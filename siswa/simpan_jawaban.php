@@ -10,7 +10,7 @@ if (!isset($_SESSION['siswa_id']) || !isset($_SESSION['ujian_id'])) {
 $siswa_id = $_SESSION['siswa_id'];
 $ujian_id = $_SESSION['ujian_id'];
 // Tangkap array jawaban dari form, jika kosong (tidak dijawab sama sekali), beri array kosong
-$jawaban_siswa = $_POST['jawaban'] ?? [];
+$jawaban_siswa = $_POST['jawaban_dipilih'] ?? [];
 
 // Ambil semua kunci jawaban dari database
 $mapel_aktif = $_SESSION['mapel_aktif'];
@@ -60,7 +60,7 @@ try {
 
         // Simpan detail jawaban siswa ke database agar Admin Guru bisa mengeceknya nanti
         // KODE YANG BENAR:
-        $stmtInsert = $pdo->prepare("INSERT INTO jawaban_siswa (ujian_id, soal_id, jawaban, status_benar) VALUES (?, ?, ?, ?)");
+        $stmtInsert = $pdo->prepare("INSERT INTO jawaban_siswa (ujian_id, soal_id, jawaban_dipilih, status_benar) VALUES (?, ?, ?, ?)");
         $stmtInsert->execute([$ujian_id, $soal_id, $jawaban_dipilih, $status_benar]);
     }
 
