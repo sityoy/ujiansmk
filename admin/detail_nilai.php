@@ -34,11 +34,13 @@ $stmtSoal->execute([$data['mata_pelajaran'], $kelas_clean]);
 $daftar_soal = $stmtSoal->fetchAll(PDO::FETCH_ASSOC);
 
 // 5. AMBIL JAWABAN DARI TABEL 'jawaban_siswa'
-$jawaban_siswa = [];
+// Pastikan query ke tabel jawaban_siswa memanggil kolom 'jawaban'
 $stmtJawaban = $pdo->prepare("SELECT soal_id, jawaban FROM jawaban_siswa WHERE ujian_id = ?");
 $stmtJawaban->execute([$ujian_id]);
+$jawaban_siswa = [];
+
 while ($row = $stmtJawaban->fetch(PDO::FETCH_ASSOC)) {
-    // Memasukkan ke array: [id_soal => jawaban]
+    // Simpan jawaban dengan huruf besar agar pencocokan kunci jawaban akurat
     $jawaban_siswa[$row['soal_id']] = strtoupper(trim($row['jawaban']));
 }
 ?>
