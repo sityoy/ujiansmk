@@ -1,11 +1,11 @@
 <?php
-session_start();
-require '../../koneksi.php';
+// session_start();
+require 'cek_admin.php';
 
-if (!isset($_SESSION['admin_id'])) { 
-    header("Location: ../login.php"); 
-    exit; 
-}
+// if (!isset($_SESSION['admin_id'])) { 
+//     header("Location: ../login.php"); 
+//     exit; 
+// }
 
 // --- SETUP FILTER KELAS ---
 $filter_kelas = isset($_GET['kelas']) ? $_GET['kelas'] : '';

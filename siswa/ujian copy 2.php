@@ -1,7 +1,7 @@
 <?php
 session_start();
 date_default_timezone_set('Asia/Jakarta');
-require '../koneksi.php';
+require 'cek_admin.php';
 
 if (!isset($_SESSION['siswa_id']) || !isset($_SESSION['ujian_id'])) {
     header("Location: login.php");

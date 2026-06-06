@@ -1,7 +1,7 @@
 <?php
 session_start();
 date_default_timezone_set('Asia/Jakarta');
-require '../koneksi.php';
+require 'cek_admin.php';
 
 // Pastikan ada session admin yang aktif sebelum memproses logout
 if (isset($_SESSION['admin_id'])) {

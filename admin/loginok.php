@@ -1,6 +1,6 @@
 <?php
 session_start();
-require '../koneksi.php';
+require 'cek_admin.php';
 
 // Jika sudah login, langsung arahkan ke dashboard
 if (isset($_SESSION['admin_id'])) {

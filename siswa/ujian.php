@@ -1,7 +1,7 @@
 <?php
 session_start();
 date_default_timezone_set('Asia/Jakarta');
-require '../koneksi.php';
+require 'cek_admin.php';
 
 if (!isset($_SESSION['siswa_id'], $_SESSION['ujian_id'], $_SESSION['jadwal_id'], $_SESSION['mapel_aktif'], $_SESSION['kelas'])) {
     header("Location: login.php");
@@ -19,6 +19,7 @@ if (!$dataUjian) {
     exit;
 }
 
+// Jika sudah melebihi atau sama dengan 2 pelanggaran, langsung tendang ke halaman selesai
 if ($dataUjian['jumlah_pelanggaran'] >= 2) {
     header("Location: selesai_ujian.php");
     exit;
@@ -50,11 +51,21 @@ if (strpos($kelas, 'XII') === 0) { $kelas = 'XII'; }
 elseif (strpos($kelas, 'XI') === 0) { $kelas = 'XI'; } 
 else { $kelas = 'X'; }
 
-if (!isset($_SESSION['urutan_soal'])) {
-    $stmtSoal = $pdo->prepare("SELECT * FROM soal WHERE mata_pelajaran = ? AND kelas = ?");
+    if (!isset($_SESSION['urutan_soal'])) {
+    // Tambahkan ORDER BY id ASC agar jika tidak diacak, urutannya sesuai saat input di tambah_soal.php
+    $stmtSoal = $pdo->prepare("SELECT * FROM soal WHERE mata_pelajaran = ? AND kelas = ? ORDER BY id ASC");
     $stmtSoal->execute([$mapel_aktif, $kelas]);
     $daftar_soal = $stmtSoal->fetchAll(PDO::FETCH_ASSOC);
-    shuffle($daftar_soal);
+    
+    // 1. Tentukan mapel apa saja yang SOALNYA TIDAK BOLEH DIACAK
+    // (Perhatikan huruf besar/kecilnya, harus sama persis dengan yang ada di database/tambah_soal)
+    $mapel_urutan_tetap = ['Bahasa Indonesia']; 
+    
+    // 2. Logika Pengecekan: Jika mapel_aktif BUKAN mapel di atas, maka ACAK soalnya!
+    if (!in_array($mapel_aktif, $mapel_urutan_tetap)) {
+        shuffle($daftar_soal);
+    }
+    
     $_SESSION['urutan_soal'] = $daftar_soal;
 } else {
     $daftar_soal = $_SESSION['urutan_soal'];
@@ -93,24 +104,8 @@ if (!isset($_SESSION['urutan_soal'])) {
         .btn-submit { background: #d9534f; color: white; border: none; padding: 15px; width: 100%; font-size: 18px; font-weight: bold; border-radius: 5px; cursor: pointer; margin-top: 20px; transition: 0.3s; }
         .btn-submit:hover { background: #c9302c; }
         .mapel-badge { background: #ffc107; color: #333; padding: 3px 8px; border-radius: 3px; margin-left: 10px; font-size: 12px; }
-        /* Container Modal Zoom Gambar */
-        .modal-zoom {
-            display: none; 
-            position: fixed; 
-            z-index: 200000; 
-            top: 0; left: 0; 
-            width: 100vw; height: 100vh; 
-            background: rgba(0,0,0,0.9); 
-            justify-content: center; 
-            align-items: center;
-            cursor: pointer; /* Menandakan seluruh area bisa diklik untuk keluar */
-        }
-        .modal-zoom img {
-            max-width: 95%; 
-            max-height: 95%; 
-            border-radius: 4px;
-            box-shadow: 0 0 20px rgba(255,255,255,0.2);
-        }
+        .modal-zoom { display: none; position: fixed; z-index: 200000; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); justify-content: center; align-items: center; cursor: pointer; }
+        .modal-zoom img { max-width: 95%; max-height: 95%; border-radius: 4px; box-shadow: 0 0 20px rgba(255,255,255,0.2); }
     </style>
 </head>
 <body oncontextmenu="return false;" oncopy="return false;" onpaste="return false;" onkeydown="return mencegahAksi(event);">
@@ -119,17 +114,13 @@ if (!isset($_SESSION['urutan_soal'])) {
         <img id="imgPreview" src="" alt="Pratinjau Gambar">
     </div>
 
-    <!-- <div id="modal-zoom-gambar" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); z-index: 100005; justify-content: center; align-items: center; flex-direction: column;">
-        <span onclick="tutupZoomGambar()" style="position: absolute; top: 20px; right: 30px; color: white; font-size: 40px; cursor: pointer; font-weight: bold;">&times;</span>
-        <img id="gambar-zoom-aktif" src="" style="max-width: 95%; max-height: 85vh; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
-        <p style="color: white; margin-top: 15px;">Ketuk tombol silang (x) untuk menutup</p>
-    </div> -->
-
     <div id="layar-hitam">
         <h2>Peringatan Sistem!</h2>
         <p>Anda terdeteksi melanggar aturan ujian! Sesi Anda dibekukan.</p>
     </div>
+
     <div id="custom-alert"><span id="custom-alert-text">Pesan</span></div>
+    
     <div id="custom-confirm">
         <div class="confirm-box">
             <h3 style="color: #333; margin-top: 0;">Konfirmasi Selesai</h3>
@@ -143,7 +134,7 @@ if (!isset($_SESSION['urutan_soal'])) {
         <h2 style="color: #ffc107; font-size: 28px;">Persiapan Ujian: <?php echo htmlspecialchars($mapel_aktif); ?></h2>
         <p style="max-width: 600px; line-height: 1.6; font-size: 16px;">
             Sistem mendeteksi aktivitas Layar Terbelah (Split Screen), Gelembung Chat (Bubble), dan Notifikasi. <br><br>
-            <strong>5 kali pelanggaran = ujian otomatis selesai.</strong>
+            <strong>2 kali pelanggaran = ujian otomatis selesai.</strong>
         </p>
         <button id="btn-fullscreen">Mulai Ujian</button>
     </div>
@@ -218,129 +209,163 @@ if (!isset($_SESSION['urutan_soal'])) {
 
     <script>
         let pelanggaran = <?php echo $dataUjian['jumlah_pelanggaran']; ?>;
-const maxPelanggaran = 2; 
+        const maxPelanggaran = 2; 
 
-let isPengawasanAktif = true; // Skenario A: Aktif dari detik pertama di layar hitam
-let isUjianFullscreen = false; 
-let isSubmitting = false; 
+        // PENGAWASAN SELALU AKTIF!
+        let isPengawasanAktif = false; 
+        let isUjianFullscreen = false; 
+        let isSubmitting = false; 
 
-const overlay = document.getElementById('fullscreen-overlay');
-const kontenUjian = document.getElementById('konten-ujian');
-const elem = document.documentElement;
+        const overlay = document.getElementById('fullscreen-overlay');
+        const kontenUjian = document.getElementById('konten-ujian');
+        const elem = document.documentElement;
 
-function tampilkanAlert(pesan) {
-    const alertBox = document.getElementById('custom-alert');
-    document.getElementById('custom-alert-text').innerHTML = pesan;
-    alertBox.style.display = 'block';
-    setTimeout(() => { alertBox.style.display = 'none'; }, 4000);
-}
+        function mencegahAksi(e) {
+            // Blokir Inspeksi Elemen dll
+            if(e.keyCode === 123 || (e.ctrlKey && e.shiftKey && e.keyCode === 73)) {
+                e.preventDefault(); return false;
+            }
+        }
 
-function bukaConfirm() {
-    document.getElementById('custom-confirm').style.display = 'flex';
-}
+        function tampilkanAlert(pesan) {
+            const alertBox = document.getElementById('custom-alert');
+            document.getElementById('custom-alert-text').innerHTML = pesan;
+            alertBox.style.display = 'block';
+            setTimeout(() => { alertBox.style.display = 'none'; }, 4500);
+        }
 
-function tutupConfirm() {
-    document.getElementById('custom-confirm').style.display = 'none';
-}
+        function bukaConfirm() {
+            // === 1. PENGECEKAN JAWABAN KOSONG (TIDAK BISA DIKIRIM JIKA ADA YG KOSONG) ===
+            const totalSoal = <?php echo count($daftar_soal); ?>;
+            const jawabanTerisi = document.querySelectorAll('input[type="radio"]:checked').length;
 
-function submitFormFinal() {
-    isSubmitting = true;
-    document.getElementById('form-ujian').submit();
-}
+            if (jawabanTerisi < totalSoal) {
+                let belumDijawab = totalSoal - jawabanTerisi;
+                tampilkanAlert("⚠️ MASIH ADA " + belumDijawab + " SOAL KOSONG!<br>Silakan periksa dan jawab semua soal sebelum mengirim.");
+                return; // Berhenti di sini, modal konfirmasi TIDAK akan muncul!
+            }
 
-document.getElementById('btn-fullscreen').addEventListener('click', () => {
-    // Memaksa layar penuh untuk menyembunyikan bilah notifikasi secara total
-    if (elem.requestFullscreen) { elem.requestFullscreen(); } 
-    else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); } 
-    
-    overlay.style.display = 'none';
-    kontenUjian.style.display = 'block';
-    setTimeout(() => { isUjianFullscreen = true; }, 1000);
-});
+            // === 2. TAMPILKAN MODAL KONFIRMASI (SISTEM GALAK TETAP NYALA!) ===
+            // Saya hapus isPengawasanAktif = false; di sini.
+            document.getElementById('custom-confirm').style.display = 'flex';
+        }
 
-function catatPelanggaran(jenis) {
-    if(!isPengawasanAktif || isSubmitting) return; 
-    
-    pelanggaran++;
-    document.getElementById('pelanggaran-count').innerText = pelanggaran;
+        function tutupConfirm() {
+            document.getElementById('custom-confirm').style.display = 'none';
+        }
 
-    let formData = new FormData();
-    formData.append('ujian_id', <?php echo $ujian_id; ?>);
-    formData.append('jumlah', pelanggaran);
-    navigator.sendBeacon('catat_pelanggaran.php', formData);
+        function submitFormFinal() {
+            // Hanya kalau siswa klik "Ya, Kirim", sistem pengawasan baru dimatikan agar saat proses submit loading tidak kena pelanggaran.
+            isSubmitting = true; 
+            document.getElementById('custom-confirm').style.display = 'none';
+            document.getElementById('form-ujian').submit();
+        }
 
-    if (pelanggaran >= maxPelanggaran) {
-        isSubmitting = true; 
-        document.getElementById('layar-hitam').style.display = 'flex';
-        setTimeout(() => { document.getElementById('form-ujian').submit(); }, 2000);
-    } else {
-        tampilkanAlert("⚠️ PELANGGARAN: " + jenis + " (" + pelanggaran + "/" + maxPelanggaran + ")");
-    }
-}
+        document.getElementById('btn-fullscreen').addEventListener('click', () => {
+            if (elem.requestFullscreen) { elem.requestFullscreen(); } 
+            else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); } 
+            
+            overlay.style.display = 'none';
+            kontenUjian.style.display = 'block';
+            setTimeout(() => { isUjianFullscreen = true; isPengawasanAktif = true; }, 1000); // Sistem galak mulai diaktifkan!
+        });
 
-// SENSOR KUNCI NOTIFIKASI & MEMINIMALKAN APLIKASI
-document.addEventListener('visibilitychange', () => { 
-    if (document.hidden && isPengawasanAktif && !isSubmitting) {
-        catatPelanggaran('Membuka Aplikasi Lain / Keluar Browser');
-    }
-});
+        // ==========================================
+        // 🚨 SISTEM ANTI-CHEAT (SUPER GALAK) 🚨
+        // ==========================================
+        function catatPelanggaran(jenis) {
+            if(!isPengawasanAktif || isSubmitting) return; 
+            
+            pelanggaran++;
+            document.getElementById('pelanggaran-count').innerText = pelanggaran;
 
-window.addEventListener('blur', () => {
-    if(isPengawasanAktif && !isSubmitting) {
-        // Memicu pelanggaran jika bilah notifikasi ditarik atau chat bubble terbuka
-        catatPelanggaran('Membuka Notifikasi / Kehilangan Fokus Layar');
-    }
-});
+            let formData = new FormData();
+            formData.append('ujian_id', <?php echo $ujian_id; ?>);
+            formData.append('jumlah', pelanggaran);
+            navigator.sendBeacon('catat_pelanggaran.php', formData);
 
-document.addEventListener('fullscreenchange', () => {
-    if (!document.fullscreenElement && isUjianFullscreen && !isSubmitting) {
-        catatPelanggaran("Keluar Mode Layar Penuh");
-        overlay.style.display = 'flex'; 
-        kontenUjian.style.display = 'none';
-        isUjianFullscreen = false; 
-    }
-});
+            if (pelanggaran >= maxPelanggaran) {
+                isSubmitting = true; // Kunci sistem agar tidak kirim data pelanggaran dobel
+                document.getElementById('layar-hitam').style.display = 'flex';
+                setTimeout(() => { document.getElementById('form-ujian').submit(); }, 2000);
+            } else {
+                tampilkanAlert("⚠️ PELANGGARAN: " + jenis + " (" + pelanggaran + "/" + maxPelanggaran + ")");
+            }
+        }
 
-// HEARTBEAT PING
-setInterval(() => {
-    if(!isPengawasanAktif || isSubmitting) return;
-    let formPing = new FormData();
-    formPing.append('ujian_id', <?php echo $ujian_id; ?>);
-    fetch('ping_ujian.php', { method: 'POST', body: formPing })
-    .then(res => res.json())
-    .then(data => {
-        if(data.status === 'stop') window.location.href = 'selesai_ujian.php';
-    }).catch(() => {});
-}, 5000); 
+        // 1. Ketahuan Ganti Tab / Minimize Browser
+        document.addEventListener('visibilitychange', () => { 
+            if (document.hidden && isPengawasanAktif && !isSubmitting) {
+                catatPelanggaran('Membuka Aplikasi Lain / Keluar Browser');
+            }
+        });
 
-// TIMER
-let sisaDetik = <?php echo $sisa_detik; ?>;
-const timerElement = document.getElementById('timer');
-const formUjian = document.getElementById('form-ujian');
+        // 2. Ketahuan Buka Pop-up Notif WA / Split Screen / Kehilangan Fokus
+        window.addEventListener('blur', () => {
+            if(isPengawasanAktif && !isSubmitting) {
+                catatPelanggaran('Kehilangan Fokus Layar / Membuka Aplikasi Lain');
+            }
+        });
 
-const hitungMundur = setInterval(() => {
-    if (sisaDetik <= 0) {
-        clearInterval(hitungMundur);
-        isSubmitting = true;
-        tampilkanAlert("Waktu habis! Mengirim otomatis...");
-        setTimeout(() => { formUjian.submit(); }, 2000);
-    } else {
-        let jam = Math.floor(sisaDetik / 3600);
-        let menit = Math.floor((sisaDetik % 3600) / 60);
-        let detik = (sisaDetik % 3600) % 60;
-        timerElement.innerText = (jam < 10 ? "0" + jam : jam) + ":" + (menit < 10 ? "0" + menit : menit) + ":" + (detik < 10 ? "0" + detik : detik);
-        sisaDetik--;
-    }
-}, 1000);
+        // 3. Ketahuan Keluar dari Mode Layar Penuh (ESC)
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement && isUjianFullscreen && !isSubmitting) {
+                catatPelanggaran("Keluar Mode Layar Penuh");
+                // Memaksa siswa untuk menekan tombol mulai lagi untuk lanjut ujian
+                overlay.style.display = 'flex'; 
+                kontenUjian.style.display = 'none';
+                isUjianFullscreen = false; 
+                isPengawasanAktif = false; // Matikan sementara sampai mereka klik "Mulai" lagi
+            }
+        });
 
-function bukaPreview(srcGambar) {
-    document.getElementById('imgPreview').src = srcGambar;
-    document.getElementById('previewModal').style.display = 'flex';
-}
+        // ==========================================
+        // 🔄 SINKRONISASI SERVER & TIMER
+        // ==========================================
+        setInterval(() => {
+            if(!isPengawasanAktif || isSubmitting) return;
+            let formPing = new FormData();
+            formPing.append('ujian_id', <?php echo $ujian_id; ?>);
+            fetch('ping_ujian.php', { method: 'POST', body: formPing })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'stop') {
+                    isSubmitting = true;
+                    window.location.href = 'selesai_ujian.php';
+                }
+            }).catch(() => {});
+        }, 5000); 
 
-function tutupPreview() {
-    document.getElementById('previewModal').style.display = 'none';
-}
+        let sisaDetik = <?php echo $sisa_detik; ?>;
+        const timerElement = document.getElementById('timer');
+        const formUjian = document.getElementById('form-ujian');
+
+        const hitungMundur = setInterval(() => {
+            if (sisaDetik <= 0) {
+                clearInterval(hitungMundur);
+                isSubmitting = true;
+                tampilkanAlert("Waktu habis! Mengirim otomatis...");
+                
+                // Jika waktu habis, akan DIPAKSA kirim walaupun ada yang kosong
+                setTimeout(() => { formUjian.submit(); }, 2000);
+            } else {
+                let jam = Math.floor(sisaDetik / 3600);
+                let menit = Math.floor((sisaDetik % 3600) / 60);
+                let detik = (sisaDetik % 3600) % 60;
+                timerElement.innerText = (jam < 10 ? "0" + jam : jam) + ":" + (menit < 10 ? "0" + menit : menit) + ":" + (detik < 10 ? "0" + detik : detik);
+                sisaDetik--;
+            }
+        }, 1000);
+
+        // FITUR ZOOM GAMBAR SOAL
+        function bukaPreview(srcGambar) {
+            document.getElementById('imgPreview').src = srcGambar;
+            document.getElementById('previewModal').style.display = 'flex';
+        }
+
+        function tutupPreview() {
+            document.getElementById('previewModal').style.display = 'none';
+        }
     </script>
 </body>
 </html>

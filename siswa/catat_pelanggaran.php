@@ -1,6 +1,6 @@
 <?php
 session_start();
-require '../koneksi.php';
+require 'cek_admin.php';
 
 if (isset($_POST['ujian_id'], $_POST['jumlah'], $_SESSION['ujian_id']) && (int) $_POST['ujian_id'] === (int) $_SESSION['ujian_id']) {
     $ujian_id = (int) $_POST['ujian_id'];

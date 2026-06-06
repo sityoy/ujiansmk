@@ -2,7 +2,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 session_start();
-require '../koneksi.php';
+require 'cek_admin.php';
 
 // Pastikan siswa sudah login dan jadwal sudah terpilih
 if (!isset($_SESSION['siswa_id'], $_SESSION['jadwal_id'], $_SESSION['mapel_aktif'])) {

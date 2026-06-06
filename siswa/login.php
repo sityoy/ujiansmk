@@ -1,7 +1,7 @@
 <?php
 session_start();
 date_default_timezone_set('Asia/Jakarta');
-require '../koneksi.php';
+require 'cek_admin.php';
 
 // Jika sudah login, langsung ke halaman selfie
 if (isset($_SESSION['siswa_id'])) {

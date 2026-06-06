@@ -1,17 +1,16 @@
 <?php
-session_start();
-require '../koneksi.php';
+// session_start();
+require 'cek_admin.php';
 
 // Pastikan hanya admin yang bisa mengakses
-if (!isset($_SESSION['admin_id'])) { 
-    header("Location: login.php"); 
-    exit; 
-}
+// if (!isset($_SESSION['admin_id'])) { 
+//     header("Location: login.php"); 
+//     exit; 
+// }
 
 $ujian_id = $_GET['id'] ?? 0;
 
 // 1. Ambil data ujian beserta data siswa
-// (Asumsi data jawaban siswa disimpan dalam kolom 'jawaban' atau 'jawaban_siswa' berformat JSON)
 $stmt = $pdo->prepare("
     SELECT u.*, s.nama_siswa, s.kartu_peserta, s.kelas 
     FROM ujian_siswa u 
@@ -36,7 +35,7 @@ if (strpos($kelas_raw, 'XII') === 0) { $kelas_clean = 'XII'; }
 elseif (strpos($kelas_raw, 'XI') === 0) { $kelas_clean = 'XI'; } 
 else { $kelas_clean = 'X'; }
 
-// 4. Ambil Daftar Soal sesuai Mapel & Kelas
+// 4. Ambil Daftar Soal sesuai Mapel & Kelas (Urut ASC)
 $stmtSoal = $pdo->prepare("SELECT * FROM soal WHERE mata_pelajaran = ? AND kelas = ? ORDER BY id ASC");
 $stmtSoal->execute([$data['mata_pelajaran'], $kelas_clean]);
 $daftar_soal = $stmtSoal->fetchAll(PDO::FETCH_ASSOC);
@@ -113,12 +112,18 @@ foreach ($stmtJawaban->fetchAll(PDO::FETCH_ASSOC) as $jawaban) {
         
         .img-soal { max-width: 250px; max-height: 200px; border-radius: 5px; border: 1px solid #ccc; margin-bottom: 10px; display: block; }
 
+        /* === STYLE UNTUK PREVIEW GAMBAR (MODAL) === */
+        .modal-zoom { display: none; position: fixed; z-index: 999999; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); justify-content: center; align-items: center; cursor: zoom-out; }
+        .modal-zoom img { max-width: 90%; max-height: 90%; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); object-fit: contain; }
+        .img-zoomable { cursor: zoom-in; transition: transform 0.2s; }
+        .img-zoomable:hover { transform: scale(1.03); opacity: 0.9; border-color: #007bff; }
+
         /* === STYLE UNTUK CETAK KERTAS A4 === */
         @media print {
             @page { size: A4 portrait; margin: 15mm; }
             body { background: white; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .container { box-shadow: none; border: none; padding: 0; max-width: 100%; width: 100%; }
-            .no-print { display: none !important; }
+            .no-print, .modal-zoom { display: none !important; }
             .card-stat { border: 1px solid #ccc !important; background-color: #f8f9fa !important; }
             .score-cards, .signature-area { page-break-inside: avoid; }
             .page-break { page-break-before: always; }
@@ -126,6 +131,10 @@ foreach ($stmtJawaban->fetchAll(PDO::FETCH_ASSOC) as $jawaban) {
     </style>
 </head>
 <body>
+
+    <div id="previewModal" class="modal-zoom" onclick="tutupPreview()">
+        <img id="imgPreview" src="" alt="Pratinjau Gambar">
+    </div>
 
     <div class="container">
         <div class="header-action no-print">
@@ -177,7 +186,7 @@ foreach ($stmtJawaban->fetchAll(PDO::FETCH_ASSOC) as $jawaban) {
                 $foto_path = "../assets/" . htmlspecialchars($data['foto_selfie']);
                 if (file_exists($foto_path) && !empty($data['foto_selfie'])): 
                 ?>
-                    <img src="<?php echo $foto_path; ?>" alt="Foto Verifikasi Siswa">
+                    <img src="<?php echo $foto_path; ?>" alt="Foto Verifikasi Siswa" class="img-zoomable" onclick="bukaPreview(this.src)" title="Klik untuk memperbesar">
                     <div style="font-size: 11px; color: #777; margin-top: 5px;">*Foto Verifikasi Sistem</div>
                 <?php else: ?>
                     <div style="width:150px; height:200px; border:2px dashed #ccc; display:inline-flex; align-items:center; justify-content:center; color:#999; font-size: 12px; border-radius: 8px; float: right;">
@@ -200,10 +209,12 @@ foreach ($stmtJawaban->fetchAll(PDO::FETCH_ASSOC) as $jawaban) {
                 <h4>JAWAB SALAH</h4>
                 <div class="value val-salah"><?php echo (int)($data['salah'] ?? 0); ?></div>
             </div>
+            <?php if ((int)$data['jumlah_pelanggaran'] > 0): ?>
             <div class="card-stat">
                 <h4>PELANGGARAN</h4>
                 <div class="value val-langgar"><?php echo (int)($data['jumlah_pelanggaran']); ?>x</div>
             </div>
+            <?php endif; ?>
         </div>
 
         <div class="signature-area">
@@ -214,7 +225,7 @@ foreach ($stmtJawaban->fetchAll(PDO::FETCH_ASSOC) as $jawaban) {
             </div>
             
             <div class="signature-box">
-                <p>Tangerang, <?php echo date('d F Y'); ?><br>Guru Mata Pelajaran,</p>
+                <p>Jakarta, <?php echo date('d F Y'); ?><br>Guru Mata Pelajaran,</p>
                 <div class="signature-line"></div>
                 <p style="margin-top: 5px; color: #555;">NIP. ............................</p>
             </div>
@@ -239,7 +250,11 @@ foreach ($stmtJawaban->fetchAll(PDO::FETCH_ASSOC) as $jawaban) {
                         </div>
 
                         <?php if (empty($jawaban_terpilih)): ?>
-                            <div class="alert-kosong">⚠️ Siswa tidak menjawab soal ini karena terkena <i style="color:red;">Pelanggaran</i></div>
+                            <?php if ((int)$data['jumlah_pelanggaran'] > 0): ?>
+                                <div class="alert-kosong">⚠️ Siswa tidak menjawab soal ini karena terkena <i style="color:red;">Pelanggaran</i></div>
+                            <?php else: ?>
+                                <div class="alert-kosong" style="background: #e2e3e5; color: #383d41; border-color: #d6d8db;">⚠️ Siswa tidak menjawab soal ini (Dikosongkan)</div>
+                            <?php endif; ?>
                         <?php endif; ?>
 
                         <?php if (!empty($soal['deskripsi'])): ?>
@@ -249,7 +264,7 @@ foreach ($stmtJawaban->fetchAll(PDO::FETCH_ASSOC) as $jawaban) {
                         <?php endif; ?>
 
                         <?php if (!empty($soal['gambar'])): ?>
-                            <img src="../uploads/<?php echo htmlspecialchars($soal['gambar']); ?>" class="img-soal" alt="Gambar Soal">
+                            <img src="../uploads/<?php echo htmlspecialchars($soal['gambar']); ?>" class="img-soal img-zoomable" alt="Gambar Soal" onclick="bukaPreview(this.src)" title="Klik untuk memperbesar">
                         <?php endif; ?>
 
                         <div class="soal-pertanyaan">
@@ -260,7 +275,6 @@ foreach ($stmtJawaban->fetchAll(PDO::FETCH_ASSOC) as $jawaban) {
                             <?php 
                             $opsi_huruf = ['A', 'B', 'C', 'D', 'E'];
                             foreach ($opsi_huruf as $huruf): 
-                                // Penentuan status Kunci Jawaban vs Jawaban Siswa
                                 $is_kunci = (strtoupper(trim($soal['kunci_jawaban'])) === $huruf);
                                 $is_dijawab = (strtoupper(trim($jawaban_terpilih)) === $huruf);
                                 
@@ -268,13 +282,13 @@ foreach ($stmtJawaban->fetchAll(PDO::FETCH_ASSOC) as $jawaban) {
                                 $badge = "";
 
                                 if ($is_kunci && $is_dijawab) {
-                                    $class_li .= " opsi-benar"; // Siswa Benar (Hijau)
+                                    $class_li .= " opsi-benar"; 
                                     $badge = '<span class="badge-kunci">✔️ Kunci & Jawaban Siswa</span>';
                                 } elseif ($is_kunci && !$is_dijawab) {
-                                    $class_li .= " opsi-benar"; // Kunci Jawaban Asli (Hijau)
+                                    $class_li .= " opsi-benar"; 
                                     $badge = '<span class="badge-kunci">✔️ Kunci Jawaban</span>';
                                 } elseif (!$is_kunci && $is_dijawab) {
-                                    $class_li .= " opsi-salah"; // Siswa Salah (Merah)
+                                    $class_li .= " opsi-salah"; 
                                     $badge = '<span class="badge-salah">❌ Jawaban Siswa</span>';
                                 }
                                 
@@ -289,7 +303,7 @@ foreach ($stmtJawaban->fetchAll(PDO::FETCH_ASSOC) as $jawaban) {
                                         <?php if (!empty($teks_opsi)) echo htmlspecialchars_decode($teks_opsi); ?>
                                         <?php if (!empty($gbr_opsi)): ?>
                                             <div style="margin-top: 5px;">
-                                                <img src="../uploads/<?php echo htmlspecialchars($gbr_opsi); ?>" class="img-soal" style="max-height: 80px;">
+                                                <img src="../uploads/<?php echo htmlspecialchars($gbr_opsi); ?>" class="img-soal img-zoomable" style="max-height: 80px;" onclick="bukaPreview(this.src)" title="Klik untuk memperbesar">
                                             </div>
                                         <?php endif; ?>
                                     </div>
@@ -304,5 +318,15 @@ foreach ($stmtJawaban->fetchAll(PDO::FETCH_ASSOC) as $jawaban) {
 
     </div>
 
+    <script>
+        function bukaPreview(srcGambar) {
+            document.getElementById('imgPreview').src = srcGambar;
+            document.getElementById('previewModal').style.display = 'flex';
+        }
+
+        function tutupPreview() {
+            document.getElementById('previewModal').style.display = 'none';
+        }
+    </script>
 </body>
 </html>

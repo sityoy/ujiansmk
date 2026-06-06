@@ -1,6 +1,6 @@
 <?php
 session_start();
-require '../koneksi.php';
+require 'cek_admin.php';
 // Gunakan SimpleXLSX (Download file SimpleXLSX.php dan letakkan di folder admin/)
 require 'SimpleXLSX.php';
 

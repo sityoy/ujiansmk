@@ -1,6 +1,6 @@
 <?php
 session_start();
-require '../koneksi.php';
+require 'cek_admin.php';
 
 if (!isset($_SESSION['siswa_id'], $_SESSION['ujian_id'], $_SESSION['mapel_aktif'], $_SESSION['kelas'])) {
     header("Location: login.php");
@@ -12,13 +12,9 @@ $mapel_aktif = $_SESSION['mapel_aktif'];
 $jawaban_siswa = $_POST['jawaban'] ?? [];
 
 $kelas = strtoupper(trim($_SESSION['kelas']));
-if (strpos($kelas, 'XII') === 0) {
-    $kelas = 'XII';
-} elseif (strpos($kelas, 'XI') === 0) {
-    $kelas = 'XI';
-} else {
-    $kelas = 'X';
-}
+if (strpos($kelas, 'XII') === 0) { $kelas = 'XII'; } 
+elseif (strpos($kelas, 'XI') === 0) { $kelas = 'XI'; } 
+else { $kelas = 'X'; }
 
 try {
     $stmtSoal = $pdo->prepare("SELECT id, kunci_jawaban FROM soal WHERE mata_pelajaran = ? AND kelas = ?");
@@ -27,7 +23,6 @@ try {
 
     $total_soal = count($semua_soal);
     $benar = 0;
-    $salah = 0;
 
     $pdo->beginTransaction();
 
@@ -41,17 +36,20 @@ try {
 
     foreach ($semua_soal as $soal) {
         $soal_id = (int) $soal['id'];
-        $jawaban_dipilih = isset($jawaban_siswa[$soal_id]) ? strtoupper(trim($jawaban_siswa[$soal_id])) : null;
+        
+        // Ambil jawaban, jika kosong jadikan NULL agar aman di database
+        $jawaban_dipilih = isset($jawaban_siswa[$soal_id]) && !empty($jawaban_siswa[$soal_id]) ? strtoupper(trim($jawaban_siswa[$soal_id])) : NULL;
 
         if (!in_array($jawaban_dipilih, ['A', 'B', 'C', 'D', 'E'], true)) {
-            $jawaban_dipilih = null;
+            $jawaban_dipilih = NULL; 
         }
 
-        $status_benar = ($jawaban_dipilih !== null && $jawaban_dipilih === strtoupper(trim($soal['kunci_jawaban']))) ? 1 : 0;
-        if ($status_benar === 1) {
-            $benar++;
-        } else {
-            $salah++;
+        $status_benar = 0;
+        if ($jawaban_dipilih !== NULL) { 
+            if ($jawaban_dipilih === strtoupper(trim($soal['kunci_jawaban']))) {
+                $status_benar = 1;
+                $benar++;
+            }
         }
 
         $stmtInsert->execute([$ujian_id, $soal_id, $jawaban_dipilih, $status_benar]);
@@ -59,6 +57,7 @@ try {
 
     $nilai = ($total_soal > 0) ? round(($benar / $total_soal) * 100, 2) : 0;
 
+    // UPDATE SESUAI DATABASE-MU (Tanpa kolom benar & salah)
     $stmtUpdateUjian = $pdo->prepare("UPDATE ujian_siswa SET nilai = ?, waktu_selesai = NOW() WHERE id = ?");
     $stmtUpdateUjian->execute([$nilai, $ujian_id]);
 
@@ -69,8 +68,8 @@ try {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }
-
-    error_log("Gagal simpan jawaban ujian {$ujian_id}: " . $e->getMessage());
-    die("<div style='color:red; padding:20px; font-family:Arial;'><b>Gagal menyimpan jawaban.</b><br>Silakan hubungi administrator.</div>");
+    
+    // Tampilkan pesan error jika database menolak NULL pada jawaban_dipilih
+    die("<b>Error Database:</b> " . htmlspecialchars($e->getMessage()) . "<br><br>Pastikan kolom `jawaban_dipilih` di tabel `jawaban_siswa` mengizinkan nilai NULL (Default: NULL).");
 }
 ?>

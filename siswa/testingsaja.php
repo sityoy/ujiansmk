@@ -1,7 +1,7 @@
 <!-- fle pertama -->
 <?php
 session_start();
-require '../koneksi.php';
+require 'cek_admin.php';
 
 // Pastikan admin sudah login (Sesuaikan dengan sistem login admin Anda)
 // if (!isset($_SESSION['admin_id'])) { header("Location: login.php"); exit; }
@@ -266,7 +266,7 @@ $status_ujian = ($data['jumlah_pelanggaran'] >= 5) ? "Diskualifikasi (Pelanggara
 
 <?php
 session_start();
-require '../koneksi.php';
+require 'cek_admin.php';
 
 // Pastikan hanya admin yang bisa mengakses
 if (!isset($_SESSION['admin_id'])) { 
@@ -458,7 +458,7 @@ $durasi = $waktu_mulai->diff($waktu_selesai)->format('%h Jam %i Menit');
  <?php
 
 session_start();
-require '../koneksi.php';
+require 'cek_admin.php';
 
 if (!isset($_SESSION['admin_id'])) {
     header("Location: login.php");

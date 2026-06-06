@@ -1,6 +1,6 @@
 <?php
-session_start();
-require '../../koneksi.php';
+// session_start();
+require 'cek_admin.php';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $kartu = $_POST['kartu_peserta'];

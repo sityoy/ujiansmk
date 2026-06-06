@@ -1,6 +1,6 @@
 <?php
 session_start();
-require '../../koneksi.php';
+require '../cek_admin.php';
 
 // Panggil library SimpleXLSX (asumsi file ini ada di folder admin/)
 require '../SimpleXLSX.php'; 

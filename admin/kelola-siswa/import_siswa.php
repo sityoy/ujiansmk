@@ -1,6 +1,7 @@
 <?php
-session_start();
-if (!isset($_SESSION['admin_id'])) { header("Location: ../login.php"); exit; }
+// session_start();
+require 'cek_admin.php';
+// if (!isset($_SESSION['admin_id'])) { header("Location: ../login.php"); exit; }
 ?>
 <!DOCTYPE html>
 <html lang="id">

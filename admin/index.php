@@ -1,6 +1,6 @@
 <?php
 session_start();
-require '../koneksi.php';
+require 'cek_admin.php';
 
 // Cek sesi login
 if (!isset($_SESSION['admin_id'])) {

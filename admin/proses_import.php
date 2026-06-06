@@ -1,6 +1,6 @@
 <?php
 session_start();
-require '../koneksi.php';
+require 'cek_admin.php';
 require 'SimpleXLSX.php'; 
 
 if (!isset($_SESSION['admin_id'])) { header("Location: login.php"); exit; }
