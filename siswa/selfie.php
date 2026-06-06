@@ -1,8 +1,10 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 session_start();
 require '../koneksi.php';
 
-// Pastikan siswa sudah login dan sudah memilih jadwal mapel
+// Pastikan siswa sudah login dan jadwal sudah terpilih
 if (!isset($_SESSION['siswa_id']) || !isset($_SESSION['jadwal_id'])) {
     header("Location: login.php");
     exit;
@@ -11,17 +13,19 @@ if (!isset($_SESSION['siswa_id']) || !isset($_SESSION['jadwal_id'])) {
 $siswa_id = $_SESSION['siswa_id'];
 $mapel_aktif = $_SESSION['mapel_aktif'];
 
-// CEK APAKAH SISWA SUDAH PUNYA SESI UJIAN AKTIF (Belum Submit)
-// Fitur ini berguna jika siswa tidak sengaja keluar/refresh, mereka tidak perlu selfie ulang
-$stmtCek = $pdo->prepare("SELECT id FROM ujian_siswa WHERE siswa_id = ? AND mata_pelajaran = ? AND waktu_selesai IS NULL");
-$stmtCek->execute([$siswa_id, $mapel_aktif]);
-$sesi_aktif = $stmtCek->fetch();
+try {
+    // Cek apakah siswa punya sesi ujian yang belum selesai
+    $stmtCek = $pdo->prepare("SELECT id FROM ujian_siswa WHERE siswa_id = ? AND mata_pelajaran = ? AND waktu_selesai IS NULL");
+    $stmtCek->execute([$siswa_id, $mapel_aktif]);
+    $sesi_aktif = $stmtCek->fetch();
 
-if ($sesi_aktif) {
-    // Jika sudah ada sesi ujian yang berjalan, langsung arahkan ke ujian.php
-    $_SESSION['ujian_id'] = $sesi_aktif['id'];
-    header("Location: ujian.php");
-    exit;
+    if ($sesi_aktif) {
+        $_SESSION['ujian_id'] = $sesi_aktif['id'];
+        header("Location: ujian.php");
+        exit;
+    }
+} catch (PDOException $e) {
+    die("Error Database di Selfie: " . $e->getMessage());
 }
 ?>
 <!DOCTYPE html>
@@ -31,31 +35,22 @@ if ($sesi_aktif) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verifikasi Selfie - CBT</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; background: #f4f7f6; padding: 20px; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .box { background: white; width: 100%; max-width: 400px; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-top: 5px solid #007bff; }
-        h3 { margin-top: 0; color: #333; }
-        .mapel-info { background: #e9ecef; padding: 10px; border-radius: 5px; margin-bottom: 20px; font-weight: bold; color: #007bff; }
-        video, canvas { width: 100%; max-width: 320px; border-radius: 8px; background: #000; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
-        button { background: #007bff; color: white; border: none; padding: 15px; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; margin-top: 20px; width: 100%; transition: 0.3s; }
-        button:hover { background: #0056b3; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
+        body { font-family: Arial, sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; flex-direction: column;}
+        .card { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; max-width: 400px; width: 90%; }
+        video, canvas { width: 100%; border-radius: 8px; background: #000; margin-bottom: 15px; }
+        .btn { background: #28a745; color: white; padding: 12px 20px; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; width: 100%; font-weight: bold; }
+        .btn:disabled { background: #6c757d; cursor: not-allowed; }
     </style>
 </head>
 <body>
-    <div class="box">
-        <h3>Verifikasi Wajah Peserta</h3>
-        
-        <div class="mapel-info">
-            Mapel: <?php echo htmlspecialchars($mapel_aktif); ?>
-        </div>
-        
-        <p style="font-size: 14px; color: #666; margin-bottom: 20px;">Posisikan Wajah dan Kartu Peserta Anda berada di tengah kamera, lalu klik tombol di bawah untuk memulai ujian.</p>
+    <div class="card">
+        <h3 style="margin-top: 0;">📸 Verifikasi Peserta</h3>
+        <p style="font-size: 14px; color: #666;">Silakan posisikan wajah Anda di kamera, lalu klik tombol di bawah untuk mulai ujian.</p>
         
         <video id="video" autoplay playsinline></video>
-        <canvas id="canvas" style="display:none;"></canvas>
+        <canvas id="canvas" style="display: none;"></canvas>
         
-        <button id="btn-mulai">Ambil Foto & Mulai Ujian</button>
-        <?php include 'footer.php'; ?>
+        <button id="btn-mulai" class="btn" disabled>Memuat Kamera...</button>
     </div>
 
     <script>
@@ -63,29 +58,32 @@ if ($sesi_aktif) {
         const canvas = document.getElementById('canvas');
         const btnMulai = document.getElementById('btn-mulai');
 
-        // Akses kamera depan HP / Laptop
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
-            .then(stream => { video.srcObject = stream; })
-            .catch(err => { 
-                alert("Gagal mengakses kamera! Pastikan izin (permission) kamera diizinkan di browser Anda."); 
-            });
+        .then(stream => {
+            video.srcObject = stream;
+            btnMulai.innerText = "Ambil Foto & Mulai Ujian";
+            btnMulai.disabled = false;
+        })
+        .catch(err => {
+            alert("Akses kamera ditolak atau kamera tidak ditemukan!");
+            btnMulai.innerText = "Kamera Error";
+        });
 
         btnMulai.addEventListener('click', () => {
             btnMulai.disabled = true;
-            btnMulai.innerText = "Memproses...";
+            btnMulai.innerText = "Memproses Ujian...";
 
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0);
 
-            // UBAH: Konversi foto menjadi File Asli (Blob), bukan Base64
             canvas.toBlob(function(blob) {
                 const formData = new FormData();
                 formData.append('image', blob, 'selfie_peserta.jpg');
 
                 fetch('mulai_ujian.php', {
                     method: 'POST',
-                    body: formData // Kirim sebagai form-data (seperti upload file biasa)
+                    body: formData
                 })
                 .then(res => res.json())
                 .then(data => {
@@ -94,13 +92,13 @@ if ($sesi_aktif) {
                     } else {
                         alert(data.message);
                         btnMulai.disabled = false;
-                        btnMulai.innerText = "Ambil Foto & Mulai Ujian";
+                        btnMulai.innerText = "Coba Lagi";
                     }
                 })
                 .catch(error => {
-                    alert('Terjadi kesalahan koneksi ke server.');
+                    alert('Gagal terhubung ke server. Pastikan folder assets/ memiliki izin (permission).');
                     btnMulai.disabled = false;
-                    btnMulai.innerText = "Ambil Foto & Mulai Ujian";
+                    btnMulai.innerText = "Coba Lagi";
                 });
             }, 'image/jpeg', 0.8);
         });

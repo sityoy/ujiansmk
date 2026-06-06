@@ -59,7 +59,8 @@ try {
         }
 
         // Simpan detail jawaban siswa ke database agar Admin Guru bisa mengeceknya nanti
-        $stmtInsert = $pdo->prepare("INSERT INTO jawaban_siswa (ujian_id, soal_id, jawaban_dipilih, status_benar) VALUES (?, ?, ?, ?)");
+        // KODE YANG BENAR:
+        $stmtInsert = $pdo->prepare("INSERT INTO jawaban_siswa (ujian_id, soal_id, jawaban, status_benar) VALUES (?, ?, ?, ?)");
         $stmtInsert->execute([$ujian_id, $soal_id, $jawaban_dipilih, $status_benar]);
     }
 

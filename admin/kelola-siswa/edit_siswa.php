@@ -14,14 +14,14 @@ $siswa = $stmt->fetch();
 if (!$siswa) { die("Siswa tidak ditemukan!"); }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    // PERBAIKAN: Sesuaikan dengan 'name' yang ada di form bawah
-    $kartu_peserta = trim($_POST['kartu_peserta']);
-    $nama_siswa = trim($_POST['nama_siswa']);
-    $kelas = trim($_POST['kelas']);
-    $password = trim($_POST['password']);
+    // PERBAIKAN: Gunakan kartu_peserta dan nama_siswa
+    $kartu_peserta = $_POST['kartu_peserta'];
+    $nama_siswa = $_POST['nama_siswa'];
+    $kelas = $_POST['kelas'];
+    $password = $_POST['password'];
 
     try {
-        // PERBAIKAN: Sesuaikan dengan nama kolom di database (kartu_peserta, nama_siswa)
+        // PERBAIKAN: Sesuaikan query dengan nama kolom di database
         $stmtUpdate = $pdo->prepare("UPDATE siswa SET kartu_peserta=?, nama_siswa=?, kelas=?, password=? WHERE id=?");
         $stmtUpdate->execute([$kartu_peserta, $nama_siswa, $kelas, $password, $id]);
         echo "<script>alert('Data siswa berhasil diupdate!'); window.location='index.php';</script>";
