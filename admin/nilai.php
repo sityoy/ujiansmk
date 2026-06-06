@@ -161,7 +161,7 @@ $data_nilai = $stmt->fetchAll();
                                     <span style="background: #dc3545; color: white; padding: 5px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; display: inline-block;">
                                         ⚠️ <?php echo $row['jumlah_pelanggaran']; ?>x (BATAS)
                                     </span>
-                                <?php elseif($row['jumlah_pelanggaran'] > 1): ?>
+                                <?php elseif($row['jumlah_pelanggaran'] > 0): ?>
                                     <span style="color: #d39e00; font-weight: bold;"><?php echo $row['jumlah_pelanggaran']; ?>x</span>
                                 <?php else: ?>
                                     <span style="color: #6c757d;">0x</span>

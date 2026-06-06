@@ -110,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
 <div class="container">
     <h2>✍️ Input Soal Baru</h2>
-    <a href="bank_soal.php" style="display:inline-block; margin-bottom: 20px; color: #666; text-decoration:none;">⬅️ Kembali ke Bank Soal</a>
+    <a href="soal.php" style="display:inline-block; margin-bottom: 20px; color: #666; text-decoration:none;">⬅️ Kembali ke Bank Soal</a>
     
     <?php echo $pesan; ?>
 

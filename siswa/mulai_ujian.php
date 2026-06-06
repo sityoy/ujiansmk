@@ -1,12 +1,12 @@
 <?php
-// Tampilkan error sementara untuk debugging
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+ini_set('display_errors', 0);
 
 session_start();
+header('Content-Type: application/json');
 require '../koneksi.php';
 
-if (!isset($_SESSION['siswa_id']) || !isset($_FILES['image'])) {
+if (!isset($_SESSION['siswa_id'], $_SESSION['mapel_aktif']) || !isset($_FILES['image'])) {
     echo json_encode(['status' => 'error', 'message' => 'Data tidak lengkap atau sesi habis.']);
     exit;
 }
@@ -44,9 +44,12 @@ if (move_uploaded_file($_FILES['image']['tmp_name'], $file)) {
         echo json_encode(['status' => 'success']);
 
     } catch (Exception $e) {
-        $pdo->rollBack();
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         @unlink($file); // Hapus foto jika gagal database
-        echo json_encode(['status' => 'error', 'message' => 'Database error: ' . $e->getMessage()]);
+        error_log('Gagal memulai ujian siswa ' . $siswa_id . ': ' . $e->getMessage());
+        echo json_encode(['status' => 'error', 'message' => 'Gagal memulai ujian. Silakan hubungi administrator.']);
     }
 } else {
     // Pesan error lebih informatif

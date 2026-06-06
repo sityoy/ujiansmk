@@ -24,8 +24,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $stmt->execute([$username]);
     $admin = $stmt->fetch();
 
-    // Verifikasi password menggunakan md5() sesuai pengaturan Bapak
-    if ($admin && md5($password) === $admin['password']) {
+    $password_valid = false;
+    $rehash_password = false;
+
+    if ($admin) {
+        if (password_verify($password, $admin['password'])) {
+            $password_valid = true;
+            $rehash_password = password_needs_rehash($admin['password'], PASSWORD_DEFAULT);
+        } elseif (hash_equals($admin['password'], md5($password))) {
+            $password_valid = true;
+            $rehash_password = true;
+        }
+    }
+
+    if ($admin && $password_valid) {
         
         // 1. CEK APAKAH AKUN SEDANG DIPAKAI LOGIN DI TEMPAT LAIN
         // (Pastikan sudah menambah kolom is_login di tabel admin)
@@ -35,9 +47,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             exit;
         }
 
-        // 2. KUNCI AKUN (Tandai sedang login)
-        $stmtUpdate = $pdo->prepare("UPDATE admin SET is_login = 1 WHERE id = ?");
-        $stmtUpdate->execute([$admin['id']]);
+        // 2. KUNCI AKUN (Tandai sedang login) dan upgrade hash lama jika perlu
+        if ($rehash_password) {
+            $password_hash = password_hash($password, PASSWORD_DEFAULT);
+            $stmtUpdate = $pdo->prepare("UPDATE admin SET password = ?, is_login = 1 WHERE id = ?");
+            $stmtUpdate->execute([$password_hash, $admin['id']]);
+        } else {
+            $stmtUpdate = $pdo->prepare("UPDATE admin SET is_login = 1 WHERE id = ?");
+            $stmtUpdate->execute([$admin['id']]);
+        }
 
         // 3. REKAM KE LOG AKTIVITAS (CCTV Sistem)
         $aktivitas = "Login ke Portal Admin CBT";

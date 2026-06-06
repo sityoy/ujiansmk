@@ -27,6 +27,14 @@ if (!isset($_SESSION['admin_id'])) { header("Location: login.php"); exit; }
                 </select>
             </div>
             <div style="margin-bottom: 20px;">
+                <label>Pilih Kelas:</label><br>
+                <select name="kelas" required style="width:100%; padding:8px;">
+                    <option value="X">Kelas X</option>
+                    <option value="XI">Kelas XI</option>
+                    <option value="XII">Kelas XII</option>
+                </select>
+            </div>
+            <div style="margin-bottom: 20px;">
                 <label>File Excel (.xlsx):</label><br>
                 <input type="file" name="file_excel" accept=".xlsx" required>
             </div>

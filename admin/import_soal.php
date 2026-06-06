@@ -2,7 +2,7 @@
 session_start();
 require '../koneksi.php';
 // Gunakan SimpleXLSX (Download file SimpleXLSX.php dan letakkan di folder admin/)
-require 'SimpleXLSX.php'; 
+require 'SimpleXLSX.php';
 
 if (!isset($_SESSION['admin_id'])) {
     header("Location: login.php");
@@ -11,20 +11,24 @@ if (!isset($_SESSION['admin_id'])) {
 
 if (isset($_FILES['file_excel']) && $_FILES['file_excel']['error'] == 0) {
     $file_tmp = $_FILES['file_excel']['tmp_name'];
-    
+
     if ($xlsx = Shuchkin\SimpleXLSX::parse($file_tmp)) {
-        $mata_pelajaran = $_POST['mata_pelajaran']; 
-        
+        $mata_pelajaran = $_POST['mata_pelajaran'];
+        $kelas = strtoupper(trim($_POST['kelas'] ?? 'X'));
+        if (!in_array($kelas, ['X', 'XI', 'XII'], true)) {
+            die("Kelas tidak valid.");
+        }
+
         try {
             $pdo->beginTransaction();
-            
-            // Query INSERT dengan 15 kolom
+
+            // Query INSERT dengan kelas yang dipilih admin.
             $stmt = $pdo->prepare("INSERT INTO soal (
-                mata_pelajaran, deskripsi, gambar, pertanyaan, 
-                opsi_a, gambar_a, opsi_b, gambar_b, 
-                opsi_c, gambar_c, opsi_d, gambar_d, 
+                mata_pelajaran, kelas, deskripsi, gambar, pertanyaan,
+                opsi_a, gambar_a, opsi_b, gambar_b,
+                opsi_c, gambar_c, opsi_d, gambar_d,
                 opsi_e, gambar_e, kunci_jawaban
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
             $rows = $xlsx->rows();
             
@@ -59,9 +63,9 @@ if (isset($_FILES['file_excel']) && $_FILES['file_excel']['error'] == 0) {
 
                 // Simpan
                 $stmt->execute([
-                    $mata_pelajaran, $deskripsi, $gambar, $pertanyaan, 
-                    $opsi_a, $gambar_a, $opsi_b, $gambar_b, 
-                    $opsi_c, $gambar_c, $opsi_d, $gambar_d, 
+                    $mata_pelajaran, $kelas, $deskripsi, $gambar, $pertanyaan,
+                    $opsi_a, $gambar_a, $opsi_b, $gambar_b,
+                    $opsi_c, $gambar_c, $opsi_d, $gambar_d,
                     $opsi_e, $gambar_e, $kunci
                 ]);
             }

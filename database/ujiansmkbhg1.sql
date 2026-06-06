@@ -473,7 +473,7 @@ INSERT INTO `siswa` (`id`, `kartu_peserta`, `password`, `nama_siswa`, `kelas`, `
 CREATE TABLE `soal` (
   `id` int(11) NOT NULL,
   `mata_pelajaran` varchar(100) DEFAULT NULL,
-  `kelas` enum('X','XI') NOT NULL,
+  `kelas` enum('X','XI','XII') NOT NULL,
   `deskripsi` text DEFAULT NULL,
   `gambar` varchar(255) DEFAULT NULL,
   `pertanyaan` text NOT NULL,

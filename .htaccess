@@ -1,0 +1,9 @@
+Options -Indexes
+
+<IfModule mod_php.c>
+    php_flag display_errors Off
+</IfModule>
+
+<FilesMatch "(^error_log$|\.sql$|\.zip$|^config\.local\.php$|^buat_admin\.php$|^buat_dummy\.php$)">
+    Require all denied
+</FilesMatch>

@@ -1,11 +1,11 @@
 <?php
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+ini_set('display_errors', 0);
 session_start();
 require '../koneksi.php';
 
 // Pastikan siswa sudah login dan jadwal sudah terpilih
-if (!isset($_SESSION['siswa_id']) || !isset($_SESSION['jadwal_id'])) {
+if (!isset($_SESSION['siswa_id'], $_SESSION['jadwal_id'], $_SESSION['mapel_aktif'])) {
     header("Location: login.php");
     exit;
 }
@@ -25,7 +25,8 @@ try {
         exit;
     }
 } catch (PDOException $e) {
-    die("Error Database di Selfie: " . $e->getMessage());
+    error_log("Error Database di Selfie: " . $e->getMessage());
+    die("Terjadi kesalahan saat membuka verifikasi. Silakan hubungi administrator.");
 }
 ?>
 <!DOCTYPE html>

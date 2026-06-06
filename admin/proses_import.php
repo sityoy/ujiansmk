@@ -7,6 +7,11 @@ if (!isset($_SESSION['admin_id'])) { header("Location: login.php"); exit; }
 
 if (isset($_FILES['file_excel']) && $_FILES['file_excel']['error'] == 0) {
     $mata_pelajaran = $_POST['mata_pelajaran'];
+    $kelas = strtoupper(trim($_POST['kelas'] ?? 'X'));
+    if (!in_array($kelas, ['X', 'XI', 'XII'], true)) {
+        die("Kelas tidak valid.");
+    }
+
     $tmp_dir = "temp_import/";
     if (!file_exists($tmp_dir)) mkdir($tmp_dir, 0777, true);
     
@@ -19,7 +24,7 @@ if (isset($_FILES['file_excel']) && $_FILES['file_excel']['error'] == 0) {
         if ($xlsx = Shuchkin\SimpleXLSX::parse($file_path)) {
             try {
                 $pdo->beginTransaction();
-                $stmt = $pdo->prepare("INSERT INTO soal (mata_pelajaran, deskripsi, gambar, pertanyaan, opsi_a, gambar_a, opsi_b, gambar_b, opsi_c, gambar_c, opsi_d, gambar_d, opsi_e, gambar_e, kunci_jawaban) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt = $pdo->prepare("INSERT INTO soal (mata_pelajaran, kelas, deskripsi, gambar, pertanyaan, opsi_a, gambar_a, opsi_b, gambar_b, opsi_c, gambar_c, opsi_d, gambar_d, opsi_e, gambar_e, kunci_jawaban) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
                 $rows = $xlsx->rows();
                 for ($i = 1; $i < count($rows); $i++) {
@@ -28,6 +33,7 @@ if (isset($_FILES['file_excel']) && $_FILES['file_excel']['error'] == 0) {
 
                     $stmt->execute([
                         $mata_pelajaran,
+                        $kelas,
                         nl2br(htmlspecialchars($row[0] ?? '')), // Deskripsi
                         $row[1] ?? '', // Gambar Soal
                         nl2br(htmlspecialchars($row[2] ?? '')), // Pertanyaan

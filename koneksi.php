@@ -1,9 +1,24 @@
 <?php
 // Pengaturan Database
-$host     = 'localhost'; // Gunakan 127.0.0.1 atau localhost jika DB di VPS yang sama
-$dbname   = 'db_ujiansmkbhg'; // Ganti dengan nama database di MariaDB
-$username = 'root'; // Ganti dengan username database
-$password = 'Smkpb@#1'; // Ganti dengan password database
+$config = [
+    'host' => 'localhost',
+    'dbname' => 'db_ujiansmkbhg',
+    'username' => 'root',
+    'password' => 'Smkpb@#1',
+];
+
+$localConfigPath = __DIR__ . '/config.local.php';
+if (is_file($localConfigPath)) {
+    $localConfig = require $localConfigPath;
+    if (is_array($localConfig)) {
+        $config = array_merge($config, $localConfig);
+    }
+}
+
+$host = getenv('DB_HOST') ?: $config['host'];
+$dbname = getenv('DB_NAME') ?: $config['dbname'];
+$username = getenv('DB_USER') ?: $config['username'];
+$password = getenv('DB_PASS') ?: $config['password'];
 
 // Pengaturan tambahan PDO untuk keamanan dan performa
 $options = [

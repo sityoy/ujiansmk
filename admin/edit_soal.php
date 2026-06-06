@@ -210,7 +210,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     <?= $soal['kelas']=='XI' ? 'selected' : '' ?>>
                     XI
                     </option>
-                
+
+                    <option value="XII"
+                    <?= $soal['kelas']=='XII' ? 'selected' : '' ?>>
+                    XII
+                    </option>
+
                 </select>
             </div>
         

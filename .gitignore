@@ -1,0 +1,4 @@
+config.local.php
+error_log
+**/error_log
+assets/selfie_*.jpg

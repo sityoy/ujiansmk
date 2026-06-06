@@ -42,8 +42,12 @@ $stmtSoal->execute([$data['mata_pelajaran'], $kelas_clean]);
 $daftar_soal = $stmtSoal->fetchAll(PDO::FETCH_ASSOC);
 
 // 5. Dekode Jawaban Siswa
-// Mengambil string JSON jawaban siswa (Misal: {"12":"A", "15":"C"}) lalu diubah menjadi Array PHP
-
+$stmtJawaban = $pdo->prepare("SELECT soal_id, jawaban_dipilih FROM jawaban_siswa WHERE ujian_id = ?");
+$stmtJawaban->execute([$ujian_id]);
+$jawaban_siswa = [];
+foreach ($stmtJawaban->fetchAll(PDO::FETCH_ASSOC) as $jawaban) {
+    $jawaban_siswa[(int) $jawaban['soal_id']] = $jawaban['jawaban_dipilih'];
+}
 
 ?>
 <!DOCTYPE html>

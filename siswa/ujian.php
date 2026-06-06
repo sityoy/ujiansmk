@@ -3,7 +3,7 @@ session_start();
 date_default_timezone_set('Asia/Jakarta');
 require '../koneksi.php';
 
-if (!isset($_SESSION['siswa_id']) || !isset($_SESSION['ujian_id'])) {
+if (!isset($_SESSION['siswa_id'], $_SESSION['ujian_id'], $_SESSION['jadwal_id'], $_SESSION['mapel_aktif'], $_SESSION['kelas'])) {
     header("Location: login.php");
     exit;
 }
@@ -12,6 +12,12 @@ $ujian_id = $_SESSION['ujian_id'];
 $stmtCek = $pdo->prepare("SELECT jumlah_pelanggaran FROM ujian_siswa WHERE id = ?");
 $stmtCek->execute([$ujian_id]);
 $dataUjian = $stmtCek->fetch();
+
+if (!$dataUjian) {
+    unset($_SESSION['ujian_id']);
+    header("Location: selfie.php");
+    exit;
+}
 
 if ($dataUjian['jumlah_pelanggaran'] >= 2) {
     header("Location: selesai_ujian.php");
@@ -23,7 +29,14 @@ $stmtJadwal = $pdo->prepare("SELECT * FROM pengaturan_ujian WHERE id = ?");
 $stmtJadwal->execute([$jadwal_id]);
 $jadwal = $stmtJadwal->fetch();
 
-$sisa_detik = strtotime($jadwal['waktu_selesai']) - time(); 
+if (!$jadwal) {
+    unset($_SESSION['jadwal_id'], $_SESSION['mapel_aktif'], $_SESSION['urutan_soal']);
+    $_SESSION['error_login'] = "Jadwal ujian tidak ditemukan. Silakan pilih jadwal ulang.";
+    header("Location: login.php");
+    exit;
+}
+
+$sisa_detik = strtotime($jadwal['waktu_selesai']) - time();
 $mapel_aktif = $_SESSION['mapel_aktif'];
 
 if ($sisa_detik <= 0) {
@@ -188,7 +201,7 @@ if (!isset($_SESSION['urutan_soal'])) {
                                         <span><strong><?php echo $huruf_tampil[$index]; ?>.</strong> <?php echo $opsi[$k]['teks']; ?></span>
                                         <?php if(!empty($opsi[$k]['gbr'])): ?>
                                             <div style="margin-top: 10px; margin-left: 20px;">
-                                                <img src="../uploads/<?php echo htmlspecialchars($opsi[$k]['gbr']); ?>" style="max-height: 120px; border-radius: 4px; border: 1px solid #ccc; cursor: zoom-in;" onclick="bukaZoomGambar(this.src)">
+                                                <img src="../uploads/<?php echo htmlspecialchars($opsi[$k]['gbr']); ?>" style="max-height: 120px; border-radius: 4px; border: 1px solid #ccc; cursor: zoom-in;" onclick="bukaPreview(this.src)">
                                             </div>
                                         <?php endif; ?>
                                     </div>
