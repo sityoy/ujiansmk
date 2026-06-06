@@ -1,4 +1,6 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 session_start();
 require '../koneksi.php';
 
@@ -9,81 +11,59 @@ if (!isset($_SESSION['siswa_id']) || !isset($_SESSION['ujian_id'])) {
 
 $siswa_id = $_SESSION['siswa_id'];
 $ujian_id = $_SESSION['ujian_id'];
-// Tangkap array jawaban dari form, jika kosong (tidak dijawab sama sekali), beri array kosong
-$jawaban_siswa = $_POST['jawaban_dipilih'] ?? [];
-
-// Ambil semua kunci jawaban dari database
 $mapel_aktif = $_SESSION['mapel_aktif'];
 
-$stmtSoal = $pdo->prepare("
-SELECT
-id,
-kunci_jawaban
-FROM soal
-WHERE mata_pelajaran = ?
-");
-
-$stmtSoal->execute([
-    $mapel_aktif
-]);
-
-$semua_soal =
-$stmtSoal->fetchAll(PDO::FETCH_ASSOC);
-
-$total_soal = count($semua_soal);
-$benar = 0;
+// Tangkap jawaban, jika kosong beri array kosong agar tidak error
+$jawaban_siswa = $_POST['jawaban'] ?? [];
+$stmtDelete = $pdo->prepare("DELETE FROM jawaban_siswa WHERE ujian_id = ?");
+$stmtDelete->execute([$ujian_id]);
 
 try {
-    // Gunakan Transaction agar jika terjadi error di tengah jalan, database tidak rusak
+    // Ambil kunci jawaban dari bank soal
+    $stmtSoal = $pdo->prepare("SELECT id, kunci_jawaban FROM soal WHERE mata_pelajaran = ?");
+    $stmtSoal->execute([$mapel_aktif]);
+    $semua_soal = $stmtSoal->fetchAll(PDO::FETCH_ASSOC);
+
+    $total_soal = count($semua_soal);
+    $benar = 0;
+
+    // Mulai transaksi DB agar aman
     $pdo->beginTransaction();
     
-    $stmtDelete = $pdo->prepare("
-        DELETE FROM jawaban_siswa
-        WHERE ujian_id = ?
-        ");
-        
-        $stmtDelete->execute([
-            $ujian_id
-        ]);
+    // Hapus jawaban lama (jika sebelumnya nyangkut)
+    $stmtDelete = $pdo->prepare("DELETE FROM jawaban_siswa WHERE ujian_id = ?");
+    $stmtDelete->execute([$ujian_id]);
+
+    // Siapkan query insert menggunakan kolom 'jawaban'
+    // Ganti baris ini (sekitar baris 47):
+        $stmtInsert = $pdo->prepare("INSERT INTO jawaban_siswa (ujian_id, soal_id, jawaban, status_benar) VALUES (?, ?, ?, ?)");
+        $stmtInsert->execute([$ujian_id, $soal_id, $jawaban_dipilih, $status_benar]);
 
     foreach ($semua_soal as $soal) {
         $soal_id = $soal['id'];
-        $kunci = $soal['kunci_jawaban'];
-        
-        // Cek apakah siswa menjawab soal ini (menghindari error jika ada soal yang dikosongi)
-        $jawaban_dipilih = isset($jawaban_siswa[$soal_id]) ? $jawaban_siswa[$soal_id] : null;
-        $status_benar = ($jawaban_dipilih === $kunci) ? 1 : 0;
+        $jawaban_dipilih = isset($jawaban_siswa[$soal_id]) ? strtoupper(trim($jawaban_siswa[$soal_id])) : '';
+        $status_benar = ($jawaban_dipilih === strtoupper(trim($soal['kunci_jawaban']))) ? 1 : 0;
 
-        if ($status_benar) {
-            $benar++;
-        }
-
-        // Simpan detail jawaban siswa ke database agar Admin Guru bisa mengeceknya nanti
-        // KODE YANG BENAR:
-        $stmtInsert = $pdo->prepare("INSERT INTO jawaban_siswa (ujian_id, soal_id, jawaban_dipilih, status_benar) VALUES (?, ?, ?, ?)");
+        // INSERT ke database (kolomnya 'jawaban')
+        $stmtInsert = $pdo->prepare("INSERT INTO jawaban_siswa (ujian_id, soal_id, jawaban, status_benar) VALUES (?, ?, ?, ?)");
         $stmtInsert->execute([$ujian_id, $soal_id, $jawaban_dipilih, $status_benar]);
     }
 
-    // Hitung nilai (Skala 100)
+    // Hitung Nilai Skala 100
     $nilai = ($total_soal > 0) ? ($benar / $total_soal) * 100 : 0;
 
-    // Update tabel ujian_siswa (simpan nilai dan catat waktu selesai)
+    // Kunci ujian dan simpan nilai ke tabel ujian_siswa
     $stmtUpdateUjian = $pdo->prepare("UPDATE ujian_siswa SET nilai = ?, waktu_selesai = NOW() WHERE id = ?");
     $stmtUpdateUjian->execute([$nilai, $ujian_id]);
 
-    // Kunci akun siswa agar statusnya menjadi 'selesai' dan tidak bisa login ulang
-    $stmtUpdateSiswa = $pdo->prepare("UPDATE siswa SET status_ujian = 'selesai' WHERE id = ?");
-    $stmtUpdateSiswa->execute([$siswa_id]);
-
+    // Jika semua sukses, Commit dan lemparkan ke halaman selesai
     $pdo->commit();
-    
-    // Arahkan ke halaman hasil
-    unset($_SESSION['urutan_soal']);
     header("Location: selesai_ujian.php");
     exit;
 
 } catch (Exception $e) {
+    // Jika ada error database, batalkan semua dan tampilkan errornya
     $pdo->rollBack();
-    die("Terjadi kesalahan sistem saat menyimpan jawaban: " . $e->getMessage());
+    die("<div style='color:red; padding:20px; font-family:Arial;'><b>FATAL ERROR GAGAL SIMPAN JAWABAN:</b><br>" . $e->getMessage() . "</div>");
 }
 ?>

@@ -80,15 +80,37 @@ if (!isset($_SESSION['urutan_soal'])) {
         .btn-submit { background: #d9534f; color: white; border: none; padding: 15px; width: 100%; font-size: 18px; font-weight: bold; border-radius: 5px; cursor: pointer; margin-top: 20px; transition: 0.3s; }
         .btn-submit:hover { background: #c9302c; }
         .mapel-badge { background: #ffc107; color: #333; padding: 3px 8px; border-radius: 3px; margin-left: 10px; font-size: 12px; }
+        /* Container Modal Zoom Gambar */
+        .modal-zoom {
+            display: none; 
+            position: fixed; 
+            z-index: 200000; 
+            top: 0; left: 0; 
+            width: 100vw; height: 100vh; 
+            background: rgba(0,0,0,0.9); 
+            justify-content: center; 
+            align-items: center;
+            cursor: pointer; /* Menandakan seluruh area bisa diklik untuk keluar */
+        }
+        .modal-zoom img {
+            max-width: 95%; 
+            max-height: 95%; 
+            border-radius: 4px;
+            box-shadow: 0 0 20px rgba(255,255,255,0.2);
+        }
     </style>
 </head>
 <body oncontextmenu="return false;" oncopy="return false;" onpaste="return false;" onkeydown="return mencegahAksi(event);">
 
-    <div id="modal-zoom-gambar" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); z-index: 100005; justify-content: center; align-items: center; flex-direction: column;">
+    <div id="previewModal" class="modal-zoom" onclick="tutupPreview()">
+        <img id="imgPreview" src="" alt="Pratinjau Gambar">
+    </div>
+
+    <!-- <div id="modal-zoom-gambar" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); z-index: 100005; justify-content: center; align-items: center; flex-direction: column;">
         <span onclick="tutupZoomGambar()" style="position: absolute; top: 20px; right: 30px; color: white; font-size: 40px; cursor: pointer; font-weight: bold;">&times;</span>
         <img id="gambar-zoom-aktif" src="" style="max-width: 95%; max-height: 85vh; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
         <p style="color: white; margin-top: 15px;">Ketuk tombol silang (x) untuk menutup</p>
-    </div>
+    </div> -->
 
     <div id="layar-hitam">
         <h2>Peringatan Sistem!</h2>
@@ -144,7 +166,7 @@ if (!isset($_SESSION['urutan_soal'])) {
 
                             <?php if(!empty($s['gambar'])): ?>
                                 <div style="text-align: left; margin-bottom: 15px;">
-                                    <img src="../uploads/<?php echo htmlspecialchars($s['gambar']); ?>" style="max-width:100%; border-radius:5px; cursor: zoom-in;" onclick="bukaZoomGambar(this.src)">
+                                    <img src="../uploads/<?php echo htmlspecialchars($s['gambar']); ?>" style="max-width:100%; cursor:pointer;" onclick="bukaPreview(this.src)">
                                 </div>
                             <?php endif; ?>
 
@@ -183,190 +205,129 @@ if (!isset($_SESSION['urutan_soal'])) {
 
     <script>
         let pelanggaran = <?php echo $dataUjian['jumlah_pelanggaran']; ?>;
-        const maxPelanggaran = 2;
-        let isUjianAktif = false;
-        let isSubmitting = false; 
-        let isModalOpen = false;
+const maxPelanggaran = 2; 
 
-        const overlay = document.getElementById('fullscreen-overlay');
-        const kontenUjian = document.getElementById('konten-ujian');
-        const elem = document.documentElement;
+let isPengawasanAktif = true; // Skenario A: Aktif dari detik pertama di layar hitam
+let isUjianFullscreen = false; 
+let isSubmitting = false; 
 
-        function bukaZoomGambar(src) {
-            document.getElementById('gambar-zoom-aktif').src = src;
-            document.getElementById('modal-zoom-gambar').style.display = 'flex';
-            isModalOpen = true; // Kunci agar Blur tidak men-trigger pelanggaran
-        }
-        function tutupZoomGambar() {
-            document.getElementById('modal-zoom-gambar').style.display = 'none';
-            setTimeout(() => { isModalOpen = false; }, 500); // Lepas kunci setelah 0.5 detik
-        }
+const overlay = document.getElementById('fullscreen-overlay');
+const kontenUjian = document.getElementById('konten-ujian');
+const elem = document.documentElement;
 
-        function tampilkanAlert(pesan) {
-            const alertBox = document.getElementById('custom-alert');
-            document.getElementById('custom-alert-text').innerHTML = pesan;
-            alertBox.style.display = 'block';
-            setTimeout(() => { alertBox.style.display = 'none'; }, 4000);
-        }
+function tampilkanAlert(pesan) {
+    const alertBox = document.getElementById('custom-alert');
+    document.getElementById('custom-alert-text').innerHTML = pesan;
+    alertBox.style.display = 'block';
+    setTimeout(() => { alertBox.style.display = 'none'; }, 4000);
+}
 
-        function bukaConfirm() {
-            const totalSoal = document.querySelectorAll('.soal-box').length;
-            const totalJawaban = document.querySelectorAll('input[type="radio"]:checked').length;
-            if(totalJawaban < totalSoal){
-                tampilkanAlert('Masih ada ' + (totalSoal - totalJawaban) + ' soal yang belum dijawab!');
-                return;
-            }
-            isModalOpen = true; // Kunci Blur
-            document.getElementById('custom-confirm').style.display = 'flex';
-        }
+function bukaConfirm() {
+    document.getElementById('custom-confirm').style.display = 'flex';
+}
 
-        function tutupConfirm() {
-            document.getElementById('custom-confirm').style.display = 'none';
-            setTimeout(() => { isModalOpen = false; }, 500); // Lepas Kunci Blur
-        }
+function tutupConfirm() {
+    document.getElementById('custom-confirm').style.display = 'none';
+}
 
-        function submitFormFinal() {
-            isSubmitting = true;
-            document.getElementById('form-ujian').submit();
-        }
+function submitFormFinal() {
+    isSubmitting = true;
+    document.getElementById('form-ujian').submit();
+}
 
-        document.getElementById('btn-fullscreen').addEventListener('click', () => {
-            if (elem.requestFullscreen) { elem.requestFullscreen(); } 
-            else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); } 
-            else if (elem.msRequestFullscreen) { elem.msRequestFullscreen(); } 
-            overlay.style.display = 'none';
-            kontenUjian.style.display = 'block';
-            isUjianAktif = true;
-        });
+document.getElementById('btn-fullscreen').addEventListener('click', () => {
+    // Memaksa layar penuh untuk menyembunyikan bilah notifikasi secara total
+    if (elem.requestFullscreen) { elem.requestFullscreen(); } 
+    else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); } 
+    
+    overlay.style.display = 'none';
+    kontenUjian.style.display = 'block';
+    setTimeout(() => { isUjianFullscreen = true; }, 1000);
+});
 
-        function mencegahAksi(e) {
-            if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74)) || (e.ctrlKey && e.keyCode == 85)) return false;
-        }
+function catatPelanggaran(jenis) {
+    if(!isPengawasanAktif || isSubmitting) return; 
+    
+    pelanggaran++;
+    document.getElementById('pelanggaran-count').innerText = pelanggaran;
 
-        // --- SISTEM PENCATAT PELANGGARAN UTAMA ---
-        function catatPelanggaran(jenis) {
-            if(!isUjianAktif || isSubmitting) return; 
+    let formData = new FormData();
+    formData.append('ujian_id', <?php echo $ujian_id; ?>);
+    formData.append('jumlah', pelanggaran);
+    navigator.sendBeacon('catat_pelanggaran.php', formData);
 
-            pelanggaran++;
-            document.getElementById('pelanggaran-count').innerText = pelanggaran;
+    if (pelanggaran >= maxPelanggaran) {
+        isSubmitting = true; 
+        document.getElementById('layar-hitam').style.display = 'flex';
+        setTimeout(() => { document.getElementById('form-ujian').submit(); }, 2000);
+    } else {
+        tampilkanAlert("⚠️ PELANGGARAN: " + jenis + " (" + pelanggaran + "/" + maxPelanggaran + ")");
+    }
+}
 
-            fetch('catat_pelanggaran.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: 'ujian_id=<?php echo $ujian_id; ?>&jumlah=' + pelanggaran
-            });
+// SENSOR KUNCI NOTIFIKASI & MEMINIMALKAN APLIKASI
+document.addEventListener('visibilitychange', () => { 
+    if (document.hidden && isPengawasanAktif && !isSubmitting) {
+        catatPelanggaran('Membuka Aplikasi Lain / Keluar Browser');
+    }
+});
 
-            if (pelanggaran >= maxPelanggaran) {
-                isSubmitting = true; 
-                document.getElementById('layar-hitam').style.display = 'flex';
-                setTimeout(() => { document.getElementById('form-ujian').submit(); }, 2000);
-            } else {
-                tampilkanAlert("⚠️ PELANGGARAN: " + jenis + "<br>Pelanggaran ke: " + pelanggaran + " / " + maxPelanggaran);
-            }
-        }
+window.addEventListener('blur', () => {
+    if(isPengawasanAktif && !isSubmitting) {
+        // Memicu pelanggaran jika bilah notifikasi ditarik atau chat bubble terbuka
+        catatPelanggaran('Membuka Notifikasi / Kehilangan Fokus Layar');
+    }
+});
 
-        // --- 1. SENSOR RECENT APPS / MINIMIZE (PALING KUAT) ---
-        document.addEventListener('visibilitychange', () => { 
-            if (document.hidden && isUjianAktif && !isSubmitting) {
-                catatPelanggaran('Membuka Aplikasi Lain (Background)');
-            }
-        });
+document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement && isUjianFullscreen && !isSubmitting) {
+        catatPelanggaran("Keluar Mode Layar Penuh");
+        overlay.style.display = 'flex'; 
+        kontenUjian.style.display = 'none';
+        isUjianFullscreen = false; 
+    }
+});
 
-        // --- 2. SENSOR BUBBLE CHAT & POP UP (BLUR) ---
-        window.addEventListener('blur', () => {
-            // Hanya deteksi jika isModalOpen = false (siswa tidak sedang nge-zoom gambar/konfirmasi)
-            if(isUjianAktif && !isSubmitting && !isModalOpen){
-                catatPelanggaran('Fokus Browser Hilang (Bubble / Notif)');
-            }
-        });
+// HEARTBEAT PING
+setInterval(() => {
+    if(!isPengawasanAktif || isSubmitting) return;
+    let formPing = new FormData();
+    formPing.append('ujian_id', <?php echo $ujian_id; ?>);
+    fetch('ping_ujian.php', { method: 'POST', body: formPing })
+    .then(res => res.json())
+    .then(data => {
+        if(data.status === 'stop') window.location.href = 'selesai_ujian.php';
+    }).catch(() => {});
+}, 5000); 
 
-        // --- 3. SENSOR KELUAR FULLSCREEN ---
-        document.addEventListener('fullscreenchange', () => {
-            if (!document.fullscreenElement && isUjianAktif && !isSubmitting) {
-                catatPelanggaran("Keluar Mode Layar Penuh");
-                overlay.style.display = 'flex'; 
-                kontenUjian.style.display = 'none';
-                isUjianAktif = false; 
-            }
-        });
+// TIMER
+let sisaDetik = <?php echo $sisa_detik; ?>;
+const timerElement = document.getElementById('timer');
+const formUjian = document.getElementById('form-ujian');
 
-        // --- 4. SENSOR STATUS BAR / TARIK NOTIFIKASI ---
-        document.addEventListener('touchstart', (e) => {
-            if(!isUjianAktif || isSubmitting) return;
-            // Jika jari menyentuh 30 pixel teratas layar (area notifikasi ditarik)
-            if (e.touches[0].clientY < 50) {
-                catatPelanggaran("Membuka Bilah Notifikasi");
-            }
-        }, {passive: true});
+const hitungMundur = setInterval(() => {
+    if (sisaDetik <= 0) {
+        clearInterval(hitungMundur);
+        isSubmitting = true;
+        tampilkanAlert("Waktu habis! Mengirim otomatis...");
+        setTimeout(() => { formUjian.submit(); }, 2000);
+    } else {
+        let jam = Math.floor(sisaDetik / 3600);
+        let menit = Math.floor((sisaDetik % 3600) / 60);
+        let detik = (sisaDetik % 3600) % 60;
+        timerElement.innerText = (jam < 10 ? "0" + jam : jam) + ":" + (menit < 10 ? "0" + menit : menit) + ":" + (detik < 10 ? "0" + detik : detik);
+        sisaDetik--;
+    }
+}, 1000);
 
-        // --- 5. SENSOR SPLIT SCREEN ---
-        // Hanya melihat perubahan lebar drastis untuk mencegah false-positive saat scroll biasa
-        let lastWidth = window.innerWidth;
-        window.addEventListener('resize', () => {
-            if(!isUjianAktif || isSubmitting) return;
-            const selisihWidth = Math.abs(window.innerWidth - lastWidth);
-            if(selisihWidth > 150){ 
-                catatPelanggaran('Layar Terbelah (Split Screen)');
-            }
-            lastWidth = window.innerWidth;
-        });
+function bukaPreview(srcGambar) {
+    document.getElementById('imgPreview').src = srcGambar;
+    document.getElementById('previewModal').style.display = 'flex';
+}
 
-        // --- 6. SENSOR SCREENSHOT LAPTOP ---
-        document.addEventListener('keyup', (e) => {
-            if (e.key === 'PrintScreen' || e.keyCode === 44) {
-                catatPelanggaran("Aktivitas Screenshot!");
-                navigator.clipboard.writeText(''); 
-            }
-        });
-
-        // --- 7. SISTEM PING (DETAK JANTUNG DATABASE) ---
-        // Sistem ini akan lapor ke server tiap 3 detik untuk sinkronisasi Database
-        setInterval(() => {
-            if(!isUjianAktif || isSubmitting) return;
-            fetch('ping_ujian.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: 'ujian_id=<?php echo $ujian_id; ?>'
-            })
-            .then(res => res.json())
-            .then(data => {
-                if(data.status === 'stop') {
-                    window.location.href = 'selesai_ujian.php';
-                }
-            }).catch(() => {}); // Abaikan jika error koneksi sebentar
-        }, 5000); 
-
-        // TIMER UJIAN
-        let sisaDetik = <?php echo $sisa_detik; ?>;
-        const timerElement = document.getElementById('timer');
-        const formUjian = document.getElementById('form-ujian');
-
-        const hitungMundur = setInterval(() => {
-            if (sisaDetik <= 0) {
-                clearInterval(hitungMundur);
-                isSubmitting = true;
-                tampilkanAlert("Waktu ujian habis!<br>Mengirim jawaban otomatis...");
-                setTimeout(() => { formUjian.submit(); }, 2500);
-            } else {
-                let jam = Math.floor(sisaDetik / 3600);
-                let menit = Math.floor((sisaDetik % 3600) / 60);
-                let detik = (sisaDetik % 3600) % 60;
-                timerElement.innerText = (jam < 10 ? "0" + jam : jam) + ":" + (menit < 10 ? "0" + menit : menit) + ":" + (detik < 10 ? "0" + detik : detik);
-                sisaDetik--;
-            }
-        }, 1000); 
-        
-        window.addEventListener('beforeunload', function (e) {
-            if (isSubmitting) return; 
-            e.preventDefault();
-            e.returnValue = ''; 
-        });
-        
-        history.pushState(null, null, location.href);
-        window.onpopstate = function () {
-            history.go(1);
-            tampilkanAlert("Dilarang menekan tombol BACK!");
-        };
+function tutupPreview() {
+    document.getElementById('previewModal').style.display = 'none';
+}
     </script>
 </body>
 </html>

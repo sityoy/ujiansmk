@@ -58,18 +58,38 @@ try {
         const canvas = document.getElementById('canvas');
         const btnMulai = document.getElementById('btn-mulai');
 
+        let isCameraReady = false; 
+        let isUploading = false;
+
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
         .then(stream => {
             video.srcObject = stream;
             btnMulai.innerText = "Ambil Foto & Mulai Ujian";
             btnMulai.disabled = false;
+            setTimeout(() => { isCameraReady = true; }, 2000);
         })
         .catch(err => {
             alert("Akses kamera ditolak atau kamera tidak ditemukan!");
             btnMulai.innerText = "Kamera Error";
         });
 
+        // SENSOR SUPER GALAK (SKENARIO C)
+        // Jika siswa meminimalkan halaman atau mencoba menarik bilah notifikasi / chat bubble
+        window.addEventListener('blur', () => {
+            if(isCameraReady && !isUploading) {
+                alert("⚠️ PELANGGARAN KETAT! Dilarang membuka notifikasi atau keluar dari aplikasi saat verifikasi wajah! Halaman dimuat ulang.");
+                window.location.reload();
+            }
+        });
+
+        document.addEventListener('visibilitychange', () => {
+            if(document.hidden && isCameraReady && !isUploading) {
+                window.location.reload();
+            }
+        });
+
         btnMulai.addEventListener('click', () => {
+            isUploading = true;
             btnMulai.disabled = true;
             btnMulai.innerText = "Memproses Ujian...";
 
@@ -91,14 +111,12 @@ try {
                         window.location = 'ujian.php';
                     } else {
                         alert(data.message);
-                        btnMulai.disabled = false;
-                        btnMulai.innerText = "Coba Lagi";
+                        window.location.reload();
                     }
                 })
                 .catch(error => {
-                    alert('Gagal terhubung ke server. Pastikan folder assets/ memiliki izin (permission).');
-                    btnMulai.disabled = false;
-                    btnMulai.innerText = "Coba Lagi";
+                    alert('Gagal terhubung ke server.');
+                    window.location.reload();
                 });
             }, 'image/jpeg', 0.8);
         });

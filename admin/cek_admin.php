@@ -43,13 +43,5 @@ $_SESSION['last_activity'] = time();
 $stmtUpdateActive = $pdo->prepare("UPDATE admin SET last_active = NOW() WHERE id = ?");
 $stmtUpdateActive->execute([$admin_id]);
 
-// Pastikan query ke tabel jawaban_siswa memanggil kolom 'jawaban'
-$stmtJawaban = $pdo->prepare("SELECT soal_id, jawaban_dipilih FROM jawaban_siswa WHERE ujian_id = ?");
-$stmtJawaban->execute([$ujian_id]);
-$jawaban_siswa = [];
 
-while ($row = $stmtJawaban->fetch(PDO::FETCH_ASSOC)) {
-    // Simpan jawaban dengan huruf besar agar pencocokan kunci jawaban akurat
-    $jawaban_siswa[$row['soal_id']] = strtoupper(trim($row['jawaban_dipilih']));
-}
 ?>

@@ -43,11 +43,7 @@ $daftar_soal = $stmtSoal->fetchAll(PDO::FETCH_ASSOC);
 
 // 5. Dekode Jawaban Siswa
 // Mengambil string JSON jawaban siswa (Misal: {"12":"A", "15":"C"}) lalu diubah menjadi Array PHP
-$kolom_jawaban = $data['jawaban'] ?? ($data['jawaban_siswa'] ?? '{}');
-$jawaban_siswa = json_decode($kolom_jawaban, true);
-if (!is_array($jawaban_siswa)) {
-    $jawaban_siswa = []; // Fallback jika kosong atau bukan JSON
-}
+
 
 ?>
 <!DOCTYPE html>
