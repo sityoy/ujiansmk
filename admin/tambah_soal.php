@@ -1,221 +1,180 @@
 <?php
-session_start();
-require '../koneksi.php';
+// session_start();
+require 'cek_admin.php';
 
-if (!isset($_SESSION['admin_id'])) {
-    header("Location: login.php");
-    exit;
-}
+// Pastikan hanya admin yang bisa akses (Sesuaikan dengan session admin Bapak)
+// if (!isset($_SESSION['admin_id'])) {
+//     header("Location: login.php");
+//     exit;
+// }
+
+$pesan = '';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $mata_pelajaran = $_POST['mata_pelajaran'];
-    $kelas = $_POST['kelas'];
-    
-    // ENCODING KHUSUS: Menggunakan ENT_QUOTES dan UTF-8
-    // $deskripsi = nl2br(htmlspecialchars($_POST['deskripsi'] ?? '', ENT_QUOTES, 'UTF-8'));
-    // $pertanyaan = nl2br(htmlspecialchars($_POST['pertanyaan'] ?? '', ENT_QUOTES, 'UTF-8'));
-    // GANTI DARI:
+    $kelas          = strtoupper(trim($_POST['kelas']));
+    $deskripsi      = $_POST['deskripsi'] ?? '';
+    $pertanyaan     = $_POST['pertanyaan'];
+    $kunci_jawaban  = strtoupper(trim($_POST['kunci_jawaban']));
 
+    $opsi_a = $_POST['opsi_a'];
+    $opsi_b = $_POST['opsi_b'];
+    $opsi_c = $_POST['opsi_c'];
+    $opsi_d = $_POST['opsi_d'];
+    $opsi_e = $_POST['opsi_e'];
 
-// MENJADI (Hapus htmlspecialchars agar tag HTML tetap tersimpan):
-$deskripsi = nl2br($_POST['deskripsi'] ?? '');
-$pertanyaan = nl2br($_POST['pertanyaan'] ?? '');
-    
-    // Default fallback ke string kosong ('') jika teks tidak diisi
-    $opsi_a = htmlspecialchars($_POST['opsi_a'] ?? '', ENT_QUOTES, 'UTF-8');
-    $opsi_b = htmlspecialchars($_POST['opsi_b'] ?? '', ENT_QUOTES, 'UTF-8');
-    $opsi_c = htmlspecialchars($_POST['opsi_c'] ?? '', ENT_QUOTES, 'UTF-8');
-    $opsi_d = htmlspecialchars($_POST['opsi_d'] ?? '', ENT_QUOTES, 'UTF-8');
-    $opsi_e = htmlspecialchars($_POST['opsi_e'] ?? '', ENT_QUOTES, 'UTF-8');
-    $kunci = $_POST['kunci_jawaban'];
-    
-    $submit_action = $_POST['submit_action'] ?? 'kembali';
-    
-    $gambar = "";
-    $target_dir = "../uploads/";
-    if (!file_exists($target_dir)) mkdir($target_dir, 0777, true);
-
-    if (isset($_FILES['gambar']) && $_FILES['gambar']['error'] == 0) {
-        $ext = pathinfo($_FILES['gambar']['name'], PATHINFO_EXTENSION);
-        $gambar = "soal_utama_" . time() . "." . $ext;
-        move_uploaded_file($_FILES['gambar']['tmp_name'], $target_dir . $gambar);
-    }
-
-    $gbr_opsi = ['a' => '', 'b' => '', 'c' => '', 'd' => '', 'e' => ''];
-    foreach (['a', 'b', 'c', 'd', 'e'] as $opt) {
-        if (isset($_FILES['gambar_'.$opt]) && $_FILES['gambar_'.$opt]['error'] == 0) {
-            $ext = pathinfo($_FILES['gambar_'.$opt]['name'], PATHINFO_EXTENSION);
-            $nama_file = "opsi_{$opt}_" . time() . "_" . rand(10,99) . "." . $ext;
-            move_uploaded_file($_FILES['gambar_'.$opt]['tmp_name'], $target_dir . $nama_file);
-            $gbr_opsi[$opt] = $nama_file;
+    // Fungsi canggih untuk menangani Upload Gambar dengan aman
+    function uploadGambar($input_name) {
+        $folder_upload = '../uploads/';
+        
+        // Buat folder otomatis jika belum ada di VPS
+        if (!file_exists($folder_upload)) {
+            @mkdir($folder_upload, 0755, true);
         }
+
+        if (isset($_FILES[$input_name]) && $_FILES[$input_name]['error'] === UPLOAD_ERR_OK) {
+            $file_tmp  = $_FILES[$input_name]['tmp_name'];
+            $file_name = $_FILES[$input_name]['name'];
+            $file_size = $_FILES[$input_name]['size'];
+            $file_ext  = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+            
+            $allowed_ext = ['jpg', 'jpeg', 'png', 'gif'];
+
+            // Validasi Ekstensi dan Ukuran (Maks 2MB per gambar)
+            if (in_array($file_ext, $allowed_ext) && $file_size <= 2097152) {
+                // Beri nama unik agar tidak saling menimpa
+                $new_file_name = $input_name . '_' . time() . '_' . uniqid() . '.' . $file_ext;
+                $tujuan = $folder_upload . $new_file_name;
+                
+                if (move_uploaded_file($file_tmp, $tujuan)) {
+                    return $new_file_name;
+                }
+            }
+        }
+        return null; // Kembalikan null jika tidak ada upload atau gagal
     }
+
+    // Proses semua upload gambar
+    $gambar_soal = uploadGambar('gambar');
+    $gambar_a    = uploadGambar('gambar_a');
+    $gambar_b    = uploadGambar('gambar_b');
+    $gambar_c    = uploadGambar('gambar_c');
+    $gambar_d    = uploadGambar('gambar_d');
+    $gambar_e    = uploadGambar('gambar_e');
 
     try {
-        $stmt = $pdo->prepare("INSERT INTO soal (mata_pelajaran, kelas, deskripsi, gambar, pertanyaan, opsi_a, gambar_a, opsi_b, gambar_b, opsi_c, gambar_c, opsi_d, gambar_d, opsi_e, gambar_e, kunci_jawaban) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt = $pdo->prepare("
+            INSERT INTO soal 
+            (mata_pelajaran, kelas, deskripsi, pertanyaan, gambar, opsi_a, gambar_a, opsi_b, gambar_b, opsi_c, gambar_c, opsi_d, gambar_d, opsi_e, gambar_e, kunci_jawaban) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        
         $stmt->execute([
-            $mata_pelajaran,
-            $kelas,
-            $deskripsi,
-            $gambar,
-            $pertanyaan,
-            $opsi_a,
-            $gbr_opsi['a'],
-            $opsi_b,
-            $gbr_opsi['b'],
-            $opsi_c,
-            $gbr_opsi['c'],
-            $opsi_d,
-            $gbr_opsi['d'],
-            $opsi_e,
-            $gbr_opsi['e'],
-            $kunci
+            $mata_pelajaran, $kelas, $deskripsi, $pertanyaan, $gambar_soal, 
+            $opsi_a, $gambar_a, $opsi_b, $gambar_b, $opsi_c, $gambar_c, 
+            $opsi_d, $gambar_d, $opsi_e, $gambar_e, $kunci_jawaban
         ]);
-        
-        if ($submit_action == 'tambah_lagi') {
-            echo "<script>alert('Soal berhasil disimpan! Silakan input soal berikutnya.'); window.location='tambah_soal.php?mapel=".urlencode($mata_pelajaran)."';</script>";
-        } else {
-            echo "<script>alert('Soal berhasil disimpan!'); window.location='soal.php';</script>";
-        }
-        
+
+        $pesan = "<div class='alert success'>✅ Soal berhasil ditambahkan ke database!</div>";
     } catch (Exception $e) {
-        die("Gagal menyimpan soal: " . $e->getMessage());
+        $pesan = "<div class='alert error'>❌ Gagal menyimpan soal: " . $e->getMessage() . "</div>";
     }
 }
-
-$selected_mapel = $_GET['mapel'] ?? '';
 ?>
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Tambah Soal Manual</title>
+    <title>Tambah Soal - Admin</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; padding: 20px; color: #333; }
-        .card { background: white; padding: 40px; border-radius: 8px; max-width: 900px; margin: auto; border-top: 5px solid #007bff; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        h2 { margin-top: 0; color: #2c3e50; font-size: 24px; border-bottom: 2px solid #f0f2f5; padding-bottom: 15px; margin-bottom: 25px; }
-        .form-group { margin-bottom: 25px; }
-        .opsi-box { background: #f8f9fa; padding: 20px; border-left: 5px solid #28a745; margin-bottom: 15px; border-radius: 0 8px 8px 0; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
-        label { font-weight: 600; display: block; margin-bottom: 8px; color: #495057; font-size: 14.5px; }
-        input[type="text"], select { width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 6px; box-sizing: border-box; font-size: 15px; transition: border-color 0.15s ease-in-out; }
-        textarea { width: 100%; padding: 15px; border: 1px solid #ced4da; border-radius: 6px; box-sizing: border-box; font-family: inherit; font-size: 15px; line-height: 1.6; min-height: 140px; resize: vertical; background-color: #fff; transition: border-color 0.15s ease-in-out; }
-        input[type="text"]:focus, select:focus, textarea:focus { border-color: #80bdff; outline: 0; box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25); }
-        input[type="file"] { display: block; margin-top: 5px; font-size: 14px; padding: 8px; border: 1px dashed #ced4da; width: 100%; border-radius: 6px; background: #fdfdfd; cursor: pointer; }
-        input[type="file"]:hover { border-color: #007bff; background: #f1f8ff; }
-        .preview-container { display: none; margin-top: 15px; text-align: center; background: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px solid #e9ecef; }
-        .preview-img { max-width: 100%; max-height: 250px; border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
-        .btn-group { display: flex; gap: 12px; margin-top: 30px; border-top: 2px solid #f0f2f5; padding-top: 20px; }
-        .btn { padding: 12px 25px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 15px; transition: all 0.2s; }
-        .btn-primary { background: #007bff; color: white; }
-        .btn-success { background: #28a745; color: white; }
-        .btn-batal { background: #6c757d; color: white; text-decoration: none; padding: 12px 25px; border-radius: 6px; font-weight: bold; font-size: 15px; }
-        .btn:hover, .btn-batal:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); opacity: 0.9; }
-        .hint-text { font-size: 13px; color: #6c757d; margin-top: 5px; display: block; }
+        body { font-family: Arial, sans-serif; background: #f4f6f9; padding: 20px; color: #333; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-top: 5px solid #007bff; }
+        h2 { margin-top: 0; color: #007bff; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .form-group { margin-bottom: 20px; }
+        label { font-weight: bold; display: block; margin-bottom: 8px; font-size: 14px; }
+        input[type="text"], select, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-family: Arial; }
+        textarea { resize: vertical; min-height: 100px; }
+        .opsi-box { background: #f9f9f9; padding: 15px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 15px; display: flex; gap: 15px; align-items: flex-start; }
+        .opsi-huruf { font-size: 20px; font-weight: bold; color: #007bff; padding-top: 10px; }
+        .opsi-input { flex-grow: 1; }
+        input[type="file"] { font-size: 13px; color: #666; margin-top: 8px; }
+        .btn-submit { background: #28a745; color: white; border: none; padding: 15px 25px; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 20px; transition: 0.3s; }
+        .btn-submit:hover { background: #218838; }
+        .alert { padding: 15px; border-radius: 5px; margin-bottom: 20px; font-weight: bold; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h2>✨ Tambah Soal Manual</h2>
-        <form method="POST" enctype="multipart/form-data">
-            
-            <div class="form-group">
-                <label>Mata Pelajaran (*Wajib):</label>
-                <select name="mata_pelajaran" required>
-                    <option value="">-- Pilih Mata Pelajaran --</option>
-                    <option value="Bahasa Indonesia" <?php if($selected_mapel == 'Bahasa Indonesia') echo 'selected'; ?>>Bahasa Indonesia</option>
-                    <option value="MTK" <?php if($selected_mapel == 'MTK') echo 'selected'; ?>>MTK</option>
-                    <option value="Bahasa Inggris" <?php if($selected_mapel == 'Bahasa Inggris') echo 'selected'; ?>>Bahasa Inggris</option>
-                    <option value="PAI" <?php if($selected_mapel == 'PAI') echo 'selected'; ?>>PAI</option>
-                </select>
-                <label>Kelas(*Wajib):</label>
 
+<div class="container">
+    <h2>✍️ Input Soal Baru</h2>
+    <a href="bank_soal.php" style="display:inline-block; margin-bottom: 20px; color: #666; text-decoration:none;">⬅️ Kembali ke Bank Soal</a>
+    
+    <?php echo $pesan; ?>
+
+    <!-- Wajib pakai enctype="multipart/form-data" untuk kirim gambar -->
+    <form action="" method="POST" enctype="multipart/form-data">
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div class="form-group">
+                <label>Mata Pelajaran</label>
+                <input type="text" name="mata_pelajaran" placeholder="Contoh: Bahasa Indonesia" required>
+            </div>
+            <div class="form-group">
+                <label>Kelas</label>
                 <select name="kelas" required>
-                    <option value="">Pilih Kelas</option>
-                    <option value="X">X</option>
-                    <option value="XI">XI</option>
+                    <option value="">-- Pilih Kelas --</option>
+                    <option value="X">Kelas X</option>
+                    <option value="XI">Kelas XI</option>
+                    <option value="XII">Kelas XII</option>
                 </select>
             </div>
-            
+        </div>
 
-            <div class="form-group">
-                <label>1. Deskripsi / Pernyataan (Opsional):</label>
-                <span class="hint-text">Aman untuk Copy-Paste dari Word. Tekan Enter untuk baris baru.</span>
-                <textarea name="deskripsi" placeholder="Ketik atau paste deskripsi soal di sini..."></textarea>
+        <div class="form-group">
+            <label>Deskripsi/Bacaan (Opsional)</label>
+            <textarea name="deskripsi" placeholder="Isi jika ada wacana/teks bacaan sebelum pertanyaan..."></textarea>
+        </div>
+
+        <div class="form-group">
+            <label>Pertanyaan Soal *</label>
+            <textarea name="pertanyaan" placeholder="Ketik pertanyaan di sini..." required></textarea>
+            <input type="file" name="gambar" accept="image/*">
+            <small style="color:#777; display:block;">*Opsional: Upload gambar untuk soal (Maks 2MB, format JPG/PNG)</small>
+        </div>
+
+        <h3 style="margin-top:30px; margin-bottom:15px; color:#555;">Pilihan Ganda</h3>
+
+        <?php 
+        $huruf = ['A', 'B', 'C', 'D', 'E'];
+        foreach($huruf as $h): 
+        ?>
+        <div class="opsi-box">
+            <div class="opsi-huruf"><?php echo $h; ?></div>
+            <div class="opsi-input">
+                <textarea name="opsi_<?php echo strtolower($h); ?>" placeholder="Teks untuk opsi <?php echo $h; ?>..." style="min-height:60px;"></textarea>
+                <input type="file" name="gambar_<?php echo strtolower($h); ?>" accept="image/*">
             </div>
-            
-            <div class="form-group">
-                <label>2. Upload Gambar Soal Utama (Opsional):</label>
-                <span class="hint-text">Gunakan gambar untuk teks hitungan/rumus yang rumit.</span>
-                <input type="file" name="gambar" accept="image/*" onchange="previewImage(event, 'preview_utama')">
-                <div id="preview_utama_container" class="preview-container">
-                    <img id="preview_utama" class="preview-img" src="" alt="Pratinjau Gambar Utama">
-                </div>
-            </div>
+        </div>
+        <?php endforeach; ?>
 
-            <div class="form-group">
-                <label>3. Soal / Pertanyaan (*Wajib):</label>
-                <small class="hint-text">
-                    Tips Format: 
-                    <i>&lt;i&gt;Teks Miring&lt;/i&gt;</i> | 
-                    Pangkat: <i>&lt;sup&gt;2&lt;/sup&gt;</i> (Contoh: x<sup>2</sup>)
-                </small>
-                <textarea name="pertanyaan" required placeholder="Ketik pertanyaan..."></textarea>
-            </div>
+        <div class="form-group" style="margin-top: 30px; background: #fff3cd; padding: 20px; border-radius: 5px; border: 1px solid #ffeeba;">
+            <label style="color: #856404; font-size: 16px;">Kunci Jawaban Benar *</label>
+            <select name="kunci_jawaban" required style="font-size: 16px; font-weight: bold; padding: 12px;">
+                <option value="">-- Pilih Kunci Jawaban --</option>
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+                <option value="D">D</option>
+                <option value="E">E</option>
+            </select>
+        </div>
 
-            <hr style="margin: 40px 0 30px; border: 1px solid #e9ecef;">
-            <h3 style="color: #2c3e50; margin-bottom: 20px;">Pilihan Ganda</h3>
-            <p style="font-size: 14px; color: #dc3545; background: #f8d7da; padding: 10px; border-radius: 6px;">
-                💡 <b>Tips Rumus Matematika:</b> Jika opsi berupa rumus pecahan/matriks, gunakan Snipping Tool (<i>Windows + Shift + S</i>) di Word, lalu upload sebagai gambar. Kosongkan saja Teks Opsinya.
-            </p>
+        <button type="submit" class="btn-submit">💾 Simpan Soal</button>
+    </form>
+</div>
 
-            <?php foreach(['A', 'B', 'C', 'D', 'E'] as $opt): $low = strtolower($opt); ?>
-            <div class="opsi-box">
-                <!-- REQUIRED DIHILANGKAN DI SINI -->
-                <label style="color: #28a745; font-size: 16px;">Opsi <?php echo $opt; ?> Teks (Opsional jika pakai gambar):</label>
-                <input type="text" name="opsi_<?php echo $low; ?>" autocomplete="off" placeholder="Ketik teks opsi atau biarkan kosong jika upload gambar ->">
-                
-                <label style="font-weight: 600; font-size: 13.5px; margin-top: 15px; color: #6c757d;">Upload Gambar Opsi <?php echo $opt; ?>:</label>
-                <input type="file" name="gambar_<?php echo $low; ?>" accept="image/*" onchange="previewImage(event, 'preview_<?php echo $low; ?>')">
-                <div id="preview_<?php echo $low; ?>_container" class="preview-container">
-                    <img id="preview_<?php echo $low; ?>" class="preview-img" src="" alt="Pratinjau Opsi <?php echo $opt; ?>">
-                </div>
-            </div>
-            <?php endforeach; ?>
-
-            <div class="form-group" style="background: #e9ecef; padding: 20px; border-radius: 8px; margin-top: 25px;">
-                <label style="font-size: 16px;">Kunci Jawaban yang Benar:</label>
-                <select name="kunci_jawaban" required style="max-width: 200px; font-weight: bold; border: 2px solid #007bff;">
-                    <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option><option value="E">E</option>
-                </select>
-            </div>
-
-            <div class="btn-group">
-                <button type="submit" name="submit_action" value="tambah_lagi" class="btn btn-success">💾 Simpan & Tambah Lagi</button>
-                <button type="submit" name="submit_action" value="kembali" class="btn btn-primary">💾 Simpan & Kembali</button>
-                <a href="soal.php" class="btn-batal">❌ Batal</a>
-            </div>
-        </form>
-    </div>
-
-    <script>
-        function previewImage(event, previewId) {
-            var input = event.target;
-            var reader = new FileReader();
-            var containerId = previewId + '_container';
-            
-            reader.onload = function(){
-                var imgElement = document.getElementById(previewId);
-                imgElement.src = reader.result;
-                document.getElementById(containerId).style.display = 'block';
-            };
-            
-            if(input.files && input.files[0]) {
-                reader.readAsDataURL(input.files[0]);
-            } else {
-                document.getElementById(containerId).style.display = 'none';
-                document.getElementById(previewId).src = "";
-            }
-        }
-    </script>
 </body>
 </html>

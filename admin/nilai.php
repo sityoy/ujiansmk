@@ -121,6 +121,9 @@ $data_nilai = $stmt->fetchAll();
                 </select>
                 
                 <button type="submit" class="btn-primary">Tampilkan</button>
+                <a href="export_nilai.php?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>" style="background: #28a745; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; font-weight: bold; margin-left: 10px;">
+                📥 Download Excel
+                </a>
             </form>
         </div>
 

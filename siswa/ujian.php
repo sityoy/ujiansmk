@@ -37,11 +37,17 @@ if (strpos($kelas, 'XII') === 0) { $kelas = 'XII'; }
 elseif (strpos($kelas, 'XI') === 0) { $kelas = 'XI'; } 
 else { $kelas = 'X'; }
 
+// LOGIKA ACAK SOAL & PENGECUALIAN B. INDO
 if (!isset($_SESSION['urutan_soal'])) {
-    $stmtSoal = $pdo->prepare("SELECT * FROM soal WHERE mata_pelajaran = ? AND kelas = ?");
+    $stmtSoal = $pdo->prepare("SELECT * FROM soal WHERE mata_pelajaran = ? AND kelas = ? ORDER BY id ASC");
     $stmtSoal->execute([$mapel_aktif, $kelas]);
     $daftar_soal = $stmtSoal->fetchAll(PDO::FETCH_ASSOC);
-    shuffle($daftar_soal);
+    
+    $is_bindo = (stripos($mapel_aktif, 'bahasa indonesia') !== false || stripos($mapel_aktif, 'b. indonesia') !== false);
+    if (!$is_bindo) {
+        shuffle($daftar_soal);
+    }
+    
     $_SESSION['urutan_soal'] = $daftar_soal;
 } else {
     $daftar_soal = $_SESSION['urutan_soal'];
@@ -57,7 +63,7 @@ if (!isset($_SESSION['urutan_soal'])) {
         body { 
             font-family: Arial, sans-serif; background: #f4f7f6; margin: 0; padding: 10px; 
             user-select: none; -moz-user-select: none; -webkit-user-select: none; -ms-user-select: none;
-            -webkit-touch-callout: none; overscroll-behavior-y: none; 
+            -webkit-touch-callout: none; overscroll-behavior-y: none; touch-action: manipulation;
         }
         
         #fullscreen-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; text-align: center; padding: 20px; box-sizing: border-box; }
@@ -108,7 +114,7 @@ if (!isset($_SESSION['urutan_soal'])) {
         <h2 style="color: #ffc107; font-size: 28px;">Persiapan Ujian: <?php echo htmlspecialchars($mapel_aktif); ?></h2>
         <p style="max-width: 600px; line-height: 1.6; font-size: 16px;">
             Sistem mendeteksi aktivitas Layar Terbelah (Split Screen), Gelembung Chat (Bubble), dan Notifikasi. <br><br>
-            <strong>5 kali pelanggaran = ujian otomatis selesai.</strong>
+            <strong>2 kali pelanggaran = ujian otomatis selesai.</strong>
         </p>
         <button id="btn-fullscreen">Mulai Ujian</button>
     </div>
@@ -138,7 +144,7 @@ if (!isset($_SESSION['urutan_soal'])) {
                             
                             <?php if(!empty($s['deskripsi'])): ?>
                                 <div style="background: #f9f9f9; padding: 15px; border-left: 4px solid #17a2b8; margin-bottom: 15px; overflow-x: auto; border-radius: 4px; font-size: 15px;">
-                                    <?php echo $s['deskripsi']; ?>
+                                    <?php echo htmlspecialchars_decode($s['deskripsi']); ?>
                                 </div>
                             <?php endif; ?>
 
@@ -149,21 +155,23 @@ if (!isset($_SESSION['urutan_soal'])) {
                             <?php endif; ?>
 
                             <div style="margin-bottom: 20px; font-size: 16px; line-height: 1.6;">
-                                <?php echo $s['pertanyaan']; ?>
+                                <?php echo htmlspecialchars_decode($s['pertanyaan']); ?>
                             </div>
                             
                             <?php 
+                                // Opsi PG Diacak Posisinya
                                 $opsi = ['A' => ['teks' => $s['opsi_a'], 'gbr' => $s['gambar_a']], 'B' => ['teks' => $s['opsi_b'], 'gbr' => $s['gambar_b']], 'C' => ['teks' => $s['opsi_c'], 'gbr' => $s['gambar_c']], 'D' => ['teks' => $s['opsi_d'], 'gbr' => $s['gambar_d']], 'E' => ['teks' => $s['opsi_e'], 'gbr' => $s['gambar_e']]];
                                 $keys = array_keys($opsi);
                                 shuffle($keys);
                                 $huruf_tampil = ['A', 'B', 'C', 'D', 'E'];
                                 
                                 foreach($keys as $index => $k): 
+                                    if(empty($opsi[$k]['teks']) && empty($opsi[$k]['gbr'])) continue;
                             ?>
                                 <label class="opsi">
-                                    <input type="radio" name="jawaban[<?php echo $s['id']; ?>]" value="<?php echo $k; ?>"> 
+                                    <input type="radio" name="jawaban[<?php echo $s['id']; ?>]" value="<?php echo strtolower($k); ?>"> 
                                     <div style="display: flex; flex-direction: column;">
-                                        <span><strong><?php echo $huruf_tampil[$index]; ?>.</strong> <?php echo $opsi[$k]['teks']; ?></span>
+                                        <span><strong><?php echo $huruf_tampil[$index]; ?>.</strong> <?php echo htmlspecialchars_decode($opsi[$k]['teks']); ?></span>
                                         <?php if(!empty($opsi[$k]['gbr'])): ?>
                                             <div style="margin-top: 10px; margin-left: 20px;">
                                                 <img src="../uploads/<?php echo htmlspecialchars($opsi[$k]['gbr']); ?>" style="max-height: 120px; border-radius: 4px; border: 1px solid #ccc; cursor: zoom-in;" onclick="bukaZoomGambar(this.src)">
@@ -183,7 +191,7 @@ if (!isset($_SESSION['urutan_soal'])) {
 
     <script>
         let pelanggaran = <?php echo $dataUjian['jumlah_pelanggaran']; ?>;
-        const maxPelanggaran = 2;
+        const maxPelanggaran = 2; // MAKSIMAL 2 KALI
         let isUjianAktif = false;
         let isSubmitting = false; 
         let isModalOpen = false;
@@ -195,11 +203,11 @@ if (!isset($_SESSION['urutan_soal'])) {
         function bukaZoomGambar(src) {
             document.getElementById('gambar-zoom-aktif').src = src;
             document.getElementById('modal-zoom-gambar').style.display = 'flex';
-            isModalOpen = true; // Kunci agar Blur tidak men-trigger pelanggaran
+            isModalOpen = true; 
         }
         function tutupZoomGambar() {
             document.getElementById('modal-zoom-gambar').style.display = 'none';
-            setTimeout(() => { isModalOpen = false; }, 500); // Lepas kunci setelah 0.5 detik
+            setTimeout(() => { isModalOpen = false; }, 500); 
         }
 
         function tampilkanAlert(pesan) {
@@ -216,13 +224,13 @@ if (!isset($_SESSION['urutan_soal'])) {
                 tampilkanAlert('Masih ada ' + (totalSoal - totalJawaban) + ' soal yang belum dijawab!');
                 return;
             }
-            isModalOpen = true; // Kunci Blur
+            isModalOpen = true; 
             document.getElementById('custom-confirm').style.display = 'flex';
         }
 
         function tutupConfirm() {
             document.getElementById('custom-confirm').style.display = 'none';
-            setTimeout(() => { isModalOpen = false; }, 500); // Lepas Kunci Blur
+            setTimeout(() => { isModalOpen = false; }, 500); 
         }
 
         function submitFormFinal() {
@@ -236,14 +244,16 @@ if (!isset($_SESSION['urutan_soal'])) {
             else if (elem.msRequestFullscreen) { elem.msRequestFullscreen(); } 
             overlay.style.display = 'none';
             kontenUjian.style.display = 'block';
-            isUjianAktif = true;
+            
+            // Beri jeda agar sensor tidak langsung menembak
+            setTimeout(() => { isUjianAktif = true; }, 1000);
         });
 
         function mencegahAksi(e) {
             if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74)) || (e.ctrlKey && e.keyCode == 85)) return false;
         }
 
-        // --- SISTEM PENCATAT PELANGGARAN UTAMA ---
+        // --- SISTEM PENCATAT PELANGGARAN GALAK ---
         function catatPelanggaran(jenis) {
             if(!isUjianAktif || isSubmitting) return; 
 
@@ -265,22 +275,21 @@ if (!isset($_SESSION['urutan_soal'])) {
             }
         }
 
-        // --- 1. SENSOR RECENT APPS / MINIMIZE (PALING KUAT) ---
+        // 1. SENSOR PINDAH APLIKASI
         document.addEventListener('visibilitychange', () => { 
             if (document.hidden && isUjianAktif && !isSubmitting) {
                 catatPelanggaran('Membuka Aplikasi Lain (Background)');
             }
         });
 
-        // --- 2. SENSOR BUBBLE CHAT & POP UP (BLUR) ---
+        // 2. SENSOR BUBBLE CHAT & NOTIFIKASI
         window.addEventListener('blur', () => {
-            // Hanya deteksi jika isModalOpen = false (siswa tidak sedang nge-zoom gambar/konfirmasi)
             if(isUjianAktif && !isSubmitting && !isModalOpen){
-                catatPelanggaran('Fokus Browser Hilang (Bubble / Notif)');
+                catatPelanggaran('Fokus Hilang (Membuka Obrolan/Notifikasi)');
             }
         });
 
-        // --- 3. SENSOR KELUAR FULLSCREEN ---
+        // 3. SENSOR KELUAR FULLSCREEN / TARIK NOTIF ATAS
         document.addEventListener('fullscreenchange', () => {
             if (!document.fullscreenElement && isUjianAktif && !isSubmitting) {
                 catatPelanggaran("Keluar Mode Layar Penuh");
@@ -290,17 +299,15 @@ if (!isset($_SESSION['urutan_soal'])) {
             }
         });
 
-        // --- 4. SENSOR STATUS BAR / TARIK NOTIFIKASI ---
+        // 4. SENSOR TARIKAN STATUS BAR
         document.addEventListener('touchstart', (e) => {
             if(!isUjianAktif || isSubmitting) return;
-            // Jika jari menyentuh 30 pixel teratas layar (area notifikasi ditarik)
             if (e.touches[0].clientY < 50) {
                 catatPelanggaran("Membuka Bilah Notifikasi");
             }
         }, {passive: true});
 
-        // --- 5. SENSOR SPLIT SCREEN ---
-        // Hanya melihat perubahan lebar drastis untuk mencegah false-positive saat scroll biasa
+        // 5. SENSOR SPLIT SCREEN
         let lastWidth = window.innerWidth;
         window.addEventListener('resize', () => {
             if(!isUjianAktif || isSubmitting) return;
@@ -311,7 +318,7 @@ if (!isset($_SESSION['urutan_soal'])) {
             lastWidth = window.innerWidth;
         });
 
-        // --- 6. SENSOR SCREENSHOT LAPTOP ---
+        // 6. SENSOR SCREENSHOT
         document.addEventListener('keyup', (e) => {
             if (e.key === 'PrintScreen' || e.keyCode === 44) {
                 catatPelanggaran("Aktivitas Screenshot!");
@@ -319,8 +326,7 @@ if (!isset($_SESSION['urutan_soal'])) {
             }
         });
 
-        // --- 7. SISTEM PING (DETAK JANTUNG DATABASE) ---
-        // Sistem ini akan lapor ke server tiap 3 detik untuk sinkronisasi Database
+        // 7. PING SINKRONISASI
         setInterval(() => {
             if(!isUjianAktif || isSubmitting) return;
             fetch('ping_ujian.php', {
@@ -333,10 +339,10 @@ if (!isset($_SESSION['urutan_soal'])) {
                 if(data.status === 'stop') {
                     window.location.href = 'selesai_ujian.php';
                 }
-            }).catch(() => {}); // Abaikan jika error koneksi sebentar
+            }).catch(() => {});
         }, 5000); 
 
-        // TIMER UJIAN
+        // TIMER WAKTU
         let sisaDetik = <?php echo $sisa_detik; ?>;
         const timerElement = document.getElementById('timer');
         const formUjian = document.getElementById('form-ujian');
