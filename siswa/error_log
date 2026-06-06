@@ -1,0 +1,106 @@
+[04-Jun-2026 10:44:59 Asia/Jakarta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'fdngbjxi_ujiansmkbhg.pengaturan_ujian' doesn't exist in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php:11
+Stack trace:
+#0 /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php(11): PDO->query()
+#1 {main}
+  thrown in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 11
+[04-Jun-2026 10:45:03 Asia/Jakarta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'fdngbjxi_ujiansmkbhg.pengaturan_ujian' doesn't exist in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php:11
+Stack trace:
+#0 /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php(11): PDO->query()
+#1 {main}
+  thrown in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 11
+[04-Jun-2026 10:45:17 Asia/Jakarta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'fdngbjxi_ujiansmkbhg.pengaturan_ujian' doesn't exist in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php:11
+Stack trace:
+#0 /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php(11): PDO->query()
+#1 {main}
+  thrown in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 11
+[04-Jun-2026 10:45:17 Asia/Jakarta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'fdngbjxi_ujiansmkbhg.pengaturan_ujian' doesn't exist in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php:11
+Stack trace:
+#0 /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php(11): PDO->query()
+#1 {main}
+  thrown in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 11
+[04-Jun-2026 10:45:22 Asia/Jakarta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'fdngbjxi_ujiansmkbhg.pengaturan_ujian' doesn't exist in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php:11
+Stack trace:
+#0 /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php(11): PDO->query()
+#1 {main}
+  thrown in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 11
+[04-Jun-2026 10:46:12 Asia/Jakarta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'fdngbjxi_ujiansmkbhg.pengaturan_ujian' doesn't exist in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php:11
+Stack trace:
+#0 /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php(11): PDO->query()
+#1 {main}
+  thrown in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 11
+[04-Jun-2026 12:36:04 Asia/Jakarta] PHP Warning:  Trying to access array offset on false in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/ujian.php on line 17
+[04-Jun-2026 12:36:04 Asia/Jakarta] PHP Warning:  Trying to access array offset on false in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/ujian.php on line 123
+[04-Jun-2026 12:36:04 Asia/Jakarta] PHP Warning:  Trying to access array offset on false in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/ujian.php on line 191
+[04-Jun-2026 12:36:08 Asia/Jakarta] PHP Warning:  Trying to access array offset on false in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/ujian.php on line 17
+[04-Jun-2026 12:36:08 Asia/Jakarta] PHP Warning:  Trying to access array offset on false in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/ujian.php on line 123
+[04-Jun-2026 12:36:08 Asia/Jakarta] PHP Warning:  Trying to access array offset on false in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/ujian.php on line 191
+[04-Jun-2026 08:14:34 UTC] PHP Warning:  Undefined variable $siswa_id in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/catat_pelanggaran.php on line 23
+[04-Jun-2026 08:14:37 UTC] PHP Warning:  Undefined variable $siswa_id in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/catat_pelanggaran.php on line 23
+[04-Jun-2026 08:14:38 UTC] PHP Warning:  Undefined variable $siswa_id in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/catat_pelanggaran.php on line 23
+[04-Jun-2026 08:14:38 UTC] PHP Warning:  Undefined variable $siswa_id in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/catat_pelanggaran.php on line 23
+[04-Jun-2026 15:16:04 Asia/Jakarta] PHP Warning:  Undefined variable $siswa in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 15:16:04 Asia/Jakarta] PHP Warning:  Trying to access array offset on null in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 15:16:13 Asia/Jakarta] PHP Warning:  Undefined variable $siswa in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 15:16:13 Asia/Jakarta] PHP Warning:  Trying to access array offset on null in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 15:22:08 Asia/Jakarta] PHP Warning:  Undefined variable $siswa in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 15:22:08 Asia/Jakarta] PHP Warning:  Trying to access array offset on null in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 15:22:18 Asia/Jakarta] PHP Warning:  Undefined variable $siswa in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 15:22:18 Asia/Jakarta] PHP Warning:  Trying to access array offset on null in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 15:22:20 Asia/Jakarta] PHP Warning:  Undefined variable $siswa in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 15:22:20 Asia/Jakarta] PHP Warning:  Trying to access array offset on null in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 15:22:33 Asia/Jakarta] PHP Warning:  Undefined variable $siswa in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 15:22:33 Asia/Jakarta] PHP Warning:  Trying to access array offset on null in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 15:30:23 Asia/Jakarta] PHP Warning:  Undefined variable $siswa in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 15:30:23 Asia/Jakarta] PHP Warning:  Trying to access array offset on null in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 08:30:42 UTC] PHP Warning:  Undefined variable $siswa_id in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/catat_pelanggaran.php on line 23
+[04-Jun-2026 08:30:44 UTC] PHP Warning:  Undefined variable $siswa_id in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/catat_pelanggaran.php on line 23
+[04-Jun-2026 08:30:44 UTC] PHP Warning:  Undefined variable $siswa_id in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/catat_pelanggaran.php on line 23
+[04-Jun-2026 16:40:02 Asia/Jakarta] PHP Warning:  Undefined variable $siswa in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 16:40:02 Asia/Jakarta] PHP Warning:  Trying to access array offset on null in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 16:44:36 Asia/Jakarta] PHP Warning:  Undefined variable $siswa in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 16:44:36 Asia/Jakarta] PHP Warning:  Trying to access array offset on null in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 16:54:44 Asia/Jakarta] PHP Warning:  Undefined variable $siswa in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 16:54:44 Asia/Jakarta] PHP Warning:  Trying to access array offset on null in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 16:54:54 Asia/Jakarta] PHP Warning:  Undefined variable $siswa in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 16:54:54 Asia/Jakarta] PHP Warning:  Trying to access array offset on null in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 18:13:47 Asia/Jakarta] PHP Warning:  Undefined variable $siswa in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 18:13:47 Asia/Jakarta] PHP Warning:  Trying to access array offset on null in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 18:13:50 Asia/Jakarta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number: number of bound variables does not match number of tokens in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/ujian.php:52
+Stack trace:
+#0 /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/ujian.php(52): PDOStatement->execute()
+#1 {main}
+  thrown in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/ujian.php on line 52
+[04-Jun-2026 18:14:02 Asia/Jakarta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number: number of bound variables does not match number of tokens in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/ujian.php:52
+Stack trace:
+#0 /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/ujian.php(52): PDOStatement->execute()
+#1 {main}
+  thrown in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/ujian.php on line 52
+[04-Jun-2026 20:27:00 Asia/Jakarta] PHP Warning:  Undefined variable $siswa in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 20:27:00 Asia/Jakarta] PHP Warning:  Trying to access array offset on null in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 20:27:25 Asia/Jakarta] PHP Warning:  Undefined variable $siswa in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 20:27:25 Asia/Jakarta] PHP Warning:  Trying to access array offset on null in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 20:29:27 Asia/Jakarta] PHP Warning:  Undefined variable $siswa in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 20:29:27 Asia/Jakarta] PHP Warning:  Trying to access array offset on null in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 20:29:35 Asia/Jakarta] PHP Warning:  Undefined variable $siswa in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 20:29:35 Asia/Jakarta] PHP Warning:  Trying to access array offset on null in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 20:38:06 Asia/Jakarta] PHP Warning:  Undefined variable $siswa in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 20:38:06 Asia/Jakarta] PHP Warning:  Trying to access array offset on null in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 20:39:12 Asia/Jakarta] PHP Warning:  Undefined variable $siswa in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 20:39:12 Asia/Jakarta] PHP Warning:  Trying to access array offset on null in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 20:39:22 Asia/Jakarta] PHP Warning:  Undefined variable $siswa in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 20:39:22 Asia/Jakarta] PHP Warning:  Trying to access array offset on null in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 20:54:43 Asia/Jakarta] PHP Warning:  Undefined variable $siswa in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 20:54:43 Asia/Jakarta] PHP Warning:  Trying to access array offset on null in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 35
+[04-Jun-2026 14:00:04 UTC] PHP Parse error:  Unclosed '{' on line 17 in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 116
+[04-Jun-2026 14:00:28 UTC] PHP Parse error:  Unclosed '{' on line 17 in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 116
+[04-Jun-2026 14:00:30 UTC] PHP Parse error:  Unclosed '{' on line 17 in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 116
+[04-Jun-2026 14:02:41 UTC] PHP Parse error:  Unclosed '{' on line 17 in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 117
+[04-Jun-2026 14:02:44 UTC] PHP Parse error:  Unclosed '{' on line 17 in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 117
+[04-Jun-2026 14:03:05 UTC] PHP Parse error:  Unclosed '{' on line 17 in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 120
+[04-Jun-2026 14:03:47 UTC] PHP Parse error:  Unclosed '{' on line 17 in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 120
+[04-Jun-2026 14:03:49 UTC] PHP Parse error:  Unclosed '{' on line 17 in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 120
+[04-Jun-2026 14:03:49 UTC] PHP Parse error:  Unclosed '{' on line 17 in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 120
+[04-Jun-2026 14:05:24 UTC] PHP Parse error:  Unclosed '{' on line 17 in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 117
+[04-Jun-2026 21:06:10 Asia/Jakarta] PHP Warning:  Undefined variable $kelas_siswa in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/ujian.php on line 40
+[04-Jun-2026 21:06:10 Asia/Jakarta] PHP Warning:  Undefined variable $kelas_siswa in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/ujian.php on line 44
+[05-Jun-2026 11:39:13 UTC] PHP Parse error:  syntax error, unexpected double-quoted string " - ", expecting "," or ";" in /home/fdngbjxi/ujiancoba.smpfatachilah.com/siswa/login.php on line 149

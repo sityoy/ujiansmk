@@ -1,0 +1,25 @@
+[04-Jun-2026 18:13:04 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'WHERE nama_lengkap = 'SMK ISLAM BAHAGIA'' at line 1 in /home/fdngbjxi/ujiancoba.smpfatachilah.com/buat_admin.php:17
+Stack trace:
+#0 /home/fdngbjxi/ujiancoba.smpfatachilah.com/buat_admin.php(17): PDOStatement->execute()
+#1 {main}
+  thrown in /home/fdngbjxi/ujiancoba.smpfatachilah.com/buat_admin.php on line 17
+[04-Jun-2026 18:13:45 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'nama_lengkap = 'SMK ISLAM BAHAGIA'' at line 1 in /home/fdngbjxi/ujiancoba.smpfatachilah.com/buat_admin.php:17
+Stack trace:
+#0 /home/fdngbjxi/ujiancoba.smpfatachilah.com/buat_admin.php(17): PDOStatement->execute()
+#1 {main}
+  thrown in /home/fdngbjxi/ujiancoba.smpfatachilah.com/buat_admin.php on line 17
+[04-Jun-2026 18:14:09 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near ' nama_lengkap = 'SMK ISLAM BAHAGIA'' at line 1 in /home/fdngbjxi/ujiancoba.smpfatachilah.com/buat_admin.php:17
+Stack trace:
+#0 /home/fdngbjxi/ujiancoba.smpfatachilah.com/buat_admin.php(17): PDOStatement->execute()
+#1 {main}
+  thrown in /home/fdngbjxi/ujiancoba.smpfatachilah.com/buat_admin.php on line 17
+[04-Jun-2026 18:14:23 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number: number of bound variables does not match number of tokens in /home/fdngbjxi/ujiancoba.smpfatachilah.com/buat_admin.php:17
+Stack trace:
+#0 /home/fdngbjxi/ujiancoba.smpfatachilah.com/buat_admin.php(17): PDOStatement->execute()
+#1 {main}
+  thrown in /home/fdngbjxi/ujiancoba.smpfatachilah.com/buat_admin.php on line 17
+[04-Jun-2026 18:14:25 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number: number of bound variables does not match number of tokens in /home/fdngbjxi/ujiancoba.smpfatachilah.com/buat_admin.php:17
+Stack trace:
+#0 /home/fdngbjxi/ujiancoba.smpfatachilah.com/buat_admin.php(17): PDOStatement->execute()
+#1 {main}
+  thrown in /home/fdngbjxi/ujiancoba.smpfatachilah.com/buat_admin.php on line 17

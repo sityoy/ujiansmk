@@ -1,0 +1,4 @@
+[04-Jun-2026 04:00:54 UTC] PHP Warning:  Undefined array key "nama_siswa" in /home/fdngbjxi/ujiancoba.smpfatachilah.com/admin/kelola-siswa/tambah_siswa.php on line 9
+[04-Jun-2026 04:02:46 UTC] PHP Warning:  Undefined array key "nama_siswa" in /home/fdngbjxi/ujiancoba.smpfatachilah.com/admin/kelola-siswa/tambah_siswa.php on line 9
+[04-Jun-2026 13:53:28 UTC] PHP Warning:  Undefined array key "nis" in /home/fdngbjxi/ujiancoba.smpfatachilah.com/admin/kelola-siswa/edit_siswa.php on line 15
+[04-Jun-2026 13:53:28 UTC] PHP Warning:  Undefined array key "nama" in /home/fdngbjxi/ujiancoba.smpfatachilah.com/admin/kelola-siswa/edit_siswa.php on line 16
