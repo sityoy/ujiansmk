@@ -55,11 +55,13 @@ try {
         $stmtInsert->execute([$ujian_id, $soal_id, $jawaban_dipilih, $status_benar]);
     }
 
+    // --- BAGIAN PERBAIKAN: Hitung Jumlah Salah & Update ke Kolom Database ---
+    $salah = $total_soal - $benar;
     $nilai = ($total_soal > 0) ? round(($benar / $total_soal) * 100, 2) : 0;
 
-    // UPDATE SESUAI DATABASE-MU (Tanpa kolom benar & salah)
-    $stmtUpdateUjian = $pdo->prepare("UPDATE ujian_siswa SET nilai = ?, waktu_selesai = NOW() WHERE id = ?");
-    $stmtUpdateUjian->execute([$nilai, $ujian_id]);
+    // UPDATE DATABASE (Sekarang menyertakan nilai kolom benar dan salah)
+    $stmtUpdateUjian = $pdo->prepare("UPDATE ujian_siswa SET nilai = ?, benar = ?, salah = ?, waktu_selesai = NOW() WHERE id = ?");
+    $stmtUpdateUjian->execute([$nilai, $benar, $salah, $ujian_id]);
 
     $pdo->commit();
     header("Location: selesai_ujian.php");
