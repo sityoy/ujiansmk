@@ -1,6 +1,6 @@
 <?php
 session_start();
-require 'cek_admin.php';
+require '../koneksi.php';
 
 if (!isset($_SESSION['ujian_id'])) {
     header("Location: ../index.php");

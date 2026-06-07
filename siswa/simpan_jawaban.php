@@ -1,6 +1,6 @@
 <?php
 session_start();
-require 'cek_admin.php';
+require '../koneksi.php';
 
 if (!isset($_SESSION['siswa_id'], $_SESSION['ujian_id'], $_SESSION['mapel_aktif'], $_SESSION['kelas'])) {
     header("Location: login.php");

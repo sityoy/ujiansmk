@@ -1,6 +1,6 @@
 <?php
 session_start();
-require 'cek_admin.php';
+require '../koneksi.php';
 
 if (!isset($_POST['ujian_id'])) {
     echo json_encode(['status' => 'error']);

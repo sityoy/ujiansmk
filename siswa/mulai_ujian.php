@@ -4,7 +4,7 @@ ini_set('display_errors', 0);
 
 session_start();
 header('Content-Type: application/json');
-require 'cek_admin.php';
+require '../koneksi.php';
 
 if (!isset($_SESSION['siswa_id'], $_SESSION['mapel_aktif']) || !isset($_FILES['image'])) {
     echo json_encode(['status' => 'error', 'message' => 'Data tidak lengkap atau sesi habis.']);
