@@ -34,10 +34,10 @@ require 'cek_admin.php';
 // $_SESSION['last_activity'] = time();
 // ==============================================================
 
-if (!isset($_SESSION['admin_id'])) {
-    header("Location: login.php");
-    exit;
-}
+// if (!isset($_SESSION['admin_id'])) {
+//     header("Location: login.php");
+//     exit;
+// }
 
 // 1. Ambil daftar mapel unik untuk dropdown filter
 $stmtMapel = $pdo->query("SELECT DISTINCT mata_pelajaran FROM soal WHERE mata_pelajaran IS NOT NULL AND mata_pelajaran != ''");

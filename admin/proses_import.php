@@ -1,5 +1,5 @@
 <?php
-session_start();
+// session_start();
 require 'cek_admin.php';
 require 'SimpleXLSX.php'; 
 

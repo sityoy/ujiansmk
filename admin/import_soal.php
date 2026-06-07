@@ -1,13 +1,13 @@
 <?php
-session_start();
+// session_start();
 require 'cek_admin.php';
 // Gunakan SimpleXLSX (Download file SimpleXLSX.php dan letakkan di folder admin/)
 require 'SimpleXLSX.php';
 
-if (!isset($_SESSION['admin_id'])) {
-    header("Location: login.php");
-    exit;
-}
+// if (!isset($_SESSION['admin_id'])) {
+//     header("Location: login.php");
+//     exit;
+// }
 
 if (isset($_FILES['file_excel']) && $_FILES['file_excel']['error'] == 0) {
     $file_tmp = $_FILES['file_excel']['tmp_name'];

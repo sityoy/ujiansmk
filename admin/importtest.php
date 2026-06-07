@@ -1,12 +1,12 @@
 <?php
-session_start();
+// session_start();
 require 'cek_admin.php';
 require 'SimpleXLSX.php'; 
 
-if (!isset($_SESSION['admin_id'])) {
-    header("Location: login.php");
-    exit;
-}
+// if (!isset($_SESSION['admin_id'])) {
+//     header("Location: login.php");
+//     exit;
+// }
 
 if (isset($_FILES['file_excel'])) {
     $file_tmp = $_FILES['file_excel']['tmp_name'];

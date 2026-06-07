@@ -6,10 +6,10 @@ function hapus_file_lama($nama_file, $dir) {
     if (!empty($nama_file) && file_exists($dir . $nama_file)) unlink($dir . $nama_file);
 }
 
-if (!isset($_SESSION['admin_id']) || !isset($_GET['id'])) {
-    header("Location: soal.php");
-    exit;
-}
+// if (!isset($_SESSION['admin_id']) || !isset($_GET['id'])) {
+//     header("Location: soal.php");
+//     exit;
+// }
 
 $stmtMapel = $pdo->query("SELECT DISTINCT mata_pelajaran FROM soal ORDER BY mata_pelajaran");
 $listMapel = $stmtMapel->fetchAll();

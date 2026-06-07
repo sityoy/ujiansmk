@@ -1,11 +1,11 @@
 <?php
-session_start();
+// session_start();
 require 'cek_admin.php';
 
-if (!isset($_SESSION['admin_id'])) {
-    header("Location: login.php");
-    exit;
-}
+// if (!isset($_SESSION['admin_id'])) {
+//     header("Location: login.php");
+//     exit;
+// }
 
 // 1. Ambil daftar mapel unik untuk dropdown
 $stmtMapel = $pdo->query("SELECT DISTINCT mata_pelajaran FROM ujian_siswa WHERE mata_pelajaran IS NOT NULL");
@@ -67,41 +67,202 @@ $data_nilai = $stmt->fetchAll();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rekap Nilai Siswa</title>
     <style>
-        body { font-family: Arial, sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
-        .card { background: white; padding: 20px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; min-width: 800px; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: center; }
-        th { background-color: #007bff; color: white; }
-        .btn-danger { background: #dc3545; color: white; padding: 6px 12px; text-decoration: none; border-radius: 3px; font-size: 12px; }
-        .btn-primary { background: #007bff; color: white; padding: 8px 15px; text-decoration: none; border-radius: 3px; border: none; cursor: pointer;}
-        .pagination { margin-top: 20px; display: flex; justify-content: center; gap: 5px; flex-wrap: wrap; }
-        .pagination a { padding: 8px 12px; border: 1px solid #007bff; text-decoration: none; color: #007bff; border-radius: 3px; }
-        .pagination a.active, .pagination a:hover { background: #007bff; color: white; }
-        .filter-box { margin-bottom: 15px; background: #e9ecef; padding: 15px; border-radius: 5px; }
+        :root {
+            --primary: #10b981;
+            --primary-hover: #059669;
+            --secondary: #3b82f6;
+            --secondary-hover: #2563eb;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --warning: #f59e0b;
+            --info: #0ea5e9;
+            --bg-main: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+        }
+
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: var(--bg-main); 
+            color: var(--text-main); 
+            margin: 0; 
+            padding: 20px; 
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+        }
+
+        .header-title {
+            margin-top: 0;
+            margin-bottom: 25px;
+            color: var(--text-main);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 15px;
+            font-size: 24px;
+        }
         
+        /* Filter Section */
+        .filter-box { 
+            background: #f1f5f9; 
+            padding: 20px; 
+            border-radius: 10px; 
+            border: 1px solid var(--border-color);
+            margin-bottom: 25px; 
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .filter-form-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-label {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-main);
+        }
+
+        .form-control {
+            padding: 10px 12px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            font-size: 14px;
+            outline: none;
+            min-width: 180px;
+            transition: 0.3s;
+        }
+
+        .form-control:focus {
+            border-color: var(--secondary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-primary { background: var(--secondary); color: white; }
+        .btn-primary:hover { background: var(--secondary-hover); }
+        .btn-success { background: var(--primary); color: white; }
+        .btn-success:hover { background: var(--primary-hover); }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-danger:hover { background: var(--danger-hover); }
+        .btn-info { background: var(--info); color: white; }
+        
+        .btn-sm { padding: 6px 12px; font-size: 13px; width: 100%; margin-bottom: 5px; box-sizing: border-box;}
+
+        /* Table */
+        .table-responsive { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 900px; margin-top: 10px;}
+        th, td { border-bottom: 1px solid var(--border-color); padding: 14px 12px; text-align: center; font-size: 14.5px;}
+        th { 
+            background-color: #f8fafc; 
+            color: var(--text-muted); 
+            font-size: 13px; 
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        tr:hover { background-color: #f1f5f9; }
+        
+        .text-left { text-align: left; }
+        .fw-bold { font-weight: 600; }
+
+        /* Badges */
+        .score-text { font-size: 18px; font-weight: 800; color: var(--primary); }
+        
+        .badge { padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; display: inline-block; }
+        .badge-danger { background: #fee2e2; color: #991b1b; }
+        .badge-warning { background: #fef3c7; color: #92400e; }
+        .badge-muted { background: #f1f5f9; color: #64748b; }
+
+        /* Selfie Image */
+        .selfie-img {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: zoom-in;
+            border: 2px solid var(--border-color);
+            transition: 0.2s;
+        }
+        .selfie-img:hover { border-color: var(--secondary); transform: scale(1.05); }
+
+        /* Pagination */
+        .pagination { margin-top: 30px; display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
+        .page-link { 
+            padding: 8px 14px; 
+            border: 1px solid var(--border-color); 
+            text-decoration: none; 
+            color: var(--text-main); 
+            border-radius: 6px; 
+            font-weight: 600;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+        .page-link.active { background: var(--secondary); color: white; border-color: var(--secondary); }
+        .page-link:hover:not(.active) { background: #e2e8f0; }
+
         /* Modal Pratinjau */
-        #modal-pratinjau { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 10000; justify-content: center; align-items: center; flex-direction: column; }
-        #modal-pratinjau img { max-width: 90%; max-height: 85vh; border-radius: 8px; }
-        .close-btn { position: absolute; top: 20px; right: 30px; color: white; font-size: 40px; cursor: pointer; font-weight: bold; }
+        #modal-pratinjau { 
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+            background: rgba(15, 23, 42, 0.9); z-index: 10000; 
+            justify-content: center; align-items: center; flex-direction: column; 
+            backdrop-filter: blur(4px);
+        }
+        #modal-pratinjau img { max-width: 90%; max-height: 85vh; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .close-btn { 
+            position: absolute; top: 25px; right: 40px; color: white; font-size: 45px; 
+            cursor: pointer; font-weight: 300; transition: 0.2s; 
+        }
+        .close-btn:hover { color: var(--danger); transform: scale(1.1); }
+        
+        .footer-wrap { margin-top: 30px; text-align: center; }
     </style>
 </head>
 <body>
 
     <?php include 'navbar.php'; ?>
 
+    <!-- Modal Pop-Up Image -->
     <div id="modal-pratinjau">
         <span class="close-btn" onclick="tutupFoto()">&times;</span>
         <img id="gambar-besar" src="">
     </div>
 
-    <div class="card">
-        <h2>Rekap Nilai Ujian Siswa</h2>
+    <div class="container">
+        <h2 class="header-title">📊 Rekap Nilai Ujian Siswa</h2>
         
         <div class="filter-box">
-            <form method="GET" action="nilai.php" style="display:flex; align-items:center; gap: 10px; flex-wrap:wrap;">
-                
-                <label><strong>Filter Kelas:</strong></label>
-                <select name="kelas" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; max-width: 200px;">
+            <form method="GET" action="nilai.php" class="filter-form-group">
+                <div class="filter-label">Filter Kelas:</div>
+                <select name="kelas" class="form-control">
                     <option value="">-- Semua Kelas --</option>
                     <?php foreach($list_kelas as $lk): ?>
                         <option value="<?php echo htmlspecialchars($lk['kelas']); ?>" <?php if($kelas_filter == $lk['kelas']) echo 'selected'; ?>>
@@ -110,8 +271,8 @@ $data_nilai = $stmt->fetchAll();
                     <?php endforeach; ?>
                 </select>
 
-                <label><strong>Mapel:</strong></label>
-                <select name="mapel" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; max-width: 200px;">
+                <div class="filter-label" style="margin-left: 10px;">Mata Pelajaran:</div>
+                <select name="mapel" class="form-control">
                     <option value="">-- Semua Mapel --</option>
                     <?php foreach($list_mapel as $lm): ?>
                         <option value="<?php echo htmlspecialchars($lm['mata_pelajaran']); ?>" <?php if($mapel_filter == $lm['mata_pelajaran']) echo 'selected'; ?>>
@@ -120,104 +281,126 @@ $data_nilai = $stmt->fetchAll();
                     <?php endforeach; ?>
                 </select>
                 
-                <button type="submit" class="btn-primary">Tampilkan</button>
-                <a href="export_nilai.php?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>" style="background: #28a745; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; font-weight: bold; margin-left: 10px;">
-                📥 Download Excel
-                </a>
+                <button type="submit" class="btn btn-primary">🔍 Tampilkan</button>
             </form>
+            
+            <!-- Tombol Download dipindah ke sisi kanan agar lebih rapi -->
+            <div>
+                <a href="export_nilai.php?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>" class="btn btn-success">
+                    📥 Download Excel
+                </a>
+            </div>
         </div>
 
-        <a href="export_nilai.php?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>" class="btn-primary" style="display:inline-block; margin-bottom:15px; text-decoration:none;">📥 Export Nilai Excel</a>
-        
-        <table>
-            <thead>
-                <tr>
-                    <th>No</th>
-                    <th>No. Peserta</th>
-                    <th>Nama Siswa</th>
-                    <th>Kelas</th>
-                    <th>Mapel</th>
-                    <th>Nilai</th>
-                    <th>Pelanggaran</th>
-                    <th>Selfie</th>
-                    <th>Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($data_nilai)): ?>
-                    <tr><td colspan="9">Belum ada data nilai.</td></tr>
-                <?php else: ?>
-                    <?php $no = ($page === 'all') ? 1 : $offset + 1; foreach ($data_nilai as $row): ?>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th width="5%">No</th>
+                        <th>No. Peserta</th>
+                        <th class="text-left">Nama Siswa</th>
+                        <th>Kelas</th>
+                        <th>Mapel</th>
+                        <th>Nilai</th>
+                        <th>Pelanggaran</th>
+                        <th>Selfie</th>
+                        <th width="10%">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($data_nilai)): ?>
                         <tr>
-                            <td><?php echo $no++; ?></td>
-                            <td><?php echo htmlspecialchars($row['kartu_peserta']); ?></td>
-                            <td style="text-align: left;"><?php echo htmlspecialchars($row['nama_siswa']); ?></td>
-                            <td><?php echo htmlspecialchars($row['kelas']); ?></td>
-                            <td><?php echo htmlspecialchars($row['mata_pelajaran']); ?></td>
-                            <td><strong style="font-size: 18px; color: #28a745;"><?php echo number_format($row['nilai'], 2); ?></strong></td>
-                            
-                            <td>
-                                <?php if($row['jumlah_pelanggaran'] >= 2): ?>
-                                    <span style="background: #dc3545; color: white; padding: 5px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; display: inline-block;">
-                                        ⚠️ <?php echo $row['jumlah_pelanggaran']; ?>x (BATAS)
-                                    </span>
-                                <?php elseif($row['jumlah_pelanggaran'] > 0): ?>
-                                    <span style="color: #d39e00; font-weight: bold;"><?php echo $row['jumlah_pelanggaran']; ?>x</span>
-                                <?php else: ?>
-                                    <span style="color: #6c757d;">0x</span>
-                                <?php endif; ?>
-                            </td>
-                            
-                            <td>
-                                <?php if($row['foto_selfie']): ?>
-                                    <img src="../assets/<?php echo $row['foto_selfie']; ?>" width="50" style="border-radius: 5px; cursor: zoom-in; border: 1px solid #ccc;" onclick="bukaFoto(this.src)">
-                                <?php else: ?>
-                                    -
-                                <?php endif; ?>
-                            </td>
-                            
-                            <td>
-                                <a href="detail_nilai.php?id=<?php echo $row['id']; ?>" class="btn-primary" style="display:block; margin-bottom:5px;">Detail</a>
-                                <a href="reset_ujian.php?id_ujian=<?php echo $row['id']; ?>&id_siswa=<?php echo $row['siswa_id']; ?>" class="btn-danger" style="display:block;" onclick="return confirm('Yakin reset ujian?')">Reset</a>
+                            <td colspan="9" style="padding: 40px; color: var(--text-muted);">
+                                <em>Belum ada data nilai ujian untuk filter tersebut.</em>
                             </td>
                         </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
+                    <?php else: ?>
+                        <?php $no = ($page === 'all') ? 1 : $offset + 1; foreach ($data_nilai as $row): ?>
+                            <tr>
+                                <td><?php echo $no++; ?></td>
+                                <td class="fw-bold"><?php echo htmlspecialchars($row['kartu_peserta']); ?></td>
+                                <td class="text-left fw-bold"><?php echo htmlspecialchars($row['nama_siswa']); ?></td>
+                                <td><?php echo htmlspecialchars($row['kelas']); ?></td>
+                                <td><span style="color: var(--secondary); font-weight: 600;"><?php echo htmlspecialchars($row['mata_pelajaran']); ?></span></td>
+                                <td><span class="score-text"><?php echo number_format($row['nilai'], 2); ?></span></td>
+                                
+                                <td>
+                                    <?php if($row['jumlah_pelanggaran'] >= 2): ?>
+                                        <span class="badge badge-danger">⚠️ <?php echo $row['jumlah_pelanggaran']; ?>x (BATAS)</span>
+                                    <?php elseif($row['jumlah_pelanggaran'] > 0): ?>
+                                        <span class="badge badge-warning"><?php echo $row['jumlah_pelanggaran']; ?>x</span>
+                                    <?php else: ?>
+                                        <span class="badge badge-muted">0x</span>
+                                    <?php endif; ?>
+                                </td>
+                                
+                                <td>
+                                    <?php if($row['foto_selfie']): ?>
+                                        <img src="../assets/<?php echo $row['foto_selfie']; ?>" class="selfie-img" onclick="bukaFoto(this.src)" title="Klik untuk perbesar">
+                                    <?php else: ?>
+                                        <span style="color: var(--text-muted);">-</span>
+                                    <?php endif; ?>
+                                </td>
+                                
+                                <td>
+                                    <a href="detail_nilai.php?id=<?php echo $row['id']; ?>" class="btn btn-primary btn-sm">Detail</a>
+                                    <a href="reset_ujian.php?id_ujian=<?php echo $row['id']; ?>&id_siswa=<?php echo $row['siswa_id']; ?>" class="btn btn-danger btn-sm" onclick="return confirm('Apakah Anda yakin ingin mereset ujian siswa ini?')">Reset</a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
 
+        <!-- Pagination Section -->
         <?php if ($total_pages > 1 && $page !== 'all'): ?>
             <div class="pagination">
                 <?php if ($page > 1): ?>
-                    <a href="?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&page=<?php echo $page - 1; ?>">&laquo; Prev</a>
+                    <a href="?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&page=<?php echo $page - 1; ?>" class="page-link">&laquo; Prev</a>
                 <?php endif; ?>
                 
                 <?php for ($i = 1; $i <= $total_pages; $i++): ?>
-                    <a href="?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&page=<?php echo $i; ?>" class="<?php echo ($page == $i) ? 'active' : ''; ?>"><?php echo $i; ?></a>
+                    <a href="?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&page=<?php echo $i; ?>" class="page-link <?php echo ($page == $i) ? 'active' : ''; ?>"><?php echo $i; ?></a>
                 <?php endfor; ?>
                 
                 <?php if ($page < $total_pages): ?>
-                    <a href="?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&page=<?php echo $page + 1; ?>">Next &raquo;</a>
+                    <a href="?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&page=<?php echo $page + 1; ?>" class="page-link">Next &raquo;</a>
                 <?php endif; ?>
                 
-                <a href="?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&page=all" style="background: #17a2b8; color: white; border-color: #17a2b8;">Lihat Semua</a>
+                <a href="?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&page=all" class="page-link" style="background: var(--info); color: white; border-color: var(--info);">Lihat Semua</a>
             </div>
         <?php elseif ($page === 'all'): ?>
-             <div class="pagination"><a href="?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&page=1" style="background: #6c757d; color: white;">Kembali ke Pagination</a></div>
+             <div class="pagination">
+                 <a href="?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&page=1" class="page-link" style="background: var(--text-muted); color: white;">Kembali ke Halaman Terpisah</a>
+             </div>
         <?php endif; ?>
 
-        <?php include "footer.php"; ?>
+        <div class="footer-wrap">
+            <?php include "footer.php"; ?>
+        </div>
     </div>
 
     <script>
-        // Script untuk pop up foto
+        // Script untuk pop up foto (Modal Image Viewer)
         function bukaFoto(src) {
             document.getElementById('gambar-besar').src = src;
             document.getElementById('modal-pratinjau').style.display = 'flex';
+            // Hindari scrolling saat modal terbuka
+            document.body.style.overflow = 'hidden'; 
         }
         function tutupFoto() {
             document.getElementById('modal-pratinjau').style.display = 'none';
+            // Kembalikan scrolling
+            document.body.style.overflow = 'auto';
         }
+        
+        // Tutup modal jika user klik di luar area foto
+        document.getElementById('modal-pratinjau').addEventListener('click', function(e) {
+            if (e.target === this) {
+                tutupFoto();
+            }
+        });
     </script>
 </body>
 </html>

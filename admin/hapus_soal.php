@@ -1,11 +1,11 @@
 <?php
-session_start();
+// session_start();
 require 'cek_admin.php';
 
-if (!isset($_SESSION['admin_id'])) {
-    header("Location: login.php");
-    exit;
-}
+// if (!isset($_SESSION['admin_id'])) {
+//     header("Location: login.php");
+//     exit;
+// }
 
 if (!isset($_GET['id'])) {
     header("Location: soal.php");

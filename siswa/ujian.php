@@ -51,21 +51,11 @@ if (strpos($kelas, 'XII') === 0) { $kelas = 'XII'; }
 elseif (strpos($kelas, 'XI') === 0) { $kelas = 'XI'; } 
 else { $kelas = 'X'; }
 
-    if (!isset($_SESSION['urutan_soal'])) {
-    // Tambahkan ORDER BY id ASC agar jika tidak diacak, urutannya sesuai saat input di tambah_soal.php
-    $stmtSoal = $pdo->prepare("SELECT * FROM soal WHERE mata_pelajaran = ? AND kelas = ? ORDER BY id ASC");
+if (!isset($_SESSION['urutan_soal'])) {
+    $stmtSoal = $pdo->prepare("SELECT * FROM soal WHERE mata_pelajaran = ? AND kelas = ?");
     $stmtSoal->execute([$mapel_aktif, $kelas]);
     $daftar_soal = $stmtSoal->fetchAll(PDO::FETCH_ASSOC);
-    
-    // 1. Tentukan mapel apa saja yang SOALNYA TIDAK BOLEH DIACAK
-    // (Perhatikan huruf besar/kecilnya, harus sama persis dengan yang ada di database/tambah_soal)
-    $mapel_urutan_tetap = ['Bahasa Indonesia']; 
-    
-    // 2. Logika Pengecekan: Jika mapel_aktif BUKAN mapel di atas, maka ACAK soalnya!
-    if (!in_array($mapel_aktif, $mapel_urutan_tetap)) {
-        shuffle($daftar_soal);
-    }
-    
+    shuffle($daftar_soal);
     $_SESSION['urutan_soal'] = $daftar_soal;
 } else {
     $daftar_soal = $_SESSION['urutan_soal'];
@@ -84,9 +74,11 @@ else { $kelas = 'X'; }
             -webkit-touch-callout: none; overscroll-behavior-y: none; 
         }
         
-        #fullscreen-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; text-align: center; padding: 20px; box-sizing: border-box; }
-        #btn-fullscreen { background: #28a745; color: white; padding: 15px 30px; font-size: 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 25px; transition: 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        #fullscreen-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; text-align: center; padding: 20px; box-sizing: border-box; }
+        .peringatan-keras { background: #dc3545; color: white; padding: 15px; border-radius: 8px; margin: 20px 0; border: 2px solid #ff0000; box-shadow: 0 0 15px rgba(220, 53, 69, 0.5); max-width: 600px; text-align: left; }
+        #btn-fullscreen { background: #28a745; color: white; padding: 15px 30px; font-size: 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 10px; transition: 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
         #btn-fullscreen:hover { background: #1e7e34; }
+        
         #konten-ujian { display: none; } 
         #layar-hitam { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: black; z-index: 100000; color: red; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px;}
         #custom-alert { display: none; position: fixed; top: 70px; left: 50%; transform: translateX(-50%); background: #dc3545; color: white; padding: 15px 25px; border-radius: 5px; z-index: 100001; box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-weight: bold; text-align: center; max-width: 90%; line-height: 1.5; }
@@ -115,8 +107,8 @@ else { $kelas = 'X'; }
     </div>
 
     <div id="layar-hitam">
-        <h2>Peringatan Sistem!</h2>
-        <p>Anda terdeteksi melanggar aturan ujian! Sesi Anda dibekukan.</p>
+        <h2 style="font-size: 30px;">❌ PELANGGARAN FATAL! ❌</h2>
+        <p style="font-size: 18px;">Sistem mendeteksi Anda mencoba berbuat curang.<br>Sesi Ujian Anda DIBEKUKAN!</p>
     </div>
 
     <div id="custom-alert"><span id="custom-alert-text">Pesan</span></div>
@@ -132,11 +124,19 @@ else { $kelas = 'X'; }
     
     <div id="fullscreen-overlay">
         <h2 style="color: #ffc107; font-size: 28px;">Persiapan Ujian: <?php echo htmlspecialchars($mapel_aktif); ?></h2>
-        <p style="max-width: 600px; line-height: 1.6; font-size: 16px;">
-            Sistem mendeteksi aktivitas Layar Terbelah (Split Screen), Gelembung Chat (Bubble), dan Notifikasi. <br><br>
-            <strong>2 kali pelanggaran = ujian otomatis selesai.</strong>
-        </p>
-        <button id="btn-fullscreen">Mulai Ujian</button>
+        
+        <div class="peringatan-keras">
+            <h3 style="margin-top:0; font-size: 18px;">⚠️ ATURAN SANGAT KETAT (TANPA AMPUN) ⚠️</h3>
+            <ul style="margin-bottom:0; padding-left: 20px; line-height: 1.6;">
+                <li><b>WAJIB:</b> Tutup/Keluarkan semua aplikasi lain sebelum memulai ujian ini.</li>
+                <li>Dilarang keras menarik <b>Bilah Notifikasi (Notif WA, dll)</b> dari atas layar.</li>
+                <li>Dilarang keras menyentuh <b>Bilah Navigasi</b> dari bawah layar.</li>
+                <li>Dilarang membuka tab baru, keluar dari layar penuh, atau split screen.</li>
+                <li>Sistem mengawasi pergerakan kursor dan sentuhan layar secara *Real-Time*.</li>
+            </ul>
+        </div>
+        <p style="color: #ccc; font-size: 15px;">2 kali pelanggaran = <b>NILAI LANGSUNG DISIMPAN OTOMATIS!</b></p>
+        <button id="btn-fullscreen">SAYA PAHAM, MULAI UJIAN!</button>
     </div>
 
     <div id="konten-ujian">
@@ -221,8 +221,8 @@ else { $kelas = 'X'; }
         const elem = document.documentElement;
 
         function mencegahAksi(e) {
-            // Blokir Inspeksi Elemen dll
-            if(e.keyCode === 123 || (e.ctrlKey && e.shiftKey && e.keyCode === 73)) {
+            // Blokir Inspeksi Elemen, Ctrl+S, Ctrl+P, F12, F5, dll
+            if(e.keyCode === 123 || (e.ctrlKey && e.shiftKey && e.keyCode === 73) || (e.ctrlKey && e.keyCode === 83) || (e.ctrlKey && e.keyCode === 80) || e.keyCode === 116 || (e.ctrlKey && e.keyCode === 82)) {
                 e.preventDefault(); return false;
             }
         }
@@ -235,18 +235,17 @@ else { $kelas = 'X'; }
         }
 
         function bukaConfirm() {
-            // === 1. PENGECEKAN JAWABAN KOSONG (TIDAK BISA DIKIRIM JIKA ADA YG KOSONG) ===
+            // Cek Jawaban Kosong
             const totalSoal = <?php echo count($daftar_soal); ?>;
             const jawabanTerisi = document.querySelectorAll('input[type="radio"]:checked').length;
 
             if (jawabanTerisi < totalSoal) {
                 let belumDijawab = totalSoal - jawabanTerisi;
                 tampilkanAlert("⚠️ MASIH ADA " + belumDijawab + " SOAL KOSONG!<br>Silakan periksa dan jawab semua soal sebelum mengirim.");
-                return; // Berhenti di sini, modal konfirmasi TIDAK akan muncul!
+                return;
             }
 
-            // === 2. TAMPILKAN MODAL KONFIRMASI (SISTEM GALAK TETAP NYALA!) ===
-            // Saya hapus isPengawasanAktif = false; di sini.
+            // Sistem galak tidak mati saat modal muncul!
             document.getElementById('custom-confirm').style.display = 'flex';
         }
 
@@ -255,23 +254,24 @@ else { $kelas = 'X'; }
         }
 
         function submitFormFinal() {
-            // Hanya kalau siswa klik "Ya, Kirim", sistem pengawasan baru dimatikan agar saat proses submit loading tidak kena pelanggaran.
             isSubmitting = true; 
             document.getElementById('custom-confirm').style.display = 'none';
             document.getElementById('form-ujian').submit();
         }
 
+        // FUNGSI MULAI UJIAN (MEMAKSA LAYAR PENUH)
         document.getElementById('btn-fullscreen').addEventListener('click', () => {
             if (elem.requestFullscreen) { elem.requestFullscreen(); } 
             else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); } 
+            else if (elem.msRequestFullscreen) { elem.msRequestFullscreen(); }
             
             overlay.style.display = 'none';
             kontenUjian.style.display = 'block';
-            setTimeout(() => { isUjianFullscreen = true; isPengawasanAktif = true; }, 1000); // Sistem galak mulai diaktifkan!
+            setTimeout(() => { isUjianFullscreen = true; isPengawasanAktif = true; }, 1000);
         });
 
         // ==========================================
-        // 🚨 SISTEM ANTI-CHEAT (SUPER GALAK) 🚨
+        // 🚨 SISTEM ANTI-CHEAT (TANPA AMPUN) 🚨
         // ==========================================
         function catatPelanggaran(jenis) {
             if(!isPengawasanAktif || isSubmitting) return; 
@@ -285,11 +285,12 @@ else { $kelas = 'X'; }
             navigator.sendBeacon('catat_pelanggaran.php', formData);
 
             if (pelanggaran >= maxPelanggaran) {
-                isSubmitting = true; // Kunci sistem agar tidak kirim data pelanggaran dobel
+                isSubmitting = true; 
                 document.getElementById('layar-hitam').style.display = 'flex';
+                // Langsung simpan otomatis jika melanggar
                 setTimeout(() => { document.getElementById('form-ujian').submit(); }, 2000);
             } else {
-                tampilkanAlert("⚠️ PELANGGARAN: " + jenis + " (" + pelanggaran + "/" + maxPelanggaran + ")");
+                tampilkanAlert("⚠️ PELANGGARAN FATAL: " + jenis + " (" + pelanggaran + "/" + maxPelanggaran + ")");
             }
         }
 
@@ -300,22 +301,48 @@ else { $kelas = 'X'; }
             }
         });
 
-        // 2. Ketahuan Buka Pop-up Notif WA / Split Screen / Kehilangan Fokus
+        // 2. Ketahuan Buka Pop-up Notif WA / Split Screen / Kehilangan Fokus (AMAT SANGAT SENSITIF)
         window.addEventListener('blur', () => {
             if(isPengawasanAktif && !isSubmitting) {
-                catatPelanggaran('Kehilangan Fokus Layar / Membuka Aplikasi Lain');
+                catatPelanggaran('Membuka Bilah Notifikasi / Navigasi / Hilang Fokus');
             }
         });
 
-        // 3. Ketahuan Keluar dari Mode Layar Penuh (ESC)
-        document.addEventListener('fullscreenchange', () => {
-            if (!document.fullscreenElement && isUjianFullscreen && !isSubmitting) {
-                catatPelanggaran("Keluar Mode Layar Penuh");
+        // 3. Sentuhan Diinterupsi oleh Sistem (Misal: Swipe dari tepi layar HP untuk notif/navigasi)
+        document.addEventListener('touchcancel', () => {
+            if(isPengawasanAktif && !isSubmitting) {
+                catatPelanggaran('Membuka Bilah Sistem Android/iOS (Notifikasi/Navigasi)');
+            }
+        });
+
+        // 4. Kursor Sengaja Diarahkan Keluar dari Halaman Browser (Khusus PC/Laptop)
+        document.addEventListener('mouseleave', (e) => {
+            // Jika kursor bergerak melewati batas atas layar (mencoba tutup tab/ganti tab)
+            if(e.clientY <= 0 && isPengawasanAktif && !isSubmitting) {
+                catatPelanggaran('Kursor Keluar Area Ujian (Mencoba Pindah Tab)');
+            }
+        });
+
+        // 5. Ketahuan Keluar dari Mode Layar Penuh (Menekan ESC atau Swipe kembali)
+        function cekLayarPenuh() {
+            if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement && isUjianFullscreen && !isSubmitting) {
+                catatPelanggaran("Keluar dari Mode Layar Penuh");
                 // Memaksa siswa untuk menekan tombol mulai lagi untuk lanjut ujian
                 overlay.style.display = 'flex'; 
                 kontenUjian.style.display = 'none';
                 isUjianFullscreen = false; 
                 isPengawasanAktif = false; // Matikan sementara sampai mereka klik "Mulai" lagi
+            }
+        }
+        document.addEventListener('fullscreenchange', cekLayarPenuh);
+        document.addEventListener('webkitfullscreenchange', cekLayarPenuh);
+        document.addEventListener('msfullscreenchange', cekLayarPenuh);
+
+        // 6. Cegah Refresh atau Back Browser (Mencegah Reload)
+        window.addEventListener('beforeunload', (e) => {
+            if (isPengawasanAktif && !isSubmitting) {
+                e.preventDefault();
+                e.returnValue = ''; // Memicu konfirmasi bawaan browser
             }
         });
 
@@ -345,8 +372,6 @@ else { $kelas = 'X'; }
                 clearInterval(hitungMundur);
                 isSubmitting = true;
                 tampilkanAlert("Waktu habis! Mengirim otomatis...");
-                
-                // Jika waktu habis, akan DIPAKSA kirim walaupun ada yang kosong
                 setTimeout(() => { formUjian.submit(); }, 2000);
             } else {
                 let jam = Math.floor(sisaDetik / 3600);
@@ -357,7 +382,6 @@ else { $kelas = 'X'; }
             }
         }, 1000);
 
-        // FITUR ZOOM GAMBAR SOAL
         function bukaPreview(srcGambar) {
             document.getElementById('imgPreview').src = srcGambar;
             document.getElementById('previewModal').style.display = 'flex';
