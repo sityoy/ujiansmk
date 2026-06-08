@@ -17,8 +17,11 @@ $nilai_tertinggi = $pdo->query("SELECT MAX(nilai) FROM ujian_siswa")->fetchColum
 $nilai_terendah = $pdo->query("SELECT MIN(nilai) FROM ujian_siswa WHERE nilai IS NOT NULL")->fetchColumn();
 $total_pelanggaran = $pdo->query("SELECT SUM(jumlah_pelanggaran) FROM ujian_siswa")->fetchColumn();
 
-$stmtRanking = $pdo->query("SELECT s.nama_siswa, u.mata_pelajaran, u.nilai FROM ujian_siswa u JOIN siswa s ON s.id=u.siswa_id ORDER BY u.nilai DESC LIMIT 10");
-$ranking = $stmtRanking->fetchAll();
+// Ambil daftar mapel yang sudah ada nilainya
+$stmtMapel = $pdo->query("SELECT DISTINCT mata_pelajaran FROM ujian_siswa WHERE nilai IS NOT NULL ORDER BY mata_pelajaran ASC");
+$list_mapel = $stmtMapel->fetchAll(PDO::FETCH_COLUMN);
+
+
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -64,7 +67,12 @@ $ranking = $stmtRanking->fetchAll();
             border-radius: 16px;
             margin-bottom: 30px;
             box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2);
-            margin-top: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        .welcome-banner::after {
+            content: ''; position: absolute; top: -50px; right: -50px; width: 200px; height: 200px;
+            background: rgba(255,255,255,0.1); border-radius: 50%;
         }
         .welcome-banner h2 { margin: 0 0 10px 0; font-size: 28px; font-weight: 700; }
         .welcome-banner p { margin: 0; font-size: 16px; opacity: 0.9; }
@@ -85,49 +93,24 @@ $ranking = $stmtRanking->fetchAll();
             box-shadow: 0 4px 6px rgba(0,0,0,0.02), 0 1px 3px rgba(0,0,0,0.05); 
             text-align: left; 
             position: relative;
-            overflow: hidden;
-            transition: transform 0.2s, box-shadow 0.2s;
-            border: 1px solid var(--border-color);
+            border-left: 5px solid transparent;
+            transition: 0.3s;
         }
-        
-        .card-stat:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 15px rgba(0,0,0,0.05);
-        }
-
-        .card-stat::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 4px;
-        }
-
-        .card-blue::after { background-color: var(--secondary); }
-        .card-green::after { background-color: var(--primary); }
-        .card-red::after { background-color: var(--danger); }
-        .card-purple::after { background-color: var(--purple); }
-        .card-warning::after { background-color: var(--warning); }
-        .card-teal::after { background-color: var(--teal); }
+        .card-stat:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+        .card-blue { border-color: var(--secondary); }
+        .card-purple { border-color: var(--purple); }
+        .card-teal { border-color: var(--teal); }
+        .card-green { border-color: var(--primary); }
+        .card-warning { border-color: var(--warning); }
+        .card-red { border-color: var(--danger); }
 
         .stat-icon {
-            font-size: 32px;
-            position: absolute;
-            right: 20px;
-            top: 25px;
-            opacity: 0.2;
+            position: absolute; right: 20px; top: 25px; font-size: 40px; opacity: 0.15;
         }
 
-        .card-stat h2 { 
-            margin: 0; 
-            font-size: 36px; 
-            color: var(--text-main); 
-            font-weight: 800;
-        }
+        .card-stat h2 { margin: 0 0 5px 0; font-size: 32px; color: var(--text-main); font-weight: 800; }
         .card-stat p { 
-            margin: 5px 0 0 0; 
-            color: var(--text-muted); 
+            margin: 0; color: var(--text-muted); 
             font-weight: 600; 
             font-size: 14px;
             text-transform: uppercase;
@@ -152,16 +135,8 @@ $ranking = $stmtRanking->fetchAll();
             padding-bottom: 15px;
         }
 
-        .ranking-header h3 {
-            margin: 0;
-            color: var(--text-main);
-            font-size: 20px;
-            font-weight: 700;
-        }
-
-        /* Table Styles */
         .table-responsive { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; min-width: 600px; }
+        table { width: 100%; border-collapse: collapse; min-width: 100%; }
         th, td { border-bottom: 1px solid var(--border-color); padding: 16px 15px; text-align: left; }
         th { 
             background-color: #f8fafc; 
@@ -196,7 +171,6 @@ $ranking = $stmtRanking->fetchAll();
             <p>Pantau perkembangan ujian, kelola soal, dan lihat statistik performa siswa hari ini.</p>
         </div>
         
-        <!-- Statistik Utama -->
         <div class="dashboard-grid">
             <div class="card-stat card-blue">
                 <div class="stat-icon">📚</div>
@@ -220,7 +194,6 @@ $ranking = $stmtRanking->fetchAll();
             </div>
         </div>
 
-        <!-- Statistik Nilai & Keamanan -->
         <div class="dashboard-grid">
             <div class="card-stat card-warning">
                 <div class="stat-icon">📊</div>
@@ -244,55 +217,73 @@ $ranking = $stmtRanking->fetchAll();
             </div>
         </div>
 
-        <!-- Papan Peringkat -->
-        <div class="ranking-section">
-            <div class="ranking-header">
-                <h3>🏆 Top 10 Nilai Tertinggi</h3>
+        <?php if (empty($list_mapel)): ?>
+            <div class="ranking-section">
+                <div class="ranking-header">
+                    <h3 style="margin: 0; font-size: 18px;">🏆 Peringkat Tertinggi</h3>
+                </div>
+                <div style="padding: 30px; text-align: center; color: var(--text-muted);">
+                    <em>Belum ada data nilai ujian.</em>
+                </div>
             </div>
-            <div class="table-responsive">
-                <table>
-                    <thead>
-                        <tr>
-                            <th width="8%">Rank</th>
-                            <th>Nama Siswa</th>
-                            <th>Mata Pelajaran</th>
-                            <th style="text-align: center;">Skor Akhir</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php 
-                        $no = 1; 
-                        foreach($ranking as $r): 
-                            $medal = '';
-                            if($no == 1) $medal = '🥇';
-                            elseif($no == 2) $medal = '🥈';
-                            elseif($no == 3) $medal = '🥉';
-                            else $medal = "<span style='color: var(--text-muted); font-weight: bold;'>#$no</span>";
-                        ?>
-                        <tr>
-                            <td align="center" class="medal"><?php echo $medal; ?></td>
-                            <td style="font-weight: 600;"><?php echo htmlspecialchars($r['nama_siswa']); ?></td>
-                            <td><?php echo htmlspecialchars($r['mata_pelajaran']); ?></td>
-                            <td align="center">
-                                <span class="score-badge"><?php echo $r['nilai']; ?></span>
-                            </td>
-                        </tr>
-                        <?php 
-                        $no++;
-                        endforeach; 
-                        
-                        if(empty($ranking)):
-                        ?>
-                        <tr>
-                            <td colspan="4" align="center" style="padding: 30px; color: var(--text-muted);">
-                                <em>Belum ada data nilai ujian.</em>
-                            </td>
-                        </tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
+        <?php else: ?>
+            <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;">
+                <?php foreach($list_mapel as $mapel): ?>
+                    <?php
+                        // PERBAIKAN: Menambahkan s.kelas ke dalam SELECT dan memastikan JOIN sudah benar
+                        $stmtRank = $pdo->prepare("SELECT s.nama_siswa, s.kelas, u.nilai 
+                                                   FROM ujian_siswa u 
+                                                   JOIN siswa s ON s.id=u.siswa_id 
+                                                   WHERE u.mata_pelajaran = ? AND u.nilai IS NOT NULL 
+                                                   ORDER BY u.nilai DESC LIMIT 5");
+                        $stmtRank->execute([$mapel]);
+                        $ranking = $stmtRank->fetchAll();
+                    ?>
+                    <div class="ranking-section" style="margin-bottom: 0;">
+                        <div class="ranking-header">
+                            <h3 style="margin: 0; font-size: 16px; color: var(--text-main);">🏆 Top 5 - <?php echo htmlspecialchars($mapel); ?></h3>
+                        </div>
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th width="12%">Rank</th>
+                                        <th>Nama Siswa</th>
+                                        <th>Kelas</th>
+                                        <th style="text-align: center; width: 30%;">Skor Akhir</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php 
+                                    $no = 1; 
+                                    foreach($ranking as $r): 
+                                        $medal = '';
+                                        if($no == 1) $medal = '🥇';
+                                        elseif($no == 2) $medal = '🥈';
+                                        elseif($no == 3) $medal = '🥉';
+                                        else $medal = "<span style='color: var(--text-muted); font-weight: bold;'>#$no</span>";
+                                    ?>
+                                    <tr>
+                                        <td align="center" class="medal"><?php echo $medal; ?></td>
+                                        <td style="font-weight: 600;"><?php echo htmlspecialchars($r['nama_siswa']); ?></td>
+                                        
+                                        <td style="color: var(--text-muted);"><?php echo htmlspecialchars($r['kelas']); ?></td>
+                                        
+                                        <td align="center">
+                                            <span class="score-badge"><?php echo $r['nilai']; ?></span>
+                                        </td>
+                                    </tr>
+                                    <?php 
+                                    $no++;
+                                    endforeach; 
+                                    ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
             </div>
-        </div>
+        <?php endif; ?>
 
         <div class="footer-wrap">
             <?php include "footer.php"; ?>

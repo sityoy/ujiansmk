@@ -253,8 +253,11 @@ try {
     </style>
 </head>
 <body>
+    <?php require "navbar.php" ?>
     <div class="container">
+        
         <div class="header-title">
+            
             <h2>📅 Kelola Jadwal Ujian</h2>
             <a href="index.php" class="btn-back">⬅️ Kembali ke Dashboard</a>
         </div>

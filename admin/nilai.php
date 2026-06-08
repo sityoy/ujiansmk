@@ -59,6 +59,129 @@ if ($page === 'all') {
     $total_pages = ceil($total_data / $limit);
 }
 
+// =========================================================================
+// --- FITUR CETAK / SIMPAN PDF A4 ---
+// =========================================================================
+if (isset($_GET['export']) && $_GET['export'] == 'print') {
+    $queryPrint = "SELECT u.mata_pelajaran, s.kartu_peserta, s.nama_siswa, s.kelas, u.nilai, u.benar, u.salah, u.jumlah_pelanggaran, u.waktu_selesai 
+                   FROM ujian_siswa u 
+                   JOIN siswa s ON u.siswa_id = s.id 
+                   $where ORDER BY s.kelas ASC, s.nama_siswa ASC";
+    $stmtPrint = $pdo->prepare($queryPrint);
+    $stmtPrint->execute($params);
+    $dataPrint = $stmtPrint->fetchAll(PDO::FETCH_ASSOC);
+    ?>
+    <!DOCTYPE html>
+    <html lang="id">
+    <head>
+        <meta charset="UTF-8">
+        <title>Cetak Rekap Nilai - A4</title>
+        <style>
+            body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 10pt; color: #1e293b; margin: 0; padding: 10mm; }
+            .kop-surat { text-align: center; margin-bottom: 20px; border-bottom: 3px solid #1e293b; padding-bottom: 10px; position: relative; }
+            .kop-surat h2 { margin: 0; font-size: 16pt; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+            .kop-surat p { margin: 4px 0 0 0; font-size: 10pt; color: #475569; }
+            .info-rekap { width: 100%; margin-bottom: 15px; font-size: 9.5pt; border-collapse: collapse; }
+            .info-rekap td { padding: 4px 0; vertical-align: top; }
+            table.tabel-data { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 9.5pt; }
+            table.tabel-data th, table.tabel-data td { border: 1px solid #475569; padding: 7px 10px; text-align: center; }
+            table.tabel-data th { background-color: #f1f5f9 !important; font-weight: bold; color: #0f172a; }
+            table.tabel-data td.text-left { text-align: left; }
+            .tanda-tangan { margin-top: 40px; float: right; text-align: center; font-size: 10pt; width: 250px; }
+            .tanda-tangan p { margin: 0; }
+            .no-print-area { background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 10px; text-align: center; margin: -10mm -10mm 10mm -10mm; }
+            .btn-print { background: #0ea5e9; color: white; border: none; padding: 8px 20px; font-weight: bold; border-radius: 5px; cursor: pointer; font-size: 10pt; }
+            .btn-print:hover { background: #0284c7; }
+            @media print {
+                .no-print-area { display: none; }
+                body { padding: 0; margin: 0; }
+                @page { size: A4 portrait; margin: 12mm 10mm; }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="no-print-area">
+            <button class="btn-print" onclick="window.print()">🖨️ Klik Untuk Cetak / Save ke PDF</button>
+            <p style="margin: 5px 0 0 0; font-size: 8.5pt; color: #64748b;">Tips: Pada dialog cetak browser, aktifkan opsi "Background graphics" agar warna tabel muncul.</p>
+        </div>
+
+        <div class="kop-surat">
+            <h2>REKAPITULASI NILAI UJIAN SISWA</h2>
+            <p>Halaman Administrator Jaringan Computer Based Test (CBT)</p>
+        </div>
+
+        <table class="info-rekap">
+            <tr>
+                <td width="15%"><strong>Mata Pelajaran</strong></td>
+                <td width="2%">:</td>
+                <td width="45%"><?php echo $mapel_filter != '' ? htmlspecialchars($mapel_filter) : 'Semua Mata Pelajaran'; ?></td>
+                <td width="15%"><strong>Tanggal Cetak</strong></td>
+                <td width="2%">:</td>
+                <td><?php echo date('d/m/Y H:i'); ?> WIB</td>
+            </tr>
+            <tr>
+                <td><strong>Kelas</strong></td>
+                <td>:</td>
+                <td><?php echo $kelas_filter != '' ? htmlspecialchars($kelas_filter) : 'Semua Kelas'; ?></td>
+                <td><strong>Pencarian</strong></td>
+                <td>:</td>
+                <td><?php echo $search_filter != '' ? htmlspecialchars($search_filter) : '-'; ?></td>
+            </tr>
+        </table>
+
+        <table class="tabel-data">
+            <thead>
+                <tr>
+                    <th width="4%">No</th>
+                    <th width="15%">No. Peserta</th>
+                    <th class="text-left">Nama Siswa</th>
+                    <th width="10%">Kelas</th>
+                    <th>Mata Pelajaran</th>
+                    <th width="8%">Benar</th>
+                    <th width="8%">Salah</th>
+                    <th width="10%">Pelanggaran</th>
+                    <th width="10%">Nilai</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($dataPrint)): ?>
+                    <tr><td colspan="9" style="color: #64748b;">Tidak ada data rekap nilai siswa.</td></tr>
+                <?php else: ?>
+                    <?php $no = 1; foreach($dataPrint as $row): ?>
+                        <tr>
+                            <td><?php echo $no++; ?></td>
+                            <td><?php echo htmlspecialchars($row['kartu_peserta']); ?></td>
+                            <td class="text-left"><?php echo htmlspecialchars($row['nama_siswa']); ?></td>
+                            <td><?php echo htmlspecialchars($row['kelas']); ?></td>
+                            <td class="text-left"><?php echo htmlspecialchars($row['mata_pelajaran']); ?></td>
+                            <td><?php echo htmlspecialchars($row['benar'] ?? 0); ?></td>
+                            <td><?php echo htmlspecialchars($row['salah'] ?? 0); ?></td>
+                            <td><?php echo htmlspecialchars($row['jumlah_pelanggaran'] ?? 0); ?></td>
+                            <td><strong><?php echo htmlspecialchars($row['nilai'] ?? 0); ?></strong></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
+
+        <div class="tanda-tangan">
+            <p>Jakarta, <?php echo date('d F Y'); ?></p>
+            <p style="margin-top: 60px; border-bottom: 1px solid #000; font-weight: bold;">Administrator CBT</p>
+        </div>
+
+        <script>
+            // Buka dialog print otomatis
+            window.onload = function() {
+                setTimeout(function() { window.print(); }, 500);
+            }
+        </script>
+    </body>
+    </html>
+    <?php
+    exit;
+}
+// =========================================================================
+
 // 5. Query utama untuk mengambil data nilai
 $query = "SELECT u.*, s.kartu_peserta, s.nama_siswa, s.kelas 
           FROM ujian_siswa u 
@@ -262,6 +385,7 @@ $data_nilai = $stmt->fetchAll();
         <span class="close-btn" onclick="tutupFoto()">&times;</span>
         <img id="gambar-besar" src="">
     </div>
+    
     <div class="container">
         <h2 class="header-title">📊 Rekap Nilai Ujian Siswa</h2>
         
@@ -293,9 +417,13 @@ $data_nilai = $stmt->fetchAll();
                 <button type="submit" class="btn btn-primary">🔍 Tampilkan</button>
             </form>
             
-            <div>
+            <div style="display: flex; gap: 10px;">
                 <a href="export_nilai.php?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&search=<?php echo urlencode($search_filter); ?>" class="btn btn-success">
                     📥 Download Excel
+                </a>
+                
+                <a href="?export=print&mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&search=<?php echo urlencode($search_filter); ?>" target="_blank" class="btn btn-info">
+                    🖨️ Cetak A4 / PDF
                 </a>
             </div>
         </div>

@@ -121,10 +121,12 @@ $q_kelas = $filter_kelas ? "&kelas=".urlencode($filter_kelas) : "";
 <body>
     
     <div class="header-nav">
+        <?php require "navbar.php" ?>
         <a href="../index.php" class="btn-back-dash">⬅️ Kembali ke Dashboard</a>
     </div>
 
     <div class="card">
+        
         <div class="card-header">
             <h2>👥 Data Peserta Ujian</h2>
             <div class="info-data">Total: <?php echo $total_data; ?> Siswa</div>
