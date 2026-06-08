@@ -18,6 +18,7 @@ $list_kelas = $stmtKelas->fetchAll();
 // 3. Tangkap nilai filter dari URL (GET)
 $mapel_filter = isset($_GET['mapel']) ? $_GET['mapel'] : '';
 $kelas_filter = isset($_GET['kelas']) ? $_GET['kelas'] : '';
+$search_filter = isset($_GET['search']) ? trim($_GET['search']) : ''; // --- TAMBAHAN BAGIAN SEARCH ---
 $page = isset($_GET['page']) ? $_GET['page'] : 1;
 $limit = 20; 
 
@@ -34,6 +35,13 @@ if ($mapel_filter != '') {
 if ($kelas_filter != '') {
     $where .= " AND s.kelas = ?";
     $params[] = $kelas_filter;
+}
+
+// --- TAMBAHAN BAGIAN SEARCH: Filter Nama Siswa atau Nomor Kartu Peserta ---
+if ($search_filter != '') {
+    $where .= " AND (s.nama_siswa LIKE ? OR s.kartu_peserta LIKE ?)";
+    $params[] = "%" . $search_filter . "%";
+    $params[] = "%" . $search_filter . "%";
 }
 
 // 4. Hitung total data untuk Pagination (WAJIB pakai JOIN ke s karena filter kelas ada di tabel siswa)
@@ -250,18 +258,19 @@ $data_nilai = $stmt->fetchAll();
 
     <?php include 'navbar.php'; ?>
 
-    <!-- Modal Pop-Up Image -->
     <div id="modal-pratinjau">
         <span class="close-btn" onclick="tutupFoto()">&times;</span>
         <img id="gambar-besar" src="">
     </div>
-
     <div class="container">
         <h2 class="header-title">📊 Rekap Nilai Ujian Siswa</h2>
         
         <div class="filter-box">
             <form method="GET" action="nilai.php" class="filter-form-group">
-                <div class="filter-label">Filter Kelas:</div>
+                <div class="filter-label">Cari Siswa:</div>
+                <input type="text" name="search" class="form-control" placeholder="Nama / No. Peserta..." value="<?php echo htmlspecialchars($search_filter); ?>" style="min-width: 200px;">
+
+                <div class="filter-label" style="margin-left: 10px;">Filter Kelas:</div>
                 <select name="kelas" class="form-control">
                     <option value="">-- Semua Kelas --</option>
                     <?php foreach($list_kelas as $lk): ?>
@@ -284,9 +293,8 @@ $data_nilai = $stmt->fetchAll();
                 <button type="submit" class="btn btn-primary">🔍 Tampilkan</button>
             </form>
             
-            <!-- Tombol Download dipindah ke sisi kanan agar lebih rapi -->
             <div>
-                <a href="export_nilai.php?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>" class="btn btn-success">
+                <a href="export_nilai.php?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&search=<?php echo urlencode($search_filter); ?>" class="btn btn-success">
                     📥 Download Excel
                 </a>
             </div>
@@ -353,26 +361,25 @@ $data_nilai = $stmt->fetchAll();
             </table>
         </div>
 
-        <!-- Pagination Section -->
         <?php if ($total_pages > 1 && $page !== 'all'): ?>
             <div class="pagination">
                 <?php if ($page > 1): ?>
-                    <a href="?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&page=<?php echo $page - 1; ?>" class="page-link">&laquo; Prev</a>
+                    <a href="?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&search=<?php echo urlencode($search_filter); ?>&page=<?php echo $page - 1; ?>" class="page-link">&laquo; Prev</a>
                 <?php endif; ?>
                 
                 <?php for ($i = 1; $i <= $total_pages; $i++): ?>
-                    <a href="?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&page=<?php echo $i; ?>" class="page-link <?php echo ($page == $i) ? 'active' : ''; ?>"><?php echo $i; ?></a>
+                    <a href="?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&search=<?php echo urlencode($search_filter); ?>&page=<?php echo $i; ?>" class="page-link <?php echo ($page == $i) ? 'active' : ''; ?>"><?php echo $i; ?></a>
                 <?php endfor; ?>
                 
                 <?php if ($page < $total_pages): ?>
-                    <a href="?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&page=<?php echo $page + 1; ?>" class="page-link">Next &raquo;</a>
+                    <a href="?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&search=<?php echo urlencode($search_filter); ?>&page=<?php echo $page + 1; ?>" class="page-link">Next &raquo;</a>
                 <?php endif; ?>
                 
-                <a href="?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&page=all" class="page-link" style="background: var(--info); color: white; border-color: var(--info);">Lihat Semua</a>
+                <a href="?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&search=<?php echo urlencode($search_filter); ?>&page=all" class="page-link" style="background: var(--info); color: white; border-color: var(--info);">Lihat Semua</a>
             </div>
         <?php elseif ($page === 'all'): ?>
              <div class="pagination">
-                 <a href="?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&page=1" class="page-link" style="background: var(--text-muted); color: white;">Kembali ke Halaman Terpisah</a>
+                 <a href="?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&search=<?php echo urlencode($search_filter); ?>&page=1" class="page-link" style="background: var(--text-muted); color: white;">Kembali ke Halaman Terpisah</a>
              </div>
         <?php endif; ?>
 
@@ -386,16 +393,13 @@ $data_nilai = $stmt->fetchAll();
         function bukaFoto(src) {
             document.getElementById('gambar-besar').src = src;
             document.getElementById('modal-pratinjau').style.display = 'flex';
-            // Hindari scrolling saat modal terbuka
             document.body.style.overflow = 'hidden'; 
         }
         function tutupFoto() {
             document.getElementById('modal-pratinjau').style.display = 'none';
-            // Kembalikan scrolling
             document.body.style.overflow = 'auto';
         }
         
-        // Tutup modal jika user klik di luar area foto
         document.getElementById('modal-pratinjau').addEventListener('click', function(e) {
             if (e.target === this) {
                 tutupFoto();

@@ -1,11 +1,27 @@
 <?php
-// Pastikan file SimpleXLSXGen.php sudah ada di folder utama/parent
-require '../SimpleXLSXGen.php';
+// 1. Bersihkan semua output buffer di awal untuk mencegah file Excel korup / rusak
+ob_start();
+
+// 2. Load file admin dan library Excel
 require 'cek_admin.php';
 
+// PENGAMAN: Jika di dalam cek_admin.php ternyata belum panggil koneksi.php, kita panggil manual di sini
+if (!isset($pdo)) {
+    require '../koneksi.php'; 
+}
+
+// Cari file SimpleXLSXGen.php. Jika tidak ketemu di ../ kita cek di folder saat ini
+if (file_exists('../SimpleXLSXGen.php')) {
+    require '../SimpleXLSXGen.php';
+} elseif (file_exists('SimpleXLSXGen.php')) {
+    require 'SimpleXLSXGen.php';
+} else {
+    die("Gagal Export: File 'SimpleXLSXGen.php' tidak ditemukan! Pastikan file tersebut sudah di-upload ke server.");
+}
+
 // Tangkap filter dari URL agar Excel yang diunduh sesuai dengan yang tampil di layar
-$mapel_filter = isset($_GET['mapel']) ? $_GET['mapel'] : '';
-$kelas_filter = isset($_GET['kelas']) ? $_GET['kelas'] : '';
+$mapel_filter = isset($_GET['mapel']) ? trim($_GET['mapel']) : '';
+$kelas_filter = isset($_GET['kelas']) ? trim($_GET['kelas']) : '';
 
 $where = "WHERE 1=1";
 $params = [];
@@ -41,8 +57,8 @@ try {
     foreach ($data_ujian as $row) {
         $excel_data[] = [
             $no++,
-            // Tambahkan spasi atau petik satu agar Nomor Peserta dibaca sebagai teks utuh oleh Excel
-            " " . $row['kartu_peserta'], 
+            // Ditambahkan petik satu (') di depan agar nomor peserta tidak berantakan/hilang angka nol-nya di Excel
+            "'" . $row['kartu_peserta'], 
             $row['nama_siswa'],
             $row['kelas'],
             $row['mata_pelajaran'],
@@ -57,13 +73,21 @@ try {
     $filename = "Rekap_Nilai_CBT";
     if ($kelas_filter) $filename .= "_Kelas_" . preg_replace('/[^A-Za-z0-9]/', '', $kelas_filter);
     if ($mapel_filter) $filename .= "_" . preg_replace('/[^A-Za-z0-9]/', '', $mapel_filter);
-    $filename .= "_" . date('Ymd') . ".xlsx";
+    $filename .= "_" . date('Ymd_His') . ".xlsx";
 
-    // Generate dan Download
-    Shuchkin\SimpleXLSXGen::fromArray($excel_data)->downloadAs($filename);
+    // 3. Hapus bersih semua spasi kosong/HTML liar sebelum melempar file Excel ke browser
+    if (ob_get_length()) {
+        ob_end_clean();
+    }
+
+    // Generate dan Download menggunakan library SimpleXLSXGen
+    \Shuchkin\SimpleXLSXGen::fromArray($excel_data)->downloadAs($filename);
     exit;
 
 } catch (Exception $e) {
-    die("Gagal mengekspor data: " . $e->getMessage());
+    if (ob_get_length()) {
+        ob_end_clean();
+    }
+    die("Gagal mengekspor data ujian: " . $e->getMessage());
 }
 ?>

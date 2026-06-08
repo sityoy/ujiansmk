@@ -205,10 +205,12 @@ if (!isset($_SESSION['urutan_soal'])) {
         }
         .opsi:hover { border-color: #cbd5e1; background: #f8fafc; transform: translateX(4px); }
         
-        .opsi:has(input[type="radio"]:checked) {
+        .opsi input[type="radio"]:checked + .opsi-teks {
             border-color: var(--primary);
             background: #eff6ff;
         }
+
+        .opsi-selected { border-color: var(--primary) !important; background: #eff6ff !important; }
 
         .opsi input[type="radio"] { 
             margin-top: 4px; margin-right: 15px; transform: scale(1.3); cursor: pointer; 
@@ -512,13 +514,24 @@ if (!isset($_SESSION['urutan_soal'])) {
         }, 1000);
 
         function bukaPreview(srcGambar) {
+            isPengawasanAktif = false; // Matikan sementara sensor saat zoom
             document.getElementById('imgPreview').src = srcGambar;
             document.getElementById('previewModal').style.display = 'flex';
         }
 
         function tutupPreview() {
             document.getElementById('previewModal').style.display = 'none';
+            document.getElementById('imgPreview').src = '';
+            setTimeout(() => { isPengawasanAktif = true; }, 500); // Nyalakan lagi setelah sedikit jeda
         }
+
+        // Tambahkan di dalam <script>
+        document.querySelectorAll('input[type="radio"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                document.querySelectorAll('.opsi').forEach(el => el.classList.remove('opsi-selected'));
+                this.closest('.opsi').classList.add('opsi-selected');
+            });
+        });
     </script>
 </body>
 </html>

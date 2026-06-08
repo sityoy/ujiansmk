@@ -16,37 +16,47 @@ if (isset($_SESSION['error_login'])) {
     unset($_SESSION['error_login']); // Hapus error setelah ditampilkan agar hilang saat di-refresh
 }
 
-// Ambil daftar jadwal untuk opsi dropdown
-$stmtListJadwal = $pdo->query("SELECT * FROM pengaturan_ujian ORDER BY waktu_mulai ASC");
-$semua_jadwal = $stmtListJadwal->fetchAll();
-
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $kartu = trim($_POST['kartu_peserta']);
     $password = trim($_POST['password']);
-    $jadwal_id = $_POST['jadwal_id'];
+    $jadwal_id = $_POST['jadwal_id'] ?? '';
 
-    $stmtJadwal = $pdo->prepare("SELECT * FROM pengaturan_ujian WHERE id = ?");
-    $stmtJadwal->execute([$jadwal_id]);
-    $jadwal = $stmtJadwal->fetch();
-
-    $waktu_sekarang = date('Y-m-d H:i:s');
-    
-    if (!$jadwal) {
+    if (empty($jadwal_id)) {
         $_SESSION['error_login'] = "Pilih Mata Pelajaran terlebih dahulu!";
-    } elseif ($waktu_sekarang < $jadwal['waktu_mulai']) {
-        $_SESSION['error_login'] = "Ujian belum dimulai!";
-    } elseif ($waktu_sekarang > $jadwal['waktu_selesai']) {
-        $_SESSION['error_login'] = "Ujian sudah ditutup!";
-    } else {
-        $stmt = $pdo->prepare("SELECT * FROM siswa WHERE kartu_peserta = ?");
-        $stmt->execute([$kartu]);
-        $siswa = $stmt->fetch();
+        header("Location: login.php");
+        exit;
+    }
+
+    // 1. Ambil data siswa terlebih dahulu untuk verifikasi & cek kelas
+    $stmt = $pdo->prepare("SELECT * FROM siswa WHERE kartu_peserta = ?");
+    $stmt->execute([$kartu]);
+    $siswa = $stmt->fetch();
+    
+    // Pencocokan password menggunakan teks biasa
+    if ($siswa && $password === $siswa['password']) {
         
-        // Pencocokan password menggunakan teks biasa
-        if ($siswa && $password === $siswa['password']) {
+        // Bersihkan data kelas siswa agar formatnya sama (X, XI, XII)
+        $kelas_siswa = strtoupper(trim($siswa['kelas']));
+        if (strpos($kelas_siswa, 'XII') === 0) { $kelas_siswa = 'XII'; } 
+        elseif (strpos($kelas_siswa, 'XI') === 0) { $kelas_siswa = 'XI'; } 
+        else { $kelas_siswa = 'X'; }
+
+        // 2. Ambil data jadwal yang dipilih dan pastikan KELAS-nya COCOK
+        $stmtJadwal = $pdo->prepare("SELECT * FROM pengaturan_ujian WHERE id = ? AND kelas = ?");
+        $stmtJadwal->execute([$jadwal_id, $kelas_siswa]);
+        $jadwal = $stmtJadwal->fetch();
+
+        $waktu_sekarang = date('Y-m-d H:i:s');
+        
+        if (!$jadwal) {
+            $_SESSION['error_login'] = "Mata pelajaran ini bukan untuk tingkatan kelas Anda!";
+        } elseif ($waktu_sekarang < $jadwal['waktu_mulai']) {
+            $_SESSION['error_login'] = "Ujian belum dimulai!";
+        } elseif ($waktu_sekarang > $jadwal['waktu_selesai']) {
+            $_SESSION['error_login'] = "Ujian sudah ditutup!";
+        } else {
             
-            // --- LOGIKA CEK MAPEL ---
-            // Cek apakah siswa ini sudah punya record 'selesai' untuk MAPEL INI
+            // --- LOGIKA UTAMA: CEK APAKAH SUDAH PERNAH MENGERJAKAN ---
             $stmtCek = $pdo->prepare("SELECT id FROM ujian_siswa 
                                       WHERE siswa_id = ? 
                                       AND TRIM(mata_pelajaran) = TRIM(?) 
@@ -56,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             if ($stmtCek->rowCount() > 0) {
                 $_SESSION['error_login'] = "Anda sudah menyelesaikan ujian <strong>" . htmlspecialchars($jadwal['mata_pelajaran']) . "</strong>. Tidak bisa mengerjakan ulang.";
             } else {
-                // Set Session untuk siswa
+                // Set Session untuk siswa jika lolos verifikasi
                 $_SESSION['siswa_id'] = $siswa['id'];
                 $_SESSION['nama_siswa'] = $siswa['nama_siswa'];
                 $_SESSION['kartu_peserta'] = $siswa['kartu_peserta'];
@@ -68,14 +78,34 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 header("Location: selfie.php");
                 exit;
             }
-        } else {
-            $_SESSION['error_login'] = "Kartu Peserta atau Password salah!";
         }
+    } else {
+        $_SESSION['error_login'] = "Kartu Peserta atau Password salah!";
     }
 
-    // Redirect kembali ke halaman ini (login.php) agar POST data terhapus dari memori browser
+    // Redirect kembali ke halaman ini (login.php) agar POST data terhapus
     header("Location: login.php");
     exit;
+}
+
+// Ambil semua daftar jadwal untuk ditampilkan di dropdown (Urut berdasarkan kelas dan waktu)
+$stmtListJadwal = $pdo->query("SELECT * FROM pengaturan_ujian ORDER BY kelas ASC, waktu_mulai ASC");
+$semua_jadwal = $stmtListJadwal->fetchAll();
+
+// Kelompokkan jadwal ke dalam array PHP berdasarkan kelas untuk mempermudah <optgroup>
+$jadwal_per_kelas = [
+    'X' => [],
+    'XI' => [],
+    'XII' => []
+];
+
+foreach ($semua_jadwal as $j) {
+    $k = strtoupper(trim($j['kelas'] ?? 'X'));
+    if (strpos($k, 'XII') === 0) { $key = 'XII'; } 
+    elseif (strpos($k, 'XI') === 0) { $key = 'XI'; } 
+    else { $key = 'X'; }
+    
+    $jadwal_per_kelas[$key][] = $j;
 }
 ?>
 <!DOCTYPE html>
@@ -86,7 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <title>Portal Ujian CBT - Siswa</title>
     <style>
         :root {
-            --primary: #10b981; /* Emerald Green */
+            --primary: #10b981;
             --primary-hover: #059669;
             --bg-gradient: linear-gradient(135deg, #dcfce7 0%, #f1f5f9 100%);
             --text-main: #1e293b;
@@ -179,6 +209,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
             background: white;
         }
+
+        /* Desain khusus teks pembatas grup kelas di dalam select */
+        select optgroup {
+            font-weight: bold;
+            color: #3730a3;
+            background: #f1f5f9;
+        }
+        select option {
+            color: #334155;
+            background: #fff;
+            padding: 6px;
+        }
         
         .btn-submit { 
             width: 100%; 
@@ -227,7 +269,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             75% { transform: translateX(-5px); }
         }
         
-        /* === STYLE PASSWORD MATA === */
         .password-wrapper { position: relative; width: 100%; }
         .password-wrapper input { padding-right: 45px; } 
         .toggle-password {
@@ -274,6 +315,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     <label>Pilih Jadwal Ujian</label>
                     <select name="jadwal_id" class="form-control" required>
                         <option value="" disabled selected>-- Pilih Mata Pelajaran --</option>
+                        
                         <?php 
                         $bulanIndo = [
                             '01' => 'Januari', '02' => 'Februari', '03' => 'Maret',
@@ -281,21 +323,32 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             '07' => 'Juli', '08' => 'Agustus', '09' => 'September',
                             '10' => 'Oktober', '11' => 'November', '12' => 'Desember'
                         ];
-                    
-                        foreach($semua_jadwal as $j): 
-                            $waktu_mulai = strtotime($j['waktu_mulai']);
-                            $tgl = date('d', $waktu_mulai);
-                            $bln = $bulanIndo[date('m', $waktu_mulai)];
-                            $thn = date('Y', $waktu_mulai);
-                            $jam_mulai = date('H:i', $waktu_mulai);
-                            $jam_selesai = date('H:i', strtotime($j['waktu_selesai']));
-                            
-                            $waktu_tampil = "$tgl $bln $thn ($jam_mulai - $jam_selesai)";
+
+                        // LOOP UNTUK MASING-MASING GRUP KELAS
+                        foreach(['X' => 'Tingkat Kelas X', 'XI' => 'Tingkat Kelas XI', 'XII' => 'Tingkat Kelas XII'] as $keyKelas => $labelKelas):
+                            if(!empty($jadwal_per_kelas[$keyKelas])):
                         ?>
-                            <option value="<?php echo $j['id']; ?>">
-                                <?php echo htmlspecialchars($j['mata_pelajaran']) . " | " . $waktu_tampil; ?>
-                            </option>
-                        <?php endforeach; ?>
+                            <optgroup label="📂 <?php echo $labelKelas; ?>">
+                                <?php 
+                                foreach($jadwal_per_kelas[$keyKelas] as $j): 
+                                    $waktu_mulai = strtotime($j['waktu_mulai']);
+                                    $tgl = date('d', $waktu_mulai);
+                                    $bln = $bulanIndo[date('m', $waktu_mulai)];
+                                    $thn = date('Y', $waktu_mulai);
+                                    $jam_mulai = date('H:i', $waktu_mulai);
+                                    $jam_selesai = date('H:i', strtotime($j['waktu_selesai']));
+                                    
+                                    $waktu_tampil = "$tgl $bln $thn ($jam_mulai - $jam_selesai)";
+                                ?>
+                                    <option value="<?php echo $j['id']; ?>">
+                                        <?php echo htmlspecialchars($j['mata_pelajaran']) . " | " . $waktu_tampil; ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </optgroup>
+                        <?php 
+                            endif;
+                        endforeach; 
+                        ?>
                     </select>
                 </div>
                 
@@ -326,12 +379,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     </div>
 
     <script>
-        // Mencegah browser menampilkan notifikasi "Confirm Form Resubmission"
         if (window.history.replaceState) {
             window.history.replaceState(null, null, window.location.href);
         }
 
-        // FUNGSI UNTUK MENGUBAH TIPE PASSWORD & IKON MATA
         function togglePassword() {
             const pwdInput = document.getElementById('password');
             const iconWrapper = document.getElementById('eye-icon');

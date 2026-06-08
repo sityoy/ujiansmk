@@ -17,6 +17,7 @@ try {
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $nama_ujian     = trim($_POST['nama_ujian']);
     $mata_pelajaran = trim($_POST['mata_pelajaran']);
+    $kelas          = trim($_POST['kelas']); // <-- TAMBAHAN KELAS
     $waktu_mulai    = $_POST['waktu_mulai'];
     $waktu_selesai  = $_POST['waktu_selesai'];
 
@@ -28,8 +29,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     if (isset($_POST['tambah'])) {
         try {
-            $stmt = $pdo->prepare("INSERT INTO pengaturan_ujian (nama_ujian, mata_pelajaran, waktu_mulai, waktu_selesai) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$nama_ujian, $mata_pelajaran, $waktu_mulai, $waktu_selesai]);
+            $stmt = $pdo->prepare("INSERT INTO pengaturan_ujian (nama_ujian, mata_pelajaran, kelas, waktu_mulai, waktu_selesai) VALUES (?, ?, ?, ?, ?)");
+            $stmt->execute([$nama_ujian, $mata_pelajaran, $kelas, $waktu_mulai, $waktu_selesai]);
             echo "<script>alert('Jadwal Ujian berhasil ditambahkan!'); window.location='jadwal.php';</script>";
             exit;
         } catch (Exception $e) {
@@ -38,8 +39,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     } elseif (isset($_POST['edit'])) {
         $id_jadwal = $_POST['id_jadwal'];
         try {
-            $stmt = $pdo->prepare("UPDATE pengaturan_ujian SET nama_ujian=?, mata_pelajaran=?, waktu_mulai=?, waktu_selesai=? WHERE id=?");
-            $stmt->execute([$nama_ujian, $mata_pelajaran, $waktu_mulai, $waktu_selesai, $id_jadwal]);
+            $stmt = $pdo->prepare("UPDATE pengaturan_ujian SET nama_ujian=?, mata_pelajaran=?, kelas=?, waktu_mulai=?, waktu_selesai=? WHERE id=?");
+            $stmt->execute([$nama_ujian, $mata_pelajaran, $kelas, $waktu_mulai, $waktu_selesai, $id_jadwal]);
             echo "<script>alert('Jadwal Ujian berhasil diupdate!'); window.location='jadwal.php';</script>";
             exit;
         } catch (Exception $e) {
@@ -156,8 +157,8 @@ try {
 
         .grid-form {
             display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+            gap: 15px;
         }
 
         .form-group label { 
@@ -238,6 +239,7 @@ try {
         .badge-aktif { background: #d1fae5; color: #065f46; }
         .badge-tutup { background: #fee2e2; color: #991b1b; }
         .badge-belum { background: #fef3c7; color: #92400e; }
+        .badge-kelas { background: #e0e7ff; color: #3730a3; padding: 4px 10px; border-radius: 6px; font-weight: bold; }
 
         /* Action Buttons */
         .action-btns { display: flex; gap: 8px; justify-content: center; }
@@ -282,6 +284,16 @@ try {
                             <?php endforeach; ?>
                         </select>
                     </div>
+                    <!-- INPUT BARU: DROPDOWN PILIHAN KELAS -->
+                    <div class="form-group">
+                        <label>Tingkatan Kelas</label>
+                        <select name="kelas" class="form-control" required>
+                            <option value="" disabled selected>-- Pilih Kelas --</option>
+                            <option value="X" <?php echo ($edit_data && $edit_data['kelas'] == 'X') ? 'selected' : ''; ?>>Kelas X</option>
+                            <option value="XI" <?php echo ($edit_data && $edit_data['kelas'] == 'XI') ? 'selected' : ''; ?>>Kelas XI</option>
+                            <option value="XII" <?php echo ($edit_data && $edit_data['kelas'] == 'XII') ? 'selected' : ''; ?>>Kelas XII</option>
+                        </select>
+                    </div>
                     <div class="form-group">
                         <label>Waktu Mulai Ujian</label>
                         <input type="datetime-local" name="waktu_mulai" class="form-control" value="<?php echo $edit_data ? date('Y-m-d\TH:i', strtotime($edit_data['waktu_mulai'])) : ''; ?>" required>
@@ -310,6 +322,7 @@ try {
                         <th width="5%">No</th>
                         <th>Nama Ujian</th>
                         <th>Mata Pelajaran</th>
+                        <th width="10%">Kelas</th> <!-- KOLOM BARU -->
                         <th>Waktu Mulai</th>
                         <th>Waktu Selesai</th>
                         <th>Status</th>
@@ -335,6 +348,8 @@ try {
                         <td align="center"><?php echo $no++; ?></td>
                         <td><?php echo htmlspecialchars($j['nama_ujian']); ?></td>
                         <td><span class="mapel-text"><?php echo htmlspecialchars($j['mata_pelajaran']); ?></span></td>
+                        <!-- MENAMPILKAN KELAS -->
+                        <td align="center"><span class="badge-kelas"><?php echo htmlspecialchars($j['kelas'] ?? '-'); ?></span></td>
                         <td align="center"><?php echo date('d-M-Y H:i', strtotime($j['waktu_mulai'])); ?></td>
                         <td align="center"><?php echo date('d-M-Y H:i', strtotime($j['waktu_selesai'])); ?></td>
                         <td align="center"><?php echo $status; ?></td>
@@ -349,7 +364,7 @@ try {
                     
                     <?php if(empty($semua_jadwal)): ?>
                     <tr>
-                        <td colspan="7" align="center" style="padding: 30px; color: var(--text-muted);">
+                        <td colspan="8" align="center" style="padding: 30px; color: var(--text-muted);">
                             <em>Belum ada jadwal ujian yang ditambahkan.</em>
                         </td>
                     </tr>
