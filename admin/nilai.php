@@ -63,7 +63,7 @@ if ($page === 'all') {
 // --- FITUR CETAK / SIMPAN PDF A4 ---
 // =========================================================================
 if (isset($_GET['export']) && $_GET['export'] == 'print') {
-    $queryPrint = "SELECT u.mata_pelajaran, s.kartu_peserta, s.nama_siswa, s.kelas, u.nilai, u.benar, u.salah, u.jumlah_pelanggaran, u.waktu_selesai 
+    $queryPrint = "SELECT u.mata_pelajaran, s.kartu_peserta, s.nama_siswa, s.kelas, u.nilai, u.benar, u.salah, u.jumlah_pelanggaran, u.waktu_selesai, u.foto_selfie
                    FROM ujian_siswa u 
                    JOIN siswa s ON u.siswa_id = s.id 
                    $where ORDER BY s.kelas ASC, s.nama_siswa ASC";
@@ -141,6 +141,7 @@ if (isset($_GET['export']) && $_GET['export'] == 'print') {
                     <th width="8%">Salah</th>
                     <th width="10%">Pelanggaran</th>
                     <th width="10%">Nilai</th>
+                    <th width="10%">Selfie</th>
                 </tr>
             </thead>
             <tbody>
@@ -158,6 +159,13 @@ if (isset($_GET['export']) && $_GET['export'] == 'print') {
                             <td><?php echo htmlspecialchars($row['salah'] ?? 0); ?></td>
                             <td><?php echo htmlspecialchars($row['jumlah_pelanggaran'] ?? 0); ?></td>
                             <td><strong><?php echo htmlspecialchars($row['nilai'] ?? 0); ?></strong></td>
+                            <td>
+                                    <?php if($row['foto_selfie']): ?>
+                                        <img src="../assets/<?php echo $row['foto_selfie']; ?>" class="selfie-img" onclick="bukaFoto(this.src)" style="width: 40px; height: 40px;" title="Klik untuk perbesar">
+                                    <?php else: ?>
+                                        <span style="color: var(--text-muted);">-</span>
+                                    <?php endif; ?>
+                                </td>
                         </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>
