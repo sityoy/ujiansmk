@@ -51,121 +51,27 @@ if (strpos($kelas, 'XII') === 0) { $kelas = 'XII'; }
 elseif (strpos($kelas, 'XI') === 0) { $kelas = 'XI'; } 
 else { $kelas = 'X'; }
 
+// LOGIKA KELAS
+$kelas = strtoupper(trim($_SESSION['kelas']));
+if (strpos($kelas, 'XII') === 0) { $kelas = 'XII'; } 
+elseif (strpos($kelas, 'XI') === 0) { $kelas = 'XI'; } 
+else { $kelas = 'X'; }
+
+// PERBAIKAN: Taruh di luar "if" agar variabel ini selalu aktif walaupun siswa me-refresh halaman!
+$mapel_cek = strtoupper(trim($mapel_aktif));
+
 // =============================================================
 // MODIFIKASI LOGIKA PENGACAKAN NOMOR SOAL BERDASARKAN MAPEL
 // =============================================================
 if (!isset($_SESSION['urutan_soal'])) {
-    // Kita tambahkan ORDER BY id ASC agar defaultnya urut dari database
     $stmtSoal = $pdo->prepare("SELECT * FROM soal WHERE mata_pelajaran = ? AND kelas = ? ORDER BY id ASC");
     $stmtSoal->execute([$mapel_aktif, $kelas]);
     $daftar_soal = $stmtSoal->fetchAll(PDO::FETCH_ASSOC);
     
-    // Normalisasi teks mapel ke huruf besar tanpa spasi berlebih untuk pengecekan
-    $mapel_cek = strtoupper(trim($mapel_aktif));
-    
-   // =========================================================================
-// SCRIPT KUSTOMISASI PENGACAKAN (BAHASA INGGRIS & BAHASA INDONESIA)
-// =========================================================================
-
-// Ambil nama mapel aktif dari session
-$mapel_sekarang = isset($_SESSION['mapel_aktif']) ? trim($_SESSION['mapel_aktif']) : '';
-
-// KONDISI 1: JIKA MAPEL BAHASA INGGRIS (Soal Urut, PG Urut)
-if (strcasecmp($mapel_sekarang, 'Bahasa Inggris') === 0) {
-    
-    // Hapus session acak sebelumnya agar tidak bentrok
-    unset($_SESSION['urutan_soal']);
-    unset($_SESSION['acak_pg']);
-    
-    // Kunci Pilihan Ganda (PG) sesuai urutan asli database (A tetap A, B tetap B, dst)
-    foreach ($daftar_soal as &$soal) {
-        $_SESSION['acak_pg'][$soal['id']] = [
-            'A' => $soal['pilihan_a'],
-            'B' => $soal['pilihan_b'],
-            'C' => $soal['pilihan_c'],
-            'D' => $soal['pilihan_d'],
-            'E' => $soal['pilihan_e']
-        ];
+    // Jika BUKAN Bahasa Inggris dan BUKAN Bahasa Indonesia, baru nomor soalnya diacak (shuffle)
+    if ($mapel_cek !== 'BAHASA INGGRIS' && $mapel_cek !== 'BAHASA INDONESIA') {
+        shuffle($daftar_soal);
     }
-    unset($soal);
-
-// KONDISI 2: JIKA MAPEL BAHASA INDONESIA (Soal Urut, PG DIACAK)
-} elseif (strcasecmp($mapel_sekarang, 'Bahasa Indonesia') === 0) {
-    
-    // Hapus urutan acak soal agar soal kembali urut sesuai database
-    unset($_SESSION['urutan_soal']);
-    
-    // Proses Mengacak Pilihan Ganda (PG) saja
-    foreach ($daftar_soal as &$soal) {
-        if (!isset($_SESSION['acak_pg'][$soal['id']])) {
-            $pilihan = [
-                'A' => $soal['pilihan_a'],
-                'B' => $soal['pilihan_b'],
-                'C' => $soal['pilihan_c'],
-                'D' => $soal['pilihan_d'],
-                'E' => $soal['pilihan_e']
-            ];
-            
-            $keys = array_keys($pilihan);
-            shuffle($keys);
-            
-            $pg_acak = [];
-            foreach ($keys as $k) {
-                $pg_acak[$k] = $pilihan[$k];
-            }
-            $_SESSION['acak_pg'][$soal['id']] = $pg_acak;
-        }
-    }
-    unset($soal);
-
-// KONDISI 3: MAPEL LAINNYA (Soal DIACAK, PG DIACAK)
-} else {
-    
-    // 1. Acak Urutan Soal jika belum ada di session
-    if (!isset($_SESSION['urutan_soal'])) {
-        $ids_soal = array_column($daftar_soal, 'id');
-        shuffle($ids_soal); 
-        $_SESSION['urutan_soal'] = $ids_soal;
-    }
-
-    // Susun ulang $daftar_soal berdasarkan urutan acak
-    $soal_diurutkan = [];
-    foreach ($_SESSION['urutan_soal'] as $id_acak) {
-        foreach ($daftar_soal as $s) {
-            if ($s['id'] == $id_acak) {
-                $soal_diurutkan[] = $s;
-                break;
-            }
-        }
-    }
-    if (!empty($soal_diurutkan)) {
-        $daftar_soal = $soal_diurutkan;
-    }
-
-    // 2. Acak Pilihan Ganda (PG)
-    foreach ($daftar_soal as &$soal) {
-        if (!isset($_SESSION['acak_pg'][$soal['id']])) {
-            $pilihan = [
-                'A' => $soal['pilihan_a'],
-                'B' => $soal['pilihan_b'],
-                'C' => $soal['pilihan_c'],
-                'D' => $soal['pilihan_d'],
-                'E' => $soal['pilihan_e']
-            ];
-            
-            $keys = array_keys($pilihan);
-            shuffle($keys);
-            
-            $pg_acak = [];
-            foreach ($keys as $k) {
-                $pg_acak[$k] = $pilihan[$k];
-            }
-            $_SESSION['acak_pg'][$soal['id']] = $pg_acak;
-        }
-    }
-    unset($soal);
-}
-// =========================================================================
     
     $_SESSION['urutan_soal'] = $daftar_soal;
 } else {
@@ -426,8 +332,11 @@ if (strcasecmp($mapel_sekarang, 'Bahasa Inggris') === 0) {
                                 $opsi = ['A' => ['teks' => $s['opsi_a'], 'gbr' => $s['gambar_a']], 'B' => ['teks' => $s['opsi_b'], 'gbr' => $s['gambar_b']], 'C' => ['teks' => $s['opsi_c'], 'gbr' => $s['gambar_c']], 'D' => ['teks' => $s['opsi_d'], 'gbr' => $s['gambar_d']], 'E' => ['teks' => $s['opsi_e'], 'gbr' => $s['gambar_e']]];
                                 $keys = array_keys($opsi);
                                 
-                                // Opsi jawaban (PG) tetap diacak untuk semua mapel termasuk B.Inggris & B.Indo
-                                shuffle($keys); 
+                                // PERBAIKAN: Acak PG hanya jika BUKAN Bahasa Inggris
+                                if ($mapel_cek !== 'BAHASA INGGRIS') {
+                                    shuffle($keys); 
+                                }
+                                
                                 $huruf_tampil = ['A', 'B', 'C', 'D', 'E'];
                                 
                                 foreach($keys as $index => $k): 
@@ -621,13 +530,18 @@ if (strcasecmp($mapel_sekarang, 'Bahasa Inggris') === 0) {
         function tutupPreview() {
             document.getElementById('previewModal').style.display = 'none';
             document.getElementById('imgPreview').src = '';
-            setTimeout(() => { isPengawasanAktif = true; }, 500); // Nyalakan lagi setelah sedikit jeda
+            // Pastikan pengawasan hanya nyala jika ujian memang sedang berjalan
+            setTimeout(() => { if(isUjianFullscreen) isPengawasanAktif = true; }, 500); 
         }
 
         // Tambahkan di dalam <script>
         document.querySelectorAll('input[type="radio"]').forEach(radio => {
             radio.addEventListener('change', function() {
-                document.querySelectorAll('.opsi').forEach(el => el.classList.remove('opsi-selected'));
+                // HANYA hapus warna biru di dalam 'soal-box' yang sedang diklik
+                const soalBoxIni = this.closest('.soal-box');
+                soalBoxIni.querySelectorAll('.opsi').forEach(el => el.classList.remove('opsi-selected'));
+                
+                // Tambahkan warna biru ke opsi yang baru saja diklik
                 this.closest('.opsi').classList.add('opsi-selected');
             });
         });
