@@ -291,8 +291,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             
             <button type="submit" class="btn-login">
                 Masuk Sistem 🚀
+                
             </button>
+            <button type="submit" class="btn-login">
+             <a href="../index.php">Kembali </a>
+             </button>
         </form>
+       
 
         <div class="footer-text">
             &copy; <?php echo date('Y'); ?> SMK Islam Bahagia

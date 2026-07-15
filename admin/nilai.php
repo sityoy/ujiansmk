@@ -15,37 +15,65 @@ $list_mapel = $stmtMapel->fetchAll();
 $stmtKelas = $pdo->query("SELECT DISTINCT kelas FROM siswa WHERE kelas IS NOT NULL AND kelas != '' ORDER BY kelas ASC");
 $list_kelas = $stmtKelas->fetchAll();
 
-// 3. Tangkap nilai filter dari URL (GET)
+// 3. Ambil daftar nama ujian unik dari tabel pengaturan_ujian
+$stmtNamaUjian = $pdo->query("SELECT DISTINCT nama_ujian FROM pengaturan_ujian WHERE nama_ujian IS NOT NULL AND nama_ujian != '' ORDER BY nama_ujian ASC");
+$list_nama_ujian = $stmtNamaUjian->fetchAll();
+
+// 4. Tangkap nilai filter dari URL (GET)
+$nama_ujian_filter = isset($_GET['nama_ujian']) ? $_GET['nama_ujian'] : '';
 $mapel_filter = isset($_GET['mapel']) ? $_GET['mapel'] : '';
 $kelas_filter = isset($_GET['kelas']) ? $_GET['kelas'] : '';
-$search_filter = isset($_GET['search']) ? trim($_GET['search']) : ''; // --- TAMBAHAN BAGIAN SEARCH ---
+$search_filter = isset($_GET['search']) ? trim($_GET['search']) : '';
 $page = isset($_GET['page']) ? $_GET['page'] : 1;
 $limit = 20; 
 
 $where = "WHERE 1=1";
 $params = [];
 
-// Tambahkan kondisi pencarian berdasarkan Mapel
+// Filter berdasarkan Nama Ujian
+if ($nama_ujian_filter != '') {
+    $where .= " AND p.nama_ujian = ?";
+    $params[] = $nama_ujian_filter;
+}
+
+// Filter berdasarkan Mapel
 if ($mapel_filter != '') {
     $where .= " AND u.mata_pelajaran = ?";
     $params[] = $mapel_filter;
 }
 
-// Tambahkan kondisi pencarian berdasarkan Kelas
+// Filter berdasarkan Kelas
 if ($kelas_filter != '') {
     $where .= " AND s.kelas = ?";
     $params[] = $kelas_filter;
 }
 
-// --- TAMBAHAN BAGIAN SEARCH: Filter Nama Siswa atau Nomor Kartu Peserta ---
+// Filter Search Nama Siswa atau Nomor Kartu Peserta
 if ($search_filter != '') {
     $where .= " AND (s.nama_siswa LIKE ? OR s.kartu_peserta LIKE ?)";
     $params[] = "%" . $search_filter . "%";
     $params[] = "%" . $search_filter . "%";
 }
 
-// 4. Hitung total data untuk Pagination (WAJIB pakai JOIN ke s karena filter kelas ada di tabel siswa)
-$stmtCount = $pdo->prepare("SELECT COUNT(*) FROM ujian_siswa u JOIN siswa s ON u.siswa_id = s.id $where");
+// =========================================================================
+// PERBAIKAN LOGIKA JOIN: Kita cocokkan berdasarkan Mapel, Kelas, DAN TANGGAL
+// Karena jadwal Utama dan Susulan tanggalnya beda, data tidak akan ganda lagi
+// =========================================================================
+$join_logic = "LEFT JOIN pengaturan_ujian p ON 
+                u.mata_pelajaran = p.mata_pelajaran 
+                AND p.kelas = (CASE 
+                                WHEN s.kelas LIKE 'XII%' THEN 'XII' 
+                                WHEN s.kelas LIKE 'XI%' THEN 'XI' 
+                                ELSE 'X' 
+                               END)
+                AND DATE(u.waktu_selesai) BETWEEN DATE(p.waktu_mulai) AND DATE(p.waktu_selesai)"; 
+
+// 5. Hitung total data untuk Pagination
+$queryCount = "SELECT COUNT(*) FROM ujian_siswa u 
+               JOIN siswa s ON u.siswa_id = s.id 
+               $join_logic
+               $where";
+$stmtCount = $pdo->prepare($queryCount);
 $stmtCount->execute($params);
 $total_data = $stmtCount->fetchColumn();
 
@@ -63,126 +91,106 @@ if ($page === 'all') {
 // --- FITUR CETAK / SIMPAN PDF A4 ---
 // =========================================================================
 if (isset($_GET['export']) && $_GET['export'] == 'print') {
-    $queryPrint = "SELECT u.mata_pelajaran, s.kartu_peserta, s.nama_siswa, s.kelas, u.nilai, u.benar, u.salah, u.jumlah_pelanggaran, u.waktu_selesai, u.foto_selfie
+    $queryPrint = "SELECT u.mata_pelajaran, p.nama_ujian, s.kartu_peserta, s.nama_siswa, s.kelas, u.nilai, u.benar, u.salah, u.jumlah_pelanggaran, u.waktu_selesai, u.foto_selfie
                    FROM ujian_siswa u 
                    JOIN siswa s ON u.siswa_id = s.id 
+                   $join_logic
                    $where ORDER BY s.kelas ASC, s.nama_siswa ASC";
     $stmtPrint = $pdo->prepare($queryPrint);
     $stmtPrint->execute($params);
     $dataPrint = $stmtPrint->fetchAll(PDO::FETCH_ASSOC);
+
+    $title_ujian = ($nama_ujian_filter != '') ? "UJIAN: " . htmlspecialchars($nama_ujian_filter) : "SEMUA UJIAN";
+    $title_kelas = ($kelas_filter != '') ? "KELAS: " . htmlspecialchars($kelas_filter) : "SEMUA KELAS";
+    $title_mapel = ($mapel_filter != '') ? "MAPEL: " . htmlspecialchars($mapel_filter) : "SEMUA MATA PELAJARAN";
     ?>
     <!DOCTYPE html>
     <html lang="id">
     <head>
         <meta charset="UTF-8">
-        <title>Cetak Rekap Nilai - A4</title>
+        <title>Rekap_Nilai_<?php echo $nama_ujian_filter ?: 'SemuaUjian'; ?>_<?php echo $kelas_filter ?: 'SemuaKelas'; ?>_<?php echo date('Ymd'); ?></title>
         <style>
             body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 10pt; color: #1e293b; margin: 0; padding: 10mm; }
-            .kop-surat { text-align: center; margin-bottom: 20px; border-bottom: 3px solid #1e293b; padding-bottom: 10px; position: relative; }
-            .kop-surat h2 { margin: 0; font-size: 16pt; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
-            .kop-surat p { margin: 4px 0 0 0; font-size: 10pt; color: #475569; }
-            .info-rekap { width: 100%; margin-bottom: 15px; font-size: 9.5pt; border-collapse: collapse; }
-            .info-rekap td { padding: 4px 0; vertical-align: top; }
-            table.tabel-data { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 9.5pt; }
-            table.tabel-data th, table.tabel-data td { border: 1px solid #475569; padding: 7px 10px; text-align: center; }
-            table.tabel-data th { background-color: #f1f5f9 !important; font-weight: bold; color: #0f172a; }
-            table.tabel-data td.text-left { text-align: left; }
-            .tanda-tangan { margin-top: 40px; float: right; text-align: center; font-size: 10pt; width: 250px; }
-            .tanda-tangan p { margin: 0; }
-            .no-print-area { background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 10px; text-align: center; margin: -10mm -10mm 10mm -10mm; }
-            .btn-print { background: #0ea5e9; color: white; border: none; padding: 8px 20px; font-weight: bold; border-radius: 5px; cursor: pointer; font-size: 10pt; }
-            .btn-print:hover { background: #0284c7; }
-            @media print {
+            .print-container { width: 100%; }
+            .kop-surat { text-align: center; margin-bottom: 15px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+            .kop-surat h2 { margin: 0; font-size: 16pt; font-weight: bold; text-transform: uppercase; }
+            .kop-surat .filter-info { margin: 5px 0 0 0; font-size: 11pt; font-weight: 600; }
+            table.tabel-data { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            table.tabel-data th, table.tabel-data td { border: 1px solid #333; padding: 8px; text-align: center; }
+            table.tabel-data th { background-color: #e2e8f0 !important; color: #000; }
+            thead { display: table-header-group; }
+            .no-print-area { background: #f8fafc; padding: 10px; text-align: center; margin-bottom: 20px; }
+            .btn-print { background: #0ea5e9; color: white; padding: 8px 20px; border-radius: 5px; cursor: pointer; border:none; }
+            @media print { 
                 .no-print-area { display: none; }
-                body { padding: 0; margin: 0; }
-                @page { size: A4 portrait; margin: 12mm 10mm; }
+                @page { size: A4 portrait; margin: 10mm; }
             }
         </style>
     </head>
     <body>
         <div class="no-print-area">
             <button class="btn-print" onclick="window.print()">🖨️ Klik Untuk Cetak / Save ke PDF</button>
-            <p style="margin: 5px 0 0 0; font-size: 8.5pt; color: #64748b;">Tips: Pada dialog cetak browser, aktifkan opsi "Background graphics" agar warna tabel muncul.</p>
         </div>
 
-        <div class="kop-surat">
-            <h2>REKAPITULASI NILAI UJIAN SISWA</h2>
-            <p>Halaman Administrator Jaringan Computer Based Test (CBT)</p>
-        </div>
-
-        <table class="info-rekap">
-            <tr>
-                <td width="15%"><strong>Mata Pelajaran</strong></td>
-                <td width="2%">:</td>
-                <td width="45%"><?php echo $mapel_filter != '' ? htmlspecialchars($mapel_filter) : 'Semua Mata Pelajaran'; ?></td>
-                <td width="15%"><strong>Tanggal Cetak</strong></td>
-                <td width="2%">:</td>
-                <td><?php echo date('d/m/Y H:i'); ?> WIB</td>
-            </tr>
-            <tr>
-                <td><strong>Kelas</strong></td>
-                <td>:</td>
-                <td><?php echo $kelas_filter != '' ? htmlspecialchars($kelas_filter) : 'Semua Kelas'; ?></td>
-                <td><strong>Pencarian</strong></td>
-                <td>:</td>
-                <td><?php echo $search_filter != '' ? htmlspecialchars($search_filter) : '-'; ?></td>
-            </tr>
-        </table>
-
-        <table class="tabel-data">
-            <thead>
-                <tr>
-                    <th width="4%">No</th>
-                    <th width="15%">No. Peserta</th>
-                    <th class="text-left">Nama Siswa</th>
-                    <th width="10%">Kelas</th>
-                    <th>Mata Pelajaran</th>
-                    <th width="8%">Benar</th>
-                    <th width="8%">Salah</th>
-                    <th width="10%">Pelanggaran</th>
-                    <th width="10%">Nilai</th>
-                    <th width="10%">Selfie</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($dataPrint)): ?>
-                    <tr><td colspan="9" style="color: #64748b;">Tidak ada data rekap nilai siswa.</td></tr>
-                <?php else: ?>
+        <div class="print-container">
+            <table class="tabel-data">
+                <thead>
+                    <tr>
+                        <th colspan="11">
+                            <div class="kop-surat">
+                                <h2>REKAP NILAI UJIAN</h2>
+                                <div class="filter-info"><?php echo $title_ujian . " | " . $title_kelas . " | " . $title_mapel; ?></div>
+                            </div>
+                        </th>
+                    </tr>
+                    <tr>
+                        <th>No</th>
+                        <th>No. Peserta</th>
+                        <th>Nama Siswa</th>
+                        <th>Kelas</th>
+                        <th>Nama Ujian</th>
+                        <th>Mapel</th>
+                        <th width="8%">Benar</th>
+                        <th width="8%">Salah</th>
+                        <th width="8%">Nilai</th>
+                        <th>Pelanggaran</th>
+                        <th>Selfie</th>
+                    </tr>
+                </thead>
+                <tbody>
                     <?php $no = 1; foreach($dataPrint as $row): ?>
                         <tr>
                             <td><?php echo $no++; ?></td>
                             <td><?php echo htmlspecialchars($row['kartu_peserta']); ?></td>
-                            <td class="text-left"><?php echo htmlspecialchars($row['nama_siswa']); ?></td>
+                            <td style="text-align: left;"><?php echo htmlspecialchars($row['nama_siswa']); ?></td>
                             <td><?php echo htmlspecialchars($row['kelas']); ?></td>
-                            <td class="text-left"><?php echo htmlspecialchars($row['mata_pelajaran']); ?></td>
-                            <td><?php echo htmlspecialchars($row['benar'] ?? 0); ?></td>
-                            <td><?php echo htmlspecialchars($row['salah'] ?? 0); ?></td>
-                            <td><?php echo htmlspecialchars($row['jumlah_pelanggaran'] ?? 0); ?></td>
-                            <td><strong><?php echo htmlspecialchars($row['nilai'] ?? 0); ?></strong></td>
+                            <td><?php echo htmlspecialchars($row['nama_ujian'] ?: '-'); ?></td>
+                            <td><?php echo htmlspecialchars($row['mata_pelajaran']); ?></td>
+                            <td><strong><?php echo htmlspecialchars($row['benar']); ?></strong></td>
+                            <td><strong><?php echo htmlspecialchars($row['salah']); ?></strong></td>
+                            <td><strong><span class="score-text"><?php echo number_format($row['nilai'], 2); ?></span></strong></td>
                             <td>
-                                    <?php if($row['foto_selfie']): ?>
-                                        <img src="../assets/<?php echo $row['foto_selfie']; ?>" class="selfie-img" onclick="bukaFoto(this.src)" style="width: 40px; height: 40px;" title="Klik untuk perbesar">
-                                    <?php else: ?>
-                                        <span style="color: var(--text-muted);">-</span>
-                                    <?php endif; ?>
-                                </td>
+                                <?php if($row['jumlah_pelanggaran'] >= 2): ?>
+                                    <span class="badge badge-danger">⚠️ <?php echo $row['jumlah_pelanggaran']; ?>x (BATAS)</span>
+                                <?php elseif($row['jumlah_pelanggaran'] > 0): ?>
+                                    <span class="badge badge-warning"><?php echo $row['jumlah_pelanggaran']; ?>x</span>
+                                <?php else: ?>
+                                    <span class="badge badge-muted">0x</span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <?php if($row['foto_selfie']): ?>
+                                    <img src="../assets/<?php echo $row['foto_selfie']; ?>" class="selfie-img" style="width: 50px; height: 50px;">
+                                <?php else: ?>
+                                    <span style="color: var(--text-muted);">-</span>
+                                <?php endif; ?>
+                            </td>
                         </tr>
                     <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
-
-        <div class="tanda-tangan">
-            <p>Jakarta, <?php echo date('d F Y'); ?></p>
-            <p style="margin-top: 60px; border-bottom: 1px solid #000; font-weight: bold;">Administrator CBT</p>
+                </tbody>
+            </table>
         </div>
-
-        <script>
-            // Buka dialog print otomatis
-            window.onload = function() {
-                setTimeout(function() { window.print(); }, 500);
-            }
-        </script>
+        <script>window.onload = function() { setTimeout(function() { window.print(); }, 500); }</script>
     </body>
     </html>
     <?php
@@ -190,11 +198,13 @@ if (isset($_GET['export']) && $_GET['export'] == 'print') {
 }
 // =========================================================================
 
-// 5. Query utama untuk mengambil data nilai
-$query = "SELECT u.*, s.kartu_peserta, s.nama_siswa, s.kelas 
+// 6. Query utama dengan LEFT JOIN yang difilter dengan waktu ujian
+$query = "SELECT u.*, s.kartu_peserta, s.nama_siswa, s.kelas, p.nama_ujian 
           FROM ujian_siswa u 
           JOIN siswa s ON u.siswa_id = s.id 
-          $where ORDER BY u.id DESC $limit_query";
+          $join_logic
+          $where 
+          ORDER BY u.id DESC $limit_query";
 $stmt = $pdo->prepare($query);
 $stmt->execute($params);
 $data_nilai = $stmt->fetchAll();
@@ -222,90 +232,15 @@ $data_nilai = $stmt->fetchAll();
             --border-color: #e2e8f0;
         }
 
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background: var(--bg-main); 
-            color: var(--text-main); 
-            margin: 0; 
-            padding: 20px; 
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: var(--card-bg);
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.04);
-        }
-
-        .header-title {
-            margin-top: 0;
-            margin-bottom: 25px;
-            color: var(--text-main);
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 15px;
-            font-size: 24px;
-        }
-        
-        /* Filter Section */
-        .filter-box { 
-            background: #f1f5f9; 
-            padding: 20px; 
-            border-radius: 10px; 
-            border: 1px solid var(--border-color);
-            margin-bottom: 25px; 
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-between;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .filter-form-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .filter-label {
-            font-weight: 600;
-            font-size: 14px;
-            color: var(--text-main);
-        }
-
-        .form-control {
-            padding: 10px 12px;
-            border-radius: 6px;
-            border: 1px solid #cbd5e1;
-            font-size: 14px;
-            outline: none;
-            min-width: 180px;
-            transition: 0.3s;
-        }
-
-        .form-control:focus {
-            border-color: var(--secondary);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-        }
-
-        /* Buttons */
-        .btn {
-            padding: 10px 16px;
-            border-radius: 6px;
-            font-weight: 600;
-            text-decoration: none;
-            border: none;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-size: 14px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-        }
-
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg-main); color: var(--text-main); margin: 0; padding: 20px; }
+        .container { max-width: 1300px; margin: 0 auto; background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); }
+        .header-title { margin-top: 0; margin-bottom: 25px; color: var(--text-main); border-bottom: 2px solid var(--border-color); padding-bottom: 15px; font-size: 24px; }
+        .filter-box { background: #f1f5f9; padding: 20px; border-radius: 10px; border: 1px solid var(--border-color); margin-bottom: 25px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px; }
+        .filter-form-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .filter-label { font-weight: 600; font-size: 14px; color: var(--text-main); }
+        .form-control { padding: 10px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 14px; outline: none; min-width: 150px; transition: 0.3s; }
+        .form-control:focus { border-color: var(--secondary); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); }
+        .btn { padding: 10px 16px; border-radius: 6px; font-weight: 600; text-decoration: none; border: none; cursor: pointer; transition: all 0.2s; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
         .btn-primary { background: var(--secondary); color: white; }
         .btn-primary:hover { background: var(--secondary-hover); }
         .btn-success { background: var(--primary); color: white; }
@@ -313,75 +248,30 @@ $data_nilai = $stmt->fetchAll();
         .btn-danger { background: var(--danger); color: white; }
         .btn-danger:hover { background: var(--danger-hover); }
         .btn-info { background: var(--info); color: white; }
-        
         .btn-sm { padding: 6px 12px; font-size: 13px; width: 100%; margin-bottom: 5px; box-sizing: border-box;}
-
-        /* Table */
         .table-responsive { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; min-width: 900px; margin-top: 10px;}
+        table { width: 100%; border-collapse: collapse; min-width: 1000px; margin-top: 10px;}
         th, td { border-bottom: 1px solid var(--border-color); padding: 14px 12px; text-align: center; font-size: 14.5px;}
-        th { 
-            background-color: #f8fafc; 
-            color: var(--text-muted); 
-            font-size: 13px; 
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
+        th { background-color: #f8fafc; color: var(--text-muted); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
         tr:hover { background-color: #f1f5f9; }
-        
         .text-left { text-align: left; }
         .fw-bold { font-weight: 600; }
-
-        /* Badges */
         .score-text { font-size: 18px; font-weight: 800; color: var(--primary); }
-        
         .badge { padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; display: inline-block; }
         .badge-danger { background: #fee2e2; color: #991b1b; }
         .badge-warning { background: #fef3c7; color: #92400e; }
         .badge-muted { background: #f1f5f9; color: #64748b; }
-
-        /* Selfie Image */
-        .selfie-img {
-            width: 50px;
-            height: 50px;
-            object-fit: cover;
-            border-radius: 8px;
-            cursor: zoom-in;
-            border: 2px solid var(--border-color);
-            transition: 0.2s;
-        }
+        .badge-ujian { background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe;}
+        .selfie-img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px; cursor: zoom-in; border: 2px solid var(--border-color); transition: 0.2s; }
         .selfie-img:hover { border-color: var(--secondary); transform: scale(1.05); }
-
-        /* Pagination */
         .pagination { margin-top: 30px; display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
-        .page-link { 
-            padding: 8px 14px; 
-            border: 1px solid var(--border-color); 
-            text-decoration: none; 
-            color: var(--text-main); 
-            border-radius: 6px; 
-            font-weight: 600;
-            font-size: 14px;
-            transition: 0.2s;
-        }
+        .page-link { padding: 8px 14px; border: 1px solid var(--border-color); text-decoration: none; color: var(--text-main); border-radius: 6px; font-weight: 600; font-size: 14px; transition: 0.2s; }
         .page-link.active { background: var(--secondary); color: white; border-color: var(--secondary); }
         .page-link:hover:not(.active) { background: #e2e8f0; }
-
-        /* Modal Pratinjau */
-        #modal-pratinjau { 
-            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
-            background: rgba(15, 23, 42, 0.9); z-index: 10000; 
-            justify-content: center; align-items: center; flex-direction: column; 
-            backdrop-filter: blur(4px);
-        }
+        #modal-pratinjau { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.9); z-index: 10000; justify-content: center; align-items: center; flex-direction: column; backdrop-filter: blur(4px); }
         #modal-pratinjau img { max-width: 90%; max-height: 85vh; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-        .close-btn { 
-            position: absolute; top: 25px; right: 40px; color: white; font-size: 45px; 
-            cursor: pointer; font-weight: 300; transition: 0.2s; 
-        }
+        .close-btn { position: absolute; top: 25px; right: 40px; color: white; font-size: 45px; cursor: pointer; font-weight: 300; transition: 0.2s; }
         .close-btn:hover { color: var(--danger); transform: scale(1.1); }
-        
         .footer-wrap { margin-top: 30px; text-align: center; }
     </style>
 </head>
@@ -399,12 +289,31 @@ $data_nilai = $stmt->fetchAll();
         
         <div class="filter-box">
             <form method="GET" action="nilai.php" class="filter-form-group">
-                <div class="filter-label">Cari Siswa:</div>
-                <input type="text" name="search" class="form-control" placeholder="Nama / No. Peserta..." value="<?php echo htmlspecialchars($search_filter); ?>" style="min-width: 200px;">
+                <div class="filter-label">Cari:</div>
+                <input type="text" name="search" class="form-control" placeholder="Nama / No. Peserta..." value="<?php echo htmlspecialchars($search_filter); ?>" style="max-width: 150px;">
 
-                <div class="filter-label" style="margin-left: 10px;">Filter Kelas:</div>
-                <select name="kelas" class="form-control">
-                    <option value="">-- Semua Kelas --</option>
+                <div class="filter-label" style="margin-left: 10px;">Nama Ujian:</div>
+                <select name="nama_ujian" class="form-control" style="max-width: 180px;">
+                    <option value="">-- Semua Ujian --</option>
+                    <?php 
+                    if (!empty($list_nama_ujian)) {
+                        foreach($list_nama_ujian as $nu): 
+                            $nama = is_array($nu) ? $nu['nama_ujian'] : $nu;
+                            if(!empty($nama)):
+                    ?>
+                        <option value="<?php echo htmlspecialchars($nama); ?>" <?php if($nama_ujian_filter == $nama) echo 'selected'; ?>>
+                            <?php echo htmlspecialchars($nama); ?>
+                        </option>
+                    <?php 
+                            endif;
+                        endforeach; 
+                    }
+                    ?>
+                </select>
+
+                <div class="filter-label" style="margin-left: 10px;">Kelas:</div>
+                <select name="kelas" class="form-control" style="max-width: 120px;">
+                    <option value="">-- Semua --</option>
                     <?php foreach($list_kelas as $lk): ?>
                         <option value="<?php echo htmlspecialchars($lk['kelas']); ?>" <?php if($kelas_filter == $lk['kelas']) echo 'selected'; ?>>
                             <?php echo htmlspecialchars($lk['kelas']); ?>
@@ -412,9 +321,9 @@ $data_nilai = $stmt->fetchAll();
                     <?php endforeach; ?>
                 </select>
 
-                <div class="filter-label" style="margin-left: 10px;">Mata Pelajaran:</div>
-                <select name="mapel" class="form-control">
-                    <option value="">-- Semua Mapel --</option>
+                <div class="filter-label" style="margin-left: 10px;">Mapel:</div>
+                <select name="mapel" class="form-control" style="max-width: 150px;">
+                    <option value="">-- Semua --</option>
                     <?php foreach($list_mapel as $lm): ?>
                         <option value="<?php echo htmlspecialchars($lm['mata_pelajaran']); ?>" <?php if($mapel_filter == $lm['mata_pelajaran']) echo 'selected'; ?>>
                             <?php echo htmlspecialchars($lm['mata_pelajaran']); ?>
@@ -422,16 +331,16 @@ $data_nilai = $stmt->fetchAll();
                     <?php endforeach; ?>
                 </select>
                 
-                <button type="submit" class="btn btn-primary">🔍 Tampilkan</button>
+                <button type="submit" class="btn btn-primary">🔍 Cari</button>
             </form>
             
             <div style="display: flex; gap: 10px;">
-                <a href="export_nilai.php?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&search=<?php echo urlencode($search_filter); ?>" class="btn btn-success">
-                    📥 Download Excel
+                <a href="export_nilai.php?nama_ujian=<?php echo urlencode($nama_ujian_filter); ?>&mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&search=<?php echo urlencode($search_filter); ?>" class="btn btn-success">
+                    📥 Excel
                 </a>
                 
-                <a href="?export=print&mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&search=<?php echo urlencode($search_filter); ?>" target="_blank" class="btn btn-info">
-                    🖨️ Cetak A4 / PDF
+                <a href="?export=print&nama_ujian=<?php echo urlencode($nama_ujian_filter); ?>&mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&search=<?php echo urlencode($search_filter); ?>" target="_blank" class="btn btn-info">
+                    🖨️ Cetak
                 </a>
             </div>
         </div>
@@ -444,6 +353,7 @@ $data_nilai = $stmt->fetchAll();
                         <th>No. Peserta</th>
                         <th class="text-left">Nama Siswa</th>
                         <th>Kelas</th>
+                        <th>Nama Ujian</th>
                         <th>Mapel</th>
                         <th>Nilai</th>
                         <th>Pelanggaran</th>
@@ -454,7 +364,7 @@ $data_nilai = $stmt->fetchAll();
                 <tbody>
                     <?php if (empty($data_nilai)): ?>
                         <tr>
-                            <td colspan="9" style="padding: 40px; color: var(--text-muted);">
+                            <td colspan="10" style="padding: 40px; color: var(--text-muted);">
                                 <em>Belum ada data nilai ujian untuk filter tersebut.</em>
                             </td>
                         </tr>
@@ -465,6 +375,9 @@ $data_nilai = $stmt->fetchAll();
                                 <td class="fw-bold"><?php echo htmlspecialchars($row['kartu_peserta']); ?></td>
                                 <td class="text-left fw-bold"><?php echo htmlspecialchars($row['nama_siswa']); ?></td>
                                 <td><?php echo htmlspecialchars($row['kelas']); ?></td>
+                                
+                                <td><span class="badge badge-ujian"><?php echo htmlspecialchars($row['nama_ujian'] ?: '-'); ?></span></td>
+                                
                                 <td><span style="color: var(--secondary); font-weight: 600;"><?php echo htmlspecialchars($row['mata_pelajaran']); ?></span></td>
                                 <td><span class="score-text"><?php echo number_format($row['nilai'], 2); ?></span></td>
                                 
@@ -500,22 +413,22 @@ $data_nilai = $stmt->fetchAll();
         <?php if ($total_pages > 1 && $page !== 'all'): ?>
             <div class="pagination">
                 <?php if ($page > 1): ?>
-                    <a href="?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&search=<?php echo urlencode($search_filter); ?>&page=<?php echo $page - 1; ?>" class="page-link">&laquo; Prev</a>
+                    <a href="?nama_ujian=<?php echo urlencode($nama_ujian_filter); ?>&mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&search=<?php echo urlencode($search_filter); ?>&page=<?php echo $page - 1; ?>" class="page-link">&laquo; Prev</a>
                 <?php endif; ?>
                 
                 <?php for ($i = 1; $i <= $total_pages; $i++): ?>
-                    <a href="?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&search=<?php echo urlencode($search_filter); ?>&page=<?php echo $i; ?>" class="page-link <?php echo ($page == $i) ? 'active' : ''; ?>"><?php echo $i; ?></a>
+                    <a href="?nama_ujian=<?php echo urlencode($nama_ujian_filter); ?>&mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&search=<?php echo urlencode($search_filter); ?>&page=<?php echo $i; ?>" class="page-link <?php echo ($page == $i) ? 'active' : ''; ?>"><?php echo $i; ?></a>
                 <?php endfor; ?>
                 
                 <?php if ($page < $total_pages): ?>
-                    <a href="?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&search=<?php echo urlencode($search_filter); ?>&page=<?php echo $page + 1; ?>" class="page-link">Next &raquo;</a>
+                    <a href="?nama_ujian=<?php echo urlencode($nama_ujian_filter); ?>&mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&search=<?php echo urlencode($search_filter); ?>&page=<?php echo $page + 1; ?>" class="page-link">Next &raquo;</a>
                 <?php endif; ?>
                 
-                <a href="?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&search=<?php echo urlencode($search_filter); ?>&page=all" class="page-link" style="background: var(--info); color: white; border-color: var(--info);">Lihat Semua</a>
+                <a href="?nama_ujian=<?php echo urlencode($nama_ujian_filter); ?>&mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&search=<?php echo urlencode($search_filter); ?>&page=all" class="page-link" style="background: var(--info); color: white; border-color: var(--info);">Lihat Semua</a>
             </div>
         <?php elseif ($page === 'all'): ?>
              <div class="pagination">
-                 <a href="?mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&search=<?php echo urlencode($search_filter); ?>&page=1" class="page-link" style="background: var(--text-muted); color: white;">Kembali ke Halaman Terpisah</a>
+                 <a href="?nama_ujian=<?php echo urlencode($nama_ujian_filter); ?>&mapel=<?php echo urlencode($mapel_filter); ?>&kelas=<?php echo urlencode($kelas_filter); ?>&search=<?php echo urlencode($search_filter); ?>&page=1" class="page-link" style="background: var(--text-muted); color: white;">Kembali ke Halaman Terpisah</a>
              </div>
         <?php endif; ?>
 
@@ -525,7 +438,6 @@ $data_nilai = $stmt->fetchAll();
     </div>
 
     <script>
-        // Script untuk pop up foto (Modal Image Viewer)
         function bukaFoto(src) {
             document.getElementById('gambar-besar').src = src;
             document.getElementById('modal-pratinjau').style.display = 'flex';

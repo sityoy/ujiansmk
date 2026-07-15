@@ -2,7 +2,7 @@
 // Pengaturan Database
 $config = [
     'host' => 'localhost',
-    'dbname' => 'db_ujiansmkbhg',
+    'dbname' => 'db_ujicobasmkbhg',
     'username' => 'root',
     'password' => 'Smkpb@#1',
 ];

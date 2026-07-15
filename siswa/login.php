@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $jadwal_id = $_POST['jadwal_id'] ?? '';
 
     if (empty($jadwal_id)) {
-        $_SESSION['error_login'] = "Pilih Mata Pelajaran terlebih dahulu!";
+        $_SESSION['error_login'] = "Pilih Jadwal Ujian terlebih dahulu!";
         header("Location: login.php");
         exit;
     }
@@ -56,15 +56,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $_SESSION['error_login'] = "Ujian sudah ditutup!";
         } else {
             
-            // --- LOGIKA UTAMA: CEK APAKAH SUDAH PERNAH MENGERJAKAN ---
+            // --- PERBAIKAN LOGIKA: CEK APAKAH SUDAH MENGERJAKAN JADWAL SPESIFIK INI ---
             $stmtCek = $pdo->prepare("SELECT id FROM ujian_siswa 
                                       WHERE siswa_id = ? 
                                       AND TRIM(mata_pelajaran) = TRIM(?) 
-                                      AND waktu_selesai IS NOT NULL");
-            $stmtCek->execute([$siswa['id'], trim($jadwal['mata_pelajaran'])]);
+                                      AND waktu_selesai IS NOT NULL
+                                      AND DATE(waktu_selesai) BETWEEN DATE(?) AND DATE(?)");
+            $stmtCek->execute([
+                $siswa['id'], 
+                trim($jadwal['mata_pelajaran']),
+                $jadwal['waktu_mulai'],
+                $jadwal['waktu_selesai']
+            ]);
             
             if ($stmtCek->rowCount() > 0) {
-                $_SESSION['error_login'] = "Anda sudah menyelesaikan ujian <strong>" . htmlspecialchars($jadwal['mata_pelajaran']) . "</strong>. Tidak bisa mengerjakan ulang.";
+                $_SESSION['error_login'] = "Anda sudah menyelesaikan ujian <strong>" . htmlspecialchars($jadwal['mata_pelajaran']) . "</strong> untuk jadwal ini. Tidak bisa mengerjakan ulang.";
             } else {
                 // Set Session untuk siswa jika lolos verifikasi
                 $_SESSION['siswa_id'] = $siswa['id'];
@@ -83,30 +89,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $_SESSION['error_login'] = "Kartu Peserta atau Password salah!";
     }
 
-    // Redirect kembali ke halaman ini (login.php) agar POST data terhapus
     header("Location: login.php");
     exit;
 }
 
-// Ambil semua daftar jadwal untuk ditampilkan di dropdown (Urut berdasarkan kelas dan waktu)
+// Ambil semua daftar jadwal untuk dilempar ke JavaScript
 $stmtListJadwal = $pdo->query("SELECT * FROM pengaturan_ujian ORDER BY kelas ASC, waktu_mulai ASC");
-$semua_jadwal = $stmtListJadwal->fetchAll();
+$semua_jadwal = $stmtListJadwal->fetchAll(PDO::FETCH_ASSOC);
 
-// Kelompokkan jadwal ke dalam array PHP berdasarkan kelas untuk mempermudah <optgroup>
-$jadwal_per_kelas = [
-    'X' => [],
-    'XI' => [],
-    'XII' => []
-];
+// Ambil nama ujian secara unik (DISTINCT)
+$stmtNamaUjian = $pdo->query("SELECT DISTINCT nama_ujian FROM pengaturan_ujian WHERE nama_ujian IS NOT NULL AND nama_ujian != '' ORDER BY nama_ujian ASC");
+$list_nama_ujian = $stmtNamaUjian->fetchAll(PDO::FETCH_COLUMN);
 
-foreach ($semua_jadwal as $j) {
-    $k = strtoupper(trim($j['kelas'] ?? 'X'));
-    if (strpos($k, 'XII') === 0) { $key = 'XII'; } 
-    elseif (strpos($k, 'XI') === 0) { $key = 'XI'; } 
-    else { $key = 'X'; }
-    
-    $jadwal_per_kelas[$key][] = $j;
-}
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -137,7 +131,7 @@ foreach ($semua_jadwal as $j) {
 
         .login-wrapper {
             width: 100%;
-            max-width: 380px;
+            max-width: 440px; 
             padding: 20px;
             box-sizing: border-box;
             animation: slideUp 0.5s ease-out;
@@ -210,7 +204,6 @@ foreach ($semua_jadwal as $j) {
             background: white;
         }
 
-        /* Desain khusus teks pembatas grup kelas di dalam select */
         select optgroup {
             font-weight: bold;
             color: #3730a3;
@@ -312,44 +305,22 @@ foreach ($semua_jadwal as $j) {
             
             <form method="POST">
                 <div class="form-group">
-                    <label>Pilih Jadwal Ujian</label>
-                    <select name="jadwal_id" class="form-control" required>
-                        <option value="" disabled selected>-- Pilih Mata Pelajaran --</option>
-                        
-                        <?php 
-                        $bulanIndo = [
-                            '01' => 'Januari', '02' => 'Februari', '03' => 'Maret',
-                            '04' => 'April', '05' => 'Mei', '06' => 'Juni',
-                            '07' => 'Juli', '08' => 'Agustus', '09' => 'September',
-                            '10' => 'Oktober', '11' => 'November', '12' => 'Desember'
-                        ];
-
-                        // LOOP UNTUK MASING-MASING GRUP KELAS
-                        foreach(['X' => 'Tingkat Kelas X', 'XI' => 'Tingkat Kelas XI', 'XII' => 'Tingkat Kelas XII'] as $keyKelas => $labelKelas):
-                            if(!empty($jadwal_per_kelas[$keyKelas])):
-                        ?>
-                            <optgroup label="📂 <?php echo $labelKelas; ?>">
-                                <?php 
-                                foreach($jadwal_per_kelas[$keyKelas] as $j): 
-                                    $waktu_mulai = strtotime($j['waktu_mulai']);
-                                    $tgl = date('d', $waktu_mulai);
-                                    $bln = $bulanIndo[date('m', $waktu_mulai)];
-                                    $thn = date('Y', $waktu_mulai);
-                                    $jam_mulai = date('H:i', $waktu_mulai);
-                                    $jam_selesai = date('H:i', strtotime($j['waktu_selesai']));
-                                    
-                                    $waktu_tampil = "$tgl $bln $thn ($jam_mulai - $jam_selesai)";
-                                ?>
-                                    <option value="<?php echo $j['id']; ?>">
-                                        <?php echo htmlspecialchars($j['mata_pelajaran']) . " | " . $waktu_tampil; ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </optgroup>
-                        <?php 
-                            endif;
-                        endforeach; 
-                        ?>
+                    <label>Pilih Nama Ujian</label>
+                    <select name="nama_ujian" id="pilih_nama_ujian" class="form-control" required onchange="filterJadwal()">
+                        <option value="" disabled selected>-- Pilih Nama Ujian --</option>
+                        <?php foreach($list_nama_ujian as $nu): ?>
+                            <option value="<?php echo htmlspecialchars($nu); ?>">
+                                <?php echo htmlspecialchars($nu); ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Pilih Jadwal Ujian</label>
+                    <select name="jadwal_id" id="pilih_jadwal_ujian" class="form-control" required>
+                        <option value="" disabled selected>-- Pilih Jadwal --</option>
+                        </select>
                 </div>
                 
                 <div class="form-group">
@@ -379,6 +350,85 @@ foreach ($semua_jadwal as $j) {
     </div>
 
     <script>
+        const semuaJadwal = <?php echo json_encode($semua_jadwal); ?>;
+        
+        const bulanIndo = {
+            '01': 'Jan', '02': 'Feb', '03': 'Mar',
+            '04': 'Apr', '05': 'Mei', '06': 'Jun',
+            '07': 'Jul', '08': 'Ags', '09': 'Sep',
+            '10': 'Okt', '11': 'Nov', '12': 'Des'
+        };
+
+        function padZero(num) {
+            return num < 10 ? '0' + num : num;
+        }
+
+        function formatTanggal(tanggalString) {
+            if (!tanggalString) return "-";
+            const dateObj = new Date(tanggalString);
+            if (isNaN(dateObj.getTime())) return tanggalString;
+
+            const tgl = padZero(dateObj.getDate());
+            const bulanStr = padZero(dateObj.getMonth() + 1); 
+            const bln = bulanIndo[bulanStr] || bulanStr;
+            const jam = padZero(dateObj.getHours());
+            const menit = padZero(dateObj.getMinutes());
+
+            return `${tgl} ${bln} ${jam}:${menit}`;
+        }
+
+        function filterJadwal() {
+            const selectNamaUjian = document.getElementById('pilih_nama_ujian');
+            const namaUjianDipilih = selectNamaUjian.value;
+            const jadwalDropdown = document.getElementById('pilih_jadwal_ujian');
+            
+            // 1. Reset dropdown
+            jadwalDropdown.innerHTML = '<option value="" disabled selected>-- Pilih Jadwal --</option>';
+
+            if (!namaUjianDipilih) return;
+
+            // 2. Filter jadwal
+            const jadwalFiltered = semuaJadwal.filter(j => {
+                const namaDB = j.nama_ujian ? j.nama_ujian.toString().trim() : '';
+                return namaDB === namaUjianDipilih.trim();
+            });
+
+            // 3. Kelompokkan berdasarkan kelas
+            const grouped = { 'X': [], 'XI': [], 'XII': [] };
+            jadwalFiltered.forEach(j => {
+                let k = (j.kelas || 'X').trim().toUpperCase();
+                if (k.startsWith('XII')) { grouped['XII'].push(j); }
+                else if (k.startsWith('XI')) { grouped['XI'].push(j); }
+                else { grouped['X'].push(j); }
+            });
+
+            // 4. Masukkan ke dropdown
+            const labels = { 'X': 'Tingkat Kelas X', 'XI': 'Tingkat Kelas XI', 'XII': 'Tingkat Kelas XII' };
+            
+            for (let key in labels) {
+                if (grouped[key].length > 0) {
+                    let optgroup = document.createElement('optgroup');
+                    optgroup.label = "📂 " + labels[key];
+                    
+                    grouped[key].forEach(j => {
+                        let mulai = formatTanggal(j.waktu_mulai);
+                        let selesai = formatTanggal(j.waktu_selesai);
+                        let mapel = j.mata_pelajaran || 'Mapel Tidak Diketahui';
+
+                        let textTampil = `${mapel} | Mulai: ${mulai} - Selesai: ${selesai}`;
+
+                        let option = document.createElement('option');
+                        option.value = j.id;
+                        option.textContent = textTampil;
+                        
+                        optgroup.appendChild(option);
+                    });
+                    
+                    jadwalDropdown.appendChild(optgroup);
+                }
+            }
+        }
+        
         if (window.history.replaceState) {
             window.history.replaceState(null, null, window.location.href);
         }
@@ -389,10 +439,10 @@ foreach ($semua_jadwal as $j) {
             
             if (pwdInput.type === 'password') {
                 pwdInput.type = 'text';
-                iconWrapper.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+                iconWrapper.innerHTML = '<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24\"></path><line x1=\"1\" y1=\"1\" x2=\"23\" y2=\"23\"></line></svg>';
             } else {
                 pwdInput.type = 'password';
-                iconWrapper.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+                iconWrapper.innerHTML = '<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z\"></path><circle cx=\"12\" cy=\"12\" r=\"3\"></circle></svg>';
             }
         }
     </script>
