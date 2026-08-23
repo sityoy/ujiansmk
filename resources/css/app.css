@@ -7,3 +7,18 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+@layer base {
+    :root {
+        color-scheme: dark;
+    }
+
+    body {
+        font-family: var(--font-sans);
+    }
+
+    ::selection {
+        background: rgb(34 211 238 / 0.3);
+        color: white;
+    }
+}
