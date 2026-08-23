@@ -83,6 +83,7 @@ class DailyCheckinServiceTest extends TestCase
             'longitude' => 106.8166660,
             'radius_meters' => 100,
             'max_accuracy_meters' => 50,
+            'is_active' => true,
         ]);
 
         return [$student, $campus];
