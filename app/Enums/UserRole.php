@@ -10,4 +10,16 @@ enum UserRole: string
     case Proctor = 'proctor';
     case Principal = 'principal';
     case Student = 'student';
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::SuperAdmin => 'Super Admin',
+            self::Committee => 'Panitia',
+            self::Teacher => 'Guru',
+            self::Proctor => 'Pengawas',
+            self::Principal => 'Kepala Sekolah',
+            self::Student => 'Siswa',
+        };
+    }
 }
