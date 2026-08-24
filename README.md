@@ -20,7 +20,7 @@ Absensi harian dibatasi oleh pasangan `student_id` dan `attendance_date`. Selfie
 
 ## Persyaratan
 
-- PHP 8.3 atau lebih baru.
+- PHP 8.4.1 atau lebih baru.
 - Composer 2.
 - MySQL 8 atau MariaDB yang kompatibel.
 - Node.js 20 atau lebih baru.
