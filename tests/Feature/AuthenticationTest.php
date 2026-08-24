@@ -75,6 +75,33 @@ class AuthenticationTest extends TestCase
         $this->assertAuthenticatedAs($studentUser);
     }
 
+    public function test_user_with_initial_password_must_change_it_before_opening_dashboard(): void
+    {
+        $studentUser = User::factory()->create([
+            'email' => null,
+            'username' => '0123456789',
+            'role' => UserRole::Student,
+            'password' => '0123456789',
+            'must_change_password' => true,
+        ]);
+
+        $this->post(route('login.store'), [
+            'login' => '0123456789',
+            'password' => '0123456789',
+        ])->assertRedirect(route('password.change'));
+
+        $this->get(route('dashboard'))->assertRedirect(route('password.change'));
+
+        $this->put(route('password.update'), [
+            'current_password' => '0123456789',
+            'password' => 'PasswordBaru123',
+            'password_confirmation' => 'PasswordBaru123',
+        ])->assertRedirect(route('dashboard'));
+
+        $this->assertFalse($studentUser->refresh()->must_change_password);
+        $this->get(route('dashboard'))->assertOk();
+    }
+
     public function test_guest_is_redirected_to_the_login_page(): void
     {
         $this->get(route('dashboard'))

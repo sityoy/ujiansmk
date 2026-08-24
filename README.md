@@ -1,6 +1,6 @@
-# GALAK CBT
+# Sistem Ujian Sekolah
 
-GALAK CBT adalah pengembangan ulang sistem ujian sekolah menggunakan Laravel 13. Branch ini dibangun terpisah dari aplikasi PHP lama agar data pengujian dan proses migrasi dapat dikendalikan.
+Aplikasi ini adalah pengembangan ulang sistem ujian sekolah menggunakan Laravel 13. Branch ini dibangun terpisah dari aplikasi PHP lama agar data pengujian dan proses migrasi dapat dikendalikan.
 
 ## Ruang lingkup tahap pertama
 
@@ -11,6 +11,14 @@ GALAK CBT adalah pengembangan ulang sistem ujian sekolah menggunakan Laravel 13.
 - Satu percobaan aktif untuk setiap penugasan.
 - Absensi satu kali per hari menggunakan kartu/wajah dan validasi radius kampus.
 - Pencatatan insiden keamanan tanpa langsung menghukum siswa dari sinyal browser tunggal.
+- Impor/ekspor Excel untuk data siswa dan mata pelajaran.
+- Rapor ATS per mata pelajaran beserta peringkat kelas.
+
+## Akun siswa hasil impor
+
+Saat siswa baru diimpor, sistem otomatis membuat akun. Username dan password awal memakai NISN jika tersedia; jika NISN kosong, keduanya memakai NIS. Siswa diwajibkan mengganti password awal setelah login pertama.
+
+Password tidak pernah dimasukkan ke file ekspor. Ketika data siswa diimpor ulang dengan kolom Password kosong, password akun yang sudah ada tetap dipertahankan. Jika kolom Password diisi, nilai tersebut menjadi password awal baru dan siswa kembali diwajibkan menggantinya.
 
 ## Aturan anti-duplikasi
 
@@ -43,6 +51,6 @@ Jangan menyalin `koneksi.php`, dump database, password, foto selfie, atau folder
 
 ## Status pengembangan
 
-Fondasi domain dan database tersedia. Tahap berikutnya meliputi autentikasi berbasis role, pengelolaan master data, bank soal, paket ujian, autosave jawaban, monitoring proktor, dan importer data lama.
+Fondasi domain, autentikasi berbasis peran, data akademik, penjadwalan, sesi susulan, absensi, monitoring dasar, dan rapor ATS tersedia. Tahap berikutnya meliputi bank soal, paket ujian, autosave jawaban, serta importer terkontrol untuk data aplikasi lama.
 
 Endpoint pemeriksaan aplikasi tersedia di `GET /health`.

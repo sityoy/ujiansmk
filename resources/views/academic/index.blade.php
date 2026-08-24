@@ -69,6 +69,19 @@
                 <button class="rounded-xl bg-violet-400 px-4 py-3 text-sm font-semibold text-slate-950">Tambah</button>
             </form>
 
+            <div class="mt-4 flex flex-wrap gap-2">
+                <a href="{{ route('academic.subjects.template') }}" class="rounded-lg border border-violet-400/30 px-3 py-2 text-xs font-medium text-violet-200 hover:bg-violet-400/10">Template Excel</a>
+                <a href="{{ route('academic.subjects.export') }}" class="rounded-lg border border-white/10 px-3 py-2 text-xs font-medium text-slate-300 hover:bg-white/5">Ekspor mapel</a>
+            </div>
+
+            <form method="POST" action="{{ route('academic.subjects.import') }}" enctype="multipart/form-data" class="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
+                @csrf
+                <input type="file" name="subject_spreadsheet" accept=".xlsx,.csv" required
+                    class="block w-full rounded-xl border border-dashed border-white/15 bg-slate-950/50 px-3 py-2 text-xs text-slate-400 file:mr-2 file:rounded-lg file:border-0 file:bg-violet-400 file:px-3 file:py-2 file:font-semibold file:text-slate-950">
+                <button class="rounded-xl border border-violet-400/30 px-4 py-2 text-xs font-semibold text-violet-200 hover:bg-violet-400/10">Impor mapel</button>
+                <p class="sm:col-span-2 text-xs leading-5 text-slate-500">Kode yang sama akan diperbarui, bukan dibuat ganda. Maksimal 1.000 mapel.</p>
+            </form>
+
             <div class="mt-6 max-h-80 space-y-2 overflow-y-auto pr-1">
                 @forelse ($subjects as $subject)
                     <div class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-slate-950/40 p-3">
@@ -110,6 +123,20 @@
                 <button class="sm:col-span-2 rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-slate-950">Tambah kelas</button>
             </form>
 
+            <form method="GET" action="{{ route('academic.index') }}" class="mt-5 grid gap-2 sm:grid-cols-[1fr_140px_auto]">
+                <select name="class_year" class="rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2 text-xs">
+                    <option value="">Semua tahun ajaran</option>
+                    @foreach ($academicYears as $year)
+                        <option value="{{ $year->id }}" @selected((int) $classYearId === $year->id)>{{ $year->name }}</option>
+                    @endforeach
+                </select>
+                <select name="class_per_page" class="rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2 text-xs">
+                    <option value="5" @selected($classPerPage === '5')>5 data</option>
+                    <option value="all" @selected($classPerPage === 'all')>Semua data</option>
+                </select>
+                <button class="rounded-xl border border-amber-400/30 px-4 py-2 text-xs font-semibold text-amber-200 hover:bg-amber-400/10">Tampilkan</button>
+            </form>
+
             <div class="mt-6 space-y-2">
                 @forelse ($classes as $class)
                     <div class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-slate-950/40 p-3">
@@ -125,6 +152,16 @@
                     <p class="text-sm text-slate-500">Belum ada kelas.</p>
                 @endforelse
             </div>
+            <div class="mt-4 text-xs text-slate-500">
+                @if ($classPerPage === 'all')
+                    Menampilkan seluruh {{ $classes->count() }} data rombel.
+                @else
+                    Menampilkan data {{ $classes->firstItem() ?? 0 }}–{{ $classes->lastItem() ?? 0 }} dari {{ $classes->total() }} rombel.
+                @endif
+            </div>
+            @if ($classPerPage !== 'all' && $classes->hasPages())
+                <div class="mt-4">{{ $classes->links() }}</div>
+            @endif
         </section>
 
         <section class="rounded-3xl border border-white/10 bg-white/[0.035] p-6">
@@ -135,7 +172,7 @@
                 @csrf
                 <select name="school_class_id" required class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
                     <option value="">Pilih kelas</option>
-                    @foreach ($classes as $class)<option value="{{ $class->id }}">{{ $class->name }} · {{ $class->academicYear->name }}</option>@endforeach
+                    @foreach ($classOptions as $class)<option value="{{ $class->id }}">{{ $class->name }} · {{ $class->academicYear->name }}</option>@endforeach
                 </select>
                 <input name="student_number" required placeholder="NIS/Nomor peserta"
                     class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400">
@@ -162,7 +199,8 @@
                 <h2 class="mt-2 text-xl font-semibold text-white">Impor dan ekspor siswa</h2>
                 <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
                     Unduh template, isi banyak siswa sekaligus, lalu pilih kelas tujuan. NIS wajib; NISN dan email opsional.
-                    Password hanya diisi jika akun login siswa ingin langsung dibuat.
+                    Akun login otomatis dibuat. Username dan password awal memakai NISN; jika NISN kosong, memakai NIS.
+                    Kolom Password boleh diisi untuk menentukan password awal lain.
                 </p>
                 <div class="mt-5 flex flex-wrap gap-3">
                     <a href="{{ route('academic.students.template') }}" class="rounded-xl border border-cyan-400/30 px-4 py-2.5 text-sm font-medium text-cyan-200 hover:bg-cyan-400/10">Unduh template Excel</a>
@@ -174,12 +212,13 @@
                 @csrf
                 <select name="school_class_id" required class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
                     <option value="">Pilih kelas tujuan impor</option>
-                    @foreach ($classes as $class)<option value="{{ $class->id }}">{{ $class->name }} · {{ $class->academicYear->name }}</option>@endforeach
+                    @foreach ($classOptions as $class)<option value="{{ $class->id }}">{{ $class->name }} · {{ $class->academicYear->name }}</option>@endforeach
                 </select>
                 <input type="file" name="spreadsheet" accept=".xlsx,.csv" required
                     class="block w-full rounded-xl border border-dashed border-white/15 bg-slate-950/50 px-4 py-3 text-sm text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-400 file:px-3 file:py-2 file:font-semibold file:text-slate-950">
                 <button class="w-full rounded-xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950">Impor data siswa</button>
                 <p class="text-xs text-slate-500">Format: XLSX/CSV, maksimal 10 MB dan 2.000 siswa sekali impor.</p>
+                <p class="text-xs leading-5 text-amber-200/80">Password tidak ikut diekspor. Saat impor ulang, password lama tetap dipertahankan jika kolom Password kosong.</p>
             </form>
         </div>
     </section>

@@ -8,6 +8,7 @@ use App\Models\SchoolClass;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 use ZipArchive;
 
@@ -43,7 +44,42 @@ class StudentSpreadsheetTest extends TestCase
             'email' => null,
             'role' => UserRole::Student->value,
         ]);
-        $this->assertDatabaseHas('students', ['student_number' => '2026002', 'user_id' => null]);
+        $this->assertDatabaseHas('users', [
+            'username' => '2026002',
+            'must_change_password' => true,
+            'role' => UserRole::Student->value,
+        ]);
+
+        $secondStudent = \App\Models\Student::query()->where('student_number', '2026002')->firstOrFail();
+        $this->assertTrue(Hash::check('2026002', $secondStudent->user->password));
+    }
+
+    public function test_reimport_with_blank_password_preserves_existing_password(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $class = $this->makeClass();
+        $firstImport = implode("\n", [
+            'NIS,NISN,Nama Lengkap,Email,Password,Status',
+            '2026001,0123456789,Siswa Satu,,Siswa1234,aktif',
+        ]);
+        $secondImport = implode("\n", [
+            'NIS,NISN,Nama Lengkap,Email,Password,Status',
+            '2026001,0123456789,Siswa Satu Diperbarui,,,aktif',
+        ]);
+
+        $this->actingAs($admin)->post(route('academic.students.import'), [
+            'school_class_id' => $class->id,
+            'spreadsheet' => UploadedFile::fake()->createWithContent('awal.csv', $firstImport),
+        ]);
+        $this->actingAs($admin)->post(route('academic.students.import'), [
+            'school_class_id' => $class->id,
+            'spreadsheet' => UploadedFile::fake()->createWithContent('ulang.csv', $secondImport),
+        ])->assertSessionHasNoErrors();
+
+        $user = User::query()->where('username', '0123456789')->firstOrFail();
+        $this->assertTrue(Hash::check('Siswa1234', $user->password));
+        $this->assertDatabaseCount('students', 1);
+        $this->assertDatabaseHas('students', ['full_name' => 'Siswa Satu Diperbarui']);
     }
 
     public function test_template_is_a_valid_xlsx_download(): void

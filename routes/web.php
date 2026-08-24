@@ -3,12 +3,14 @@
 use App\Http\Controllers\AcademicDataController;
 use App\Http\Controllers\AttendanceSecurityController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\PasswordChangeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExamOperationsController;
 use App\Http\Controllers\Reports\MidtermReportController;
 use App\Http\Controllers\SchedulingController;
 use App\Http\Controllers\Settings\SchoolProfileController;
 use App\Http\Controllers\StudentSpreadsheetController;
+use App\Http\Controllers\SubjectSpreadsheetController;
 use App\Http\Controllers\UserManagementController;
 use Illuminate\Support\Facades\Route;
 
@@ -28,9 +30,14 @@ Route::middleware('guest')->group(function (): void {
 });
 
 Route::middleware(['auth', 'active'])->group(function (): void {
-    Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    Route::get('/account/password', [PasswordChangeController::class, 'edit'])->name('password.change');
+    Route::put('/account/password', [PasswordChangeController::class, 'update'])->name('password.update');
+    Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
 
-    Route::middleware('role:super_admin')->group(function (): void {
+    Route::middleware('password.changed')->group(function (): void {
+        Route::get('/dashboard', DashboardController::class)->name('dashboard');
+
+        Route::middleware('role:super_admin')->group(function (): void {
         Route::get('/settings/school', [SchoolProfileController::class, 'edit'])
             ->name('settings.school.edit');
         Route::put('/settings/school', [SchoolProfileController::class, 'update'])
@@ -44,6 +51,9 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             Route::delete('/years/{academicYear}', [AcademicDataController::class, 'destroyAcademicYear'])->name('years.destroy');
 
             Route::post('/subjects', [AcademicDataController::class, 'storeSubject'])->name('subjects.store');
+            Route::get('/subjects/template', [SubjectSpreadsheetController::class, 'template'])->name('subjects.template');
+            Route::get('/subjects/export', [SubjectSpreadsheetController::class, 'export'])->name('subjects.export');
+            Route::post('/subjects/import', [SubjectSpreadsheetController::class, 'import'])->name('subjects.import');
             Route::patch('/subjects/{subject}/toggle', [AcademicDataController::class, 'toggleSubject'])->name('subjects.toggle');
             Route::delete('/subjects/{subject}', [AcademicDataController::class, 'destroySubject'])->name('subjects.destroy');
 
@@ -111,5 +121,5 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             Route::patch('/{dailyCheckin}/status', [AttendanceSecurityController::class, 'updateStatus'])->name('status');
         });
 
-    Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
+    });
 });

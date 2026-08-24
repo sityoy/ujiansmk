@@ -14,6 +14,26 @@ class StudentSpreadsheetService
     /** @return array<int, array<string, string|null>> */
     public function read(UploadedFile $file): array
     {
+        $result = $this->readTable($file);
+
+        if ($result === []) {
+            return [];
+        }
+
+        $headers = array_keys($result[0]);
+
+        foreach (['nis', 'nama_lengkap'] as $header) {
+            if (! in_array($header, $headers, true)) {
+                throw new RuntimeException('Kolom wajib NIS dan Nama Lengkap tidak ditemukan. Gunakan template dari sistem.');
+            }
+        }
+
+        return $result;
+    }
+
+    /** @return array<int, array<string, string|null>> */
+    public function readTable(UploadedFile $file): array
+    {
         $rows = match (strtolower($file->getClientOriginalExtension())) {
             'csv' => $this->readCsv($file->getRealPath()),
             'xlsx' => $this->readXlsx($file->getRealPath()),
@@ -25,14 +45,6 @@ class StudentSpreadsheetService
         }
 
         $headers = array_map(fn ($value) => $this->normalizeHeader((string) $value), array_shift($rows));
-        $required = ['nis', 'nama_lengkap'];
-
-        foreach ($required as $header) {
-            if (! in_array($header, $headers, true)) {
-                throw new RuntimeException('Kolom wajib NIS dan Nama Lengkap tidak ditemukan. Gunakan template dari sistem.');
-            }
-        }
-
         $result = [];
 
         foreach ($rows as $offset => $row) {
@@ -62,9 +74,15 @@ class StudentSpreadsheetService
             '0123456789',
             'Contoh Siswa',
             'siswa@example.sch.id',
-            'Siswa1234',
+            '',
             'aktif',
         ]], 'Template Siswa');
+    }
+
+    /** @param array<int, string> $headers @param array<int, array<int, mixed>> $rows */
+    public function createWorkbook(array $headers, array $rows, string $sheetName): string
+    {
+        return $this->createXlsx($headers, $rows, $sheetName);
     }
 
     /** @param iterable<int, Student> $students */

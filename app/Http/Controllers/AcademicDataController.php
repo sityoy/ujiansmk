@@ -19,19 +19,34 @@ use Illuminate\View\View;
 
 class AcademicDataController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
+        $classPerPage = $request->string('class_per_page')->toString();
+        $classPerPage = in_array($classPerPage, ['5', 'all'], true) ? $classPerPage : '5';
+        $classYearId = $request->filled('class_year') ? $request->integer('class_year') : null;
+        $classQuery = SchoolClass::query()
+            ->with('academicYear')
+            ->withCount('students')
+            ->when($classYearId, fn ($query) => $query->where('academic_year_id', $classYearId))
+            ->orderByDesc('academic_year_id')
+            ->orderBy('name');
+
         return view('academic.index', [
             'academicYears' => AcademicYear::query()
                 ->withCount('classes')
                 ->orderByDesc('starts_on')
                 ->get(),
             'subjects' => Subject::query()->orderBy('name')->get(),
-            'classes' => SchoolClass::query()
+            'classOptions' => SchoolClass::query()
                 ->with('academicYear')
-                ->withCount('students')
+                ->orderByDesc('academic_year_id')
                 ->orderBy('name')
                 ->get(),
+            'classes' => $classPerPage === 'all'
+                ? $classQuery->get()
+                : $classQuery->paginate(5, ['*'], 'class_page')->withQueryString(),
+            'classPerPage' => $classPerPage,
+            'classYearId' => $classYearId,
             'students' => Student::query()
                 ->with(['schoolClass.academicYear', 'user'])
                 ->orderBy('full_name')
@@ -184,6 +199,7 @@ class AcademicDataController extends Controller
                     'password' => $validated['password'],
                     'role' => UserRole::Student,
                     'is_active' => true,
+                    'must_change_password' => true,
                 ]);
             }
 

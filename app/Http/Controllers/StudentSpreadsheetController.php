@@ -146,10 +146,6 @@ class StudentSpreadsheetController extends Controller
                 $errors[] = 'Baris '.$line.': email sudah dipakai akun lain.';
             }
 
-            if ($data['email'] && ! $data['password'] && ! $existingUserId) {
-                $errors[] = 'Baris '.$line.': password wajib diisi untuk membuat akun baru dengan email.';
-            }
-
             $seenNis[$data['nis']] = true;
             if ($data['nisn']) {
                 $seenNisn[$data['nisn']] = true;
@@ -176,25 +172,27 @@ class StudentSpreadsheetController extends Controller
                 $user = $student->user;
                 $username = $data['nisn'] ?: $data['nis'];
 
-                if ($data['password']) {
-                    $user ??= new User([
+                if (! $user) {
+                    $user = new User([
                         'role' => UserRole::Student,
                         'is_active' => true,
+                        'password' => $data['password'] ?: $username,
+                        'must_change_password' => true,
                     ]);
+                } elseif ($data['password']) {
                     $user->password = $data['password'];
+                    $user->must_change_password = true;
                 }
 
-                if ($user) {
-                    $user->fill([
-                        'name' => $data['nama_lengkap'],
-                        'username' => $username,
-                        'email' => $data['email'] ?: $user->email,
-                        'is_active' => $this->isActive($data['status']),
-                    ])->save();
-                }
+                $user->fill([
+                    'name' => $data['nama_lengkap'],
+                    'username' => $username,
+                    'email' => $data['email'] ?: $user->email,
+                    'is_active' => $this->isActive($data['status']),
+                ])->save();
 
                 $student->fill([
-                    'user_id' => $user?->id,
+                    'user_id' => $user->id,
                     'school_class_id' => $schoolClass->id,
                     'student_number' => $data['nis'],
                     'nisn' => $data['nisn'],

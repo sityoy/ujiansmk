@@ -81,6 +81,36 @@ class AcademicDataManagementTest extends TestCase
         $this->assertTrue($newYear->refresh()->is_active);
     }
 
+    public function test_class_list_can_be_filtered_by_year_and_shows_five_rows_by_default(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $year = AcademicYear::create([
+            'name' => '2026/2027',
+            'starts_on' => '2026-07-01',
+            'ends_on' => '2027-06-30',
+            'is_active' => true,
+        ]);
+
+        foreach (range(1, 6) as $number) {
+            SchoolClass::create([
+                'academic_year_id' => $year->id,
+                'name' => 'IX-'.$number,
+                'grade_level' => 9,
+            ]);
+        }
+
+        $this->actingAs($admin)
+            ->get(route('academic.index', ['class_year' => $year->id]))
+            ->assertOk()
+            ->assertViewHas('classes', fn ($classes) => $classes->count() === 5 && $classes->total() === 6)
+            ->assertViewHas('classYearId', $year->id);
+
+        $this->actingAs($admin)
+            ->get(route('academic.index', ['class_year' => $year->id, 'class_per_page' => 'all']))
+            ->assertOk()
+            ->assertViewHas('classes', fn ($classes) => $classes->count() === 6);
+    }
+
     public function test_non_admin_cannot_manage_academic_data(): void
     {
         $teacher = User::factory()->create(['role' => UserRole::Teacher]);

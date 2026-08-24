@@ -48,6 +48,11 @@ class LoginController extends Controller
 
         $request->session()->regenerate();
 
+        if ($user->must_change_password) {
+            return redirect()->route('password.change')
+                ->with('status', 'Silakan ganti password awal sebelum menggunakan sistem.');
+        }
+
         return redirect()->intended(route('dashboard'))
             ->with('status', 'Selamat datang di sistem ujian sekolah.');
     }
