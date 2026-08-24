@@ -141,6 +141,7 @@ class MidtermReportServiceTest extends TestCase
                 'started_at' => now()->subHour(),
                 'submitted_at' => now(),
                 'score' => $scores[$index],
+                'device_session_hash' => hash('sha256', 'test-device-'.$assignment->id),
             ]);
         }
     }
