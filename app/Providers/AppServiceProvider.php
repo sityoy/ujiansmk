@@ -18,7 +18,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         View::composer(
-            ['auth.login', 'layouts.app', 'reports.midterm.print'],
+            ['auth.login', 'dashboard', 'layouts.app', 'reports.midterm.print'],
             function ($view): void {
                 $schoolProfile = null;
 
