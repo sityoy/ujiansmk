@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['user_id', 'school_class_id', 'student_number', 'card_uid_hash', 'full_name', 'is_active'])]
+#[Fillable(['user_id', 'school_class_id', 'student_number', 'nisn', 'card_uid_hash', 'full_name', 'is_active'])]
 #[Hidden(['card_uid_hash'])]
 class Student extends Model
 {

@@ -28,7 +28,7 @@ class AuthenticationTest extends TestCase
         ]);
 
         $response = $this->post(route('login.store'), [
-            'email' => $user->email,
+            'login' => $user->email,
             'password' => 'SecurePass123',
         ]);
 
@@ -49,13 +49,30 @@ class AuthenticationTest extends TestCase
 
         $this->from(route('login'))
             ->post(route('login.store'), [
-                'email' => $user->email,
+                'login' => $user->email,
                 'password' => 'SecurePass123',
             ])
             ->assertRedirect(route('login'))
-            ->assertSessionHasErrors('email');
+            ->assertSessionHasErrors('login');
 
         $this->assertGuest();
+    }
+
+    public function test_student_can_sign_in_with_nisn_username(): void
+    {
+        $studentUser = User::factory()->create([
+            'email' => null,
+            'username' => '0123456789',
+            'role' => UserRole::Student,
+            'password' => 'SecurePass123',
+        ]);
+
+        $this->post(route('login.store'), [
+            'login' => '0123456789',
+            'password' => 'SecurePass123',
+        ])->assertRedirect(route('dashboard'));
+
+        $this->assertAuthenticatedAs($studentUser);
     }
 
     public function test_guest_is_redirected_to_the_login_page(): void

@@ -60,12 +60,18 @@
                     </a>
                 @endif
 
-                <span class="rounded-xl px-4 py-3 text-slate-500">Pelaksanaan ujian</span>
-                <span class="rounded-xl px-4 py-3 text-slate-500">Absensi & keamanan</span>
+                @if (in_array($currentRole, ['super_admin', 'committee', 'proctor'], true))
+                    <a href="{{ route('operations.index') }}" class="rounded-xl px-4 py-3 {{ request()->routeIs('operations.*') ? 'bg-cyan-400 text-slate-950 font-semibold' : 'text-slate-300 hover:bg-white/5' }}">
+                        Pelaksanaan ujian
+                    </a>
+                    <a href="{{ route('attendance.index') }}" class="rounded-xl px-4 py-3 {{ request()->routeIs('attendance.*') ? 'bg-cyan-400 text-slate-950 font-semibold' : 'text-slate-300 hover:bg-white/5' }}">
+                        Absensi & keamanan
+                    </a>
+                @endif
             </nav>
 
             <div class="mt-8 hidden rounded-2xl border border-white/10 bg-white/5 p-4 text-xs leading-5 text-slate-400 lg:block">
-                Identitas sekolah, data akademik, jadwal, akun pengguna, dan rapor ATS dikelola sesuai hak akses.
+                Identitas sekolah, akademik, jadwal, pelaksanaan, absensi, akun, dan rapor ATS dikelola sesuai hak akses.
             </div>
         </aside>
 

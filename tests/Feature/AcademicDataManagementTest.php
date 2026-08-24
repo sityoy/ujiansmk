@@ -43,6 +43,7 @@ class AcademicDataManagementTest extends TestCase
         $this->actingAs($admin)->post(route('academic.students.store'), [
             'school_class_id' => $class->id,
             'student_number' => 'S-001',
+            'nisn' => '0123456789',
             'full_name' => 'Peserta Uji',
             'email' => 'siswa@example.test',
             'password' => 'Student123',
@@ -52,8 +53,8 @@ class AcademicDataManagementTest extends TestCase
         $this->assertDatabaseHas('academic_years', ['name' => '2026/2027', 'is_active' => true]);
         $this->assertDatabaseHas('subjects', ['code' => 'INF']);
         $this->assertDatabaseHas('school_classes', ['name' => 'IX-2']);
-        $this->assertDatabaseHas('students', ['student_number' => 'S-001']);
-        $this->assertDatabaseHas('users', ['email' => 'siswa@example.test', 'role' => UserRole::Student->value]);
+        $this->assertDatabaseHas('students', ['student_number' => 'S-001', 'nisn' => '0123456789']);
+        $this->assertDatabaseHas('users', ['email' => 'siswa@example.test', 'username' => '0123456789', 'role' => UserRole::Student->value]);
     }
 
     public function test_only_one_academic_year_can_be_active(): void

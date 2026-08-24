@@ -76,9 +76,9 @@
                     @csrf
 
                     <div>
-                        <label for="email" class="mb-2 block text-sm font-medium text-slate-200">Alamat email</label>
-                        <input id="email" name="email" type="email" value="{{ old('email') }}" autocomplete="username"
-                            required autofocus placeholder="nama@sekolah.sch.id"
+                        <label for="login" class="mb-2 block text-sm font-medium text-slate-200">Email, NISN, atau NIS</label>
+                        <input id="login" name="login" type="text" value="{{ old('login') }}" autocomplete="username"
+                            required autofocus placeholder="Email untuk petugas · NISN/NIS untuk siswa"
                             class="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400/70 focus:ring-4 focus:ring-cyan-400/10">
                     </div>
 

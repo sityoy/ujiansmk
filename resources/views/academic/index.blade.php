@@ -139,18 +139,50 @@
                 </select>
                 <input name="student_number" required placeholder="NIS/Nomor peserta"
                     class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400">
+                <input name="nisn" inputmode="numeric" maxlength="10" placeholder="NISN 10 digit (opsional)"
+                    class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400">
                 <input name="full_name" required placeholder="Nama lengkap siswa"
-                    class="sm:col-span-2 rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400">
+                    class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400">
                 <input type="email" name="email" placeholder="Email login (opsional)"
                     class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400">
-                <input type="password" name="password" placeholder="Password login"
+                <input type="password" name="password" placeholder="Password untuk membuat login"
                     class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400">
                 <input type="password" name="password_confirmation" placeholder="Ulangi password"
-                    class="sm:col-span-2 rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400">
+                    class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400">
+                <p class="sm:col-span-2 text-xs leading-5 text-slate-500">Login siswa memakai NISN jika tersedia, jika tidak memakai NIS. Email tidak wajib.</p>
                 <button class="sm:col-span-2 rounded-xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950">Tambah siswa</button>
             </form>
         </section>
     </div>
+
+    <section class="mt-6 rounded-3xl border border-cyan-400/20 bg-cyan-400/[0.045] p-6">
+        <div class="grid gap-6 xl:grid-cols-[1fr_420px]">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">05 · Excel</p>
+                <h2 class="mt-2 text-xl font-semibold text-white">Impor dan ekspor siswa</h2>
+                <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
+                    Unduh template, isi banyak siswa sekaligus, lalu pilih kelas tujuan. NIS wajib; NISN dan email opsional.
+                    Password hanya diisi jika akun login siswa ingin langsung dibuat.
+                </p>
+                <div class="mt-5 flex flex-wrap gap-3">
+                    <a href="{{ route('academic.students.template') }}" class="rounded-xl border border-cyan-400/30 px-4 py-2.5 text-sm font-medium text-cyan-200 hover:bg-cyan-400/10">Unduh template Excel</a>
+                    <a href="{{ route('academic.students.export') }}" class="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-medium text-slate-200 hover:bg-white/5">Ekspor seluruh siswa</a>
+                </div>
+            </div>
+
+            <form method="POST" action="{{ route('academic.students.import') }}" enctype="multipart/form-data" class="space-y-3">
+                @csrf
+                <select name="school_class_id" required class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
+                    <option value="">Pilih kelas tujuan impor</option>
+                    @foreach ($classes as $class)<option value="{{ $class->id }}">{{ $class->name }} · {{ $class->academicYear->name }}</option>@endforeach
+                </select>
+                <input type="file" name="spreadsheet" accept=".xlsx,.csv" required
+                    class="block w-full rounded-xl border border-dashed border-white/15 bg-slate-950/50 px-4 py-3 text-sm text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-400 file:px-3 file:py-2 file:font-semibold file:text-slate-950">
+                <button class="w-full rounded-xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950">Impor data siswa</button>
+                <p class="text-xs text-slate-500">Format: XLSX/CSV, maksimal 10 MB dan 2.000 siswa sekali impor.</p>
+            </form>
+        </div>
+    </section>
 
     <section class="mt-6 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035]">
         <div class="border-b border-white/10 p-6">
@@ -160,15 +192,19 @@
         <div class="overflow-x-auto">
             <table class="min-w-full text-left text-sm">
                 <thead class="bg-slate-950/60 text-xs uppercase tracking-wider text-slate-500">
-                    <tr><th class="px-5 py-4">NIS</th><th class="px-5 py-4">Nama</th><th class="px-5 py-4">Kelas</th><th class="px-5 py-4">Login</th><th class="px-5 py-4 text-right">Aksi</th></tr>
+                    <tr><th class="px-5 py-4">NIS</th><th class="px-5 py-4">NISN</th><th class="px-5 py-4">Nama</th><th class="px-5 py-4">Kelas</th><th class="px-5 py-4">Login</th><th class="px-5 py-4 text-right">Aksi</th></tr>
                 </thead>
                 <tbody class="divide-y divide-white/5">
                     @forelse ($students as $student)
                         <tr>
                             <td class="px-5 py-4 text-slate-400">{{ $student->student_number }}</td>
+                            <td class="px-5 py-4 text-slate-400">{{ $student->nisn ?? '—' }}</td>
                             <td class="px-5 py-4 font-medium text-white">{{ $student->full_name }}</td>
                             <td class="px-5 py-4 text-slate-400">{{ $student->schoolClass->name }}</td>
-                            <td class="px-5 py-4 text-slate-400">{{ $student->user?->email ?? 'Belum dibuat' }}</td>
+                            <td class="px-5 py-4 text-slate-400">
+                                <span class="block">{{ $student->user?->username ?? 'Belum dibuat' }}</span>
+                                @if ($student->user?->email)<span class="mt-1 block text-xs text-slate-600">{{ $student->user->email }}</span>@endif
+                            </td>
                             <td class="px-5 py-4">
                                 <div class="flex justify-end gap-3">
                                     <form method="POST" action="{{ route('academic.students.toggle', $student) }}">@csrf @method('PATCH')
@@ -181,7 +217,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="5" class="px-6 py-12 text-center text-slate-500">Belum ada siswa.</td></tr>
+                        <tr><td colspan="6" class="px-6 py-12 text-center text-slate-500">Belum ada siswa.</td></tr>
                     @endforelse
                 </tbody>
             </table>

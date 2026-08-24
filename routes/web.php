@@ -1,11 +1,14 @@
 <?php
 
 use App\Http\Controllers\AcademicDataController;
+use App\Http\Controllers\AttendanceSecurityController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ExamOperationsController;
 use App\Http\Controllers\Reports\MidtermReportController;
 use App\Http\Controllers\SchedulingController;
 use App\Http\Controllers\Settings\SchoolProfileController;
+use App\Http\Controllers\StudentSpreadsheetController;
 use App\Http\Controllers\UserManagementController;
 use Illuminate\Support\Facades\Route;
 
@@ -48,6 +51,9 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             Route::delete('/classes/{schoolClass}', [AcademicDataController::class, 'destroyClass'])->name('classes.destroy');
 
             Route::post('/students', [AcademicDataController::class, 'storeStudent'])->name('students.store');
+            Route::get('/students/template', [StudentSpreadsheetController::class, 'template'])->name('students.template');
+            Route::get('/students/export', [StudentSpreadsheetController::class, 'export'])->name('students.export');
+            Route::post('/students/import', [StudentSpreadsheetController::class, 'import'])->name('students.import');
             Route::patch('/students/{student}/toggle', [AcademicDataController::class, 'toggleStudent'])->name('students.toggle');
             Route::delete('/students/{student}', [AcademicDataController::class, 'destroyStudent'])->name('students.destroy');
         });
@@ -86,6 +92,23 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             Route::get('/', [MidtermReportController::class, 'index'])->name('index');
             Route::get('/{assessmentPeriod}/{schoolClass}', [MidtermReportController::class, 'show'])->name('show');
             Route::get('/{assessmentPeriod}/{schoolClass}/{student}/print', [MidtermReportController::class, 'print'])->name('print');
+        });
+
+    Route::prefix('operations')
+        ->middleware('role:super_admin,committee,proctor')
+        ->name('operations.')
+        ->group(function (): void {
+            Route::get('/', [ExamOperationsController::class, 'index'])->name('index');
+            Route::patch('/sessions/{examSession}/status', [ExamOperationsController::class, 'updateSessionStatus'])
+                ->name('sessions.status');
+        });
+
+    Route::prefix('attendance')
+        ->middleware('role:super_admin,committee,proctor')
+        ->name('attendance.')
+        ->group(function (): void {
+            Route::get('/', [AttendanceSecurityController::class, 'index'])->name('index');
+            Route::patch('/{dailyCheckin}/status', [AttendanceSecurityController::class, 'updateStatus'])->name('status');
         });
 
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');

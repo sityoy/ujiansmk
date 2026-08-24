@@ -145,9 +145,15 @@ class AcademicDataController extends Controller
 
     public function storeStudent(Request $request): RedirectResponse
     {
+        $request->merge([
+            'nisn' => $request->filled('nisn') ? trim((string) $request->input('nisn')) : null,
+            'email' => $request->filled('email') ? Str::lower(trim((string) $request->input('email'))) : null,
+        ]);
+
         $validated = $request->validate([
             'school_class_id' => ['required', 'exists:school_classes,id'],
             'student_number' => ['required', 'string', 'max:50', 'unique:students,student_number'],
+            'nisn' => ['nullable', 'digits:10', 'unique:students,nisn'],
             'full_name' => ['required', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255', 'unique:users,email'],
             'password' => [
@@ -158,13 +164,23 @@ class AcademicDataController extends Controller
             ],
         ]);
 
+        $username = $validated['nisn'] ?: trim($validated['student_number']);
+
+        if (User::query()->where('username', $username)->exists()) {
+            return back()
+                ->withErrors(['student_number' => 'NISN/NIS tersebut sudah digunakan sebagai login siswa lain.'])
+                ->withInput();
+        }
+
         DB::transaction(function () use ($validated): void {
             $user = null;
+            $username = $validated['nisn'] ?: trim($validated['student_number']);
 
-            if (! empty($validated['email'])) {
+            if (! empty($validated['password'])) {
                 $user = User::create([
                     'name' => $validated['full_name'],
-                    'email' => Str::lower($validated['email']),
+                    'email' => $validated['email'] ?: null,
+                    'username' => $username,
                     'password' => $validated['password'],
                     'role' => UserRole::Student,
                     'is_active' => true,
@@ -175,6 +191,7 @@ class AcademicDataController extends Controller
                 'user_id' => $user?->id,
                 'school_class_id' => $validated['school_class_id'],
                 'student_number' => trim($validated['student_number']),
+                'nisn' => $validated['nisn'],
                 'full_name' => trim($validated['full_name']),
                 'is_active' => true,
             ]);

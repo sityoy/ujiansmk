@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -23,25 +25,26 @@ class LoginController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'email' => ['required', 'string', 'email', 'max:255'],
+            'login' => ['required', 'string', 'max:255'],
             'password' => ['required', 'string'],
         ], [
-            'email.required' => 'Alamat email wajib diisi.',
-            'email.email' => 'Format alamat email belum benar.',
+            'login.required' => 'Email, NISN, atau NIS wajib diisi.',
             'password.required' => 'Kata sandi wajib diisi.',
         ]);
 
-        $authenticated = Auth::attempt([
-            'email' => Str::lower($validated['email']),
-            'password' => $validated['password'],
-            'is_active' => true,
-        ], $request->boolean('remember'));
+        $login = trim($validated['login']);
+        $user = User::query()
+            ->where('email', Str::lower($login))
+            ->orWhere('username', $login)
+            ->first();
 
-        if (! $authenticated) {
+        if (! $user || ! $user->is_active || ! Hash::check($validated['password'], $user->password)) {
             return back()
-                ->withErrors(['email' => 'Email, kata sandi, atau status akun tidak sesuai.'])
-                ->onlyInput('email');
+                ->withErrors(['login' => 'Email/NISN/NIS, kata sandi, atau status akun tidak sesuai.'])
+                ->onlyInput('login');
         }
+
+        Auth::login($user, $request->boolean('remember'));
 
         $request->session()->regenerate();
 
