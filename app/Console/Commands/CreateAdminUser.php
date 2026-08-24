@@ -11,11 +11,11 @@ use Illuminate\Validation\Rules\Password;
 
 class CreateAdminUser extends Command
 {
-    protected $signature = 'galak:admin
+    protected $signature = 'school:admin
         {email? : Alamat email Super Admin}
         {--name= : Nama lengkap Super Admin}';
 
-    protected $description = 'Membuat atau memperbarui akun Super Admin GALAK CBT';
+    protected $description = 'Membuat atau memperbarui akun Super Admin sistem ujian sekolah';
 
     public function handle(): int
     {
