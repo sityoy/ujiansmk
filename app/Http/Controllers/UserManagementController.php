@@ -20,16 +20,28 @@ class UserManagementController extends Controller
                 ->orderBy('role')
                 ->orderBy('name')
                 ->paginate(20),
-            'roles' => UserRole::cases(),
+            'roles' => array_values(array_filter(
+                UserRole::cases(),
+                fn (UserRole $role): bool => $role !== UserRole::Student,
+            )),
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
+        $request->merge([
+            'email' => Str::lower(trim((string) $request->input('email'))),
+        ]);
+
+        $manageableRoles = array_map(
+            fn (UserRole $role): string => $role->value,
+            array_filter(UserRole::cases(), fn (UserRole $role): bool => $role !== UserRole::Student),
+        );
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'role' => ['required', Rule::in(array_column(UserRole::cases(), 'value'))],
+            'role' => ['required', Rule::in($manageableRoles)],
             'password' => [
                 'required',
                 'confirmed',
@@ -39,7 +51,6 @@ class UserManagementController extends Controller
 
         User::create([
             ...$validated,
-            'email' => Str::lower($validated['email']),
             'is_active' => true,
         ]);
 
