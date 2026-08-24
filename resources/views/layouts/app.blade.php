@@ -40,6 +40,12 @@
                     <a href="{{ route('settings.school.edit') }}" class="rounded-xl px-4 py-3 {{ request()->routeIs('settings.school.*') ? 'bg-cyan-400 text-slate-950 font-semibold' : 'text-slate-300 hover:bg-white/5' }}">
                         Identitas sekolah
                     </a>
+                    <a href="{{ route('academic.index') }}" class="rounded-xl px-4 py-3 {{ request()->routeIs('academic.*') ? 'bg-cyan-400 text-slate-950 font-semibold' : 'text-slate-300 hover:bg-white/5' }}">
+                        Data akademik
+                    </a>
+                    <a href="{{ route('users.index') }}" class="rounded-xl px-4 py-3 {{ request()->routeIs('users.*') ? 'bg-cyan-400 text-slate-950 font-semibold' : 'text-slate-300 hover:bg-white/5' }}">
+                        Manajemen akun
+                    </a>
                 @endif
 
                 @if (in_array($currentRole, ['super_admin', 'committee', 'principal'], true))
@@ -48,14 +54,13 @@
                     </a>
                 @endif
 
-                <span class="rounded-xl px-4 py-3 text-slate-500">Data akademik</span>
                 <span class="rounded-xl px-4 py-3 text-slate-500">Penjadwalan</span>
                 <span class="rounded-xl px-4 py-3 text-slate-500">Pelaksanaan ujian</span>
                 <span class="rounded-xl px-4 py-3 text-slate-500">Absensi & keamanan</span>
             </nav>
 
             <div class="mt-8 hidden rounded-2xl border border-white/10 bg-white/5 p-4 text-xs leading-5 text-slate-400 lg:block">
-                Identitas sekolah dan rapor ATS dapat dikelola sesuai hak akses pengguna.
+                Identitas sekolah, data akademik, akun pengguna, dan rapor ATS dikelola sesuai hak akses.
             </div>
         </aside>
 
