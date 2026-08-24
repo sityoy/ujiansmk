@@ -66,6 +66,8 @@ class SchedulingManagementTest extends TestCase
 
     public function test_committee_can_open_scheduling_but_teacher_cannot(): void
     {
+        $this->withoutVite();
+
         $committee = User::factory()->create(['role' => UserRole::Committee]);
         $teacher = User::factory()->create(['role' => UserRole::Teacher]);
 
