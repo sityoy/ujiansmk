@@ -2,7 +2,7 @@
 
 @section('title', 'Dashboard')
 @section('eyebrow', 'Pusat Kendali')
-@section('heading', 'Dashboard GALAK CBT')
+@section('heading', 'Dashboard Sistem Ujian')
 
 @section('content')
     <section class="rounded-3xl border border-white/10 bg-gradient-to-br from-cyan-400/15 via-slate-900 to-blue-500/10 p-6 md:p-8">
@@ -12,7 +12,7 @@
             </span>
             <h2 class="mt-5 text-2xl font-semibold text-white md:text-3xl">Selamat datang, {{ $user->name }}.</h2>
             <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-                Fondasi sistem sudah siap. Data ujian, sesi susulan, absensi harian, dan kontrol keamanan akan dikelola dari pusat kendali ini.
+                Sistem ujian {{ $schoolProfile?->name ? 'untuk '.$schoolProfile->name : 'sekolah' }} siap digunakan untuk mengelola jadwal, sesi susulan, absensi, dan laporan hasil ATS.
             </p>
         </div>
     </section>
@@ -51,7 +51,7 @@
                     ['01', 'Data akademik', 'Tahun ajaran, kelas, siswa, dan mata pelajaran.'],
                     ['02', 'Periode asesmen', 'ATS, AAS/AAT, UUB ganjil maupun genap.'],
                     ['03', 'Sesi & susulan', 'Penempatan peserta tanpa membuat data ganda.'],
-                    ['04', 'Absensi aman', 'Kartu, wajah, GPS, radius, dan akurasi lokasi.'],
+                    ['04', 'Rapor ATS', 'Nilai per mapel, rata-rata, dan peringkat kelas.'],
                 ] as [$number, $title, $description])
                     <div class="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
                         <div class="flex items-start gap-3">
