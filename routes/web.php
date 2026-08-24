@@ -43,8 +43,8 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             Route::patch('/subjects/{subject}/toggle', [AcademicDataController::class, 'toggleSubject'])->name('subjects.toggle');
             Route::delete('/subjects/{subject}', [AcademicDataController::class, 'destroySubject'])->name('subjects.destroy');
 
-            Route::post('/classes', [AcademicDataController::class, 'storeSchoolClass'])->name('classes.store');
-            Route::delete('/classes/{schoolClass}', [AcademicDataController::class, 'destroySchoolClass'])->name('classes.destroy');
+            Route::post('/classes', [AcademicDataController::class, 'storeClass'])->name('classes.store');
+            Route::delete('/classes/{schoolClass}', [AcademicDataController::class, 'destroyClass'])->name('classes.destroy');
 
             Route::post('/students', [AcademicDataController::class, 'storeStudent'])->name('students.store');
             Route::patch('/students/{student}/toggle', [AcademicDataController::class, 'toggleStudent'])->name('students.toggle');
