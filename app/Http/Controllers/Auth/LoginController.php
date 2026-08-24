@@ -46,7 +46,7 @@ class LoginController extends Controller
         $request->session()->regenerate();
 
         return redirect()->intended(route('dashboard'))
-            ->with('status', 'Selamat datang di GALAK CBT.');
+            ->with('status', 'Selamat datang di sistem ujian sekolah.');
     }
 
     public function destroy(Request $request): RedirectResponse
