@@ -48,19 +48,24 @@
                     </a>
                 @endif
 
+                @if (in_array($currentRole, ['super_admin', 'committee'], true))
+                    <a href="{{ route('scheduling.index') }}" class="rounded-xl px-4 py-3 {{ request()->routeIs('scheduling.*') ? 'bg-cyan-400 text-slate-950 font-semibold' : 'text-slate-300 hover:bg-white/5' }}">
+                        Penjadwalan
+                    </a>
+                @endif
+
                 @if (in_array($currentRole, ['super_admin', 'committee', 'principal'], true))
                     <a href="{{ route('reports.midterm.index') }}" class="rounded-xl px-4 py-3 {{ request()->routeIs('reports.midterm.*') ? 'bg-cyan-400 text-slate-950 font-semibold' : 'text-slate-300 hover:bg-white/5' }}">
                         Rapor ATS
                     </a>
                 @endif
 
-                <span class="rounded-xl px-4 py-3 text-slate-500">Penjadwalan</span>
                 <span class="rounded-xl px-4 py-3 text-slate-500">Pelaksanaan ujian</span>
                 <span class="rounded-xl px-4 py-3 text-slate-500">Absensi & keamanan</span>
             </nav>
 
             <div class="mt-8 hidden rounded-2xl border border-white/10 bg-white/5 p-4 text-xs leading-5 text-slate-400 lg:block">
-                Identitas sekolah, data akademik, akun pengguna, dan rapor ATS dikelola sesuai hak akses.
+                Identitas sekolah, data akademik, jadwal, akun pengguna, dan rapor ATS dikelola sesuai hak akses.
             </div>
         </aside>
 
