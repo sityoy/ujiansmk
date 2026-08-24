@@ -14,6 +14,13 @@ class AcademicDataManagementTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->withoutVite();
+    }
+
     public function test_super_admin_can_create_core_academic_data_and_student_login(): void
     {
         $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
