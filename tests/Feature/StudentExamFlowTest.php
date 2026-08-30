@@ -40,9 +40,9 @@ class StudentExamFlowTest extends TestCase
     public function test_student_can_check_in_start_autosave_and_submit_an_exam(): void
     {
         [$user, $assignment, $questions] = $this->makeExam();
+        $this->actingAs($user);
 
-        $this->actingAs($user)
-            ->post(route('student.attendance.store', $assignment), [
+        $this->post(route('student.attendance.store', $assignment), [
                 'latitude' => -6.2000000,
                 'longitude' => 106.8166660,
                 'accuracy_meters' => 10,
@@ -52,22 +52,18 @@ class StudentExamFlowTest extends TestCase
             ->assertRedirect()
             ->assertSessionHasNoErrors();
 
-        $this->actingAs($user)
-            ->post(route('student.exams.start', $assignment))
+        $this->post(route('student.exams.start', $assignment))
             ->assertRedirect();
 
         $attempt = ExamAttempt::query()->firstOrFail();
 
-        $this->actingAs($user)
-            ->putJson(route('student.exams.answer', [$attempt, $questions[0]]), ['answer' => 'A'])
+        $this->putJson(route('student.exams.answer', [$attempt, $questions[0]]), ['answer' => 'A'])
             ->assertOk()
             ->assertJson(['saved' => true]);
-        $this->actingAs($user)
-            ->putJson(route('student.exams.answer', [$attempt, $questions[1]]), ['answer' => 'A'])
+        $this->putJson(route('student.exams.answer', [$attempt, $questions[1]]), ['answer' => 'A'])
             ->assertOk();
 
-        $this->actingAs($user)
-            ->post(route('student.exams.submit', $attempt))
+        $this->post(route('student.exams.submit', $attempt))
             ->assertRedirect(route('student.exams.index'));
 
         $this->assertSame('submitted', $attempt->refresh()->status->value);

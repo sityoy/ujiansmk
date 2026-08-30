@@ -99,7 +99,7 @@ class AuthenticationTest extends TestCase
         ])->assertRedirect(route('dashboard'));
 
         $this->assertFalse($studentUser->refresh()->must_change_password);
-        $this->get(route('dashboard'))->assertOk();
+        $this->get(route('dashboard'))->assertRedirect(route('student.exams.index'));
     }
 
     public function test_guest_is_redirected_to_the_login_page(): void

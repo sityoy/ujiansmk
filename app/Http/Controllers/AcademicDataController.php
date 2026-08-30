@@ -200,7 +200,7 @@ class AcademicDataController extends Controller
                 'name' => $validated['full_name'],
                 'email' => $validated['email'] ?: null,
                 'username' => $username,
-                'password' => $validated['password'] ?: $username,
+                'password' => $validated['password'] ?? $username,
                 'role' => UserRole::Student,
                 'is_active' => true,
                 'must_change_password' => true,
