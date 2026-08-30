@@ -29,6 +29,7 @@
         <div class="mb-5">
             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Sesi</p>
             <h2 class="mt-2 text-xl font-semibold text-white">Kontrol status sesi ujian</h2>
+            <p class="mt-2 text-sm text-slate-500">Saat sesi ditutup, seluruh ujian yang masih berlangsung dikumpulkan otomatis.</p>
         </div>
         <div class="grid gap-3 xl:grid-cols-2">
             @forelse ($sessions as $session)
@@ -38,7 +39,7 @@
                             <p class="font-medium text-white">{{ $session->assessmentSubject->subject->name }} · {{ $session->assessmentSubject->schoolClass->name }}</p>
                             <p class="mt-1 text-xs text-slate-500">{{ $session->assessmentSubject->assessmentPeriod->name }} · {{ $session->kind->value === 'makeup' ? 'Susulan' : 'Reguler' }}</p>
                             <p class="mt-2 text-sm text-slate-300">{{ $session->starts_at->format('d/m/Y H:i') }}–{{ $session->ends_at->format('H:i') }}</p>
-                            <p class="mt-1 text-xs text-slate-500">{{ $session->campus->name }} · {{ $session->assignments_count }} peserta</p>
+                            <p class="mt-1 text-xs text-slate-500">{{ $session->campus->name }}{{ $session->room_name ? ' · '.$session->room_name : '' }} · {{ $session->assignments_count }} peserta</p>
                         </div>
                         <form method="POST" action="{{ route('operations.sessions.status', $session) }}" class="flex items-center gap-2">
                             @csrf @method('PATCH')

@@ -9,7 +9,7 @@ use ZipArchive;
 
 class StudentSpreadsheetService
 {
-    private const IMPORT_HEADERS = ['NIS', 'NISN', 'Nama Lengkap', 'Email', 'Password', 'Status'];
+    private const IMPORT_HEADERS = ['NIS', 'NISN', 'Nama Lengkap', 'Email', 'Password', 'UID Kartu', 'Status'];
 
     /** @return array<int, array<string, string|null>> */
     public function read(UploadedFile $file): array
@@ -74,6 +74,7 @@ class StudentSpreadsheetService
             '0123456789',
             'Contoh Siswa',
             'siswa@example.sch.id',
+            '',
             '',
             'aktif',
         ]], 'Template Siswa');

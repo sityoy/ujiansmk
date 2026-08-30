@@ -8,6 +8,7 @@ use App\Models\SchoolClass;
 use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class AcademicDataManagementTest extends TestCase
@@ -86,6 +87,34 @@ class AcademicDataManagementTest extends TestCase
 
         $this->assertFalse($oldYear->refresh()->is_active);
         $this->assertTrue($newYear->refresh()->is_active);
+    }
+
+    public function test_manual_student_creation_uses_nisn_as_the_initial_password_when_blank(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $year = AcademicYear::create([
+            'name' => '2026/2027',
+            'starts_on' => '2026-07-01',
+            'ends_on' => '2027-06-30',
+            'is_active' => true,
+        ]);
+        $class = SchoolClass::create([
+            'academic_year_id' => $year->id,
+            'name' => 'X-1',
+            'grade_level' => 10,
+        ]);
+
+        $this->actingAs($admin)->post(route('academic.students.store'), [
+            'school_class_id' => $class->id,
+            'student_number' => 'S-002',
+            'nisn' => '9876543210',
+            'full_name' => 'Siswa Otomatis',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $user = User::query()->where('username', '9876543210')->firstOrFail();
+        $this->assertTrue(Hash::check('9876543210', $user->password));
+        $this->assertTrue($user->must_change_password);
+        $this->assertDatabaseHas('students', ['user_id' => $user->id, 'student_number' => 'S-002']);
     }
 
     public function test_class_list_can_be_filtered_by_year_and_shows_five_rows_by_default(): void

@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
-    'assessment_subject_id', 'campus_id', 'source_session_id', 'kind', 'status',
+    'assessment_subject_id', 'campus_id', 'source_session_id', 'room_name', 'kind', 'status',
     'starts_at', 'ends_at', 'duration_minutes', 'access_token_hash',
 ])]
 #[Hidden(['access_token_hash'])]

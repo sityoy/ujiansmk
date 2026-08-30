@@ -163,6 +163,7 @@ class AcademicDataController extends Controller
         $request->merge([
             'nisn' => $request->filled('nisn') ? trim((string) $request->input('nisn')) : null,
             'email' => $request->filled('email') ? Str::lower(trim((string) $request->input('email'))) : null,
+            'card_uid' => $request->filled('card_uid') ? trim((string) $request->input('card_uid')) : null,
         ]);
 
         $validated = $request->validate([
@@ -171,9 +172,9 @@ class AcademicDataController extends Controller
             'nisn' => ['nullable', 'digits:10', 'unique:students,nisn'],
             'full_name' => ['required', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255', 'unique:users,email'],
+            'card_uid' => ['nullable', 'string', 'max:255'],
             'password' => [
                 'nullable',
-                'required_with:email',
                 'confirmed',
                 Password::min(8)->letters()->numbers(),
             ],
@@ -187,28 +188,31 @@ class AcademicDataController extends Controller
                 ->withInput();
         }
 
-        DB::transaction(function () use ($validated): void {
-            $user = null;
-            $username = $validated['nisn'] ?: trim($validated['student_number']);
+        if ($validated['card_uid'] && Student::query()
+            ->where('card_uid_hash', hash('sha256', $validated['card_uid']))
+            ->exists()) {
+            return back()->withErrors(['card_uid' => 'UID kartu sudah digunakan siswa lain.'])->withInput();
+        }
 
-            if (! empty($validated['password'])) {
-                $user = User::create([
-                    'name' => $validated['full_name'],
-                    'email' => $validated['email'] ?: null,
-                    'username' => $username,
-                    'password' => $validated['password'],
-                    'role' => UserRole::Student,
-                    'is_active' => true,
-                    'must_change_password' => true,
-                ]);
-            }
+        DB::transaction(function () use ($validated): void {
+            $username = $validated['nisn'] ?: trim($validated['student_number']);
+            $user = User::create([
+                'name' => $validated['full_name'],
+                'email' => $validated['email'] ?: null,
+                'username' => $username,
+                'password' => $validated['password'] ?: $username,
+                'role' => UserRole::Student,
+                'is_active' => true,
+                'must_change_password' => true,
+            ]);
 
             Student::create([
-                'user_id' => $user?->id,
+                'user_id' => $user->id,
                 'school_class_id' => $validated['school_class_id'],
                 'student_number' => trim($validated['student_number']),
                 'nisn' => $validated['nisn'],
                 'full_name' => trim($validated['full_name']),
+                'card_uid_hash' => $validated['card_uid'] ? hash('sha256', $validated['card_uid']) : null,
                 'is_active' => true,
             ]);
         });

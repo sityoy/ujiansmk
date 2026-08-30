@@ -75,6 +75,48 @@ class SchedulingManagementTest extends TestCase
         $this->actingAs($teacher)->get(route('scheduling.index'))->assertForbidden();
     }
 
+    public function test_session_end_is_calculated_and_class_time_conflicts_are_rejected(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        [$component, $regular, , $campus] = $this->makeSchedule();
+        $otherSubject = Subject::create(['code' => 'MTK', 'name' => 'Matematika', 'is_active' => true]);
+        $otherComponent = AssessmentSubject::create([
+            'assessment_period_id' => $component->assessment_period_id,
+            'subject_id' => $otherSubject->id,
+            'school_class_id' => $component->school_class_id,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('scheduling.sessions.store'), [
+                'assessment_subject_id' => $otherComponent->id,
+                'campus_id' => $campus->id,
+                'kind' => SessionKind::Regular->value,
+                'status' => SessionStatus::Published->value,
+                'starts_at' => '2026-09-01 09:00:00',
+                'duration_minutes' => 60,
+                'room_name' => 'Lab 2',
+            ])
+            ->assertSessionHasErrors('starts_at');
+
+        $this->actingAs($admin)
+            ->post(route('scheduling.sessions.store'), [
+                'assessment_subject_id' => $otherComponent->id,
+                'campus_id' => $campus->id,
+                'kind' => SessionKind::Regular->value,
+                'status' => SessionStatus::Published->value,
+                'starts_at' => '2026-09-01 11:00:00',
+                'duration_minutes' => 45,
+                'room_name' => 'Lab 2',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $created = ExamSession::query()->where('assessment_subject_id', $otherComponent->id)->firstOrFail();
+        $this->assertSame('2026-09-01 11:45:00', $created->ends_at->format('Y-m-d H:i:s'));
+        $this->assertSame('Lab 2', $created->room_name);
+        $this->assertSame($regular->id, ExamSession::query()->where('assessment_subject_id', $component->id)->value('id'));
+    }
+
     private function makeSchedule(): array
     {
         $year = AcademicYear::create([
@@ -136,6 +178,6 @@ class SchedulingManagementTest extends TestCase
             'duration_minutes' => 90,
         ]);
 
-        return [$component, $regular, $makeup];
+        return [$component, $regular, $makeup, $campus];
     }
 }

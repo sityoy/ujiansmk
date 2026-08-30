@@ -34,4 +34,9 @@ class AssessmentSubject extends Model
     {
         return $this->hasMany(ExamAssignment::class);
     }
+
+    public function questions(): HasMany
+    {
+        return $this->hasMany(ExamQuestion::class)->orderBy('position');
+    }
 }

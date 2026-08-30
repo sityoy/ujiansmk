@@ -160,6 +160,7 @@
                         <div>
                             <p class="font-semibold text-white">{{ $component->subject->name }} · {{ $component->schoolClass->name }}</p>
                             <p class="mt-1 text-xs text-slate-500">{{ $component->assessmentPeriod->name }} · {{ $component->assessmentPeriod->academicYear->name }}</p>
+                            <a href="{{ route('scheduling.questions.index', $component) }}" class="mt-2 inline-flex text-xs font-medium text-violet-300 hover:text-violet-200">Kelola bank soal →</a>
                         </div>
                         <form method="POST" action="{{ route('scheduling.components.destroy', $component) }}" onsubmit="return confirm('Hapus mapel dan kelas dari periode ini?')">
                             @csrf @method('DELETE')
@@ -190,9 +191,10 @@
                                 @foreach ($sessionStatuses as $status)<option value="{{ $status->value }}">{{ $statusLabels[$status->value] }}</option>@endforeach
                             </select>
                             <input type="datetime-local" name="starts_at" required class="rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
-                            <input type="datetime-local" name="ends_at" required class="rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
                             <input type="number" name="duration_minutes" value="90" min="10" max="600" required class="rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
+                            <input name="room_name" placeholder="Ruangan (opsional)" class="rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
                             <button class="rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950">Simpan sesi</button>
+                            <p class="text-xs leading-5 text-slate-500 md:col-span-2 xl:col-span-4">Jam selesai dihitung otomatis dari jam mulai dan durasi. Sistem menolak bentrok kelas maupun ruangan.</p>
                         </form>
                     </details>
 
@@ -206,7 +208,7 @@
                                     <span class="text-xs text-slate-500">{{ $statusLabels[$session->status->value] }}</span>
                                 </div>
                                 <p class="mt-3 text-sm font-medium text-white">{{ $session->starts_at->format('d/m/Y H:i') }}–{{ $session->ends_at->format('H:i') }}</p>
-                                <p class="mt-1 text-xs text-slate-500">{{ $session->campus->name }} · {{ $session->duration_minutes }} menit · {{ $session->assignments_count }} peserta</p>
+                                <p class="mt-1 text-xs text-slate-500">{{ $session->campus->name }}{{ $session->room_name ? ' · '.$session->room_name : '' }} · {{ $session->duration_minutes }} menit · {{ $session->assignments_count }} peserta</p>
                                 <div class="mt-3 flex items-center justify-between">
                                     @if ($session->kind->value === 'regular')
                                         <form method="POST" action="{{ route('scheduling.assign-class', [$component, $session]) }}">@csrf

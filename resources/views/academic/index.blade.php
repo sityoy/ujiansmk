@@ -182,11 +182,13 @@
                     class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400">
                 <input type="email" name="email" placeholder="Email login (opsional)"
                     class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400">
-                <input type="password" name="password" placeholder="Password untuk membuat login"
+                <input name="card_uid" placeholder="UID kartu pelajar (opsional)"
+                    class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400">
+                <input type="password" name="password" placeholder="Password awal (kosong = NISN/NIS)"
                     class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400">
                 <input type="password" name="password_confirmation" placeholder="Ulangi password"
                     class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400">
-                <p class="sm:col-span-2 text-xs leading-5 text-slate-500">Login siswa memakai NISN jika tersedia, jika tidak memakai NIS. Email tidak wajib.</p>
+                <p class="sm:col-span-2 text-xs leading-5 text-slate-500">Akun selalu dibuat. Username dan password awal memakai NISN jika tersedia, jika tidak memakai NIS. Email dan UID kartu tidak wajib.</p>
                 <button class="sm:col-span-2 rounded-xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950">Tambah siswa</button>
             </form>
         </section>

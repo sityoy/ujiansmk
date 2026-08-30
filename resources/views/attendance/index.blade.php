@@ -37,7 +37,12 @@
                     @forelse ($checkins as $checkin)
                         <tr>
                             <td class="px-5 py-4"><p class="font-medium text-white">{{ $checkin->student->full_name }}</p><p class="mt-1 text-xs text-slate-500">{{ $checkin->student->schoolClass->name }}</p></td>
-                            <td class="px-5 py-4 text-slate-400">{{ $methodLabels[$checkin->method->value] }}</td>
+                            <td class="px-5 py-4 text-slate-400">
+                                <span class="block">{{ $methodLabels[$checkin->method->value] }}</span>
+                                @if ($checkin->selfie_path)
+                                    <a href="{{ route('attendance.selfie', $checkin) }}" target="_blank" rel="noopener" class="mt-1 inline-flex text-xs text-cyan-300">Lihat selfie</a>
+                                @endif
+                            </td>
                             <td class="px-5 py-4 text-slate-400">{{ $checkin->campus->name }}</td>
                             <td class="px-5 py-4 text-slate-400">{{ number_format((float) $checkin->distance_meters, 0) }} m / ±{{ number_format((float) $checkin->accuracy_meters, 0) }} m</td>
                             <td class="px-5 py-4">

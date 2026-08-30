@@ -11,6 +11,7 @@ Aplikasi ini adalah pengembangan ulang sistem ujian sekolah menggunakan Laravel 
 - Satu percobaan aktif untuk setiap penugasan.
 - Absensi satu kali per hari menggunakan kartu/wajah dan validasi radius kampus.
 - Pencatatan insiden keamanan tanpa langsung menghukum siswa dari sinyal browser tunggal.
+- Bank soal pilihan ganda, autosave jawaban, penghitung waktu, pengumpulan otomatis, dan perhitungan nilai.
 - Impor/ekspor Excel untuk data siswa dan mata pelajaran.
 - Rapor ATS per mata pelajaran beserta peringkat kelas.
 
@@ -24,7 +25,9 @@ Password tidak pernah dimasukkan ke file ekspor. Ketika data siswa diimpor ulang
 
 Database menolak penugasan ganda berdasarkan pasangan `student_id` dan `assessment_subject_id`. Siswa yang tidak hadir pada jadwal reguler dipindahkan ke sesi susulan melalui `ExamAssignmentService`; sistem tidak membuat hasil ujian baru.
 
-Absensi harian dibatasi oleh pasangan `student_id` dan `attendance_date`. Selfie lengkap cukup satu kali pada hari ujian dan dapat digunakan oleh beberapa sesi mapel pada hari yang sama.
+Absensi harian dibatasi oleh pasangan `student_id` dan `attendance_date`. Selfie lengkap cukup satu kali pada hari ujian dan dapat digunakan oleh beberapa sesi mapel pada hari yang sama di kampus yang sama. File selfie disimpan privat dan hanya dapat dibuka oleh petugas berwenang.
+
+Jadwal selesai dihitung otomatis dari jam mulai dan durasi. Sistem menolak tabrakan waktu pada kelas, ruangan, dan penugasan siswa. Jadwal reguler wajib berada dalam periode asesmen; jadwal susulan dapat ditempatkan sesudah periode selama merujuk sesi reguler yang sesuai.
 
 ## Persyaratan
 
@@ -51,6 +54,6 @@ Jangan menyalin `koneksi.php`, dump database, password, foto selfie, atau folder
 
 ## Status pengembangan
 
-Fondasi domain, autentikasi berbasis peran, data akademik, penjadwalan, sesi susulan, absensi, monitoring dasar, dan rapor ATS tersedia. Tahap berikutnya meliputi bank soal, paket ujian, autosave jawaban, serta importer terkontrol untuk data aplikasi lama.
+Fondasi domain, autentikasi berbasis peran, data akademik, penjadwalan, sesi susulan, absensi, bank soal pilihan ganda, pengerjaan ujian siswa, monitoring dasar, dan rapor ATS tersedia. Pengembangan lanjutan dapat mencakup paket soal acak, soal esai, pengenalan wajah biometrik dengan persetujuan dan kebijakan privasi, serta importer terkontrol untuk data aplikasi lama.
 
 Endpoint pemeriksaan aplikasi tersedia di `GET /health`.

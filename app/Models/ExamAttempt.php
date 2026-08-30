@@ -42,4 +42,9 @@ class ExamAttempt extends Model
     {
         return $this->hasMany(SecurityIncident::class);
     }
+
+    public function answers(): HasMany
+    {
+        return $this->hasMany(ExamAnswer::class);
+    }
 }

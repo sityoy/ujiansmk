@@ -79,6 +79,7 @@ class StudentSpreadsheetController extends Controller
         $seenNisn = [];
         $seenEmails = [];
         $seenUsernames = [];
+        $seenCards = [];
 
         foreach ($rows as $row) {
             $line = (int) $row['_row'];
@@ -88,6 +89,7 @@ class StudentSpreadsheetController extends Controller
                 'nama_lengkap' => trim((string) ($row['nama_lengkap'] ?? '')),
                 'email' => filled($row['email'] ?? null) ? Str::lower(trim((string) $row['email'])) : null,
                 'password' => filled($row['password'] ?? null) ? (string) $row['password'] : null,
+                'card_uid' => filled($row['uid_kartu'] ?? null) ? trim((string) $row['uid_kartu']) : null,
                 'status' => strtolower(trim((string) ($row['status'] ?? 'aktif'))),
             ];
 
@@ -97,6 +99,7 @@ class StudentSpreadsheetController extends Controller
                 'nama_lengkap' => ['required', 'string', 'max:255'],
                 'email' => ['nullable', 'email', 'max:255'],
                 'password' => ['nullable', Password::min(8)->letters()->numbers()],
+                'card_uid' => ['nullable', 'string', 'max:255'],
                 'status' => ['required', 'in:aktif,nonaktif,active,inactive,1,0'],
             ]);
 
@@ -108,6 +111,7 @@ class StudentSpreadsheetController extends Controller
             $existing = Student::query()->where('student_number', $data['nis'])->first();
             $existingUserId = $existing?->user_id;
             $username = $data['nisn'] ?: $data['nis'];
+            $cardHash = $data['card_uid'] ? hash('sha256', $data['card_uid']) : null;
 
             if (isset($seenNis[$data['nis']])) {
                 $errors[] = 'Baris '.$line.': NIS duplikat di dalam file.';
@@ -123,6 +127,10 @@ class StudentSpreadsheetController extends Controller
 
             if (isset($seenUsernames[$username])) {
                 $errors[] = 'Baris '.$line.': NISN/NIS login bertabrakan dengan baris lain.';
+            }
+
+            if ($cardHash && isset($seenCards[$cardHash])) {
+                $errors[] = 'Baris '.$line.': UID kartu duplikat di dalam file.';
             }
 
             if ($data['nisn'] && Student::query()
@@ -146,6 +154,13 @@ class StudentSpreadsheetController extends Controller
                 $errors[] = 'Baris '.$line.': email sudah dipakai akun lain.';
             }
 
+            if ($cardHash && Student::query()
+                ->where('card_uid_hash', $cardHash)
+                ->when($existing, fn ($query) => $query->where('id', '!=', $existing->id))
+                ->exists()) {
+                $errors[] = 'Baris '.$line.': UID kartu sudah dipakai siswa lain.';
+            }
+
             $seenNis[$data['nis']] = true;
             if ($data['nisn']) {
                 $seenNisn[$data['nisn']] = true;
@@ -154,6 +169,9 @@ class StudentSpreadsheetController extends Controller
                 $seenEmails[$data['email']] = true;
             }
             $seenUsernames[$username] = true;
+            if ($cardHash) {
+                $seenCards[$cardHash] = true;
+            }
 
             $preparedRows[] = [$data, $existing];
         }
@@ -197,6 +215,9 @@ class StudentSpreadsheetController extends Controller
                     'student_number' => $data['nis'],
                     'nisn' => $data['nisn'],
                     'full_name' => $data['nama_lengkap'],
+                    'card_uid_hash' => $data['card_uid']
+                        ? hash('sha256', $data['card_uid'])
+                        : $student->card_uid_hash,
                     'is_active' => $this->isActive($data['status']),
                 ])->save();
             }

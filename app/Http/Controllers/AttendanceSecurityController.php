@@ -7,8 +7,10 @@ use App\Models\DailyCheckin;
 use App\Models\SecurityIncident;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class AttendanceSecurityController extends Controller
 {
@@ -51,5 +53,14 @@ class AttendanceSecurityController extends Controller
         ]);
 
         return back()->with('status', 'Status absensi berhasil diperbarui.');
+    }
+
+    public function selfie(DailyCheckin $dailyCheckin): BinaryFileResponse
+    {
+        abort_unless($dailyCheckin->selfie_path && Storage::exists($dailyCheckin->selfie_path), 404);
+
+        return response()->file(Storage::path($dailyCheckin->selfie_path), [
+            'Cache-Control' => 'private, no-store, max-age=0',
+        ]);
     }
 }

@@ -36,6 +36,12 @@
                     Ringkasan
                 </a>
 
+                @if ($currentRole === 'student')
+                    <a href="{{ route('student.exams.index') }}" class="rounded-xl px-4 py-3 {{ request()->routeIs('student.*') ? 'bg-cyan-400 text-slate-950 font-semibold' : 'text-slate-300 hover:bg-white/5' }}">
+                        Ujian saya
+                    </a>
+                @endif
+
                 @if ($currentRole === 'super_admin')
                     <a href="{{ route('settings.school.edit') }}" class="rounded-xl px-4 py-3 {{ request()->routeIs('settings.school.*') ? 'bg-cyan-400 text-slate-950 font-semibold' : 'text-slate-300 hover:bg-white/5' }}">
                         Identitas sekolah

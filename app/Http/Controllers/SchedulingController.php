@@ -20,6 +20,7 @@ use App\Services\Exams\ExamAssignmentService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -134,6 +135,12 @@ class SchedulingController extends Controller
 
     public function destroyPeriod(AssessmentPeriod $assessmentPeriod): RedirectResponse
     {
+        if ($assessmentPeriod->assessmentSubjects()->exists()) {
+            return back()->withErrors([
+                'period' => 'Periode tidak dapat dihapus karena sudah memiliki mapel, kelas, atau jadwal ujian.',
+            ]);
+        }
+
         return $this->deleteSafely(
             fn () => $assessmentPeriod->delete(),
             'Periode asesmen berhasil dihapus.',
@@ -171,6 +178,12 @@ class SchedulingController extends Controller
 
     public function destroyComponent(AssessmentSubject $assessmentSubject): RedirectResponse
     {
+        if ($assessmentSubject->examSessions()->exists() || $assessmentSubject->questions()->exists()) {
+            return back()->withErrors([
+                'component' => 'Komponen tidak dapat dihapus karena sudah memiliki sesi atau bank soal.',
+            ]);
+        }
+
         return $this->deleteSafely(
             fn () => $assessmentSubject->delete(),
             'Komponen asesmen berhasil dihapus.',
@@ -185,18 +198,67 @@ class SchedulingController extends Controller
             'campus_id' => ['required', Rule::exists('campuses', 'id')->where('is_active', true)],
             'kind' => ['required', Rule::enum(SessionKind::class)],
             'source_session_id' => ['nullable', 'exists:exam_sessions,id'],
+            'room_name' => ['nullable', 'string', 'max:100'],
             'status' => ['required', Rule::enum(SessionStatus::class)],
             'starts_at' => ['required', 'date'],
-            'ends_at' => ['required', 'date', 'after:starts_at'],
             'duration_minutes' => ['required', 'integer', 'between:10,600'],
         ]);
 
-        $component = AssessmentSubject::findOrFail($validated['assessment_subject_id']);
+        $component = AssessmentSubject::query()
+            ->with('assessmentPeriod')
+            ->findOrFail($validated['assessment_subject_id']);
         $sourceSession = ! empty($validated['source_session_id'])
             ? ExamSession::findOrFail($validated['source_session_id'])
             : null;
+        $startsAt = Carbon::parse($validated['starts_at']);
+        $endsAt = $startsAt->copy()->addMinutes((int) $validated['duration_minutes']);
+        $period = $component->assessmentPeriod;
+        $isMakeup = $validated['kind'] === SessionKind::Makeup->value;
 
-        if ($validated['kind'] === SessionKind::Makeup->value) {
+        if (! $isMakeup && (
+            $startsAt->toDateString() < $period->starts_on->toDateString()
+            || $endsAt->toDateString() > $period->ends_on->toDateString()
+        )) {
+            throw ValidationException::withMessages([
+                'starts_at' => 'Jadwal reguler harus berada di dalam rentang tanggal periode asesmen.',
+            ]);
+        }
+
+        if ($isMakeup && $startsAt->toDateString() < $period->starts_on->toDateString()) {
+            throw ValidationException::withMessages([
+                'starts_at' => 'Jadwal susulan tidak boleh mendahului periode asesmen.',
+            ]);
+        }
+
+        $classConflict = ExamSession::query()
+            ->where('starts_at', '<', $endsAt)
+            ->where('ends_at', '>', $startsAt)
+            ->whereHas('assessmentSubject', fn ($query) => $query
+                ->where('school_class_id', $component->school_class_id))
+            ->exists();
+
+        if ($classConflict) {
+            throw ValidationException::withMessages([
+                'starts_at' => 'Kelas tersebut sudah memiliki ujian lain pada waktu yang bertabrakan.',
+            ]);
+        }
+
+        if (! empty($validated['room_name'])) {
+            $roomConflict = ExamSession::query()
+                ->where('campus_id', $validated['campus_id'])
+                ->whereRaw('LOWER(room_name) = ?', [Str::lower(trim($validated['room_name']))])
+                ->where('starts_at', '<', $endsAt)
+                ->where('ends_at', '>', $startsAt)
+                ->exists();
+
+            if ($roomConflict) {
+                throw ValidationException::withMessages([
+                    'room_name' => 'Ruangan tersebut sudah dipakai oleh sesi lain pada waktu yang sama.',
+                ]);
+            }
+        }
+
+        if ($isMakeup) {
             if (
                 ! $sourceSession
                 || $sourceSession->kind !== SessionKind::Regular
@@ -206,9 +268,21 @@ class SchedulingController extends Controller
                     'source_session_id' => 'Sesi susulan harus merujuk sesi reguler dari mapel dan kelas yang sama.',
                 ]);
             }
+
+            if ($startsAt->lt($sourceSession->ends_at)) {
+                throw ValidationException::withMessages([
+                    'starts_at' => 'Sesi susulan harus dimulai setelah sesi reguler selesai.',
+                ]);
+            }
         } else {
             $validated['source_session_id'] = null;
         }
+
+        $validated['room_name'] = filled($validated['room_name'] ?? null)
+            ? trim($validated['room_name'])
+            : null;
+        $validated['starts_at'] = $startsAt;
+        $validated['ends_at'] = $endsAt;
 
         ExamSession::create($validated);
 
