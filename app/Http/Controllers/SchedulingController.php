@@ -51,6 +51,7 @@ class SchedulingController extends Controller
                         ->withCount('assignments')
                         ->orderBy('starts_at'),
                 ])
+                ->withCount(['assignments', 'questions'])
                 ->latest()
                 ->get(),
             'movableAssignments' => ExamAssignment::query()
@@ -162,18 +163,48 @@ class SchedulingController extends Controller
             ],
         ]);
 
-        $period = AssessmentPeriod::findOrFail($validated['assessment_period_id']);
-        $schoolClass = SchoolClass::findOrFail($validated['school_class_id']);
-
-        if ($period->academic_year_id !== $schoolClass->academic_year_id) {
-            throw ValidationException::withMessages([
-                'school_class_id' => 'Kelas dan periode asesmen harus berada pada tahun ajaran yang sama.',
-            ]);
-        }
+        $this->assertComponentAcademicYear($validated);
 
         AssessmentSubject::create($validated);
 
         return back()->with('status', 'Mapel dan kelas berhasil dimasukkan ke periode asesmen.');
+    }
+
+    public function updateComponent(
+        Request $request,
+        AssessmentSubject $assessmentSubject,
+    ): RedirectResponse {
+        $validated = $request->validate([
+            'assessment_period_id' => ['required', 'exists:assessment_periods,id'],
+            'subject_id' => ['required', 'exists:subjects,id'],
+            'school_class_id' => [
+                'required',
+                'exists:school_classes,id',
+                Rule::unique('assessment_subjects')->where(fn ($query) => $query
+                    ->where('assessment_period_id', $request->integer('assessment_period_id'))
+                    ->where('subject_id', $request->integer('subject_id')))
+                    ->ignore($assessmentSubject->id),
+            ],
+        ]);
+
+        $identityChanged = $assessmentSubject->assessment_period_id !== (int) $validated['assessment_period_id']
+            || $assessmentSubject->subject_id !== (int) $validated['subject_id']
+            || $assessmentSubject->school_class_id !== (int) $validated['school_class_id'];
+
+        if ($identityChanged && (
+            $assessmentSubject->examSessions()->exists()
+            || $assessmentSubject->assignments()->exists()
+            || $assessmentSubject->questions()->exists()
+        )) {
+            throw ValidationException::withMessages([
+                'component' => 'Periode, mapel, atau kelas tidak dapat diubah setelah komponen memiliki sesi, peserta, atau soal.',
+            ]);
+        }
+
+        $this->assertComponentAcademicYear($validated);
+        $assessmentSubject->update($validated);
+
+        return back()->with('status', 'Komponen asesmen berhasil diperbarui.');
     }
 
     public function destroyComponent(AssessmentSubject $assessmentSubject): RedirectResponse
@@ -193,8 +224,69 @@ class SchedulingController extends Controller
 
     public function storeSession(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
+        $componentId = $request->validate([
             'assessment_subject_id' => ['required', 'exists:assessment_subjects,id'],
+        ])['assessment_subject_id'];
+
+        $component = AssessmentSubject::query()
+            ->with('assessmentPeriod')
+            ->findOrFail($componentId);
+        $validated = $this->validatedSessionData($request, $component);
+
+        ExamSession::create([
+            ...$validated,
+            'assessment_subject_id' => $component->id,
+        ]);
+
+        return back()->with('status', 'Sesi ujian berhasil dijadwalkan.');
+    }
+
+    public function updateSession(Request $request, ExamSession $examSession): RedirectResponse
+    {
+        $examSession->loadMissing('assessmentSubject.assessmentPeriod');
+        $component = $examSession->assessmentSubject;
+        $validated = $this->validatedSessionData($request, $component, $examSession);
+
+        if (
+            $examSession->kind->value !== $validated['kind']
+            && ($examSession->assignments()->exists() || ExamSession::query()
+                ->where('source_session_id', $examSession->id)
+                ->exists())
+        ) {
+            throw ValidationException::withMessages([
+                'kind' => 'Jenis sesi tidak dapat diubah setelah memiliki peserta atau menjadi sumber sesi susulan.',
+            ]);
+        }
+
+        $assignedStudentIds = $examSession->assignments()->pluck('student_id');
+        if ($assignedStudentIds->isNotEmpty()) {
+            $studentConflict = ExamAssignment::query()
+                ->whereIn('student_id', $assignedStudentIds)
+                ->where('exam_session_id', '!=', $examSession->id)
+                ->whereIn('status', [AssignmentStatus::Scheduled, AssignmentStatus::Started])
+                ->whereHas('examSession', fn ($query) => $query
+                    ->where('starts_at', '<', $validated['ends_at'])
+                    ->where('ends_at', '>', $validated['starts_at']))
+                ->exists();
+
+            if ($studentConflict) {
+                throw ValidationException::withMessages([
+                    'starts_at' => 'Perubahan ditolak karena ada peserta yang mempunyai ujian lain pada waktu tersebut.',
+                ]);
+            }
+        }
+
+        $examSession->update($validated);
+
+        return back()->with('status', 'Sesi ujian berhasil diperbarui dan waktu selesai dihitung ulang.');
+    }
+
+    private function validatedSessionData(
+        Request $request,
+        AssessmentSubject $component,
+        ?ExamSession $currentSession = null,
+    ): array {
+        $validated = $request->validate([
             'campus_id' => ['required', Rule::exists('campuses', 'id')->where('is_active', true)],
             'kind' => ['required', Rule::enum(SessionKind::class)],
             'source_session_id' => ['nullable', 'exists:exam_sessions,id'],
@@ -204,9 +296,7 @@ class SchedulingController extends Controller
             'duration_minutes' => ['required', 'integer', 'between:10,600'],
         ]);
 
-        $component = AssessmentSubject::query()
-            ->with('assessmentPeriod')
-            ->findOrFail($validated['assessment_subject_id']);
+        $component->loadMissing('assessmentPeriod');
         $sourceSession = ! empty($validated['source_session_id'])
             ? ExamSession::findOrFail($validated['source_session_id'])
             : null;
@@ -214,6 +304,12 @@ class SchedulingController extends Controller
         $endsAt = $startsAt->copy()->addMinutes((int) $validated['duration_minutes']);
         $period = $component->assessmentPeriod;
         $isMakeup = $validated['kind'] === SessionKind::Makeup->value;
+
+        if (! $startsAt->isSameDay($endsAt)) {
+            throw ValidationException::withMessages([
+                'duration_minutes' => 'Sesi ujian harus selesai pada tanggal yang sama. Sesuaikan jam mulai atau durasi.',
+            ]);
+        }
 
         if (! $isMakeup && (
             $startsAt->toDateString() < $period->starts_on->toDateString()
@@ -231,6 +327,7 @@ class SchedulingController extends Controller
         }
 
         $classConflict = ExamSession::query()
+            ->when($currentSession, fn ($query) => $query->where('id', '!=', $currentSession->id))
             ->where('starts_at', '<', $endsAt)
             ->where('ends_at', '>', $startsAt)
             ->whereHas('assessmentSubject', fn ($query) => $query
@@ -245,6 +342,7 @@ class SchedulingController extends Controller
 
         if (! empty($validated['room_name'])) {
             $roomConflict = ExamSession::query()
+                ->when($currentSession, fn ($query) => $query->where('id', '!=', $currentSession->id))
                 ->where('campus_id', $validated['campus_id'])
                 ->whereRaw('LOWER(room_name) = ?', [Str::lower(trim($validated['room_name']))])
                 ->where('starts_at', '<', $endsAt)
@@ -261,6 +359,7 @@ class SchedulingController extends Controller
         if ($isMakeup) {
             if (
                 ! $sourceSession
+                || ($currentSession && $sourceSession->is($currentSession))
                 || $sourceSession->kind !== SessionKind::Regular
                 || $sourceSession->assessment_subject_id !== $component->id
             ) {
@@ -276,6 +375,15 @@ class SchedulingController extends Controller
             }
         } else {
             $validated['source_session_id'] = null;
+
+            if ($currentSession && ExamSession::query()
+                ->where('source_session_id', $currentSession->id)
+                ->where('starts_at', '<', $endsAt)
+                ->exists()) {
+                throw ValidationException::withMessages([
+                    'starts_at' => 'Sesi reguler harus selesai sebelum seluruh sesi susulannya dimulai.',
+                ]);
+            }
         }
 
         $validated['room_name'] = filled($validated['room_name'] ?? null)
@@ -284,9 +392,7 @@ class SchedulingController extends Controller
         $validated['starts_at'] = $startsAt;
         $validated['ends_at'] = $endsAt;
 
-        ExamSession::create($validated);
-
-        return back()->with('status', 'Sesi ujian berhasil dijadwalkan.');
+        return $validated;
     }
 
     public function assignClass(
@@ -340,6 +446,18 @@ class SchedulingController extends Controller
             'Sesi ujian berhasil dihapus.',
             'Sesi tidak dapat dihapus karena sudah memiliki peserta atau aktivitas ujian.',
         );
+    }
+
+    private function assertComponentAcademicYear(array $validated): void
+    {
+        $period = AssessmentPeriod::findOrFail($validated['assessment_period_id']);
+        $schoolClass = SchoolClass::findOrFail($validated['school_class_id']);
+
+        if ($period->academic_year_id !== $schoolClass->academic_year_id) {
+            throw ValidationException::withMessages([
+                'school_class_id' => 'Kelas dan periode asesmen harus berada pada tahun ajaran yang sama.',
+            ]);
+        }
     }
 
     private function deleteSafely(callable $callback, string $success, string $failure): RedirectResponse

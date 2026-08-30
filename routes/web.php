@@ -108,9 +108,11 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             Route::delete('/periods/{assessmentPeriod}', [SchedulingController::class, 'destroyPeriod'])->name('periods.destroy');
 
             Route::post('/components', [SchedulingController::class, 'storeComponent'])->name('components.store');
+            Route::patch('/components/{assessmentSubject}', [SchedulingController::class, 'updateComponent'])->name('components.update');
             Route::delete('/components/{assessmentSubject}', [SchedulingController::class, 'destroyComponent'])->name('components.destroy');
 
             Route::post('/sessions', [SchedulingController::class, 'storeSession'])->name('sessions.store');
+            Route::patch('/sessions/{examSession}', [SchedulingController::class, 'updateSession'])->name('sessions.update');
             Route::delete('/sessions/{examSession}', [SchedulingController::class, 'destroySession'])->name('sessions.destroy');
             Route::post('/components/{assessmentSubject}/sessions/{examSession}/assign-class', [SchedulingController::class, 'assignClass'])
                 ->name('assign-class');

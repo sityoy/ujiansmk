@@ -155,6 +155,7 @@
 
         <div class="space-y-5">
             @forelse ($components as $component)
+                @php($componentLocked = $component->examSessions->isNotEmpty() || $component->assignments_count > 0 || $component->questions_count > 0)
                 <article class="rounded-3xl border border-white/10 bg-white/[0.035] p-6">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div>
@@ -167,6 +168,33 @@
                             <button class="text-xs text-rose-300">Hapus komponen</button>
                         </form>
                     </div>
+
+                    <details class="mt-4 rounded-2xl border border-white/10 bg-slate-950/35 p-4">
+                        <summary class="cursor-pointer text-sm font-medium text-amber-300">Edit periode, mapel, atau kelas</summary>
+                        @if ($componentLocked)
+                            <p class="mt-3 text-xs leading-5 text-slate-500">Identitas komponen dikunci karena sudah memiliki sesi, peserta, atau soal. Hapus data turunannya terlebih dahulu jika komponen memang dibuat keliru.</p>
+                        @else
+                            <form method="POST" action="{{ route('scheduling.components.update', $component) }}" class="mt-4 grid gap-3 md:grid-cols-3">
+                                @csrf @method('PATCH')
+                                <select name="assessment_period_id" required class="rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
+                                    @foreach ($periods as $period)
+                                        <option value="{{ $period->id }}" @selected($component->assessment_period_id === $period->id)>{{ $period->name }} · {{ $period->academicYear->name }}</option>
+                                    @endforeach
+                                </select>
+                                <select name="subject_id" required class="rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
+                                    @foreach ($subjects as $subject)
+                                        <option value="{{ $subject->id }}" @selected($component->subject_id === $subject->id)>{{ $subject->code }} · {{ $subject->name }}</option>
+                                    @endforeach
+                                </select>
+                                <select name="school_class_id" required class="rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
+                                    @foreach ($classes as $class)
+                                        <option value="{{ $class->id }}" @selected($component->school_class_id === $class->id)>{{ $class->name }} · {{ $class->academicYear->name }}</option>
+                                    @endforeach
+                                </select>
+                                <button class="rounded-xl bg-amber-400 px-4 py-2.5 text-sm font-semibold text-slate-950 md:col-span-3">Simpan perubahan komponen</button>
+                            </form>
+                        @endif
+                    </details>
 
                     <details class="mt-5 rounded-2xl border border-white/10 bg-slate-950/35 p-4">
                         <summary class="cursor-pointer text-sm font-medium text-cyan-300">Tambah sesi untuk komponen ini</summary>
@@ -209,6 +237,36 @@
                                 </div>
                                 <p class="mt-3 text-sm font-medium text-white">{{ $session->starts_at->format('d/m/Y H:i') }}–{{ $session->ends_at->format('H:i') }}</p>
                                 <p class="mt-1 text-xs text-slate-500">{{ $session->campus->name }}{{ $session->room_name ? ' · '.$session->room_name : '' }} · {{ $session->duration_minutes }} menit · {{ $session->assignments_count }} peserta</p>
+                                <details class="mt-3 rounded-xl border border-white/10 p-3">
+                                    <summary class="cursor-pointer text-xs font-medium text-cyan-300">Edit sesi ujian</summary>
+                                    <form method="POST" action="{{ route('scheduling.sessions.update', $session) }}" class="mt-3 grid gap-2 sm:grid-cols-2">
+                                        @csrf @method('PATCH')
+                                        <select name="campus_id" required class="rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-xs">
+                                            @foreach ($campuses->where('is_active', true) as $campus)
+                                                <option value="{{ $campus->id }}" @selected($session->campus_id === $campus->id)>{{ $campus->name }}</option>
+                                            @endforeach
+                                        </select>
+                                        <select name="kind" required class="rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-xs">
+                                            <option value="regular" @selected($session->kind->value === 'regular')>Reguler</option>
+                                            <option value="makeup" @selected($session->kind->value === 'makeup')>Susulan</option>
+                                        </select>
+                                        <select name="source_session_id" class="rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-xs">
+                                            <option value="">Sumber reguler</option>
+                                            @foreach ($component->examSessions->where('kind.value', 'regular')->where('id', '!=', $session->id) as $source)
+                                                <option value="{{ $source->id }}" @selected($session->source_session_id === $source->id)>{{ $source->starts_at->format('d/m/Y H:i') }}</option>
+                                            @endforeach
+                                        </select>
+                                        <select name="status" required class="rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-xs">
+                                            @foreach ($sessionStatuses as $status)
+                                                <option value="{{ $status->value }}" @selected($session->status === $status)>{{ $statusLabels[$status->value] }}</option>
+                                            @endforeach
+                                        </select>
+                                        <input type="datetime-local" name="starts_at" value="{{ $session->starts_at->format('Y-m-d\TH:i') }}" required class="rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-xs">
+                                        <input type="number" name="duration_minutes" value="{{ $session->duration_minutes }}" min="10" max="600" required class="rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-xs">
+                                        <input name="room_name" value="{{ $session->room_name }}" placeholder="Ruangan (opsional)" class="rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-xs sm:col-span-2">
+                                        <button class="rounded-lg bg-cyan-400 px-4 py-2.5 text-xs font-semibold text-slate-950 sm:col-span-2">Simpan perubahan sesi</button>
+                                    </form>
+                                </details>
                                 <div class="mt-3 flex items-center justify-between">
                                     @if ($session->kind->value === 'regular')
                                         <form method="POST" action="{{ route('scheduling.assign-class', [$component, $session]) }}">@csrf

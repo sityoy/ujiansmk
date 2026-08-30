@@ -117,6 +117,61 @@ class SchedulingManagementTest extends TestCase
         $this->assertSame($regular->id, ExamSession::query()->where('assessment_subject_id', $component->id)->value('id'));
     }
 
+    public function test_existing_session_can_be_edited_and_end_time_is_recalculated(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        [, $regular, , $campus] = $this->makeSchedule();
+
+        $this->actingAs($admin)
+            ->patch(route('scheduling.sessions.update', $regular), [
+                'campus_id' => $campus->id,
+                'kind' => SessionKind::Regular->value,
+                'status' => SessionStatus::Active->value,
+                'starts_at' => '2026-09-02 09:00:00',
+                'duration_minutes' => 60,
+                'room_name' => 'Ruang 9A',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $regular->refresh();
+        $this->assertSame('2026-09-02 10:00:00', $regular->ends_at->format('Y-m-d H:i:s'));
+        $this->assertSame('Ruang 9A', $regular->room_name);
+        $this->assertSame(SessionStatus::Active, $regular->status);
+    }
+
+    public function test_unused_component_can_be_edited_but_used_component_is_locked(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        [$usedComponent] = $this->makeSchedule();
+        $temporarySubject = Subject::create(['code' => 'TMP', 'name' => 'Sementara', 'is_active' => true]);
+        $replacementSubject = Subject::create(['code' => 'IPA', 'name' => 'Ilmu Pengetahuan Alam', 'is_active' => true]);
+        $unusedComponent = AssessmentSubject::create([
+            'assessment_period_id' => $usedComponent->assessment_period_id,
+            'subject_id' => $temporarySubject->id,
+            'school_class_id' => $usedComponent->school_class_id,
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('scheduling.components.update', $unusedComponent), [
+                'assessment_period_id' => $unusedComponent->assessment_period_id,
+                'subject_id' => $replacementSubject->id,
+                'school_class_id' => $unusedComponent->school_class_id,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame($replacementSubject->id, $unusedComponent->refresh()->subject_id);
+
+        $this->actingAs($admin)
+            ->patch(route('scheduling.components.update', $usedComponent), [
+                'assessment_period_id' => $usedComponent->assessment_period_id,
+                'subject_id' => $temporarySubject->id,
+                'school_class_id' => $usedComponent->school_class_id,
+            ])
+            ->assertSessionHasErrors('component');
+    }
+
     private function makeSchedule(): array
     {
         $year = AcademicYear::create([
