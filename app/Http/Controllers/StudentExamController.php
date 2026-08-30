@@ -14,6 +14,7 @@ use App\Services\Exams\ExamAttemptService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -174,6 +175,13 @@ class StudentExamController extends Controller
 
     private function deviceHash(Request $request): string
     {
-        return hash('sha256', $request->session()->getId());
+        $token = $request->session()->get('exam_device_token');
+
+        if (! is_string($token) || strlen($token) < 32) {
+            $token = Str::random(64);
+            $request->session()->put('exam_device_token', $token);
+        }
+
+        return hash('sha256', $token);
     }
 }

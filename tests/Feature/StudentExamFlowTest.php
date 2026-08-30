@@ -40,9 +40,11 @@ class StudentExamFlowTest extends TestCase
     public function test_student_can_check_in_start_autosave_and_submit_an_exam(): void
     {
         [$user, $assignment, $questions] = $this->makeExam();
+        $deviceToken = str_repeat('a', 64);
         $this->actingAs($user);
 
-        $this->post(route('student.attendance.store', $assignment), [
+        $this->withSession(['exam_device_token' => $deviceToken])
+            ->post(route('student.attendance.store', $assignment), [
                 'latitude' => -6.2000000,
                 'longitude' => 106.8166660,
                 'accuracy_meters' => 10,
@@ -52,18 +54,22 @@ class StudentExamFlowTest extends TestCase
             ->assertRedirect()
             ->assertSessionHasNoErrors();
 
-        $this->post(route('student.exams.start', $assignment))
+        $this->withSession(['exam_device_token' => $deviceToken])
+            ->post(route('student.exams.start', $assignment))
             ->assertRedirect();
 
         $attempt = ExamAttempt::query()->firstOrFail();
 
-        $this->putJson(route('student.exams.answer', [$attempt, $questions[0]]), ['answer' => 'A'])
+        $this->withSession(['exam_device_token' => $deviceToken])
+            ->putJson(route('student.exams.answer', [$attempt, $questions[0]]), ['answer' => 'A'])
             ->assertOk()
             ->assertJson(['saved' => true]);
-        $this->putJson(route('student.exams.answer', [$attempt, $questions[1]]), ['answer' => 'A'])
+        $this->withSession(['exam_device_token' => $deviceToken])
+            ->putJson(route('student.exams.answer', [$attempt, $questions[1]]), ['answer' => 'A'])
             ->assertOk();
 
-        $this->post(route('student.exams.submit', $attempt))
+        $this->withSession(['exam_device_token' => $deviceToken])
+            ->post(route('student.exams.submit', $attempt))
             ->assertRedirect(route('student.exams.index'));
 
         $this->assertSame('submitted', $attempt->refresh()->status->value);
