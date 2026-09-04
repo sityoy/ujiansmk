@@ -26,6 +26,8 @@ use App\Models\Subject;
 use App\Models\User;
 use App\Services\Attendance\DailyCheckinService;
 use App\Services\Exams\ExamAttemptService;
+use App\Services\Exams\ExamSessionService;
+use App\Services\Exams\ExamAssignmentService;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -281,6 +283,144 @@ class StudentExamFlowTest extends TestCase
         );
 
         return app(ExamAttemptService::class)->start($assignment, $checkin, hash('sha256', str_repeat('a', 64)), '127.0.0.1', 'Test');
+    }
+
+    public function test_proctor_can_monitor_progress_and_search_by_nisn_without_showing_other_participants(): void
+    {
+        [, $assignment, $questions] = $this->makeExam();
+        $assignment->student->update(['nisn' => '0001234567']);
+        $attempt = $this->startAttempt($assignment);
+        app(ExamAttemptService::class)->saveAnswer($attempt, $questions[0], 'A');
+        $this->additionalParticipant($assignment->examSession, 'S-002', 'Peserta Kedua');
+        $proctor = User::factory()->create(['role' => UserRole::Proctor]);
+
+        $this->actingAs($proctor)->get(route('operations.sessions.show', [$assignment->examSession, 'q' => '0001234567']))
+            ->assertOk()->assertSee('Peserta Uji')->assertDontSee('Peserta Kedua')
+            ->assertSee('1 / 2 jawaban')->assertSee('Terverifikasi')
+            ->assertViewHas('statistics', fn ($stats) => $stats['total'] === 2 && $stats['in_progress'] === 1 && $stats['scheduled'] === 1);
+    }
+
+    public function test_session_roster_filters_status_and_does_not_include_other_sessions(): void
+    {
+        [, $assignment] = $this->makeExam();
+        $this->startAttempt($assignment);
+        $this->additionalParticipant($assignment->examSession, 'S-002', 'Peserta Belum Mulai');
+        $otherSession = $assignment->examSession->replicate();
+        $otherSession->save();
+        $this->additionalParticipant($otherSession, 'S-003', 'Peserta Sesi Lain');
+        $proctor = User::factory()->create(['role' => UserRole::Proctor]);
+
+        $this->actingAs($proctor)->get(route('operations.sessions.show', [$assignment->examSession, 'status' => 'scheduled']))
+            ->assertOk()->assertSee('Peserta Belum Mulai')->assertDontSee('Peserta Uji')->assertDontSee('Peserta Sesi Lain')
+            ->assertViewHas('participants', fn ($participants) => $participants->total() === 1);
+    }
+
+    public function test_session_roster_uses_attendance_on_exam_date_not_current_date(): void
+    {
+        [, $assignment] = $this->makeExam();
+        $this->startAttempt($assignment);
+        $this->travel(1)->days();
+        $proctor = User::factory()->create(['role' => UserRole::Proctor]);
+        $this->actingAs($proctor)->get(route('operations.sessions.show', $assignment->examSession))
+            ->assertOk()->assertSee('Terverifikasi')->assertDontSee('Belum tercatat');
+    }
+
+    public function test_student_and_teacher_cannot_view_session_roster(): void
+    {
+        [$student, $assignment] = $this->makeExam();
+        $teacher = User::factory()->create(['role' => UserRole::Teacher]);
+        $route = route('operations.sessions.show', $assignment->examSession);
+        $this->actingAs($student)->get($route)->assertForbidden();
+        $this->actingAs($teacher)->get($route)->assertForbidden();
+    }
+
+    public function test_session_roster_is_paginated_and_filter_parameters_are_validated(): void
+    {
+        [, $assignment] = $this->makeExam();
+        for ($i = 2; $i <= 27; $i++) {
+            $this->additionalParticipant($assignment->examSession, 'P-'.$i, 'Peserta Halaman '.$i);
+        }
+        $proctor = User::factory()->create(['role' => UserRole::Proctor]);
+        $this->actingAs($proctor)->get(route('operations.sessions.show', [$assignment->examSession, 'page' => 2, 'status' => 'scheduled']))
+            ->assertOk()->assertViewHas('participants', fn ($participants) => $participants->total() === 27 && $participants->count() === 2);
+        $this->getJson(route('operations.sessions.show', [$assignment->examSession, 'status' => 'unknown']))
+            ->assertUnprocessable()->assertJsonValidationErrors('status');
+    }
+
+    public function test_operations_date_and_year_filters_scope_both_statistics_and_attempts(): void
+    {
+        [, $assignment] = $this->makeExam();
+        $this->startAttempt($assignment);
+        $proctor = User::factory()->create(['role' => UserRole::Proctor]);
+        $year = $assignment->assessmentSubject->assessmentPeriod->academic_year_id;
+
+        $this->actingAs($proctor)->get(route('operations.index', ['academic_year_id' => $year, 'date' => now()->toDateString()]))
+            ->assertOk()->assertViewHas('statistics', fn ($stats) => $stats['startedAttempts'] === 1)
+            ->assertViewHas('attempts', fn ($attempts) => $attempts->total() === 1);
+        $this->get(route('operations.index', ['date' => now()->addDay()->toDateString()]))
+            ->assertOk()->assertViewHas('statistics', fn ($stats) => $stats['startedAttempts'] === 0)
+            ->assertViewHas('attempts', fn ($attempts) => $attempts->total() === 0);
+        $this->getJson(route('operations.index', ['date' => 'invalid']))->assertUnprocessable();
+    }
+
+    public function test_closing_marks_only_unstarted_scheduled_participants_absent_and_makeup_reuses_assignment(): void
+    {
+        [, $assignment] = $this->makeExam();
+        $active = $this->additionalParticipant($assignment->examSession, 'S-002', 'Peserta Mengerjakan');
+        $this->startAttempt($active);
+        $cancelled = $this->additionalParticipant($assignment->examSession, 'S-003', 'Peserta Batal');
+        $cancelled->update(['status' => AssignmentStatus::Cancelled]);
+        $service = app(ExamSessionService::class);
+        $service->update($assignment->examSession, ['status' => SessionStatus::Closed]);
+        $service->update($assignment->examSession, ['status' => SessionStatus::Closed]);
+        $this->assertSame(AssignmentStatus::Absent, $assignment->fresh()->status);
+        $this->assertSame(AssignmentStatus::Completed, $active->fresh()->status);
+        $this->assertSame(AssignmentStatus::Cancelled, $cancelled->fresh()->status);
+        $this->assertDatabaseCount('exam_attempts', 1);
+
+        $makeup = $assignment->examSession->replicate();
+        $makeup->fill(['source_session_id' => $assignment->exam_session_id, 'kind' => SessionKind::Makeup,
+            'status' => SessionStatus::Published, 'starts_at' => now()->addDay(), 'ends_at' => now()->addDay()->addMinutes(90)]);
+        $makeup->save();
+        $moved = app(ExamAssignmentService::class)->moveToMakeup($assignment->fresh(), $makeup);
+        $this->assertSame($assignment->id, $moved->id);
+        $this->assertSame(AssignmentStatus::Scheduled, $moved->status);
+        $this->assertSame($makeup->id, $moved->exam_session_id);
+        $this->assertDatabaseCount('exam_assignments', 3);
+    }
+
+    public function test_closing_before_start_does_not_mark_students_absent(): void
+    {
+        [, $assignment] = $this->makeExam();
+        $assignment->examSession->update(['starts_at' => now()->addDay(), 'ends_at' => now()->addDay()->addMinutes(90)]);
+        app(ExamSessionService::class)->update($assignment->examSession, ['status' => SessionStatus::Closed]);
+        $this->assertSame(AssignmentStatus::Scheduled, $assignment->fresh()->status);
+    }
+
+    public function test_cancelled_assignment_and_closed_destination_cannot_be_used_for_makeup(): void
+    {
+        [, $assignment] = $this->makeExam();
+        $assignment->update(['status' => AssignmentStatus::Cancelled]);
+        $makeup = $assignment->examSession->replicate();
+        $makeup->fill(['kind' => SessionKind::Makeup, 'source_session_id' => $assignment->exam_session_id]);
+        $makeup->save();
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $data = ['assignment_id' => $assignment->id, 'makeup_session_id' => $makeup->id];
+        $this->actingAs($committee)->post(route('scheduling.makeup.move'), $data)->assertSessionHasErrors('assignment');
+        $assignment->update(['status' => AssignmentStatus::Scheduled]);
+        $makeup->update(['status' => SessionStatus::Closed]);
+        $this->post(route('scheduling.makeup.move'), $data)->assertSessionHasErrors('exam_session');
+        $this->assertSame($assignment->exam_session_id, $assignment->fresh()->exam_session_id);
+    }
+
+    private function additionalParticipant(ExamSession $session, string $number, string $name): ExamAssignment
+    {
+        $student = Student::create(['school_class_id' => $session->assessmentSubject->school_class_id,
+            'student_number' => $number, 'full_name' => $name, 'is_active' => true]);
+
+        return ExamAssignment::create(['assessment_subject_id' => $session->assessment_subject_id,
+            'student_id' => $student->id, 'exam_session_id' => $session->id,
+            'status' => AssignmentStatus::Scheduled, 'assigned_at' => now()]);
     }
 
     private function sessionData(ExamSession $session): array

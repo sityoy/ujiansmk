@@ -33,6 +33,14 @@ Sesi yang sudah dibuat dapat diedit kembali dan waktu selesai akan dihitung ulan
 
 Jadwal, lokasi, dan durasi sesi terkunci setelah percobaan ujian pertama. Bank soal komponen juga terkunci setelah siswa pertama mulai, termasuk untuk menjaga kesamaan penilaian susulan. Menutup sesi melalui Penjadwalan ataupun Pelaksanaan mengumpulkan semua percobaan yang masih berjalan. Sesi tertutup tidak dapat dibuka ulang; gunakan alur susulan untuk peserta yang belum mengerjakan.
 
+## Pemantauan peserta per sesi
+
+Menu **Pelaksanaan ujian → Lihat peserta & progres** menampilkan seluruh peserta yang saat ini ditempatkan pada sesi, 25 baris per halaman. Pengawas/panitia dapat mencari nama, NIS, atau NISN dan memfilter status pengerjaan. Absensi diambil berdasarkan tanggal serta lokasi sesi, progres berdasarkan jawaban yang sudah tersimpan, dan ringkasan tetap mencakup seluruh peserta sesi. Halaman dimuat ulang secara manual; waktu simpan terakhir bukan indikator online.
+
+Halaman Pelaksanaan mendukung filter tahun ajaran, tanggal, dan status sesi. Ringkasan dan daftar aktivitas mengikuti filter yang sama; aktivitas tidak lagi dibatasi hanya 30 catatan terakhir tanpa halaman berikutnya. Insiden browser adalah sinyal pemeriksaan, bukan bukti kecurangan otomatis.
+
+Saat sesi ditutup setelah waktu mulai, peserta berstatus terjadwal yang tidak memiliki percobaan ditandai tidak hadir ujian. Peserta yang sudah mulai dikumpulkan, sedangkan peserta dibatalkan tidak diubah. Penutupan sebelum waktu mulai tidak menandai ketidakhadiran. Susulan tetap memakai penugasan yang sama; peserta dibatalkan/yang sudah memiliki percobaan dan sesi susulan tertutup ditolak. Penandaan ini terjadi ketika panitia menutup sesi, bukan otomatis ketika waktu berakhir.
+
 ## Pengumpulan otomatis di server
 
 Aktifkan Laravel Scheduler pada server agar ujian kedaluwarsa tetap dikumpulkan meskipun browser siswa ditutup. Jalankan dengan akun aplikasi dan PHP yang sama dengan aplikasi. Contoh cron (ganti `/path/to/ujiansmk` dengan lokasi proyek sebenarnya):

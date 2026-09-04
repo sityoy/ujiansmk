@@ -140,6 +140,7 @@ Route::middleware(['auth', 'active'])->group(function (): void {
         ->name('operations.')
         ->group(function (): void {
             Route::get('/', [ExamOperationsController::class, 'index'])->name('index');
+            Route::get('/sessions/{examSession}', [ExamOperationsController::class, 'show'])->name('sessions.show');
             Route::patch('/sessions/{examSession}/status', [ExamOperationsController::class, 'updateSessionStatus'])
                 ->name('sessions.status');
         });

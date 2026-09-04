@@ -3,6 +3,7 @@
 namespace App\Services\Exams;
 
 use App\Enums\AttemptStatus;
+use App\Enums\AssignmentStatus;
 use App\Enums\SessionStatus;
 use App\Models\ExamAttempt;
 use App\Models\ExamSession;
@@ -42,6 +43,13 @@ class ExamSessionService
             if ($locked->status === SessionStatus::Closed) {
                 $attempts->where('status', AttemptStatus::InProgress)
                     ->eachById(fn (ExamAttempt $attempt) => app(ExamAttemptService::class)->submit($attempt));
+
+                // No new assignment/attempt is created for participants who never started.
+                // A session cancelled before its start does not imply student absence.
+                if (now()->gte($locked->starts_at)) {
+                    $locked->assignments()->where('status', AssignmentStatus::Scheduled)
+                        ->whereDoesntHave('attempt')->update(['status' => AssignmentStatus::Absent]);
+                }
             }
         });
     }

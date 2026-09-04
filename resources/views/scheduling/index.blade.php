@@ -295,7 +295,7 @@
         </div>
     </section>
 
-    <section class="mt-6 rounded-3xl border border-amber-400/20 bg-amber-400/[0.05] p-6">
+    <section id="peserta-susulan" class="mt-6 rounded-3xl border border-amber-400/20 bg-amber-400/[0.05] p-6">
         <p class="text-xs font-semibold uppercase tracking-[0.18em] text-amber-300">06 · Peserta Susulan</p>
         <h2 class="mt-2 text-xl font-semibold text-white">Pindahkan tanpa duplikasi data</h2>
         <form method="POST" action="{{ route('scheduling.makeup.move') }}" class="mt-5 grid gap-3 lg:grid-cols-[1fr_1fr_auto]">

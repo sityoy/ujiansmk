@@ -4,6 +4,7 @@ namespace App\Services\Exams;
 
 use App\Enums\AssignmentStatus;
 use App\Enums\SessionKind;
+use App\Enums\SessionStatus;
 use App\Models\AssessmentSubject;
 use App\Models\ExamAssignment;
 use App\Models\ExamSession;
@@ -43,6 +44,10 @@ class ExamAssignmentService
         }
 
         return DB::transaction(function () use ($assignment, $makeupSession): ExamAssignment {
+            $makeupSession = ExamSession::query()->lockForUpdate()->findOrFail($makeupSession->id);
+            if ($makeupSession->status === SessionStatus::Closed || $makeupSession->kind !== SessionKind::Makeup) {
+                throw ValidationException::withMessages(['exam_session' => 'Sesi tujuan harus berupa susulan yang belum ditutup.']);
+            }
             $lockedAssignment = ExamAssignment::query()
                 ->lockForUpdate()
                 ->findOrFail($assignment->id);
@@ -54,9 +59,10 @@ class ExamAssignmentService
                 $lockedAssignment->assessment_subject_id,
             );
 
-            if (in_array($lockedAssignment->status, [AssignmentStatus::Started, AssignmentStatus::Completed], true)) {
+            if (! in_array($lockedAssignment->status, [AssignmentStatus::Scheduled, AssignmentStatus::Absent], true)
+                || $lockedAssignment->attempt()->exists()) {
                 throw ValidationException::withMessages([
-                    'assignment' => 'Ujian yang sudah dimulai atau selesai tidak dapat dipindahkan ke susulan.',
+                    'assignment' => 'Hanya peserta belum mulai atau tidak hadir yang dapat dipindahkan ke susulan; peserta dibatalkan atau memiliki percobaan tidak dapat dipindahkan.',
                 ]);
             }
 
