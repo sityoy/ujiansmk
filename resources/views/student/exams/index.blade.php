@@ -10,7 +10,7 @@
     @endif
 
     <section class="rounded-3xl border border-cyan-400/20 bg-cyan-400/[0.045] p-6">
-        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Peserta terverifikasi</p>
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Identitas peserta</p>
         <h2 class="mt-2 text-2xl font-semibold text-white">{{ $student->full_name }}</h2>
         <p class="mt-2 text-sm text-slate-400">NIS {{ $student->student_number }} · {{ $student->schoolClass->name }}</p>
         <div class="mt-4 inline-flex rounded-full px-3 py-1 text-xs {{ $checkin?->status->value === 'verified' ? 'bg-emerald-400/10 text-emerald-200' : 'bg-amber-400/10 text-amber-200' }}">
@@ -26,10 +26,8 @@
                 $isOpen = in_array($session->status->value, ['published', 'active'], true)
                     && now()->gte($session->starts_at)
                     && now()->lt($session->ends_at);
-                $canAttend = in_array($session->status->value, ['published', 'active'], true)
-                    && $session->starts_at->isToday()
-                    && now()->gte($session->starts_at->copy()->subMinutes(60))
-                    && now()->lt($session->ends_at);
+                $attendanceReason = app(\App\Services\Attendance\AttendanceAvailability::class)->reason($assignment, $checkin);
+                $canAttend = $attendanceReason === null;
                 $hasCheckin = $checkin?->status->value === 'verified' && $checkin->campus_id === $session->campus_id;
             @endphp
             <article class="rounded-3xl border border-white/10 bg-white/[0.035] p-6">
@@ -37,7 +35,7 @@
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-300">{{ $assignment->assessmentSubject->assessmentPeriod->name }}</p>
                         <h3 class="mt-2 text-xl font-semibold text-white">{{ $assignment->assessmentSubject->subject->name }}</h3>
-                        <p class="mt-2 text-sm text-slate-400">{{ $session->starts_at->format('d/m/Y H:i') }}–{{ $session->ends_at->format('H:i') }} · {{ $session->duration_minutes }} menit</p>
+                        <p class="mt-2 text-sm text-slate-400">{{ $session->starts_at->format('d/m/Y H:i') }}–{{ $session->ends_at->format($session->starts_at->isSameDay($session->ends_at) ? 'H:i' : 'd/m/Y H:i') }} · {{ $session->duration_minutes }} menit</p>
                         <p class="mt-1 text-xs text-slate-500">{{ $session->campus->name }}{{ $session->room_name ? ' · '.$session->room_name : '' }} · {{ $session->kind->value === 'makeup' ? 'Susulan' : 'Reguler' }}</p>
                     </div>
                     <span class="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-300">{{ ucfirst($assignment->status->value) }}</span>
@@ -65,13 +63,17 @@
                         <a href="{{ route('student.exams.show', $attempt) }}" class="rounded-xl bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950">Lanjutkan ujian</a>
                     @elseif ($attempt?->status->value === 'submitted')
                         <span class="rounded-xl bg-emerald-400/10 px-5 py-3 text-sm font-medium text-emerald-200">Ujian sudah dikumpulkan</span>
+                    @elseif ($attempt?->status->value === 'terminated')
+                        <span class="text-sm text-rose-300">Ujian dihentikan. Hubungi pengawas.</span>
+                    @elseif ($attendanceReason)
+                        <span class="text-sm text-amber-300">{{ $attendanceReason }}</span>
                     @elseif ($isOpen && $hasCheckin)
                         <form method="POST" action="{{ route('student.exams.start', $assignment) }}" onsubmit="return confirm('Mulai ujian sekarang? Waktu akan langsung berjalan.')">
                             @csrf
                             <button class="rounded-xl bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950">Mulai ujian</button>
                         </form>
                     @elseif (! $isOpen)
-                        <span class="text-sm text-slate-500">Ujian belum dapat dimulai pada waktu ini.</span>
+                        <span class="text-sm text-slate-500">Ujian dimulai pukul {{ $session->starts_at->format('H:i') }}. Absensi dapat diselesaikan terlebih dahulu.</span>
                     @else
                         <span class="text-sm text-amber-300">Selesaikan absensi terlebih dahulu.</span>
                     @endif

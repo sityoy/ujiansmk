@@ -4,11 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Enums\CheckinMethod;
 use App\Enums\CheckinStatus;
-use App\Enums\SessionStatus;
 use App\Models\DailyCheckin;
 use App\Models\ExamAssignment;
 use App\Models\Student;
 use App\Services\Attendance\DailyCheckinService;
+use App\Services\Attendance\AttendanceAvailability;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -28,22 +28,14 @@ class StudentAttendanceController extends Controller
         $assignment->load('examSession.campus');
         $session = $assignment->examSession;
 
-        if (! in_array($session->status, [SessionStatus::Published, SessionStatus::Active], true)) {
-            throw ValidationException::withMessages(['attendance' => 'Sesi belum diterbitkan oleh panitia.']);
-        }
-
-        if (! $session->starts_at->isToday()) {
-            throw ValidationException::withMessages(['attendance' => 'Absensi hanya dapat dilakukan pada hari pelaksanaan ujian.']);
-        }
-
-        if (now()->lt($session->starts_at->copy()->subMinutes(60)) || now()->gte($session->ends_at)) {
-            throw ValidationException::withMessages(['attendance' => 'Absensi dibuka 60 menit sebelum ujian sampai sesi berakhir.']);
-        }
-
         $existing = DailyCheckin::query()
             ->where('student_id', $student->id)
             ->whereDate('attendance_date', now()->toDateString())
             ->first();
+
+        if ($reason = app(AttendanceAvailability::class)->reason($assignment, $existing)) {
+            throw ValidationException::withMessages(['attendance' => $reason]);
+        }
 
         if ($existing?->status === CheckinStatus::Verified) {
             if ($existing->campus_id !== $session->campus_id) {

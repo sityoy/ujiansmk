@@ -17,6 +17,7 @@ use App\Models\ExamSession;
 use App\Models\SchoolClass;
 use App\Models\Subject;
 use App\Services\Exams\ExamAssignmentService;
+use App\Services\Exams\ExamSessionService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -276,7 +277,7 @@ class SchedulingController extends Controller
             }
         }
 
-        $examSession->update($validated);
+        app(ExamSessionService::class)->update($examSession, $validated);
 
         return back()->with('status', 'Sesi ujian berhasil diperbarui dan waktu selesai dihitung ulang.');
     }

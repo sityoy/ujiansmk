@@ -12,6 +12,7 @@
         </div>
         <div class="text-right">
             <p id="save-status" class="text-xs text-slate-400">Jawaban tersimpan otomatis</p>
+            <button id="retry-save" type="button" hidden class="mt-2 text-xs font-semibold text-amber-300">Coba simpan lagi</button>
             <p class="mt-1 text-xs text-amber-300">Jangan menutup halaman ujian</p>
         </div>
     </div>
@@ -42,21 +43,93 @@
         @endforeach
     </div>
 
-    <form id="submit-exam" method="POST" action="{{ route('student.exams.submit', $attempt) }}" class="mt-6" onsubmit="return window.examAutoSubmit || confirm('Yakin ingin mengumpulkan seluruh jawaban?')">
+    <form id="submit-exam" method="POST" action="{{ route('student.exams.submit', $attempt) }}" class="mt-6">
         @csrf
         <button class="w-full rounded-xl bg-emerald-400 px-5 py-4 font-semibold text-slate-950">Selesai dan kumpulkan jawaban</button>
     </form>
 
     <script>
         const csrf = document.querySelector('meta[name="csrf-token"]').content;
-        const deadline = {{ $deadline->getTimestamp() * 1000 }};
+        // Base the countdown on server time, not the student's system clock.
+        const remainingAtLoad = {{ max(0, $deadline->getTimestamp() - now()->getTimestamp()) * 1000 }};
+        const loadedAt = performance.now();
         const timer = document.getElementById('exam-timer');
         const status = document.getElementById('save-status');
         const submitForm = document.getElementById('submit-exam');
+        const retryButton = document.getElementById('retry-save');
+        const inputs = document.querySelectorAll('input[data-save-url]');
+        const pending = new Map();
+        let saving = null;
+        let submitting = false;
         window.examAutoSubmit = false;
 
+        const flushAnswers = () => {
+            if (saving) return saving;
+            saving = (async () => {
+                while (pending.size && !window.examAutoSubmit) {
+                    const [url, answer] = pending.entries().next().value;
+                    status.textContent = `Menyimpan jawaban (${pending.size} tertunda)...`;
+                    const controller = new AbortController();
+                    const timeout = setTimeout(() => controller.abort(), 15000);
+                    try {
+                        const response = await fetch(url, {
+                            method: 'PUT',
+                            headers: {'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf},
+                            body: JSON.stringify({answer}),
+                            signal: controller.signal,
+                        });
+                        const result = await response.json().catch(() => ({}));
+                        if (!response.ok) throw new Error(result.message || 'Jawaban gagal disimpan. Periksa koneksi atau sesi login.');
+                        if (pending.get(url) === answer) pending.delete(url);
+                        status.textContent = `Tersimpan pukul ${result.saved_at}`;
+                        status.classList.remove('text-rose-300');
+                        retryButton.hidden = true;
+                    } catch (error) {
+                        status.textContent = `${error.name === 'AbortError' ? 'Koneksi terlalu lambat.' : error.message} ${pending.size} jawaban belum tersimpan. Klik coba simpan lagi.`;
+                        status.classList.add('text-rose-300');
+                        retryButton.hidden = false;
+                        break;
+                    } finally {
+                        clearTimeout(timeout);
+                    }
+                }
+            })().finally(() => { saving = null; });
+            return saving;
+        };
+
+        inputs.forEach((input) => input.addEventListener('change', () => {
+            pending.set(input.dataset.saveUrl, input.value);
+            flushAnswers();
+        }));
+        retryButton.addEventListener('click', flushAnswers);
+        window.addEventListener('online', flushAnswers);
+        window.addEventListener('beforeunload', (event) => {
+            if (pending.size && !window.examAutoSubmit) {
+                event.preventDefault();
+                event.returnValue = '';
+            }
+        });
+
+        submitForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            if (submitting || !confirm('Yakin ingin mengumpulkan seluruh jawaban?')) return;
+            submitting = true;
+            inputs.forEach((input) => { input.disabled = true; });
+            submitForm.querySelector('button').disabled = true;
+            await flushAnswers();
+            if (window.examAutoSubmit) return;
+            if (pending.size) {
+                submitting = false;
+                inputs.forEach((input) => { input.disabled = false; });
+                submitForm.querySelector('button').disabled = false;
+                return;
+            }
+            window.examAutoSubmit = true;
+            submitForm.submit();
+        });
+
         const updateTimer = () => {
-            const remaining = Math.max(0, deadline - Date.now());
+            const remaining = Math.max(0, remainingAtLoad - (performance.now() - loadedAt));
             const seconds = Math.floor(remaining / 1000);
             const hours = String(Math.floor(seconds / 3600)).padStart(2, '0');
             const minutes = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
@@ -72,25 +145,6 @@
         updateTimer();
         setInterval(updateTimer, 1000);
 
-        document.querySelectorAll('input[data-save-url]').forEach((input) => {
-            input.addEventListener('change', async () => {
-                status.textContent = 'Menyimpan jawaban...';
-                try {
-                    const response = await fetch(input.dataset.saveUrl, {
-                        method: 'PUT',
-                        headers: {'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf},
-                        body: JSON.stringify({answer: input.value}),
-                    });
-                    if (!response.ok) throw new Error('Jawaban gagal disimpan');
-                    const result = await response.json();
-                    status.textContent = `Tersimpan pukul ${result.saved_at}`;
-                } catch (error) {
-                    status.textContent = 'Gagal menyimpan. Periksa koneksi lalu pilih kembali jawaban.';
-                    status.classList.add('text-rose-300');
-                }
-            });
-        });
-
         document.addEventListener('visibilitychange', () => {
             if (document.hidden && !window.examAutoSubmit) {
                 fetch(@json(route('student.exams.incident', $attempt)), {
@@ -98,7 +152,7 @@
                     headers: {'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf},
                     body: JSON.stringify({category: 'tab_hidden'}),
                     keepalive: true,
-                });
+                }).catch(() => {});
             }
         });
     </script>

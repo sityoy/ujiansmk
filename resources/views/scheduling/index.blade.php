@@ -172,7 +172,7 @@
                     <details class="mt-4 rounded-2xl border border-white/10 bg-slate-950/35 p-4">
                         <summary class="cursor-pointer text-sm font-medium text-amber-300">Edit periode, mapel, atau kelas</summary>
                         @if ($componentLocked)
-                            <p class="mt-3 text-xs leading-5 text-slate-500">Identitas komponen dikunci karena sudah memiliki sesi, peserta, atau soal. Hapus data turunannya terlebih dahulu jika komponen memang dibuat keliru.</p>
+                            <p class="mt-3 text-xs leading-5 text-slate-500">Identitas komponen dikunci karena sudah memiliki sesi, peserta, atau soal. Jika salah mapel atau kelas, buat komponen baru yang sesuai dan pertahankan riwayat ujian lama.</p>
                         @else
                             <form method="POST" action="{{ route('scheduling.components.update', $component) }}" class="mt-4 grid gap-3 md:grid-cols-3">
                                 @csrf @method('PATCH')
@@ -239,6 +239,7 @@
                                 <p class="mt-1 text-xs text-slate-500">{{ $session->campus->name }}{{ $session->room_name ? ' · '.$session->room_name : '' }} · {{ $session->duration_minutes }} menit · {{ $session->assignments_count }} peserta</p>
                                 <details class="mt-3 rounded-xl border border-white/10 p-3">
                                     <summary class="cursor-pointer text-xs font-medium text-cyan-300">Edit sesi ujian</summary>
+                                    <p class="mt-2 text-xs text-slate-400">Jadwal dan durasi hanya dapat diubah sebelum siswa mulai. Menutup sesi akan mengumpulkan jawaban; sesi tertutup tidak dapat dibuka ulang.</p>
                                     <form method="POST" action="{{ route('scheduling.sessions.update', $session) }}" class="mt-3 grid gap-2 sm:grid-cols-2">
                                         @csrf @method('PATCH')
                                         <select name="campus_id" required class="rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-xs">

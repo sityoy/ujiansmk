@@ -73,6 +73,12 @@ class DailyCheckinService
                 return $existing;
             }
 
+            if ($existing) {
+                throw ValidationException::withMessages([
+                    'attendance' => 'Absensi sudah masuk pemeriksaan pengawas dan tidak dapat diverifikasi ulang oleh siswa.',
+                ]);
+            }
+
             $checkin = $existing ?? new DailyCheckin([
                 'student_id' => $student->id,
                 'attendance_date' => $date,

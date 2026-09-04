@@ -2,11 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\AttemptStatus;
 use App\Enums\SessionStatus;
 use App\Models\ExamAttempt;
 use App\Models\ExamSession;
-use App\Services\Exams\ExamAttemptService;
+use App\Services\Exams\ExamSessionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -40,21 +39,14 @@ class ExamOperationsController extends Controller
     public function updateSessionStatus(
         Request $request,
         ExamSession $examSession,
-        ExamAttemptService $attempts,
+        ExamSessionService $sessions,
     ): RedirectResponse
     {
         $validated = $request->validate([
             'status' => ['required', Rule::enum(SessionStatus::class)],
         ]);
 
-        $examSession->update($validated);
-
-        if ($examSession->status === SessionStatus::Closed) {
-            ExamAttempt::query()
-                ->whereHas('assignment', fn ($query) => $query->where('exam_session_id', $examSession->id))
-                ->where('status', AttemptStatus::InProgress)
-                ->each(fn (ExamAttempt $attempt) => $attempts->submit($attempt));
-        }
+        $sessions->update($examSession, $validated);
 
         return back()->with('status', 'Status pelaksanaan sesi berhasil diperbarui.');
     }

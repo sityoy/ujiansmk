@@ -19,6 +19,10 @@
     <div class="mt-6 grid gap-6 xl:grid-cols-[420px_1fr]">
         <section class="rounded-3xl border border-white/10 bg-white/[0.035] p-6">
             <h2 class="text-xl font-semibold text-white">Tambah soal pilihan ganda</h2>
+            @if ($isLocked)
+                <p class="mt-3 text-sm text-amber-300">Bank soal terkunci karena sudah ada siswa yang mulai ujian. Isi dan bobot soal dipertahankan untuk menjaga konsistensi nilai reguler dan susulan.</p>
+            @endif
+            <fieldset @disabled($isLocked)>
             <form method="POST" action="{{ route('scheduling.questions.store', $assessmentSubject) }}" class="mt-5 space-y-3">
                 @csrf
                 <textarea name="question_text" rows="5" required placeholder="Tuliskan pertanyaan..." class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-violet-400">{{ old('question_text') }}</textarea>
@@ -37,6 +41,7 @@
                 </div>
                 <button class="w-full rounded-xl bg-violet-400 px-4 py-3 text-sm font-semibold text-slate-950">Simpan soal</button>
             </form>
+            </fieldset>
         </section>
 
         <section class="space-y-3">
@@ -49,7 +54,7 @@
                         </div>
                         <form method="POST" action="{{ route('scheduling.questions.destroy', [$assessmentSubject, $question]) }}" onsubmit="return confirm('Hapus soal ini?')">
                             @csrf @method('DELETE')
-                            <button class="text-xs text-rose-300">Hapus</button>
+                            <button @disabled($isLocked) class="text-xs text-rose-300 disabled:opacity-40">Hapus</button>
                         </form>
                     </div>
                     <div class="mt-4 grid gap-2 sm:grid-cols-2">

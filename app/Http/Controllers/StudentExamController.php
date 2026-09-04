@@ -67,7 +67,7 @@ class StudentExamController extends Controller
             $request->userAgent(),
         );
 
-        if ($attempt->status === AttemptStatus::Submitted) {
+        if ($attempt->status !== AttemptStatus::InProgress) {
             return redirect()->route('student.exams.index')->with('status', 'Ujian tersebut sudah selesai.');
         }
 
@@ -80,7 +80,7 @@ class StudentExamController extends Controller
         $this->assertAttemptOwner($attempt, $student);
         $attempts->assertDevice($attempt, $this->deviceHash($request));
 
-        if ($attempt->status === AttemptStatus::Submitted) {
+        if ($attempt->status !== AttemptStatus::InProgress) {
             return redirect()->route('student.exams.index')->with('status', 'Ujian tersebut sudah selesai.');
         }
 

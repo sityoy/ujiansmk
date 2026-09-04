@@ -6,11 +6,14 @@ use App\Enums\AssignmentStatus;
 use App\Enums\AttemptStatus;
 use App\Enums\CheckinStatus;
 use App\Enums\SessionStatus;
+use App\Models\AssessmentSubject;
 use App\Models\DailyCheckin;
 use App\Models\ExamAnswer;
 use App\Models\ExamAssignment;
 use App\Models\ExamAttempt;
 use App\Models\ExamQuestion;
+use App\Models\ExamSession;
+use App\Services\Attendance\AttendanceAvailability;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -18,6 +21,27 @@ use Illuminate\Validation\ValidationException;
 class ExamAttemptService
 {
     public function start(
+        ExamAssignment $assignment,
+        DailyCheckin $checkin,
+        string $deviceSessionHash,
+        ?string $ipAddress,
+        ?string $userAgent,
+    ): ExamAttempt {
+        return DB::transaction(function () use ($assignment, $checkin, $deviceSessionHash, $ipAddress, $userAgent): ExamAttempt {
+            // Use the same parent locks as question editing and session changes.
+            AssessmentSubject::query()->lockForUpdate()->findOrFail($assignment->assessment_subject_id);
+            ExamSession::query()->lockForUpdate()->findOrFail($assignment->exam_session_id);
+            $assignment = ExamAssignment::query()->lockForUpdate()->findOrFail($assignment->id);
+            $checkin = $checkin->fresh();
+            if (! $checkin) {
+                throw ValidationException::withMessages(['attendance' => 'Data absensi tidak ditemukan. Hubungi pengawas.']);
+            }
+
+            return $this->startLocked($assignment, $checkin, $deviceSessionHash, $ipAddress, $userAgent);
+        });
+    }
+
+    private function startLocked(
         ExamAssignment $assignment,
         DailyCheckin $checkin,
         string $deviceSessionHash,
@@ -32,6 +56,10 @@ class ExamAttemptService
             $this->assertDevice($existing, $deviceSessionHash);
 
             return $existing;
+        }
+
+        if ($reason = app(AttendanceAvailability::class)->reason($assignment, $checkin)) {
+            throw ValidationException::withMessages(['exam' => $reason]);
         }
 
         if (! in_array($assignment->status, [AssignmentStatus::Scheduled, AssignmentStatus::Started], true)) {
@@ -63,40 +91,47 @@ class ExamAttemptService
             throw ValidationException::withMessages(['exam' => 'Soal belum tersedia. Hubungi panitia ujian.']);
         }
 
-        return DB::transaction(function () use ($assignment, $checkin, $deviceSessionHash, $ipAddress, $userAgent): ExamAttempt {
-            $lockedAssignment = ExamAssignment::query()->lockForUpdate()->findOrFail($assignment->id);
-            $attempt = $lockedAssignment->attempt;
+        $attempt = ExamAttempt::create([
+            'exam_assignment_id' => $assignment->id,
+            'daily_checkin_id' => $checkin->id,
+            'status' => AttemptStatus::InProgress,
+            'started_at' => now(),
+            'last_seen_at' => now(),
+            'device_session_hash' => $deviceSessionHash,
+            'ip_address' => $ipAddress,
+            'user_agent' => $userAgent,
+        ]);
+        $assignment->update(['status' => AssignmentStatus::Started]);
 
-            if (! $attempt) {
-                $attempt = ExamAttempt::create([
-                    'exam_assignment_id' => $lockedAssignment->id,
-                    'daily_checkin_id' => $checkin->id,
-                    'status' => AttemptStatus::InProgress,
-                    'started_at' => now(),
-                    'last_seen_at' => now(),
-                    'device_session_hash' => $deviceSessionHash,
-                    'ip_address' => $ipAddress,
-                    'user_agent' => $userAgent,
-                ]);
-
-                $lockedAssignment->update(['status' => AssignmentStatus::Started]);
-            }
-
-            $this->assertDevice($attempt, $deviceSessionHash);
-
-            return $attempt->refresh();
-        });
+        return $attempt->refresh();
     }
 
     public function saveAnswer(ExamAttempt $attempt, ExamQuestion $question, string $answer): ExamAnswer
     {
-        if ($attempt->status !== AttemptStatus::InProgress) {
-            throw ValidationException::withMessages(['exam' => 'Ujian sudah tidak menerima jawaban.']);
+        $saved = DB::transaction(function () use ($attempt, $question, $answer): ?ExamAnswer {
+            $attempt = ExamAttempt::query()->lockForUpdate()->findOrFail($attempt->id);
+
+            if ($attempt->status === AttemptStatus::InProgress && $this->isExpired($attempt)) {
+                $this->submit($attempt);
+
+                return null;
+            }
+
+            return $this->saveAnswerLocked($attempt, $question, $answer);
+        });
+
+        // Throw after committing the automatic submission, not inside its transaction.
+        if (! $saved) {
+            throw ValidationException::withMessages(['exam' => 'Waktu ujian telah berakhir dan jawaban dikumpulkan otomatis.']);
         }
 
-        if ($this->isExpired($attempt)) {
-            $this->submit($attempt);
-            throw ValidationException::withMessages(['exam' => 'Waktu ujian telah berakhir dan jawaban dikumpulkan otomatis.']);
+        return $saved;
+    }
+
+    private function saveAnswerLocked(ExamAttempt $attempt, ExamQuestion $question, string $answer): ExamAnswer
+    {
+        if ($attempt->status !== AttemptStatus::InProgress) {
+            throw ValidationException::withMessages(['exam' => 'Ujian sudah tidak menerima jawaban.']);
         }
 
         $attempt->loadMissing('assignment');
@@ -130,7 +165,7 @@ class ExamAttemptService
         return DB::transaction(function () use ($attempt): ExamAttempt {
             $lockedAttempt = ExamAttempt::query()->lockForUpdate()->findOrFail($attempt->id);
 
-            if ($lockedAttempt->status === AttemptStatus::Submitted) {
+            if ($lockedAttempt->status !== AttemptStatus::InProgress) {
                 return $lockedAttempt;
             }
 

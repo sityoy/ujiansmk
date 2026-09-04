@@ -23,7 +23,9 @@ class QuestionBankController extends Controller
             'questions',
         ]);
 
-        return view('questions.index', compact('assessmentSubject'));
+        $isLocked = $assessmentSubject->assignments()->whereHas('attempt')->exists();
+
+        return view('questions.index', compact('assessmentSubject', 'isLocked'));
     }
 
     public function store(Request $request, AssessmentSubject $assessmentSubject): RedirectResponse
@@ -39,6 +41,7 @@ class QuestionBankController extends Controller
         ]);
 
         DB::transaction(function () use ($assessmentSubject, $validated): void {
+            $this->assertEditable($assessmentSubject);
             $position = (int) ExamQuestion::query()
                 ->where('assessment_subject_id', $assessmentSubject->id)
                 ->lockForUpdate()
@@ -74,11 +77,24 @@ class QuestionBankController extends Controller
         }
 
         try {
-            $question->delete();
+            DB::transaction(function () use ($assessmentSubject, $question): void {
+                $this->assertEditable($assessmentSubject);
+                $question->delete();
+            });
         } catch (QueryException) {
             return back()->withErrors(['question' => 'Soal tidak dapat dihapus karena sudah digunakan.']);
         }
 
         return back()->with('status', 'Soal berhasil dihapus.');
+    }
+
+    private function assertEditable(AssessmentSubject $component): void
+    {
+        $component = AssessmentSubject::query()->lockForUpdate()->findOrFail($component->id);
+        if ($component->assignments()->whereHas('attempt')->exists()) {
+            throw ValidationException::withMessages([
+                'question' => 'Bank soal terkunci karena sudah ada siswa yang mulai ujian, termasuk untuk sesi susulan.',
+            ]);
+        }
     }
 }
