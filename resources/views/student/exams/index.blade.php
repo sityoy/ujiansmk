@@ -59,7 +59,9 @@
                 @endif
 
                 <div class="mt-5 flex flex-wrap items-center gap-3">
-                    @if ($attempt?->status->value === 'in_progress')
+                    @if ($attempt?->status->value === 'in_progress' && $attempt->security_locked_at)
+                        <a href="{{ route('student.exams.show', $attempt) }}" class="rounded-xl bg-amber-400 px-5 py-3 text-sm font-semibold text-slate-950">Ujian terkunci — hubungi pengawas</a>
+                    @elseif ($attempt?->status->value === 'in_progress')
                         <a href="{{ route('student.exams.show', $attempt) }}" class="rounded-xl bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950">Lanjutkan ujian</a>
                     @elseif ($attempt?->status->value === 'submitted')
                         <span class="rounded-xl bg-emerald-400/10 px-5 py-3 text-sm font-medium text-emerald-200">Ujian sudah dikumpulkan</span>

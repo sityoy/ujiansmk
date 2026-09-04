@@ -5,6 +5,9 @@
 @section('heading', $session->assessmentSubject->subject->name.' · '.$session->assessmentSubject->schoolClass->name)
 
 @section('content')
+    @if ($errors->any())
+        <div class="mb-5 rounded-xl border border-rose-400/30 bg-rose-400/10 p-4 text-sm text-rose-200">{{ $errors->first() }}</div>
+    @endif
     @php
         $sessionLabels = ['draft' => 'Draf', 'published' => 'Terbit', 'active' => 'Aktif', 'closed' => 'Ditutup'];
         $checkinLabels = ['verified' => 'Terverifikasi', 'review' => 'Perlu diperiksa', 'rejected' => 'Ditolak'];
@@ -25,8 +28,8 @@
         <p class="mt-4 text-xs text-slate-500">Data dimuat {{ now()->format('d/m/Y H:i:s') }} ({{ config('app.timezone') }}). Halaman ini tidak memperbarui otomatis. Absensi di bawah sesuai tanggal dan lokasi sesi, bukan selalu hari ini.</p>
     </section>
 
-    <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        @foreach (['total' => 'Total peserta', 'scheduled' => 'Belum mulai', 'in_progress' => 'Mengerjakan', 'submitted' => 'Dikumpulkan', 'absent' => 'Tidak hadir ujian'] as $key => $label)
+    <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+        @foreach (['total' => 'Total peserta', 'scheduled' => 'Belum mulai', 'in_progress' => 'Berjalan (termasuk terkunci)', 'locked' => 'Perlu pemeriksaan', 'submitted' => 'Dikumpulkan', 'absent' => 'Tidak hadir ujian'] as $key => $label)
             <div class="rounded-2xl border border-white/10 bg-white/[0.035] p-4"><p class="text-xs text-slate-400">{{ $label }}</p><p class="mt-2 text-2xl font-semibold text-cyan-300">{{ $statistics[$key] }}</p></div>
         @endforeach
     </div>
@@ -53,6 +56,7 @@
                         @php
                             $attempt = $assignment->attempt;
                             $status = $attempt?->status->value ?? $assignment->status->value;
+                            if ($status === 'in_progress' && $attempt->security_locked_at) $status = 'locked';
                             $checkin = $assignment->student->dailyCheckins->first();
                             $answered = $attempt?->answers_count ?? 0;
                         @endphp
@@ -63,7 +67,38 @@
                             <td class="px-5 py-4 text-slate-300"><p>{{ $answered }} / {{ $questionCount }} jawaban</p><progress value="{{ $answered }}" max="{{ max(1, $questionCount) }}" aria-label="Progres jawaban {{ $assignment->student->full_name }}" class="mt-2 h-2 w-24 accent-cyan-400"></progress></td>
                             <td class="whitespace-nowrap px-5 py-4 text-xs leading-6 text-slate-400">Mulai: {{ $attempt?->started_at?->format('H:i:s') ?? '—' }}<br>Simpan terakhir: {{ $attempt?->last_seen_at?->format('H:i:s') ?? '—' }}<br>Dikumpulkan: {{ $attempt?->submitted_at?->format('H:i:s') ?? '—' }}</td>
                             <td class="px-5 py-4 text-slate-300">{{ $attempt?->score ?? '—' }}</td>
-                            <td class="px-5 py-4 text-slate-300">{{ $attempt?->violation_count ?? 0 }}</td>
+                            <td class="min-w-72 px-5 py-4 text-slate-300">
+                                <p>{{ $attempt?->violation_count ?? 0 }}{{ $attempt?->security_enabled ? '/2' : '' }}</p>
+                                @if ($attempt)
+                                    <details class="mt-2 text-xs">
+                                        <summary class="cursor-pointer text-cyan-300">Riwayat pengawasan</summary>
+                                        @forelse ($attempt->securityIncidents as $incident)
+                                            <p class="mt-3 leading-5">{{ $incident->occurred_at->format('d/m H:i:s') }} · {{ ['tab_hidden' => 'Halaman tidak terlihat', 'fullscreen_exit' => 'Keluar layar penuh', 'supervisor_resume' => 'Diizinkan lanjut', 'supervisor_submit' => 'Dikumpulkan pengawas'][$incident->category] ?? $incident->category }}
+                                                @if (array_key_exists('counted', $incident->details ?? [])) · {{ $incident->details['counted'] ? 'Dihitung' : 'Sinyal bersamaan; tidak dihitung ulang' }} @endif
+                                                @if (isset($incident->details['reason']))<br>{{ $incident->details['reviewer_name'] ?? 'Pengawas' }}: {{ $incident->details['reason'] }}@endif
+                                            </p>
+                                        @empty
+                                            <p class="mt-2 text-slate-500">Belum ada catatan.</p>
+                                        @endforelse
+                                    </details>
+                                    @if ($status === 'locked')
+                                        <form method="POST" action="{{ route('operations.attempts.security-review', $attempt) }}" class="mt-3 space-y-2" onsubmit="return confirm('Simpan keputusan pengawas? Waktu dan riwayat tidak direset.')">
+                                            @csrf
+                                            <input type="hidden" name="lock_version" value="{{ $attempt->security_lock_version }}">
+                                            <label class="block text-xs text-amber-300">Alasan pemeriksaan (wajib)
+                                                <textarea name="reason" required minlength="5" maxlength="1000" rows="2" class="mt-1 w-full rounded-lg border border-white/20 bg-slate-950 p-2 text-white"></textarea>
+                                            </label>
+                                            <select name="action" required aria-label="Keputusan pengawas" class="w-full rounded-lg border border-white/20 bg-slate-950 p-2 text-xs">
+                                                <option value="">Pilih keputusan</option>
+                                                <option value="resume">Izinkan lanjut tanpa reset</option>
+                                                <option value="submit">Akhiri dan kumpulkan jawaban</option>
+                                            </select>
+                                            <p class="text-xs leading-5 text-slate-400">Jika diizinkan lanjut, hitungan tetap 2/2 dan kejadian berikutnya langsung mengunci kembali.</p>
+                                            <button class="rounded-lg bg-amber-400 px-3 py-2 text-xs font-semibold text-slate-950">Simpan keputusan</button>
+                                        </form>
+                                    @endif
+                                @endif
+                            </td>
                         </tr>
                     @empty
                         <tr><td colspan="7" class="px-5 py-12 text-center text-slate-500">Tidak ada peserta sesuai filter.</td></tr>

@@ -26,6 +26,8 @@ use App\Models\Subject;
 use App\Models\User;
 use App\Services\Attendance\DailyCheckinService;
 use App\Services\Exams\ExamAttemptService;
+use App\Services\Exams\ExamSecurityService;
+use Illuminate\Support\Str;
 use App\Services\Exams\ExamSessionService;
 use App\Services\Exams\ExamAssignmentService;
 use Illuminate\Support\Carbon;
@@ -273,6 +275,175 @@ class StudentExamFlowTest extends TestCase
         $this->actingAs($user)->withSession(['exam_device_token' => str_repeat('a', 64)])
             ->get(route('student.exams.show', $attempt))->assertOk()
             ->assertSee('Coba simpan lagi')->assertSee('remainingAtLoad', false);
+    }
+
+    public function test_second_security_event_locks_answers_and_hides_questions_after_reload(): void
+    {
+        [$user, $assignment, $questions] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $this->securityEvent($user, $attempt)->assertOk()->assertJson(['violations' => 1, 'locked' => false]);
+        $this->travel(4)->seconds();
+        $this->securityEvent($user, $attempt)->assertOk()->assertJson(['violations' => 2, 'locked' => true]);
+        $this->withSession(['exam_device_token' => str_repeat('a', 64)])
+            ->putJson(route('student.exams.answer', [$attempt, $questions[0]]), ['answer' => 'A'])
+            ->assertUnprocessable()->assertJsonValidationErrors('security');
+        $this->withSession(['exam_device_token' => str_repeat('a', 64)])
+            ->get(route('student.exams.show', $attempt))->assertOk()->assertSee('Hubungi pengawas ujian')
+            ->assertDontSee($questions[0]->question_text);
+        $this->assertDatabaseCount('exam_answers', 0);
+        $this->assertSame(2, (int) $attempt->fresh()->violation_count);
+    }
+
+    public function test_security_events_are_idempotent_and_simultaneous_signals_count_once(): void
+    {
+        [$user, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $firstId = (string) Str::uuid();
+        $suppressedId = (string) Str::uuid();
+        $this->securityEvent($user, $attempt, $firstId)->assertJson(['violations' => 1]);
+        $this->securityEvent($user, $attempt, $suppressedId, 'fullscreen_exit')->assertJson(['violations' => 1]);
+        $this->travel(10)->seconds();
+        $this->securityEvent($user, $attempt, $firstId)->assertJson(['violations' => 1]);
+        $this->securityEvent($user, $attempt, $suppressedId)->assertJson(['violations' => 1]);
+        $this->assertSame(2, $attempt->securityIncidents()->count());
+        $this->securityEvent($user, $attempt)->assertJson(['violations' => 2, 'locked' => true]);
+        $this->travel(4)->seconds();
+        $this->securityEvent($user, $attempt)->assertJson(['violations' => 2, 'locked' => true]);
+    }
+
+    public function test_proctor_can_release_lock_without_reset_and_stale_review_cannot_unlock_again(): void
+    {
+        [$user, $assignment, $questions] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $service = app(ExamAttemptService::class);
+        $deadline = $service->deadline($attempt)->toIso8601String();
+        $service->saveAnswer($attempt, $questions[0], 'A');
+        $this->lockAttempt($user, $attempt);
+        $proctor = User::factory()->create(['role' => UserRole::Proctor]);
+        $payload = ['action' => 'resume', 'reason' => 'Gangguan perangkat sudah diperiksa.', 'lock_version' => 1];
+        $reviewUrl = route('operations.attempts.security-review', $attempt);
+        $this->actingAs($proctor)->post($reviewUrl, $payload)->assertSessionHasNoErrors();
+        $this->assertNull($attempt->fresh()->security_locked_at);
+        $this->assertSame(2, (int) $attempt->fresh()->violation_count);
+        $this->assertSame($deadline, $service->deadline($attempt->fresh())->toIso8601String());
+        $this->assertDatabaseCount('exam_answers', 1);
+        $audit = $attempt->securityIncidents()->where('category', 'supervisor_resume')->firstOrFail();
+        $this->assertSame($proctor->id, $audit->details['reviewer_id']);
+        $this->travel(4)->seconds();
+        $this->securityEvent($user, $attempt)->assertJson(['violations' => 2, 'locked' => true]);
+        $this->assertSame(2, $attempt->fresh()->security_lock_version);
+        $this->actingAs($proctor)->post($reviewUrl, $payload)->assertSessionHasErrors('security');
+        $this->assertNotNull($attempt->fresh()->security_locked_at);
+    }
+
+    public function test_proctor_can_collect_locked_exam_and_roster_shows_audit(): void
+    {
+        [$user, $assignment, $questions] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        app(ExamAttemptService::class)->saveAnswer($attempt, $questions[0], 'A');
+        $this->lockAttempt($user, $attempt);
+        $proctor = User::factory()->create(['role' => UserRole::Proctor]);
+        $this->actingAs($proctor)->get(route('operations.sessions.show', [$assignment->examSession, 'status' => 'locked']))
+            ->assertOk()->assertSee('Simpan keputusan')->assertSee('Halaman tidak terlihat');
+        $this->post(route('operations.attempts.security-review', $attempt), [
+            'action' => 'submit', 'reason' => 'Pemeriksaan selesai, ujian diakhiri.', 'lock_version' => 1,
+        ])->assertSessionHasNoErrors();
+        $this->assertSame(AttemptStatus::Submitted, $attempt->fresh()->status);
+        $this->assertSame('50.00', $attempt->fresh()->score);
+        $this->get(route('operations.sessions.show', $assignment->examSession))->assertOk()
+            ->assertSee('Pemeriksaan selesai, ujian diakhiri.')->assertDontSee('Simpan keputusan');
+    }
+
+    public function test_security_review_requires_authorized_role_and_reason(): void
+    {
+        [$user, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $this->lockAttempt($user, $attempt);
+        $url = route('operations.attempts.security-review', $attempt);
+        $payload = ['action' => 'resume', 'reason' => 'Alasan pemeriksaan.', 'lock_version' => 1];
+        $this->actingAs($user)->post($url, $payload)->assertForbidden();
+        $teacher = User::factory()->create(['role' => UserRole::Teacher]);
+        $this->actingAs($teacher)->post($url, $payload)->assertForbidden();
+        $proctor = User::factory()->create(['role' => UserRole::Proctor]);
+        $this->actingAs($proctor)->post($url, [...$payload, 'reason' => ''])->assertSessionHasErrors('reason');
+        $this->assertNotNull($attempt->fresh()->security_locked_at);
+    }
+
+    public function test_another_student_or_device_cannot_report_or_inspect_security(): void
+    {
+        [$user, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $other = User::factory()->create(['role' => UserRole::Student]);
+        Student::create(['user_id' => $other->id, 'school_class_id' => $assignment->student->school_class_id,
+            'student_number' => 'OTHER-SEC', 'full_name' => 'Siswa lain', 'is_active' => true]);
+        $this->securityEvent($other, $attempt)->assertForbidden();
+        $this->getJson(route('student.exams.security', $attempt))->assertForbidden();
+        $this->actingAs($user)->withSession(['exam_device_token' => str_repeat('b', 64)])
+            ->getJson(route('student.exams.security', $attempt))->assertUnprocessable()->assertJsonValidationErrors('device');
+        $this->assertSame(0, (int) $attempt->fresh()->violation_count);
+    }
+
+    public function test_invalid_security_signal_is_rejected_without_changing_count(): void
+    {
+        [$user, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $this->securityEvent($user, $attempt, 'invalid-id', 'blur')->assertUnprocessable()
+            ->assertJsonValidationErrors(['event_id', 'category']);
+        $this->assertSame(0, (int) $attempt->fresh()->violation_count);
+    }
+
+    public function test_locked_exam_still_expires_and_cannot_be_released_after_deadline(): void
+    {
+        [$user, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $this->lockAttempt($user, $attempt);
+        $this->travel(91)->minutes();
+        $proctor = User::factory()->create(['role' => UserRole::Proctor]);
+        $this->actingAs($proctor)->post(route('operations.attempts.security-review', $attempt), [
+            'action' => 'resume', 'reason' => 'Pemeriksaan selesai.', 'lock_version' => 1,
+        ])->assertSessionHasErrors('security');
+        $this->artisan('exams:finalize-expired')->assertSuccessful();
+        $this->assertSame(AttemptStatus::Submitted, $attempt->fresh()->status);
+        $this->assertSame('0.00', $attempt->fresh()->score);
+    }
+
+    public function test_legacy_attempts_keep_monitoring_without_new_automatic_lock(): void
+    {
+        [$user, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $this->assertTrue($attempt->security_enabled);
+        $attempt->update(['security_enabled' => false]);
+        $this->securityEvent($user, $attempt)->assertJson(['enabled' => false, 'locked' => false]);
+        $this->travel(4)->seconds();
+        $this->securityEvent($user, $attempt)->assertJson(['violations' => 2, 'locked' => false]);
+    }
+
+    public function test_security_state_reports_lock_and_finalizes_at_deadline(): void
+    {
+        [$user, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $this->lockAttempt($user, $attempt);
+        $url = route('student.exams.security', $attempt);
+        $this->withSession(['exam_device_token' => str_repeat('a', 64)])->getJson($url)
+            ->assertOk()->assertJson(['locked' => true, 'violations' => 2, 'status' => 'in_progress']);
+        $this->travel(91)->minutes();
+        $this->withSession(['exam_device_token' => str_repeat('a', 64)])->getJson($url)
+            ->assertOk()->assertJson(['locked' => false, 'status' => 'submitted']);
+    }
+
+    private function securityEvent(User $user, ExamAttempt $attempt, ?string $eventId = null, string $category = 'tab_hidden'): \Illuminate\Testing\TestResponse
+    {
+        return $this->actingAs($user)->withSession(['exam_device_token' => str_repeat('a', 64)])
+            ->postJson(route('student.exams.incident', $attempt), [
+                'event_id' => $eventId ?? (string) Str::uuid(), 'category' => $category,
+            ]);
+    }
+
+    private function lockAttempt(User $user, ExamAttempt $attempt): void
+    {
+        $this->securityEvent($user, $attempt)->assertOk();
+        $this->travel(4)->seconds();
+        $this->securityEvent($user, $attempt)->assertOk();
     }
 
     private function startAttempt(ExamAssignment $assignment): ExamAttempt

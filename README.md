@@ -80,6 +80,18 @@ Jangan menyalin `koneksi.php`, dump database, password, foto selfie, atau folder
 
 ## Status pengembangan
 
+### Pengawasan campuran — batas dua pelanggaran
+
+Percobaan ujian baru memakai aturan: kejadian pertama diperingatkan, kejadian kedua dikunci di server. Siswa tidak dapat menyimpan jawaban baru selama terkunci, termasuk melalui permintaan langsung atau refresh. Jawaban tersimpan tidak dihapus dan waktu tidak berhenti. Scheduler tetap mengumpulkan percobaan terkunci saat kedaluwarsa. Percobaan yang sudah ada sebelum migrasi mempertahankan kebijakan lama agar pembaruan tidak mendadak menghentikan ujian berjalan.
+
+Sinyal yang dihitung adalah halaman tersembunyi (`visibilitychange`) dan keluar fullscreen. Browser tidak bisa memastikan penyebabnya atau membuktikan kecurangan. `blur`, gerakan kursor, sentuhan bilah sistem, dan hilangnya koneksi tidak otomatis menambah pelanggaran. Satu perpindahan menonaktifkan sensor sampai siswa kembali mengonfirmasi; server juga menggabungkan sinyal dalam tiga detik dan menduplikasi ulang kiriman berdasarkan ID kejadian. Permintaan gagal disimpan sementara di browser untuk dikirim ulang dengan ID sama. Jika sinkronisasi gagal, halaman ditahan sampai koneksi pulih tanpa menambah pelanggaran koneksi.
+
+Fullscreen diminta lewat tombol persetujuan. Browser yang tidak mendukung fullscreen mendapat pemberitahuan dan tetap memakai pengawasan visibilitas. Pembatasan salin/tempel/menu konteks hanyalah pencegahan ringan, bukan penguncian sistem operasi. Pengawasan JavaScript dapat dimanipulasi klien dan tidak mendeteksi aplikasi tertentu, screenshot, split-screen secara pasti, atau perangkat kedua. Tetap perlu pengawas.
+
+Pengawas/panitia/super admin memeriksa lewat **Pelaksanaan ujian → Lihat peserta & progres → filter Terkunci**. Alasan wajib diisi untuk mengizinkan lanjut atau mengumpulkan jawaban. Izin lanjut tidak menghapus riwayat, jawaban, atau hitungan 2/2; kejadian berikutnya mengunci kembali. Formulir pemeriksaan lama ditolak jika versi kunci berubah. Ujian yang sudah dikumpulkan atau waktunya habis tidak bisa dibuka ulang.
+
+Setelah memperbarui kode, jalankan `php artisan migrate --force`, `php artisan optimize:clear`, dan build aset. Jangan menjalankan `migrate:fresh` atau mereset database. Uji fullscreen dan gangguan koneksi pada HP/browser yang akan dipakai sekolah sebelum penerapan massal.
+
 Fondasi domain, autentikasi berbasis peran, data akademik, penjadwalan, sesi susulan, absensi, bank soal pilihan ganda, pengerjaan ujian siswa, monitoring dasar, dan rapor ATS tersedia. Pengembangan lanjutan dapat mencakup paket soal acak, soal esai, pengenalan wajah biometrik dengan persetujuan dan kebijakan privasi, serta importer terkontrol untuk data aplikasi lama.
 
 Endpoint pemeriksaan aplikasi tersedia di `GET /health`.

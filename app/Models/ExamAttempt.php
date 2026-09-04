@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'exam_assignment_id', 'daily_checkin_id', 'status', 'started_at', 'submitted_at',
     'last_seen_at', 'score', 'correct_answers', 'incorrect_answers', 'violation_count',
     'device_session_hash', 'ip_address', 'user_agent',
+    'security_enabled', 'security_locked_at', 'security_lock_version',
 ])]
 #[Hidden(['device_session_hash'])]
 class ExamAttempt extends Model
@@ -21,6 +22,9 @@ class ExamAttempt extends Model
     {
         return [
             'status' => AttemptStatus::class,
+            'security_enabled' => 'boolean',
+            'security_locked_at' => 'datetime',
+            'security_lock_version' => 'integer',
             'started_at' => 'datetime',
             'submitted_at' => 'datetime',
             'last_seen_at' => 'datetime',

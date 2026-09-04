@@ -8,9 +8,9 @@ use App\Models\DailyCheckin;
 use App\Models\ExamAssignment;
 use App\Models\ExamAttempt;
 use App\Models\ExamQuestion;
-use App\Models\SecurityIncident;
 use App\Models\Student;
 use App\Services\Exams\ExamAttemptService;
+use App\Services\Exams\ExamSecurityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -97,7 +97,7 @@ class StudentExamController extends Controller
             'answers',
         ]);
 
-        return view('student.exams.show', [
+        return view($attempt->security_locked_at ? 'student.exams.locked' : 'student.exams.show', [
             'attempt' => $attempt,
             'questions' => $attempt->assignment->assessmentSubject->questions,
             'answers' => $attempt->answers->keyBy('exam_question_id'),
@@ -134,27 +134,32 @@ class StudentExamController extends Controller
         Request $request,
         ExamAttempt $attempt,
         ExamAttemptService $attempts,
+        ExamSecurityService $security,
     ): JsonResponse
     {
         $student = $this->student($request);
         $this->assertAttemptOwner($attempt, $student);
-        abort_unless($attempt->status === AttemptStatus::InProgress, 409, 'Ujian sudah tidak berlangsung.');
         $attempts->assertDevice($attempt, $this->deviceHash($request));
 
         $validated = $request->validate([
             'category' => ['required', Rule::in(['tab_hidden', 'fullscreen_exit'])],
+            'event_id' => ['nullable', 'uuid'],
         ]);
 
-        SecurityIncident::create([
-            'exam_attempt_id' => $attempt->id,
-            'category' => $validated['category'],
-            'details' => ['user_agent' => $request->userAgent()],
-            'severity' => 1,
-            'occurred_at' => now(),
-        ]);
-        $attempt->increment('violation_count');
+        $state = $security->record($attempt, $validated['category'], $validated['event_id'] ?? (string) Str::uuid());
 
-        return response()->json(['recorded' => true]);
+        return response()->json(['recorded' => true, ...$state])->header('Cache-Control', 'no-store');
+    }
+
+    public function securityState(Request $request, ExamAttempt $attempt, ExamAttemptService $attempts, ExamSecurityService $security): JsonResponse
+    {
+        $this->assertAttemptOwner($attempt, $this->student($request));
+        $attempts->assertDevice($attempt, $this->deviceHash($request));
+        if ($attempt->status === AttemptStatus::InProgress && $attempts->isExpired($attempt)) {
+            $attempt = $attempts->submit($attempt);
+        }
+
+        return response()->json($security->state($attempt))->header('Cache-Control', 'no-store');
     }
 
     private function student(Request $request): Student

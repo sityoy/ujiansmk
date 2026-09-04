@@ -50,6 +50,8 @@ Route::middleware(['auth', 'active'])->group(function (): void {
                     ->name('attendance.store');
                 Route::post('/exams/{assignment}/start', [StudentExamController::class, 'start'])->name('exams.start');
                 Route::get('/attempts/{attempt}', [StudentExamController::class, 'show'])->name('exams.show');
+                Route::get('/attempts/{attempt}/security', [StudentExamController::class, 'securityState'])
+                    ->middleware('throttle:30,1')->name('exams.security');
                 Route::put('/attempts/{attempt}/questions/{question}', [StudentExamController::class, 'answer'])
                     ->middleware('throttle:120,1')
                     ->name('exams.answer');
@@ -141,6 +143,8 @@ Route::middleware(['auth', 'active'])->group(function (): void {
         ->group(function (): void {
             Route::get('/', [ExamOperationsController::class, 'index'])->name('index');
             Route::get('/sessions/{examSession}', [ExamOperationsController::class, 'show'])->name('sessions.show');
+            Route::post('/attempts/{attempt}/security-review', [ExamOperationsController::class, 'reviewSecurity'])
+                ->name('attempts.security-review');
             Route::patch('/sessions/{examSession}/status', [ExamOperationsController::class, 'updateSessionStatus'])
                 ->name('sessions.status');
         });

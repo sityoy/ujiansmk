@@ -46,5 +46,5 @@ jobs:
       - name: Execute tests
         run: php artisan test
 
-      - name: Test exam autosave script
-        run: node --test tests/Browser/exam-autosave.test.mjs
+      - name: Test exam browser scripts
+        run: node --test tests/Browser/*.test.mjs

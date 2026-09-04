@@ -95,6 +95,7 @@ class ExamAttemptService
             'exam_assignment_id' => $assignment->id,
             'daily_checkin_id' => $checkin->id,
             'status' => AttemptStatus::InProgress,
+            'security_enabled' => true,
             'started_at' => now(),
             'last_seen_at' => now(),
             'device_session_hash' => $deviceSessionHash,
@@ -132,6 +133,10 @@ class ExamAttemptService
     {
         if ($attempt->status !== AttemptStatus::InProgress) {
             throw ValidationException::withMessages(['exam' => 'Ujian sudah tidak menerima jawaban.']);
+        }
+
+        if ($attempt->security_locked_at) {
+            throw ValidationException::withMessages(['security' => 'Ujian terkunci setelah mencapai batas dua pelanggaran. Hubungi pengawas.']);
         }
 
         $attempt->loadMissing('assignment');

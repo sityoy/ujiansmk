@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['exam_attempt_id', 'category', 'details', 'severity', 'occurred_at'])]
+#[Fillable(['exam_attempt_id', 'event_id', 'category', 'details', 'severity', 'occurred_at'])]
 class SecurityIncident extends Model
 {
     protected function casts(): array
