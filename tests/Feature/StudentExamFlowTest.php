@@ -342,7 +342,7 @@ class StudentExamFlowTest extends TestCase
         $this->lockAttempt($user, $attempt);
         $proctor = User::factory()->create(['role' => UserRole::Proctor]);
         $this->actingAs($proctor)->get(route('operations.sessions.show', [$assignment->examSession, 'status' => 'locked']))
-            ->assertOk()->assertSee('Simpan keputusan')->assertSee('Halaman tidak terlihat');
+            ->assertOk()->assertSee('Simpan keputusan')->assertSee('Berpindah tab/aplikasi');
         $this->post(route('operations.attempts.security-review', $attempt), [
             'action' => 'submit', 'reason' => 'Pemeriksaan selesai, ujian diakhiri.', 'lock_version' => 1,
         ])->assertSessionHasNoErrors();
