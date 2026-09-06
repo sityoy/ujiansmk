@@ -84,7 +84,7 @@ class UserSpreadsheetController extends Controller
 
         $headers = array_keys($rows[0]);
 
-        foreach (['nama', 'email', 'akses', 'password_baru'] as $requiredHeader) {
+        foreach (['nama_lengkap', 'email', 'akses', 'password_baru'] as $requiredHeader) {
             if (! in_array($requiredHeader, $headers, true)) {
                 return back()->withErrors([
                     'account_spreadsheet' => 'Kolom Nama, Email, Akses, dan Password Baru wajib tersedia. Gunakan template dari sistem.',
@@ -111,7 +111,7 @@ class UserSpreadsheetController extends Controller
                 ? User::query()->where('role', '!=', UserRole::Student)->find($id)
                 : User::query()->where('role', '!=', UserRole::Student)->where('email', $email)->first();
             $data = [
-                'name' => trim((string) ($row['nama'] ?? '')),
+                'name' => trim((string) ($row['nama_lengkap'] ?? '')),
                 'email' => $email,
                 'password' => filled($row['password_baru'] ?? null) ? (string) $row['password_baru'] : null,
                 'status' => $status,
