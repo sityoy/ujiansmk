@@ -25,7 +25,7 @@ class AcademicDataController extends Controller
         $classPerPage = in_array($classPerPage, ['5', 'all'], true) ? $classPerPage : '5';
         $classYearId = $request->filled('class_year') ? $request->integer('class_year') : null;
         $classQuery = SchoolClass::query()
-            ->with('academicYear')
+            ->with(['academicYear', 'homeroomTeacher'])
             ->withCount('students')
             ->when($classYearId, fn ($query) => $query->where('academic_year_id', $classYearId))
             ->orderByDesc('academic_year_id')
@@ -37,6 +37,11 @@ class AcademicDataController extends Controller
                 ->orderByDesc('starts_on')
                 ->get(),
             'subjects' => Subject::query()->orderBy('name')->get(),
+            'teachers' => User::query()
+                ->where('role', UserRole::Teacher)
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(),
             'classOptions' => SchoolClass::query()
                 ->with('academicYear')
                 ->orderByDesc('academic_year_id')
@@ -156,6 +161,24 @@ class AcademicDataController extends Controller
             'Kelas berhasil dihapus.',
             'Kelas tidak dapat dihapus karena sudah memiliki siswa atau data asesmen.',
         );
+    }
+
+    public function updateHomeroomTeacher(Request $request, SchoolClass $schoolClass): RedirectResponse
+    {
+        $validated = $request->validate([
+            'homeroom_teacher_user_id' => [
+                'nullable',
+                Rule::exists('users', 'id')->where(fn ($query) => $query
+                    ->where('role', UserRole::Teacher->value)
+                    ->where('is_active', true)),
+            ],
+        ]);
+
+        $schoolClass->update([
+            'homeroom_teacher_user_id' => $validated['homeroom_teacher_user_id'] ?? null,
+        ]);
+
+        return back()->with('status', 'Wali kelas berhasil diperbarui.');
     }
 
     public function storeStudent(Request $request): RedirectResponse

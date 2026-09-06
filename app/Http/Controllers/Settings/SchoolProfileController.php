@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\SchoolProfile;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Illuminate\View\View;
 
 class SchoolProfileController extends Controller
@@ -27,14 +29,37 @@ class SchoolProfileController extends Controller
             'phone' => ['nullable', 'string', 'max:32'],
             'email' => ['nullable', 'email', 'max:255'],
             'principal_name' => ['nullable', 'string', 'max:255'],
+            'letterhead' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ], [
             'name.required' => 'Nama sekolah wajib diisi.',
             'email.email' => 'Format email sekolah belum benar.',
         ]);
 
         $profile = SchoolProfile::query()->first() ?? new SchoolProfile();
+        unset($validated['letterhead']);
+
+        if ($request->hasFile('letterhead')) {
+            $newPath = $request->file('letterhead')->store('school/letterheads');
+            if ($profile->letterhead_path) {
+                Storage::delete($profile->letterhead_path);
+            }
+            $validated['letterhead_path'] = $newPath;
+        }
+
         $profile->fill($validated)->save();
 
         return back()->with('status', 'Identitas sekolah berhasil disimpan.');
+    }
+
+    public function letterhead(): BinaryFileResponse
+    {
+        $profile = SchoolProfile::query()->first();
+        $path = $profile?->letterhead_path && Storage::exists($profile->letterhead_path)
+            ? Storage::path($profile->letterhead_path)
+            : public_path('images/kop-surat-smk-islam-bahagia.png');
+
+        abort_unless(is_file($path), 404);
+
+        return response()->file($path, ['Cache-Control' => 'private, max-age=300']);
     }
 }

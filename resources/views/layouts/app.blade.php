@@ -60,7 +60,7 @@
                     </a>
                 @endif
 
-                @if (in_array($currentRole, ['super_admin', 'committee', 'principal'], true))
+                @if (in_array($currentRole, ['super_admin', 'committee', 'principal', 'teacher'], true))
                     <a href="{{ route('reports.midterm.index') }}" class="rounded-xl px-4 py-3 {{ request()->routeIs('reports.midterm.*') ? 'bg-cyan-400 text-slate-950 font-semibold' : 'text-slate-300 hover:bg-white/5' }}">
                         Rapor ATS
                     </a>

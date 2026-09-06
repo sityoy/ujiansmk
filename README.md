@@ -86,6 +86,14 @@ Jangan menyalin `koneksi.php`, dump database, password, foto selfie, atau folder
 
 ## Status pengembangan
 
+### Rapor ATS bergaya E-Rapor
+
+Rapor ATS memiliki data terpisah dari percobaan CBT agar nilai asesmen kertas tetap dapat dimasukkan tanpa membuat riwayat ujian palsu. Nilai CBT yang sudah dikumpulkan menjadi nilai awal; guru mapel yang ditetapkan dapat mengisi atau menyesuaikan nilai, Tujuan Pembelajaran (TP), dan deskripsi capaian setiap peserta.
+
+Super admin menetapkan wali kelas pada Data Akademik. Wali kelas mengisi rekap sakit, izin, tanpa keterangan, dan catatan wali kelas. Panitia/super admin menambahkan kegiatan ekstrakurikuler serta pesertanya, sedangkan guru pembina memberi predikat Sangat Baik, Baik, Cukup, atau Kurang. Keterangan ekstrakurikuler dibuat otomatis sesuai predikat jika kolom keterangan dikosongkan.
+
+Cetak rapor memuat KOP sekolah, nilai dan deskripsi mapel, ekstrakurikuler, ketidakhadiran, catatan wali kelas, rata-rata, serta peringkat. KOP bawaan SMK Islam Bahagia dapat diganti melalui Identitas Sekolah.
+
 ### ATS isian/esai, koreksi manual, dan reset ujian
 
 Bank soal ATS hanya menerima tipe **isian singkat** dan **esai**. Jawaban siswa tidak diberi nilai otomatis; setelah dikumpulkan, guru yang ditetapkan pada komponen mapel/kelas mengoreksi melalui menu **Koreksi jawaban** dan memberi poin per soal. Panitia dan super admin juga dapat melakukan koreksi. Nilai akhir baru diterbitkan ke rapor ATS setelah koreksi disimpan.

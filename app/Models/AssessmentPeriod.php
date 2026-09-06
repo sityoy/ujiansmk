@@ -36,4 +36,14 @@ class AssessmentPeriod extends Model
     {
         return $this->hasMany(AssessmentSubject::class);
     }
+
+    public function extracurricularGrades(): HasMany
+    {
+        return $this->hasMany(ExtracurricularGrade::class);
+    }
+
+    public function attendanceSummaries(): HasMany
+    {
+        return $this->hasMany(MidtermAttendanceSummary::class);
+    }
 }

@@ -6,6 +6,8 @@ use App\Enums\AssessmentType;
 use App\Enums\AttemptStatus;
 use App\Models\AssessmentPeriod;
 use App\Models\AssessmentSubject;
+use App\Models\Extracurricular;
+use App\Models\MidtermAttendanceSummary;
 use App\Models\SchoolClass;
 use App\Models\Student;
 use Illuminate\Support\Collection;
@@ -24,7 +26,7 @@ class MidtermReportService
         }
 
         $subjects = AssessmentSubject::query()
-            ->with('subject')
+            ->with(['subject', 'midtermResults'])
             ->where('assessment_period_id', $period->id)
             ->where('school_class_id', $schoolClass->id)
             ->get()
@@ -32,6 +34,21 @@ class MidtermReportService
             ->values();
 
         $subjectIds = $subjects->pluck('id');
+        $extracurriculars = Extracurricular::query()
+            ->where('academic_year_id', $period->academic_year_id)
+            ->where('is_active', true)
+            ->whereHas('participants', fn ($query) => $query->where('school_class_id', $schoolClass->id))
+            ->with([
+                'participants' => fn ($query) => $query->where('school_class_id', $schoolClass->id),
+                'grades' => fn ($query) => $query->where('assessment_period_id', $period->id),
+            ])
+            ->orderBy('name')
+            ->get();
+        $attendance = MidtermAttendanceSummary::query()
+            ->where('assessment_period_id', $period->id)
+            ->whereHas('student', fn ($query) => $query->where('school_class_id', $schoolClass->id))
+            ->get()
+            ->keyBy('student_id');
 
         $students = Student::query()
             ->where('school_class_id', $schoolClass->id)
@@ -44,19 +61,24 @@ class MidtermReportService
             ->orderBy('full_name')
             ->get();
 
-        $rows = $students->map(function (Student $student) use ($subjects): array {
+        $rows = $students->map(function (Student $student) use ($subjects, $extracurriculars, $attendance): array {
             $assignments = $student->examAssignments->keyBy('assessment_subject_id');
             $scores = [];
+            $descriptions = [];
             $total = 0.0;
             $submittedCount = 0;
 
             foreach ($subjects as $assessmentSubject) {
                 $attempt = $assignments->get($assessmentSubject->id)?->attempt;
-                $score = $attempt?->status === AttemptStatus::Submitted && $attempt->score !== null
+                $result = $assessmentSubject->midtermResults->firstWhere('student_id', $student->id);
+                $attemptScore = $attempt?->status === AttemptStatus::Submitted && $attempt->score !== null
                     ? (float) $attempt->score
                     : null;
+                $score = $result ? (float) $result->score : $attemptScore;
 
                 $scores[$assessmentSubject->id] = $score;
+                $descriptions[$assessmentSubject->id] = $result?->description
+                    ?: ($score !== null ? $this->subjectDescription($score, $assessmentSubject->learning_objective) : null);
 
                 if ($score !== null) {
                     $total += $score;
@@ -69,12 +91,27 @@ class MidtermReportService
             return [
                 'student' => $student,
                 'scores' => $scores,
+                'descriptions' => $descriptions,
                 'total' => round($total, 2),
                 'average' => $subjectCount > 0 ? round($total / $subjectCount, 2) : 0.0,
                 'submitted_count' => $submittedCount,
                 'subject_count' => $subjectCount,
                 'is_complete' => $subjectCount > 0 && $submittedCount === $subjectCount,
                 'rank' => null,
+                'extracurriculars' => $extracurriculars->map(function (Extracurricular $extracurricular) use ($student): array {
+                    $grade = $extracurricular->grades->firstWhere('student_id', $student->id);
+
+                    return [
+                        'activity' => $extracurricular,
+                        'rating' => $grade?->rating,
+                        'description' => $grade?->description,
+                    ];
+                })->filter(fn (array $item) => $item['activity']->participants->contains('id', $student->id))->values(),
+                'attendance' => $attendance->get($student->id) ?? new MidtermAttendanceSummary([
+                    'sick_days' => 0,
+                    'excused_days' => 0,
+                    'unexcused_days' => 0,
+                ]),
             ];
         });
 
@@ -82,11 +119,25 @@ class MidtermReportService
 
         return [
             'period' => $period->loadMissing('academicYear'),
-            'schoolClass' => $schoolClass->loadMissing('academicYear'),
+            'schoolClass' => $schoolClass->loadMissing(['academicYear', 'homeroomTeacher']),
             'subjects' => $subjects,
+            'extracurriculars' => $extracurriculars,
             'rows' => $rows,
             'is_complete' => $rows->isNotEmpty() && $rows->every(fn (array $row) => $row['is_complete']),
         ];
+    }
+
+    public function subjectDescription(float $score, ?string $learningObjective): string
+    {
+        $objective = rtrim(trim((string) $learningObjective), '.');
+        $target = $objective !== '' ? ': '.$objective : ' yang dinilai pada ATS';
+
+        return match (true) {
+            $score >= 86 => 'Menunjukkan penguasaan sangat baik pada tujuan pembelajaran'.$target.'.',
+            $score >= 76 => 'Menunjukkan penguasaan baik pada tujuan pembelajaran'.$target.'.',
+            $score >= 66 => 'Menunjukkan penguasaan cukup pada tujuan pembelajaran'.$target.' dan perlu meningkatkan konsistensi.',
+            default => 'Perlu bimbingan lebih lanjut untuk mencapai tujuan pembelajaran'.$target.'.',
+        };
     }
 
     private function applyRanking(Collection $rows, bool $hasSubjects): Collection

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable(['user_id', 'school_class_id', 'student_number', 'nisn', 'card_uid_hash', 'full_name', 'is_active'])]
@@ -35,5 +36,25 @@ class Student extends Model
     public function dailyCheckins(): HasMany
     {
         return $this->hasMany(DailyCheckin::class);
+    }
+
+    public function midtermSubjectResults(): HasMany
+    {
+        return $this->hasMany(MidtermSubjectResult::class);
+    }
+
+    public function extracurriculars(): BelongsToMany
+    {
+        return $this->belongsToMany(Extracurricular::class, 'extracurricular_participants')->withTimestamps();
+    }
+
+    public function extracurricularGrades(): HasMany
+    {
+        return $this->hasMany(ExtracurricularGrade::class);
+    }
+
+    public function midtermAttendanceSummaries(): HasMany
+    {
+        return $this->hasMany(MidtermAttendanceSummary::class);
     }
 }

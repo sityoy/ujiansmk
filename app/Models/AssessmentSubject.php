@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['assessment_period_id', 'subject_id', 'school_class_id', 'teacher_user_id'])]
+#[Fillable(['assessment_period_id', 'subject_id', 'school_class_id', 'teacher_user_id', 'learning_objective'])]
 class AssessmentSubject extends Model
 {
     public function assessmentPeriod(): BelongsTo
@@ -43,5 +43,10 @@ class AssessmentSubject extends Model
     public function questions(): HasMany
     {
         return $this->hasMany(ExamQuestion::class)->orderBy('position');
+    }
+
+    public function midtermResults(): HasMany
+    {
+        return $this->hasMany(MidtermSubjectResult::class);
     }
 }

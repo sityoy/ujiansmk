@@ -25,7 +25,7 @@
                             </p>
                         </div>
                         <div class="flex flex-wrap gap-2">
-                            @forelse ($period->assessmentSubjects->pluck('schoolClass')->filter()->unique('id')->sortBy('name') as $class)
+                            @forelse ($period->accessibleClasses as $class)
                                 <a href="{{ route('reports.midterm.show', [$period, $class]) }}"
                                     class="rounded-xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-xs font-medium text-cyan-200 transition hover:bg-cyan-400/20">
                                     {{ $class->name }}

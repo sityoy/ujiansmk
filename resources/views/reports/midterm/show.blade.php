@@ -11,9 +11,14 @@
             <h2 class="mt-3 text-2xl font-semibold text-white">{{ $period->name }}</h2>
             <p class="mt-2 text-sm text-slate-400">{{ $schoolClass->name }} · {{ $subjects->count() }} mata pelajaran</p>
         </div>
-        <span class="w-fit rounded-full px-3 py-1 text-xs font-medium {{ $is_complete ? 'bg-emerald-400/10 text-emerald-200' : 'bg-amber-400/10 text-amber-200' }}">
-            {{ $is_complete ? 'Nilai lengkap' : 'Peringkat sementara — nilai belum lengkap' }}
-        </span>
+        <div class="flex flex-wrap items-center gap-2">
+            @if ($canEdit)
+                <a href="{{ route('reports.midterm.edit', [$period, $schoolClass]) }}" class="rounded-xl bg-cyan-400 px-4 py-2 text-xs font-semibold text-slate-950">Kelola data rapor</a>
+            @endif
+            <span class="w-fit rounded-full px-3 py-1 text-xs font-medium {{ $is_complete ? 'bg-emerald-400/10 text-emerald-200' : 'bg-amber-400/10 text-amber-200' }}">
+                {{ $is_complete ? 'Nilai lengkap' : 'Peringkat sementara — nilai belum lengkap' }}
+            </span>
+        </div>
     </div>
 
     <section class="mt-6 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035]">

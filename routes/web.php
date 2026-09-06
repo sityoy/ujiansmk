@@ -9,6 +9,7 @@ use App\Http\Controllers\ExamOperationsController;
 use App\Http\Controllers\ExamGradingController;
 use App\Http\Controllers\QuestionBankController;
 use App\Http\Controllers\Reports\MidtermReportController;
+use App\Http\Controllers\Reports\MidtermReportEntryController;
 use App\Http\Controllers\SchedulingController;
 use App\Http\Controllers\Settings\SchoolProfileController;
 use App\Http\Controllers\StudentAttendanceController;
@@ -67,6 +68,8 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             ->name('settings.school.edit');
         Route::put('/settings/school', [SchoolProfileController::class, 'update'])
             ->name('settings.school.update');
+        Route::get('/settings/school/letterhead', [SchoolProfileController::class, 'letterhead'])
+            ->name('settings.school.letterhead');
 
         Route::prefix('academic')->name('academic.')->group(function (): void {
             Route::get('/', [AcademicDataController::class, 'index'])->name('index');
@@ -83,6 +86,7 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             Route::delete('/subjects/{subject}', [AcademicDataController::class, 'destroySubject'])->name('subjects.destroy');
 
             Route::post('/classes', [AcademicDataController::class, 'storeClass'])->name('classes.store');
+            Route::patch('/classes/{schoolClass}/homeroom', [AcademicDataController::class, 'updateHomeroomTeacher'])->name('classes.homeroom');
             Route::delete('/classes/{schoolClass}', [AcademicDataController::class, 'destroyClass'])->name('classes.destroy');
 
             Route::post('/students', [AcademicDataController::class, 'storeStudent'])->name('students.store');
@@ -131,12 +135,19 @@ Route::middleware(['auth', 'active'])->group(function (): void {
         });
 
     Route::prefix('reports/midterm')
-        ->middleware('role:super_admin,committee,principal')
+        ->middleware('role:super_admin,committee,principal,teacher')
         ->name('reports.midterm.')
         ->group(function (): void {
             Route::get('/', [MidtermReportController::class, 'index'])->name('index');
             Route::get('/{assessmentPeriod}/{schoolClass}', [MidtermReportController::class, 'show'])->name('show');
+            Route::get('/{assessmentPeriod}/{schoolClass}/edit', [MidtermReportEntryController::class, 'edit'])->name('edit');
             Route::get('/{assessmentPeriod}/{schoolClass}/{student}/print', [MidtermReportController::class, 'print'])->name('print');
+            Route::put('/subjects/{assessmentSubject}', [MidtermReportEntryController::class, 'updateSubjectResults'])->name('subject-results.update');
+            Route::put('/{assessmentPeriod}/{schoolClass}/attendance', [MidtermReportEntryController::class, 'updateAttendance'])->name('attendance.update');
+            Route::post('/{assessmentPeriod}/{schoolClass}/extracurriculars', [MidtermReportEntryController::class, 'storeExtracurricular'])->name('extracurriculars.store');
+            Route::patch('/{assessmentPeriod}/{schoolClass}/extracurriculars/{extracurricular}', [MidtermReportEntryController::class, 'updateExtracurricular'])->name('extracurriculars.update');
+            Route::put('/{assessmentPeriod}/{schoolClass}/extracurriculars/{extracurricular}/participants', [MidtermReportEntryController::class, 'syncExtracurricularParticipants'])->name('extracurriculars.participants');
+            Route::put('/{assessmentPeriod}/{schoolClass}/extracurriculars/{extracurricular}/grades', [MidtermReportEntryController::class, 'updateExtracurricularGrades'])->name('extracurriculars.grades');
         });
 
     Route::prefix('grading')

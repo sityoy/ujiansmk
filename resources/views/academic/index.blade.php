@@ -139,13 +139,24 @@
 
             <div class="mt-6 space-y-2">
                 @forelse ($classes as $class)
-                    <div class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-slate-950/40 p-3">
+                    <div class="rounded-xl border border-white/10 bg-slate-950/40 p-3">
+                        <div class="flex items-center justify-between gap-3">
                         <div>
                             <p class="text-sm font-medium text-white">{{ $class->name }}</p>
-                            <p class="text-xs text-slate-500">{{ $class->academicYear->name }} · {{ $class->students_count }} siswa</p>
+                            <p class="text-xs text-slate-500">{{ $class->academicYear->name }} · {{ $class->students_count }} siswa · Wali kelas: {{ $class->homeroomTeacher?->name ?? 'belum dipilih' }}</p>
                         </div>
                         <form method="POST" action="{{ route('academic.classes.destroy', $class) }}" onsubmit="return confirm('Hapus kelas ini?')">@csrf @method('DELETE')
                             <button class="text-xs text-rose-300">Hapus</button>
+                        </form>
+                        </div>
+                        <form method="POST" action="{{ route('academic.classes.homeroom', $class) }}" class="mt-3 flex gap-2">@csrf @method('PATCH')
+                            <select name="homeroom_teacher_user_id" class="min-w-0 flex-1 rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-xs">
+                                <option value="">Belum ada wali kelas</option>
+                                @foreach ($teachers as $teacher)
+                                    <option value="{{ $teacher->id }}" @selected($class->homeroom_teacher_user_id === $teacher->id)>{{ $teacher->name }}</option>
+                                @endforeach
+                            </select>
+                            <button class="rounded-lg border border-amber-400/30 px-3 py-2 text-xs font-semibold text-amber-200">Simpan wali kelas</button>
                         </form>
                     </div>
                 @empty

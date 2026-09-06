@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable(['name', 'email', 'username', 'password', 'role', 'is_active', 'must_change_password'])]
@@ -39,5 +40,15 @@ class User extends Authenticatable
     public function student(): HasOne
     {
         return $this->hasOne(Student::class);
+    }
+
+    public function homeroomClasses(): HasMany
+    {
+        return $this->hasMany(SchoolClass::class, 'homeroom_teacher_user_id');
+    }
+
+    public function coachedExtracurriculars(): HasMany
+    {
+        return $this->hasMany(Extracurricular::class, 'coach_user_id');
     }
 }

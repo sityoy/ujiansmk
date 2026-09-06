@@ -21,7 +21,7 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('settings.school.update') }}" class="mt-8 grid gap-5 md:grid-cols-2">
+            <form method="POST" action="{{ route('settings.school.update') }}" enctype="multipart/form-data" class="mt-8 grid gap-5 md:grid-cols-2">
                 @csrf
                 @method('PUT')
 
@@ -30,6 +30,14 @@
                     <input id="name" name="name" value="{{ old('name', $profile->name) }}" required
                         placeholder="Contoh: SMK Permata Bunda I Jakarta"
                         class="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-cyan-400/70 focus:ring-4 focus:ring-cyan-400/10">
+                </div>
+
+                <div class="md:col-span-2 rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                    <label for="letterhead" class="mb-2 block text-sm font-medium text-slate-200">KOP rapor ATS</label>
+                    <p class="mb-4 text-xs leading-5 text-slate-500">KOP SMK Islam Bahagia digunakan sebagai bawaan. Unggah JPG/PNG/WebP maksimal 2 MB untuk menggantinya.</p>
+                    <img src="{{ route('settings.school.letterhead') }}" alt="KOP rapor ATS" class="mb-4 max-h-36 w-full rounded-xl bg-white object-contain p-2">
+                    <input id="letterhead" type="file" name="letterhead" accept="image/jpeg,image/png,image/webp"
+                        class="block w-full rounded-xl border border-dashed border-white/15 bg-slate-950/50 px-3 py-2 text-xs text-slate-400 file:mr-2 file:rounded-lg file:border-0 file:bg-cyan-400 file:px-3 file:py-2 file:font-semibold file:text-slate-950">
                 </div>
 
                 <div>

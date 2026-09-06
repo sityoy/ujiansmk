@@ -7,8 +7,10 @@
     <style>
         * { box-sizing: border-box; }
         body { margin: 0; color: #111827; font-family: Arial, sans-serif; background: #e5e7eb; }
-        .sheet { width: 210mm; min-height: 297mm; margin: 16px auto; padding: 18mm; background: white; }
-        .header { text-align: center; border-bottom: 3px double #111827; padding-bottom: 12px; }
+        .sheet { width: 210mm; min-height: 297mm; margin: 16px auto; padding: 12mm 15mm; background: white; }
+        .header { text-align: center; }
+        .letterhead { display: block; width: 100%; height: auto; max-height: 36mm; object-fit: contain; }
+        .fallback-header { border-bottom: 3px double #111827; padding-bottom: 10px; }
         .header h1 { margin: 0; font-size: 20px; text-transform: uppercase; }
         .header p { margin: 5px 0 0; font-size: 11px; }
         .title { margin: 24px 0 18px; text-align: center; }
@@ -17,17 +19,21 @@
         .identity { width: 100%; margin-bottom: 18px; font-size: 12px; border-collapse: collapse; }
         .identity td { padding: 3px 0; vertical-align: top; }
         .identity td:first-child { width: 145px; }
-        .scores { width: 100%; border-collapse: collapse; font-size: 12px; }
-        .scores th, .scores td { border: 1px solid #111827; padding: 8px; }
+        .section-title { margin: 16px 0 6px; font-size: 12px; font-weight: bold; }
+        .scores { width: 100%; border-collapse: collapse; font-size: 10px; }
+        .scores th, .scores td { border: 1px solid #111827; padding: 6px; vertical-align: top; }
         .scores th { background: #f3f4f6; }
-        .scores td:last-child { text-align: center; width: 110px; }
+        .score-number { text-align: center; width: 58px; }
+        .description { line-height: 1.45; }
         .summary { margin-top: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
         .summary div { border: 1px solid #9ca3af; padding: 10px; text-align: center; }
         .summary small { display: block; color: #4b5563; font-size: 10px; }
         .summary strong { display: block; margin-top: 4px; font-size: 17px; }
         .note { margin-top: 12px; font-size: 10px; color: #4b5563; }
-        .signature { margin-top: 40px; margin-left: auto; width: 240px; text-align: center; font-size: 12px; }
+        .attendance-layout { display: grid; grid-template-columns: 1fr 1.4fr; gap: 12px; align-items: start; }
+        .signature { margin-top: 30px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; text-align: center; font-size: 11px; page-break-inside: avoid; }
         .signature .space { height: 70px; }
+        .avoid-break { page-break-inside: avoid; }
         .actions { width: 210mm; margin: 12px auto; text-align: right; }
         button { border: 0; border-radius: 8px; padding: 10px 16px; color: white; background: #0891b2; cursor: pointer; }
         @page { size: A4 portrait; margin: 0; }
@@ -43,15 +49,21 @@
 
     <main class="sheet">
         <header class="header">
-            <h1>{{ $schoolProfile?->name ?? 'Nama Sekolah' }}</h1>
-            @if ($schoolProfile?->address)
-                <p>{{ $schoolProfile->address }}{{ $schoolProfile->city ? ', '.$schoolProfile->city : '' }}</p>
+            @if ($letterheadData)
+                <img src="{{ $letterheadData }}" alt="KOP {{ $schoolProfile?->name }}" class="letterhead">
+            @else
+                <div class="fallback-header">
+                    <h1>{{ $schoolProfile?->name ?? 'Nama Sekolah' }}</h1>
+                    @if ($schoolProfile?->address)
+                        <p>{{ $schoolProfile->address }}{{ $schoolProfile->city ? ', '.$schoolProfile->city : '' }}</p>
+                    @endif
+                    <p>
+                        @if ($schoolProfile?->npsn) NPSN: {{ $schoolProfile->npsn }} @endif
+                        @if ($schoolProfile?->phone) · Telp: {{ $schoolProfile->phone }} @endif
+                        @if ($schoolProfile?->email) · {{ $schoolProfile->email }} @endif
+                    </p>
+                </div>
             @endif
-            <p>
-                @if ($schoolProfile?->npsn) NPSN: {{ $schoolProfile->npsn }} @endif
-                @if ($schoolProfile?->phone) · Telp: {{ $schoolProfile->phone }} @endif
-                @if ($schoolProfile?->email) · {{ $schoolProfile->email }} @endif
-            </p>
         </header>
 
         <section class="title">
@@ -61,20 +73,26 @@
 
         <table class="identity">
             <tr><td>Nama Peserta Didik</td><td>: <strong>{{ $row['student']->full_name }}</strong></td></tr>
-            <tr><td>Nomor Peserta/Induk</td><td>: {{ $row['student']->student_number }}</td></tr>
+            <tr><td>NIS / NISN</td><td>: {{ $row['student']->student_number }} / {{ $row['student']->nisn ?? '—' }}</td></tr>
             <tr><td>Kelas</td><td>: {{ $schoolClass->name }}</td></tr>
+            <tr><td>Wali Kelas</td><td>: {{ $schoolClass->homeroomTeacher?->name ?? '—' }}</td></tr>
         </table>
 
+        <p class="section-title">A. Capaian Hasil Belajar</p>
         <table class="scores">
             <thead>
-                <tr><th style="width: 42px">No.</th><th>Mata Pelajaran</th><th>Nilai</th></tr>
+                <tr><th style="width: 36px">No.</th><th style="width: 145px">Mata Pelajaran</th><th style="width: 58px">Nilai</th><th>Tujuan Pembelajaran/Deskripsi Capaian</th></tr>
             </thead>
             <tbody>
                 @foreach ($subjects as $assessmentSubject)
                     <tr>
                         <td style="text-align:center">{{ $loop->iteration }}</td>
                         <td>{{ $assessmentSubject->subject->name }}</td>
-                        <td>{{ $row['scores'][$assessmentSubject->id] === null ? 'Belum ada' : number_format($row['scores'][$assessmentSubject->id], 2, ',', '.') }}</td>
+                        <td class="score-number">{{ $row['scores'][$assessmentSubject->id] === null ? '—' : number_format($row['scores'][$assessmentSubject->id], 2, ',', '.') }}</td>
+                        <td class="description">
+                            <strong>TP:</strong> {{ $assessmentSubject->learning_objective ?: 'Belum diisi.' }}<br>
+                            <strong>Deskripsi:</strong> {{ $row['descriptions'][$assessmentSubject->id] ?? 'Belum diisi oleh guru mata pelajaran.' }}
+                        </td>
                     </tr>
                 @endforeach
             </tbody>
@@ -86,15 +104,60 @@
             <div><small>Peringkat Kelas</small><strong>{{ $row['rank'] ?? '—' }}</strong></div>
         </div>
 
+        <div class="avoid-break">
+            <p class="section-title">B. Ekstrakurikuler</p>
+            <table class="scores">
+                <thead><tr><th style="width: 36px">No.</th><th style="width: 145px">Kegiatan</th><th style="width: 90px">Predikat</th><th>Keterangan</th></tr></thead>
+                <tbody>
+                    @forelse ($row['extracurriculars'] as $item)
+                        <tr>
+                            <td class="score-number">{{ $loop->iteration }}</td>
+                            <td>{{ $item['activity']->name }}</td>
+                            <td class="score-number">{{ $item['rating']?->label() ?? '—' }}</td>
+                            <td class="description">{{ $item['description'] ?? 'Belum dinilai oleh guru pembina.' }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="4" style="text-align:center">Tidak ada kegiatan ekstrakurikuler yang tercatat.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        <div class="attendance-layout avoid-break">
+            <div>
+                <p class="section-title">C. Ketidakhadiran</p>
+                <table class="scores">
+                    <tr><td>Sakit</td><td class="score-number">{{ $row['attendance']->sick_days }} hari</td></tr>
+                    <tr><td>Izin</td><td class="score-number">{{ $row['attendance']->excused_days }} hari</td></tr>
+                    <tr><td>Tanpa Keterangan</td><td class="score-number">{{ $row['attendance']->unexcused_days }} hari</td></tr>
+                </table>
+            </div>
+            <div>
+                <p class="section-title">D. Catatan Wali Kelas</p>
+                <table class="scores"><tr><td style="height:74px">{{ $row['attendance']->notes ?: '—' }}</td></tr></table>
+            </div>
+        </div>
+
         @unless ($row['is_complete'])
             <p class="note">Catatan: masih terdapat nilai mata pelajaran yang belum tersedia. Peringkat pada dokumen ini bersifat sementara.</p>
         @endunless
 
         <div class="signature">
-            <p>{{ $schoolProfile?->city ?? '................' }}, {{ now()->translatedFormat('d F Y') }}</p>
-            <p>Kepala Sekolah</p>
-            <div class="space"></div>
-            <p><strong><u>{{ $schoolProfile?->principal_name ?? '................................' }}</u></strong></p>
+            <div>
+                <p>Mengetahui,<br>Orang Tua/Wali</p>
+                <div class="space"></div>
+                <p><strong><u>................................</u></strong></p>
+            </div>
+            <div>
+                <p>{{ $schoolProfile?->city ?? '................' }}, {{ now()->translatedFormat('d F Y') }}<br>Wali Kelas</p>
+                <div class="space"></div>
+                <p><strong><u>{{ $schoolClass->homeroomTeacher?->name ?? '................................' }}</u></strong></p>
+            </div>
+            <div>
+                <p>Mengetahui,<br>Kepala Sekolah</p>
+                <div class="space"></div>
+                <p><strong><u>{{ $schoolProfile?->principal_name ?? '................................' }}</u></strong></p>
+            </div>
         </div>
     </main>
 </body>
