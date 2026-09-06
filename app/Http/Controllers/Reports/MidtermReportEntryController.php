@@ -107,7 +107,7 @@ class MidtermReportEntryController extends Controller
             }
         });
 
-        return back()->with('status', 'Nilai, tujuan pembelajaran, dan deskripsi '.$assessmentSubject->subject->name.' berhasil disimpan.');
+        return back()->with('status', 'Nilai, tujuan pembelajaran, dan capaian kompetensi '.$assessmentSubject->subject->name.' berhasil disimpan.');
     }
 
     public function updateAttendance(

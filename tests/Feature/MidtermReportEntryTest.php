@@ -154,11 +154,15 @@ class MidtermReportEntryTest extends TestCase
         $this->actingAs($admin)
             ->get(route('reports.midterm.print', [$period, $class, $student]))
             ->assertOk()
+            ->assertSee('Laporan Hasil Belajar')
+            ->assertSee('Capaian Kompetensi')
+            ->assertSee('Fase')
             ->assertSee('Menguasai teks laporan dengan sangat baik.')
             ->assertSee('Pramuka')
             ->assertSee('Aktif dan disiplin mengikuti latihan.')
             ->assertSee('Pertahankan prestasi belajar.')
-            ->assertSee('Wali Kelas Contoh');
+            ->assertSee('Wali Kelas Contoh')
+            ->assertDontSee('<strong>TP:</strong>', false);
     }
 
     private function makeContext(): array

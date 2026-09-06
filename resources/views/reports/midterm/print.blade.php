@@ -13,12 +13,14 @@
         .fallback-header { border-bottom: 3px double #111827; padding-bottom: 10px; }
         .header h1 { margin: 0; font-size: 20px; text-transform: uppercase; }
         .header p { margin: 5px 0 0; font-size: 11px; }
-        .title { margin: 24px 0 18px; text-align: center; }
+        .title { margin: 14px 0 18px; text-align: center; }
         .title h2 { margin: 0; font-size: 16px; text-transform: uppercase; }
         .title p { margin: 5px 0 0; font-size: 11px; }
-        .identity { width: 100%; margin-bottom: 18px; font-size: 12px; border-collapse: collapse; }
-        .identity td { padding: 3px 0; vertical-align: top; }
-        .identity td:first-child { width: 145px; }
+        .identity-layout { display: grid; grid-template-columns: 1.55fr 1fr; gap: 28px; margin: 14px 0 0; padding-bottom: 12px; border-bottom: 1px solid #9ca3af; }
+        .identity { width: 100%; font-size: 12px; border-collapse: collapse; }
+        .identity td { padding: 2px 0; vertical-align: top; }
+        .identity td:first-child { width: 120px; }
+        .identity-layout .identity:last-child td:first-child { width: 90px; }
         .section-title { margin: 16px 0 6px; font-size: 12px; font-weight: bold; }
         .scores { width: 100%; border-collapse: collapse; font-size: 10px; }
         .scores th, .scores td { border: 1px solid #111827; padding: 6px; vertical-align: top; }
@@ -31,8 +33,13 @@
         .summary strong { display: block; margin-top: 4px; font-size: 17px; }
         .note { margin-top: 12px; font-size: 10px; color: #4b5563; }
         .attendance-layout { display: grid; grid-template-columns: 1fr 1.4fr; gap: 12px; align-items: start; }
-        .signature { margin-top: 30px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; text-align: center; font-size: 11px; page-break-inside: avoid; }
-        .signature .space { height: 70px; }
+        .signature { margin-top: 30px; font-size: 11px; page-break-inside: avoid; }
+        .signature-top { display: grid; grid-template-columns: 1fr 1fr; gap: 34%; }
+        .signature-bottom { width: 42%; margin: 12px auto 0; text-align: center; }
+        .signature-box { text-align: left; }
+        .signature-top .signature-box:last-child { justify-self: end; min-width: 220px; }
+        .signature .space { height: 64px; }
+        .signature-bottom .space { height: 62px; }
         .avoid-break { page-break-inside: avoid; }
         .actions { width: 210mm; margin: 12px auto; text-align: right; }
         button { border: 0; border-radius: 8px; padding: 10px 16px; color: white; background: #0891b2; cursor: pointer; }
@@ -66,22 +73,42 @@
             @endif
         </header>
 
-        <section class="title">
-            <h2>Laporan Hasil Asesmen Tengah Semester</h2>
-            <p>{{ $period->name }} · Tahun Ajaran {{ $period->academicYear->name }}</p>
-        </section>
+        @php
+            $phase = match (true) {
+                $schoolClass->grade_level <= 2 => 'A',
+                $schoolClass->grade_level <= 4 => 'B',
+                $schoolClass->grade_level <= 6 => 'C',
+                $schoolClass->grade_level <= 9 => 'D',
+                $schoolClass->grade_level === 10 => 'E',
+                default => 'F',
+            };
+            $semesterNumber = $period->semester === \App\Enums\Semester::Odd ? 1 : 2;
+        @endphp
 
-        <table class="identity">
-            <tr><td>Nama Peserta Didik</td><td>: <strong>{{ $row['student']->full_name }}</strong></td></tr>
-            <tr><td>NIS / NISN</td><td>: {{ $row['student']->student_number }} / {{ $row['student']->nisn ?? '—' }}</td></tr>
-            <tr><td>Kelas</td><td>: {{ $schoolClass->name }}</td></tr>
-            <tr><td>Wali Kelas</td><td>: {{ $schoolClass->homeroomTeacher?->name ?? '—' }}</td></tr>
-        </table>
+        <div class="identity-layout">
+            <table class="identity">
+                <tr><td>Nama Murid</td><td>: <strong>{{ $row['student']->full_name }}</strong></td></tr>
+                <tr><td>NIS/NISN</td><td>: {{ $row['student']->student_number }} / {{ $row['student']->nisn ?? '—' }}</td></tr>
+                <tr><td>Sekolah</td><td>: {{ $schoolProfile?->name ?? 'Nama Sekolah' }}</td></tr>
+                <tr><td>Alamat</td><td>: {{ $schoolProfile?->address ?? '—' }}</td></tr>
+            </table>
+            <table class="identity">
+                <tr><td>Kelas</td><td>: {{ $schoolClass->name }}</td></tr>
+                <tr><td>Fase</td><td>: {{ $phase }}</td></tr>
+                <tr><td>Semester</td><td>: {{ $semesterNumber }}</td></tr>
+                <tr><td>Tahun Ajaran</td><td>: {{ $period->academicYear->name }}</td></tr>
+            </table>
+        </div>
+
+        <section class="title">
+            <h2>Laporan Hasil Belajar</h2>
+            <p>Asesmen Tengah Semester · {{ $period->name }}</p>
+        </section>
 
         <p class="section-title">A. Capaian Hasil Belajar</p>
         <table class="scores">
             <thead>
-                <tr><th style="width: 36px">No.</th><th style="width: 145px">Mata Pelajaran</th><th style="width: 58px">Nilai</th><th>Tujuan Pembelajaran/Deskripsi Capaian</th></tr>
+                <tr><th style="width: 36px">No.</th><th style="width: 145px">Mata Pelajaran</th><th style="width: 58px">Nilai Akhir</th><th>Capaian Kompetensi</th></tr>
             </thead>
             <tbody>
                 @foreach ($subjects as $assessmentSubject)
@@ -89,10 +116,7 @@
                         <td style="text-align:center">{{ $loop->iteration }}</td>
                         <td>{{ $assessmentSubject->subject->name }}</td>
                         <td class="score-number">{{ $row['scores'][$assessmentSubject->id] === null ? '—' : number_format($row['scores'][$assessmentSubject->id], 2, ',', '.') }}</td>
-                        <td class="description">
-                            <strong>TP:</strong> {{ $assessmentSubject->learning_objective ?: 'Belum diisi.' }}<br>
-                            <strong>Deskripsi:</strong> {{ $row['descriptions'][$assessmentSubject->id] ?? 'Belum diisi oleh guru mata pelajaran.' }}
-                        </td>
+                        <td class="description">{{ $row['descriptions'][$assessmentSubject->id] ?? 'Belum diisi oleh guru mata pelajaran.' }}</td>
                     </tr>
                 @endforeach
             </tbody>
@@ -143,17 +167,19 @@
         @endunless
 
         <div class="signature">
-            <div>
-                <p>Mengetahui,<br>Orang Tua/Wali</p>
-                <div class="space"></div>
-                <p><strong><u>................................</u></strong></p>
+            <div class="signature-top">
+                <div class="signature-box">
+                    <p>Orang Tua/Wali</p>
+                    <div class="space"></div>
+                    <p><strong><u>................................</u></strong></p>
+                </div>
+                <div class="signature-box">
+                    <p>{{ $schoolProfile?->city ?? '................' }}, {{ now()->translatedFormat('d F Y') }}<br>Wali Kelas</p>
+                    <div class="space"></div>
+                    <p><strong><u>{{ $schoolClass->homeroomTeacher?->name ?? '................................' }}</u></strong></p>
+                </div>
             </div>
-            <div>
-                <p>{{ $schoolProfile?->city ?? '................' }}, {{ now()->translatedFormat('d F Y') }}<br>Wali Kelas</p>
-                <div class="space"></div>
-                <p><strong><u>{{ $schoolClass->homeroomTeacher?->name ?? '................................' }}</u></strong></p>
-            </div>
-            <div>
+            <div class="signature-bottom">
                 <p>Mengetahui,<br>Kepala Sekolah</p>
                 <div class="space"></div>
                 <p><strong><u>{{ $schoolProfile?->principal_name ?? '................................' }}</u></strong></p>

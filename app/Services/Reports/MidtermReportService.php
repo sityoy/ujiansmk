@@ -129,14 +129,15 @@ class MidtermReportService
 
     public function subjectDescription(float $score, ?string $learningObjective): string
     {
-        $objective = rtrim(trim((string) $learningObjective), '.');
-        $target = $objective !== '' ? ': '.$objective : ' yang dinilai pada ATS';
+        $objective = rtrim(trim((string) $learningObjective), ". \t\n\r\0\x0B");
+        $objective = preg_replace('/^(peserta didik|siswa)\s+(mampu\s+)?/iu', '', $objective) ?? $objective;
+        $target = $objective !== '' ? lcfirst($objective) : 'kompetensi yang dinilai pada ATS';
 
         return match (true) {
-            $score >= 86 => 'Menunjukkan penguasaan sangat baik pada tujuan pembelajaran'.$target.'.',
-            $score >= 76 => 'Menunjukkan penguasaan baik pada tujuan pembelajaran'.$target.'.',
-            $score >= 66 => 'Menunjukkan penguasaan cukup pada tujuan pembelajaran'.$target.' dan perlu meningkatkan konsistensi.',
-            default => 'Perlu bimbingan lebih lanjut untuk mencapai tujuan pembelajaran'.$target.'.',
+            $score >= 86 => 'Menunjukkan penguasaan sangat baik dalam '.$target.'.',
+            $score >= 76 => 'Menunjukkan penguasaan baik dalam '.$target.'.',
+            $score >= 66 => 'Menunjukkan penguasaan cukup dalam '.$target.' dan perlu meningkatkan konsistensi.',
+            default => 'Perlu peningkatan dan bimbingan dalam '.$target.'.',
         };
     }
 

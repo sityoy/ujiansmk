@@ -55,6 +55,19 @@ class MidtermReportServiceTest extends TestCase
         app(MidtermReportService::class)->build($period->refresh(), $class);
     }
 
+    public function test_subject_description_uses_learning_objective_as_competency_achievement(): void
+    {
+        $description = app(MidtermReportService::class)->subjectDescription(
+            90,
+            'Peserta didik mampu menganalisis informasi dalam teks laporan.',
+        );
+
+        $this->assertSame(
+            'Menunjukkan penguasaan sangat baik dalam menganalisis informasi dalam teks laporan.',
+            $description,
+        );
+    }
+
     private function makeReportData(): array
     {
         $academicYear = AcademicYear::create([
