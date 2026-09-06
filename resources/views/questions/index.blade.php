@@ -10,10 +10,10 @@
     @endif
 
     <section class="rounded-3xl border border-violet-400/20 bg-violet-400/[0.045] p-6">
-        <a href="{{ route('scheduling.index') }}" class="text-xs font-medium text-violet-300">← Kembali ke penjadwalan</a>
+        <a href="{{ route('question-bank.index') }}" class="text-xs font-medium text-violet-300">← Kembali ke daftar bank soal</a>
         <p class="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-violet-300">{{ $assessmentSubject->assessmentPeriod->name }}</p>
         <h2 class="mt-2 text-2xl font-semibold text-white">{{ $assessmentSubject->subject->name }} · {{ $assessmentSubject->schoolClass->name }}</h2>
-        <p class="mt-2 text-sm text-slate-400">{{ $assessmentSubject->assessmentPeriod->academicYear->name }} · {{ $assessmentSubject->questions->count() }} soal tersedia</p>
+        <p class="mt-2 text-sm text-slate-400">{{ $assessmentSubject->assessmentPeriod->academicYear->name }} · {{ $assessmentSubject->questions->count() }} soal · Total bobot {{ number_format((float) $assessmentSubject->questions->sum('points'), 2, ',', '.') }}</p>
     </section>
 
     <div class="mt-6 grid gap-6 xl:grid-cols-[420px_1fr]">
@@ -21,6 +21,7 @@
             <h2 class="text-xl font-semibold text-white">Tambah soal</h2>
             @if ($assessmentSubject->assessmentPeriod->type->value === 'ats')
                 <p class="mt-2 text-sm text-cyan-200">Khusus ATS: tersedia isian singkat dan esai. Seluruh jawaban dikoreksi manual.</p>
+                <p class="mt-2 rounded-xl border border-cyan-400/15 bg-cyan-400/[0.04] p-3 text-xs leading-5 text-slate-400">Saran 20 soal: 10 isian × 3 poin + 10 esai × 7 poin = total 100. Bobot wajib diisi dan merupakan nilai maksimal setiap soal.</p>
             @endif
             @if ($isLocked)
                 <p class="mt-3 text-sm text-amber-300">Bank soal terkunci karena sudah ada siswa yang mulai ujian. Isi dan bobot soal dipertahankan untuk menjaga konsistensi nilai reguler dan susulan.</p>
@@ -46,9 +47,11 @@
                         @foreach (['A', 'B', 'C', 'D'] as $option)<option value="{{ $option }}">Pilihan {{ $option }}</option>@endforeach
                     </select>
                 </div>
-                <div class="grid gap-3 sm:grid-cols-2">
-                    <input type="number" name="points" value="1" min="0.01" max="1000" step="0.01" required placeholder="Bobot" class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
+                <div>
+                    <label for="question-points" class="mb-2 block text-xs font-medium text-slate-400">Bobot maksimal soal</label>
+                    <input id="question-points" type="number" name="points" value="{{ old('points', $assessmentSubject->assessmentPeriod->type->value === 'ats' ? 3 : 1) }}" min="0.01" max="1000" step="0.01" required placeholder="Bobot" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
                 </div>
+                <p class="text-xs leading-5 text-slate-500">Nilai akhir dihitung: poin diperoleh ÷ total bobot × 100. Total bobot disarankan 100 agar mudah diperiksa.</p>
                 <button class="w-full rounded-xl bg-violet-400 px-4 py-3 text-sm font-semibold text-slate-950">Simpan soal</button>
             </form>
             </fieldset>
@@ -87,10 +90,16 @@
     <script>
         const questionType = document.getElementById('question-type');
         const choiceFields = document.getElementById('multiple-choice-fields');
+        const questionPoints = document.getElementById('question-points');
+        let pointsEdited = @json(old('points') !== null);
+        questionPoints.addEventListener('input', () => { pointsEdited = true; });
         const syncQuestionType = () => {
             const enabled = questionType.value === 'multiple_choice';
             choiceFields.hidden = !enabled;
             choiceFields.querySelectorAll('input, select').forEach(field => { field.required = enabled; field.disabled = !enabled; });
+            if (!pointsEdited) {
+                questionPoints.value = questionType.value === 'essay' ? '7' : (questionType.value === 'short_answer' ? '3' : '1');
+            }
         };
         questionType.addEventListener('change', syncQuestionType);
         syncQuestionType();

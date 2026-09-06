@@ -104,6 +104,8 @@ Cetak rapor memuat KOP sekolah, nilai dan deskripsi mapel, ekstrakurikuler, keti
 
 Bank soal ATS hanya menerima tipe **isian singkat** dan **esai**. Jawaban siswa tidak diberi nilai otomatis; setelah dikumpulkan, guru yang ditetapkan pada komponen mapel/kelas mengoreksi melalui menu **Koreksi jawaban** dan memberi poin per soal. Panitia dan super admin juga dapat melakukan koreksi. Nilai akhir baru diterbitkan ke rapor ATS setelah koreksi disimpan.
 
+Guru mempunyai menu **Bank soal** yang hanya menampilkan periode, mapel, dan kelas yang ditugaskan kepadanya. Panitia/Super Admin menetapkan guru pada komponen penjadwalan, sedangkan guru menulis soal serta menentukan bobot. Panitia dan Super Admin tetap memiliki akses pengawasan. Nilai akhir dihitung dari `poin diperoleh / total bobot × 100`; total bobot disarankan 100 agar pemeriksaan mudah, misalnya 10 isian × 3 dan 10 esai × 7.
+
 Daftar pada **Penjadwalan → 05 · Sesi Ujian** ditampilkan sebagai kartu ringkas berbentuk grid dan dibatasi 12 komponen per halaman. Daftar dapat difilter berdasarkan periode, kelas, nama, atau kode mapel. Kartu yang dibuka melebar penuh untuk menampilkan guru, bank soal, sesi reguler, dan sesi susulan tanpa membuat kartu lain memanjang.
 
 Pada **Pelaksanaan ujian → Lihat peserta & progres**, panitia dan super admin memiliki dua tindakan berbeda: reset pelanggaran hanya mengembalikan hitungan ke 0 tanpa menghapus jawaban, sedangkan reset seluruh ujian menghapus percobaan aktif agar siswa memulai dari awal. Reset seluruh ujian wajib disertai alasan dan ringkasan percobaan lama disimpan dalam audit. Sesi yang sudah ditutup/berakhir tidak dapat direset; gunakan sesi susulan.

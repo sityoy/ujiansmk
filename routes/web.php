@@ -131,6 +131,16 @@ Route::middleware(['auth', 'active'])->group(function (): void {
                 ->name('assign-class');
             Route::post('/makeup/move', [SchedulingController::class, 'moveToMakeup'])->name('makeup.move');
 
+        });
+
+    Route::get('/question-bank', [QuestionBankController::class, 'catalog'])
+        ->middleware('role:super_admin,committee,teacher')
+        ->name('question-bank.index');
+
+    Route::prefix('scheduling')
+        ->middleware('role:super_admin,committee,teacher')
+        ->name('scheduling.')
+        ->group(function (): void {
             Route::get('/components/{assessmentSubject}/questions', [QuestionBankController::class, 'index'])
                 ->name('questions.index');
             Route::post('/components/{assessmentSubject}/questions', [QuestionBankController::class, 'store'])

@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Enums\AssessmentType;
 use App\Enums\ExamQuestionType;
+use App\Enums\UserRole;
+use App\Models\AssessmentPeriod;
 use App\Models\AssessmentSubject;
 use App\Models\ExamQuestion;
+use App\Models\SchoolClass;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,8 +19,50 @@ use Illuminate\View\View;
 
 class QuestionBankController extends Controller
 {
-    public function index(AssessmentSubject $assessmentSubject): View
+    public function catalog(Request $request): View
     {
+        $teacherId = $request->user()->role === UserRole::Teacher ? $request->user()->id : null;
+        $periodId = $request->integer('period_id') ?: null;
+        $classId = $request->integer('class_id') ?: null;
+        $search = trim((string) $request->query('q'));
+        $scopeTeacher = fn ($query) => $query->when(
+            $teacherId,
+            fn ($query) => $query->where('teacher_user_id', $teacherId),
+        );
+
+        return view('questions.catalog', [
+            'components' => AssessmentSubject::query()
+                ->with(['assessmentPeriod.academicYear', 'subject', 'schoolClass', 'teacher'])
+                ->withCount('questions')
+                ->withSum('questions', 'points')
+                ->when($teacherId, fn ($query) => $query->where('teacher_user_id', $teacherId))
+                ->when($periodId, fn ($query) => $query->where('assessment_period_id', $periodId))
+                ->when($classId, fn ($query) => $query->where('school_class_id', $classId))
+                ->when($search, fn ($query) => $query->whereHas('subject', fn ($query) => $query
+                    ->where('name', 'like', '%'.$search.'%')
+                    ->orWhere('code', 'like', '%'.$search.'%')))
+                ->latest()
+                ->paginate(12)
+                ->withQueryString(),
+            'periods' => AssessmentPeriod::query()
+                ->with('academicYear')
+                ->whereHas('assessmentSubjects', $scopeTeacher)
+                ->orderByDesc('starts_on')
+                ->get(),
+            'classes' => SchoolClass::query()
+                ->with('academicYear')
+                ->whereHas('assessmentSubjects', $scopeTeacher)
+                ->orderBy('name')
+                ->get(),
+            'periodId' => $periodId,
+            'classId' => $classId,
+            'search' => $search,
+        ]);
+    }
+
+    public function index(Request $request, AssessmentSubject $assessmentSubject): View
+    {
+        $this->authorizeAccess($request, $assessmentSubject);
         $assessmentSubject->load([
             'assessmentPeriod.academicYear',
             'subject',
@@ -35,6 +80,7 @@ class QuestionBankController extends Controller
 
     public function store(Request $request, AssessmentSubject $assessmentSubject): RedirectResponse
     {
+        $this->authorizeAccess($request, $assessmentSubject);
         $assessmentSubject->loadMissing('assessmentPeriod');
         $allowedTypes = $assessmentSubject->assessmentPeriod->type === AssessmentType::ATS
             ? [ExamQuestionType::ShortAnswer->value, ExamQuestionType::Essay->value]
@@ -75,8 +121,9 @@ class QuestionBankController extends Controller
         return back()->with('status', 'Soal berhasil ditambahkan. Jawaban isian dan esai akan dikoreksi manual.');
     }
 
-    public function destroy(AssessmentSubject $assessmentSubject, ExamQuestion $question): RedirectResponse
+    public function destroy(Request $request, AssessmentSubject $assessmentSubject, ExamQuestion $question): RedirectResponse
     {
+        $this->authorizeAccess($request, $assessmentSubject);
         if ($question->assessment_subject_id !== $assessmentSubject->id) {
             abort(404);
         }
@@ -106,6 +153,13 @@ class QuestionBankController extends Controller
             throw ValidationException::withMessages([
                 'question' => 'Bank soal terkunci karena sudah ada siswa yang mulai ujian, termasuk untuk sesi susulan.',
             ]);
+        }
+    }
+
+    private function authorizeAccess(Request $request, AssessmentSubject $component): void
+    {
+        if ($request->user()->role === UserRole::Teacher) {
+            abort_unless($component->teacher_user_id === $request->user()->id, 403);
         }
     }
 }

@@ -55,8 +55,14 @@
                 @endif
 
                 @if (in_array($currentRole, ['super_admin', 'committee'], true))
-                    <a href="{{ route('scheduling.index') }}" class="rounded-xl px-4 py-3 {{ request()->routeIs('scheduling.*') ? 'bg-cyan-400 text-slate-950 font-semibold' : 'text-slate-300 hover:bg-white/5' }}">
+                    <a href="{{ route('scheduling.index') }}" class="rounded-xl px-4 py-3 {{ request()->routeIs('scheduling.*') && !request()->routeIs('scheduling.questions.*') ? 'bg-cyan-400 text-slate-950 font-semibold' : 'text-slate-300 hover:bg-white/5' }}">
                         Penjadwalan
+                    </a>
+                @endif
+
+                @if (in_array($currentRole, ['super_admin', 'committee', 'teacher'], true))
+                    <a href="{{ route('question-bank.index') }}" class="rounded-xl px-4 py-3 {{ request()->routeIs('question-bank.*', 'scheduling.questions.*') ? 'bg-cyan-400 text-slate-950 font-semibold' : 'text-slate-300 hover:bg-white/5' }}">
+                        Bank soal
                     </a>
                 @endif
 
