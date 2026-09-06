@@ -43,7 +43,7 @@
                     <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Alur Operasional</p>
                     <h3 class="mt-2 text-lg font-semibold text-white">Kesiapan sistem ujian</h3>
                 </div>
-                <span class="rounded-full bg-amber-400/10 px-3 py-1 text-xs font-medium text-amber-200">Tahap pengembangan</span>
+                <span class="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-200">Siap digunakan</span>
             </div>
 
             <div class="mt-6 grid gap-3 md:grid-cols-2">

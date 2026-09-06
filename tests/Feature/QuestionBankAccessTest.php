@@ -58,10 +58,27 @@ class QuestionBankAccessTest extends TestCase
         $question = $assigned->questions()->firstOrFail();
         $this->assertSame('3.00', $question->points);
 
+        $this->put(route('scheduling.questions.update', [$assigned, $question]), [
+            'question_type' => ExamQuestionType::Essay->value,
+            'question_text' => 'Jelaskan fungsi protokol HTTP.',
+            'points' => 7,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $question->refresh();
+        $this->assertSame(ExamQuestionType::Essay, $question->question_type);
+        $this->assertSame('Jelaskan fungsi protokol HTTP.', $question->question_text);
+        $this->assertSame('7.00', $question->points);
+
         $this->get(route('scheduling.questions.index', $other))->assertForbidden();
         $this->post(route('scheduling.questions.store', $other), [
             'question_type' => ExamQuestionType::Essay->value,
             'question_text' => 'Soal yang tidak boleh dibuat.',
+            'points' => 7,
+        ])->assertForbidden();
+
+        $this->put(route('scheduling.questions.update', [$other, $question]), [
+            'question_type' => ExamQuestionType::Essay->value,
+            'question_text' => 'Perubahan yang tidak diizinkan.',
             'points' => 7,
         ])->assertForbidden();
 

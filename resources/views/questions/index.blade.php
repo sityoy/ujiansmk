@@ -65,10 +65,15 @@
                             <p class="text-xs font-semibold text-violet-300">Soal {{ $question->position }} · {{ $question->question_type->label() }} · {{ number_format((float) $question->points, 2, ',', '.') }} poin</p>
                             <p class="mt-2 whitespace-pre-line text-sm leading-6 text-white">{{ $question->question_text }}</p>
                         </div>
-                        <form method="POST" action="{{ route('scheduling.questions.destroy', [$assessmentSubject, $question]) }}" onsubmit="return confirm('Hapus soal ini?')">
-                            @csrf @method('DELETE')
-                            <button @disabled($isLocked) class="text-xs text-rose-300 disabled:opacity-40">Hapus</button>
-                        </form>
+                        <div class="flex shrink-0 items-center gap-3">
+                            @unless ($isLocked)
+                                <button type="button" data-edit-toggle="question-edit-{{ $question->id }}" class="text-xs font-medium text-cyan-300">Edit</button>
+                            @endunless
+                            <form method="POST" action="{{ route('scheduling.questions.destroy', [$assessmentSubject, $question]) }}" onsubmit="return confirm('Hapus soal ini?')">
+                                @csrf @method('DELETE')
+                                <button @disabled($isLocked) class="text-xs text-rose-300 disabled:opacity-40">Hapus</button>
+                            </form>
+                        </div>
                     </div>
                     @if ($question->question_type->value === 'multiple_choice')
                         <div class="mt-4 grid gap-2 sm:grid-cols-2">
@@ -81,6 +86,41 @@
                     @else
                         <p class="mt-4 text-xs text-amber-200">Tidak memakai kunci otomatis; guru memberi nilai setelah ujian dikumpulkan.</p>
                     @endif
+
+                    @unless ($isLocked)
+                        <form id="question-edit-{{ $question->id }}" method="POST" action="{{ route('scheduling.questions.update', [$assessmentSubject, $question]) }}" class="question-edit-form mt-5 hidden space-y-3 border-t border-white/10 pt-5">
+                            @csrf @method('PUT')
+                            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-300">Edit soal {{ $question->position }}</p>
+                            <select name="question_type" required class="edit-question-type w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
+                                @foreach ($questionTypes as $type)
+                                    <option value="{{ $type->value }}" @selected($question->question_type === $type)>{{ $type->label() }}</option>
+                                @endforeach
+                            </select>
+                            <textarea name="question_text" rows="4" required class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-cyan-400">{{ $question->question_text }}</textarea>
+                            <div class="edit-choice-fields space-y-3">
+                                @foreach (['A', 'B', 'C', 'D'] as $option)
+                                    <div class="grid grid-cols-[36px_1fr] items-center gap-2">
+                                        <span class="grid size-9 place-items-center rounded-lg bg-slate-900 text-xs font-semibold text-violet-300">{{ $option }}</span>
+                                        <input name="option_{{ strtolower($option) }}" value="{{ $question->options[$option] ?? '' }}" placeholder="Pilihan {{ $option }}" class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-cyan-400">
+                                    </div>
+                                @endforeach
+                                <select name="correct_answer" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
+                                    <option value="">Jawaban benar</option>
+                                    @foreach (['A', 'B', 'C', 'D'] as $option)
+                                        <option value="{{ $option }}" @selected($question->correct_answer === $option)>Pilihan {{ $option }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label class="mb-2 block text-xs font-medium text-slate-400">Bobot maksimal soal</label>
+                                <input type="number" name="points" value="{{ $question->points }}" min="0.01" max="1000" step="0.01" required class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <button class="rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950">Simpan perubahan</button>
+                                <button type="button" data-edit-toggle="question-edit-{{ $question->id }}" class="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-300">Batal</button>
+                            </div>
+                        </form>
+                    @endunless
                 </article>
             @empty
                 <div class="rounded-3xl border border-dashed border-white/10 p-12 text-center text-sm text-slate-500">Belum ada soal untuk mapel dan kelas ini.</div>
@@ -103,5 +143,26 @@
         };
         questionType.addEventListener('change', syncQuestionType);
         syncQuestionType();
+
+        document.querySelectorAll('[data-edit-toggle]').forEach((button) => {
+            button.addEventListener('click', () => {
+                document.getElementById(button.dataset.editToggle)?.classList.toggle('hidden');
+            });
+        });
+
+        document.querySelectorAll('.question-edit-form').forEach((form) => {
+            const type = form.querySelector('.edit-question-type');
+            const fields = form.querySelector('.edit-choice-fields');
+            const syncEditType = () => {
+                const enabled = type.value === 'multiple_choice';
+                fields.hidden = !enabled;
+                fields.querySelectorAll('input, select').forEach((field) => {
+                    field.required = enabled;
+                    field.disabled = !enabled;
+                });
+            };
+            type.addEventListener('change', syncEditType);
+            syncEditType();
+        });
     </script>
 @endsection

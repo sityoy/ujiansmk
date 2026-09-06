@@ -145,6 +145,8 @@ Route::middleware(['auth', 'active'])->group(function (): void {
                 ->name('questions.index');
             Route::post('/components/{assessmentSubject}/questions', [QuestionBankController::class, 'store'])
                 ->name('questions.store');
+            Route::put('/components/{assessmentSubject}/questions/{question}', [QuestionBankController::class, 'update'])
+                ->name('questions.update');
             Route::delete('/components/{assessmentSubject}/questions/{question}', [QuestionBankController::class, 'destroy'])
                 ->name('questions.destroy');
         });
