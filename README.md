@@ -86,6 +86,12 @@ Jangan menyalin `koneksi.php`, dump database, password, foto selfie, atau folder
 
 ## Status pengembangan
 
+### Manajemen akun
+
+Super admin dapat membuat, mencari, memfilter, mengaktifkan/nonaktifkan, dan mengedit akun petugas sekolah. Daftar dibatasi 10 akun per halaman. Sistem membatasi satu akun Kepala Sekolah dan paling banyak empat akun Super Admin, termasuk perubahan melalui impor Excel.
+
+Template dan ekspor akun memuat ID, nama, email, akses, Password Baru, dan status. Password lama tidak pernah dapat dibaca atau diekspor karena tersimpan sebagai hash. Password Baru wajib untuk akun baru; saat memperbarui akun yang sudah ada, kolom kosong mempertahankan password lama dan nilai yang diisi akan mereset password serta mewajibkan pengguna menggantinya saat login.
+
 ### Rapor ATS bergaya E-Rapor
 
 Rapor ATS memiliki data terpisah dari percobaan CBT agar nilai asesmen kertas tetap dapat dimasukkan tanpa membuat riwayat ujian palsu. Nilai CBT yang sudah dikumpulkan menjadi nilai awal; guru mapel yang ditetapkan dapat mengisi atau menyesuaikan nilai, Tujuan Pembelajaran (TP), dan deskripsi capaian setiap peserta.
