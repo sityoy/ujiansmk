@@ -184,7 +184,10 @@ class SchedulingManagementTest extends TestCase
         ])->assertSessionHasNoErrors();
         $this->assertSame($teacher->id, $component->fresh()->teacher_user_id);
         $this->get(route('scheduling.index'))->assertOk()
-            ->assertSee('Buka pengaturan')->assertSee('Guru pengoreksi');
+            ->assertViewHas('components', fn ($components): bool => $components->perPage() === 12)
+            ->assertSee('Buka pengaturan')
+            ->assertSee('maksimal 12 komponen per halaman')
+            ->assertSee('Guru pengoreksi');
     }
 
     private function makeSchedule(): array

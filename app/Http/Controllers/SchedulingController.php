@@ -32,8 +32,12 @@ use Illuminate\View\View;
 
 class SchedulingController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
+        $sessionPeriodId = $request->integer('session_period_id') ?: null;
+        $sessionClassId = $request->integer('session_class_id') ?: null;
+        $sessionSearch = trim((string) $request->query('session_search'));
+
         return view('scheduling.index', [
             'academicYears' => AcademicYear::query()->orderByDesc('starts_on')->get(),
             'campuses' => Campus::query()->orderBy('name')->get(),
@@ -56,8 +60,16 @@ class SchedulingController extends Controller
                         ->orderBy('starts_at'),
                 ])
                 ->withCount(['assignments', 'questions'])
+                ->when($sessionPeriodId, fn ($query) => $query->where('assessment_period_id', $sessionPeriodId))
+                ->when($sessionClassId, fn ($query) => $query->where('school_class_id', $sessionClassId))
+                ->when($sessionSearch, fn ($query) => $query->whereHas(
+                    'subject',
+                    fn ($query) => $query->where('name', 'like', '%'.$sessionSearch.'%')
+                        ->orWhere('code', 'like', '%'.$sessionSearch.'%'),
+                ))
                 ->latest()
-                ->get(),
+                ->paginate(12, ['*'], 'session_page')
+                ->withQueryString(),
             'movableAssignments' => ExamAssignment::query()
                 ->with(['student.schoolClass', 'assessmentSubject.subject'])
                 ->whereIn('status', [AssignmentStatus::Scheduled, AssignmentStatus::Absent])
@@ -73,6 +85,9 @@ class SchedulingController extends Controller
             'semesters' => Semester::cases(),
             'periodStatuses' => PeriodStatus::cases(),
             'sessionStatuses' => SessionStatus::cases(),
+            'sessionPeriodId' => $sessionPeriodId,
+            'sessionClassId' => $sessionClassId,
+            'sessionSearch' => $sessionSearch,
         ]);
     }
 

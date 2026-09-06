@@ -152,15 +152,37 @@
     </section>
 
     <section class="mt-6">
-        <div class="mb-4">
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">05 · Sesi Ujian</p>
-            <h2 class="mt-2 text-xl font-semibold text-white">Jadwal reguler dan susulan</h2>
+        <div class="mb-4 flex flex-wrap items-end justify-between gap-4">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">05 · Sesi Ujian</p>
+                <h2 class="mt-2 text-xl font-semibold text-white">Jadwal reguler dan susulan</h2>
+                <p class="mt-1 text-xs text-slate-500">Ditampilkan ringkas dalam grid, maksimal 12 komponen per halaman.</p>
+            </div>
         </div>
 
-        <div class="space-y-5">
+        <form method="GET" action="{{ route('scheduling.index') }}" class="mb-5 grid gap-3 rounded-2xl border border-white/10 bg-white/[0.025] p-4 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_auto_auto]">
+            <select name="session_period_id" class="rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2.5 text-sm">
+                <option value="">Semua periode</option>
+                @foreach ($periods as $period)
+                    <option value="{{ $period->id }}" @selected($sessionPeriodId === $period->id)>{{ $period->name }} · {{ $period->academicYear->name }}</option>
+                @endforeach
+            </select>
+            <select name="session_class_id" class="rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2.5 text-sm">
+                <option value="">Semua kelas</option>
+                @foreach ($classes as $class)
+                    <option value="{{ $class->id }}" @selected($sessionClassId === $class->id)>{{ $class->name }} · {{ $class->academicYear->name }}</option>
+                @endforeach
+            </select>
+            <input name="session_search" value="{{ $sessionSearch }}" placeholder="Cari mapel atau kode"
+                class="rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2.5 text-sm outline-none focus:border-cyan-400">
+            <button class="rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950">Tampilkan</button>
+            <a href="{{ route('scheduling.index') }}#sesi-ujian" class="rounded-xl border border-white/10 px-4 py-2.5 text-center text-sm text-slate-300">Reset</a>
+        </form>
+
+        <div id="sesi-ujian" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             @forelse ($components as $component)
                 @php($componentLocked = $component->examSessions->isNotEmpty() || $component->assignments_count > 0 || $component->questions_count > 0)
-                <details class="group rounded-3xl border border-white/10 bg-white/[0.035]">
+                <details class="group rounded-3xl border border-white/10 bg-white/[0.035] open:md:col-span-2 open:xl:col-span-3">
                     <summary class="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 p-5">
                         <div>
                             <p class="font-semibold text-white">{{ $component->assessmentPeriod->name }} · {{ $component->subject->name }}</p>
@@ -321,6 +343,11 @@
                 </div>
             @endforelse
         </div>
+        @if ($components->hasPages())
+            <div class="mt-5 rounded-2xl border border-white/10 bg-white/[0.025] p-4">
+                {{ $components->links() }}
+            </div>
+        @endif
     </section>
 
     <section id="peserta-susulan" class="mt-6 rounded-3xl border border-amber-400/20 bg-amber-400/[0.05] p-6">
