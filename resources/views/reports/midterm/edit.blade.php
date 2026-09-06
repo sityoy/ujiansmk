@@ -17,7 +17,31 @@
     <section class="mt-6 rounded-3xl border border-cyan-400/20 bg-cyan-400/[0.045] p-6">
         <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Alur Pengisian</p>
         <h2 class="mt-2 text-xl font-semibold text-white">Data rapor dibagi sesuai tugas guru</h2>
-        <p class="mt-3 max-w-4xl text-sm leading-6 text-slate-400">Guru mapel mengisi tujuan pembelajaran, nilai, dan capaian kompetensi setiap peserta didik. Guru pembina mengisi nilai ekstrakurikuler. Wali kelas mengisi sakit, izin, tanpa keterangan, dan catatan. Panitia serta super admin dapat membantu seluruh bagian.</p>
+        <p class="mt-3 max-w-4xl text-sm leading-6 text-slate-400">Panitia atau super admin menyiapkan TP dan tanggal cetak. Guru mapel cukup mengisi nilai; capaian kompetensi dibuat otomatis. Guru pembina cukup memilih predikat ekstrakurikuler; keterangannya juga dibuat otomatis. Wali kelas mengisi ketidakhadiran dan catatan.</p>
+    </section>
+
+    <section class="mt-6 rounded-3xl border border-sky-400/20 bg-sky-400/[0.035] p-6">
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-sky-300">Pengaturan Cetak</p>
+        <h2 class="mt-2 text-xl font-semibold text-white">Tempat dan tanggal rapor</h2>
+        @if ($canConfigure)
+            <form method="POST" action="{{ route('reports.midterm.settings.update', [$period, $schoolClass]) }}" class="mt-5 grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
+                @csrf @method('PUT')
+                <label class="text-sm text-slate-300">Tempat penerbitan
+                    <input name="report_place" value="{{ old('report_place', $period->report_place) }}" required maxlength="120" placeholder="Contoh: Jakarta"
+                        class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3">
+                </label>
+                <label class="text-sm text-slate-300">Tanggal rapor
+                    <input type="date" name="report_date" value="{{ old('report_date', $period->report_date?->format('Y-m-d') ?? $period->ends_on?->format('Y-m-d')) }}" required
+                        class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3">
+                </label>
+                <button class="rounded-xl bg-sky-400 px-5 py-3 text-sm font-semibold text-slate-950">Simpan pengaturan</button>
+            </form>
+        @else
+            <p class="mt-3 text-sm text-slate-400">
+                {{ $period->report_place ?: 'Tempat belum diatur' }} ·
+                {{ ($period->report_date ?? $period->ends_on)?->translatedFormat('d F Y') }}
+            </p>
+        @endif
     </section>
 
     <section class="mt-6 space-y-4">
@@ -39,33 +63,49 @@
                     </div>
                 </summary>
 
-                <div class="border-t border-white/10 p-5">
-                    @if ($canEditSubject)
-                        <form method="POST" action="{{ route('reports.midterm.subject-results.update', $assessmentSubject) }}">
+                <div class="space-y-5 border-t border-white/10 p-5">
+                    @if ($canConfigure)
+                        <form method="POST" action="{{ route('reports.midterm.learning-objective.update', $assessmentSubject) }}" class="rounded-xl border border-violet-400/15 bg-violet-400/[0.035] p-4">
                             @csrf @method('PUT')
                             <label class="block text-sm font-medium text-slate-200">Tujuan Pembelajaran (dasar capaian)
-                                <textarea name="learning_objective" rows="4" required maxlength="2000" placeholder="Contoh: Menganalisis informasi dalam teks laporan. Pisahkan dengan baris baru jika TP lebih dari satu."
+                                <textarea name="learning_objective" rows="4" required maxlength="4000" placeholder="Masukkan satu TP per baris."
                                     class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm leading-6 outline-none focus:border-violet-400">{{ old('learning_objective', $assessmentSubject->learning_objective) }}</textarea>
                             </label>
-                            <p class="mt-2 text-xs text-slate-500">TP menjadi dasar penyusunan capaian kompetensi. Nilai CBT tampil sebagai nilai awal dan dapat disesuaikan untuk asesmen kertas. Jika capaian dikosongkan, sistem membuat kalimat positif secara otomatis dari nilai dan TP.</p>
+                            <p class="mt-2 text-xs text-slate-500">Satu baris untuk satu TP. Jika TP diubah, capaian siswa yang nilainya sudah tersimpan akan diperbarui otomatis.</p>
+                            <button class="mt-3 rounded-lg border border-violet-400/30 px-4 py-2 text-xs font-semibold text-violet-200">Simpan TP mapel</button>
+                        </form>
+                    @else
+                        <div class="rounded-xl border border-white/10 bg-slate-950/50 p-4">
+                            <p class="text-xs font-semibold uppercase tracking-[0.14em] text-violet-300">Tujuan Pembelajaran</p>
+                            <p class="mt-2 whitespace-pre-line text-sm leading-6 text-slate-300">{{ $assessmentSubject->learning_objective ?: 'TP belum disiapkan oleh panitia.' }}</p>
+                        </div>
+                    @endif
 
+                    @if ($canEditSubject)
+                        @if ($assessmentSubject->learning_objective)
+                        <form method="POST" action="{{ route('reports.midterm.subject-results.update', $assessmentSubject) }}">
+                            @csrf @method('PUT')
+                            <p class="text-xs text-slate-500">Masukkan nilai akhir saja. Sistem membuat capaian kompetensi otomatis dari nilai dan TP yang telah disiapkan.</p>
                             <div class="mt-5 overflow-x-auto">
                                 <table class="min-w-full text-left text-xs">
-                                    <thead class="border-b border-white/10 text-slate-500"><tr><th class="px-3 py-3">Peserta Didik</th><th class="w-28 px-3 py-3">Nilai Akhir</th><th class="min-w-96 px-3 py-3">Capaian Kompetensi</th></tr></thead>
+                                    <thead class="border-b border-white/10 text-slate-500"><tr><th class="px-3 py-3">Peserta Didik</th><th class="w-28 px-3 py-3">Nilai Akhir</th><th class="min-w-96 px-3 py-3">Capaian Kompetensi Otomatis</th></tr></thead>
                                     <tbody class="divide-y divide-white/5">
                                         @foreach ($rows->sortBy(fn ($item) => $item['student']->full_name) as $row)
                                             @php($result = $assessmentSubject->midtermResults->firstWhere('student_id', $row['student']->id))
                                             <tr>
                                                 <td class="px-3 py-3"><span class="font-medium text-white">{{ $row['student']->full_name }}</span><span class="mt-1 block text-slate-600">{{ $row['student']->student_number }}</span></td>
                                                 <td class="px-3 py-3"><input type="number" name="results[{{ $row['student']->id }}][score]" value="{{ old('results.'.$row['student']->id.'.score', $result?->score ?? $row['scores'][$assessmentSubject->id]) }}" min="0" max="100" step="0.01" class="w-24 rounded-lg border border-white/10 bg-slate-950 px-3 py-2"></td>
-                                                <td class="px-3 py-3"><textarea name="results[{{ $row['student']->id }}][description]" rows="2" maxlength="2000" placeholder="Kosongkan agar dibuat otomatis dari nilai dan TP" class="w-full rounded-lg border border-white/10 bg-slate-950 px-3 py-2 leading-5">{{ old('results.'.$row['student']->id.'.description', $result?->description) }}</textarea></td>
+                                                <td class="px-3 py-3 leading-5 text-slate-400">{{ $result?->description ?: 'Akan dibuat setelah nilai disimpan.' }}</td>
                                             </tr>
                                         @endforeach
                                     </tbody>
                                 </table>
                             </div>
-                            <button class="mt-4 rounded-xl bg-violet-400 px-5 py-3 text-sm font-semibold text-slate-950">Simpan nilai dan capaian mapel</button>
+                            <button class="mt-4 rounded-xl bg-violet-400 px-5 py-3 text-sm font-semibold text-slate-950">Simpan nilai</button>
                         </form>
+                        @else
+                            <p class="rounded-xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm text-amber-200">Nilai belum dapat diisi karena TP mapel belum disiapkan oleh panitia atau super admin.</p>
+                        @endif
                     @else
                         <p class="text-sm text-slate-500">Bagian ini diisi guru mata pelajaran yang ditetapkan pada Penjadwalan.</p>
                     @endif
@@ -120,10 +160,11 @@
                     @if ($canGradeActivity && $activity->participants->isNotEmpty())
                         <form method="POST" action="{{ route('reports.midterm.extracurriculars.grades', [$period, $schoolClass, $activity]) }}">
                             @csrf @method('PUT')
-                            <div class="overflow-x-auto"><table class="min-w-full text-left text-xs"><thead class="border-b border-white/10 text-slate-500"><tr><th class="px-3 py-3">Peserta</th><th class="w-44 px-3 py-3">Predikat</th><th class="min-w-96 px-3 py-3">Keterangan</th></tr></thead><tbody class="divide-y divide-white/5">
+                            <p class="mb-3 text-xs text-slate-500">Pembina cukup memilih predikat. Keterangan ekstrakurikuler dibuat otomatis oleh sistem.</p>
+                            <div class="overflow-x-auto"><table class="min-w-full text-left text-xs"><thead class="border-b border-white/10 text-slate-500"><tr><th class="px-3 py-3">Peserta</th><th class="w-44 px-3 py-3">Predikat</th><th class="min-w-96 px-3 py-3">Keterangan Otomatis</th></tr></thead><tbody class="divide-y divide-white/5">
                                 @foreach ($activity->participants as $student)
                                     @php($grade = $activity->grades->firstWhere('student_id', $student->id))
-                                    <tr><td class="px-3 py-3 font-medium text-white">{{ $student->full_name }}</td><td class="px-3 py-3"><select name="ratings[{{ $student->id }}]" required class="w-full rounded-lg border border-white/10 bg-slate-950 px-3 py-2"><option value="">Pilih</option>@foreach($ratings as $rating)<option value="{{ $rating->value }}" @selected(old('ratings.'.$student->id, $grade?->rating?->value) === $rating->value)>{{ $rating->label() }}</option>@endforeach</select></td><td class="px-3 py-3"><textarea name="descriptions[{{ $student->id }}]" rows="2" maxlength="1000" placeholder="Kosongkan untuk keterangan otomatis" class="w-full rounded-lg border border-white/10 bg-slate-950 px-3 py-2 leading-5">{{ old('descriptions.'.$student->id, $grade?->description) }}</textarea></td></tr>
+                                    <tr><td class="px-3 py-3 font-medium text-white">{{ $student->full_name }}</td><td class="px-3 py-3"><select name="ratings[{{ $student->id }}]" required class="w-full rounded-lg border border-white/10 bg-slate-950 px-3 py-2"><option value="">Pilih</option>@foreach($ratings as $rating)<option value="{{ $rating->value }}" @selected(old('ratings.'.$student->id, $grade?->rating?->value) === $rating->value)>{{ $rating->label() }}</option>@endforeach</select></td><td class="px-3 py-3 leading-5 text-slate-400">{{ $grade?->description ?: 'Akan dibuat setelah predikat disimpan.' }}</td></tr>
                                 @endforeach
                             </tbody></table></div>
                             <button class="mt-4 rounded-xl bg-emerald-400 px-5 py-3 text-sm font-semibold text-slate-950">Simpan nilai ekstrakurikuler</button>

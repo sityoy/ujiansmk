@@ -94,11 +94,11 @@ Template dan ekspor akun memuat ID, nama, email, akses, Password Baru, dan statu
 
 ### Rapor ATS bergaya E-Rapor
 
-Rapor ATS memiliki data terpisah dari percobaan CBT agar nilai asesmen kertas tetap dapat dimasukkan tanpa membuat riwayat ujian palsu. Nilai CBT yang sudah dikumpulkan menjadi nilai awal; guru mapel yang ditetapkan dapat mengisi atau menyesuaikan nilai, Tujuan Pembelajaran (TP), dan deskripsi capaian setiap peserta.
+Rapor ATS memiliki data terpisah dari percobaan CBT agar nilai asesmen kertas tetap dapat dimasukkan tanpa membuat riwayat ujian palsu. Nilai CBT yang sudah dikumpulkan menjadi nilai awal. Panitia/super admin menyiapkan Tujuan Pembelajaran (TP), lalu guru mapel yang ditetapkan cukup mengisi atau menyesuaikan nilai; deskripsi capaian kompetensi dibuat otomatis dari nilai dan TP.
 
-Super admin menetapkan wali kelas pada Data Akademik. Wali kelas mengisi rekap sakit, izin, tanpa keterangan, dan catatan wali kelas. Panitia/super admin menambahkan kegiatan ekstrakurikuler serta pesertanya, sedangkan guru pembina memberi predikat Sangat Baik, Baik, Cukup, atau Kurang. Keterangan ekstrakurikuler dibuat otomatis sesuai predikat jika kolom keterangan dikosongkan.
+Super admin menetapkan wali kelas pada Data Akademik. Wali kelas mengisi rekap sakit, izin, tanpa keterangan, dan catatan wali kelas. Panitia/super admin menambahkan kegiatan ekstrakurikuler serta pesertanya, sedangkan guru pembina cukup memberi predikat Sangat Baik, Baik, Cukup, atau Kurang. Keterangan ekstrakurikuler selalu dibuat otomatis sesuai predikat.
 
-Cetak rapor memuat KOP sekolah, nilai dan deskripsi mapel, ekstrakurikuler, ketidakhadiran, catatan wali kelas, rata-rata, serta peringkat. KOP bawaan SMK Islam Bahagia dapat diganti melalui Identitas Sekolah.
+Cetak rapor memuat KOP sekolah, nilai dan capaian kompetensi mapel, ekstrakurikuler, ketidakhadiran, catatan wali kelas, rata-rata, serta peringkat. Kelas X menggunakan Fase E dan kelas XI–XII menggunakan Fase F. Tempat dan tanggal penerbitan diatur per periode ATS sehingga tidak mengikuti tanggal saat cetak. KOP bawaan SMK Islam Bahagia dapat diganti melalui Identitas Sekolah.
 
 ### ATS isian/esai, koreksi manual, dan reset ujian
 

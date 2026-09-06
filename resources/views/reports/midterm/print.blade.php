@@ -73,18 +73,6 @@
             @endif
         </header>
 
-        @php
-            $phase = match (true) {
-                $schoolClass->grade_level <= 2 => 'A',
-                $schoolClass->grade_level <= 4 => 'B',
-                $schoolClass->grade_level <= 6 => 'C',
-                $schoolClass->grade_level <= 9 => 'D',
-                $schoolClass->grade_level === 10 => 'E',
-                default => 'F',
-            };
-            $semesterNumber = $period->semester === \App\Enums\Semester::Odd ? 1 : 2;
-        @endphp
-
         <div class="identity-layout">
             <table class="identity">
                 <tr><td>Nama Murid</td><td>: <strong>{{ $row['student']->full_name }}</strong></td></tr>
@@ -174,7 +162,7 @@
                     <p><strong><u>................................</u></strong></p>
                 </div>
                 <div class="signature-box">
-                    <p>{{ $schoolProfile?->city ?? '................' }}, {{ now()->translatedFormat('d F Y') }}<br>Wali Kelas</p>
+                    <p>{{ $period->report_place ?: ($schoolProfile?->city ?? '................') }}, {{ ($period->report_date ?? $period->ends_on)?->translatedFormat('d F Y') ?? '................' }}<br>Wali Kelas</p>
                     <div class="space"></div>
                     <p><strong><u>{{ $schoolClass->homeroomTeacher?->name ?? '................................' }}</u></strong></p>
                 </div>

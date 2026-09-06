@@ -73,21 +73,24 @@ class MidtermReportEntryController extends Controller
         abort_unless($access->canManageSubject($request->user(), $assessmentSubject), 403);
 
         $validated = $request->validate([
-            'learning_objective' => ['required', 'string', 'max:2000'],
             'results' => ['required', 'array'],
             'results.*.score' => ['nullable', 'numeric', 'between:0,100'],
-            'results.*.description' => ['nullable', 'string', 'max:2000'],
         ]);
+        $objective = trim((string) $assessmentSubject->learning_objective);
+
+        if ($objective === '') {
+            return back()->withErrors([
+                'learning_objective' => 'Tujuan pembelajaran belum diatur. Hubungi panitia atau super admin sebelum menyimpan nilai.',
+            ]);
+        }
+
         $studentIds = Student::query()
             ->where('school_class_id', $assessmentSubject->school_class_id)
             ->where('is_active', true)
             ->pluck('id')
             ->all();
 
-        DB::transaction(function () use ($validated, $studentIds, $assessmentSubject, $request, $reports): void {
-            $objective = trim($validated['learning_objective']);
-            $assessmentSubject->update(['learning_objective' => $objective]);
-
+        DB::transaction(function () use ($validated, $studentIds, $assessmentSubject, $request, $reports, $objective): void {
             foreach ($studentIds as $studentId) {
                 $data = $validated['results'][$studentId] ?? null;
                 if (! $data || $data['score'] === null || $data['score'] === '') {
@@ -95,19 +98,69 @@ class MidtermReportEntryController extends Controller
                 }
 
                 $score = (float) $data['score'];
-                $description = trim((string) ($data['description'] ?? ''));
                 MidtermSubjectResult::query()->updateOrCreate(
                     ['assessment_subject_id' => $assessmentSubject->id, 'student_id' => $studentId],
                     [
                         'score' => $score,
-                        'description' => $description !== '' ? $description : $reports->subjectDescription($score, $objective),
+                        'description' => $reports->subjectDescription($score, $objective),
                         'recorded_by_user_id' => $request->user()->id,
                     ],
                 );
             }
         });
 
-        return back()->with('status', 'Nilai, tujuan pembelajaran, dan capaian kompetensi '.$assessmentSubject->subject->name.' berhasil disimpan.');
+        return back()->with('status', 'Nilai dan capaian kompetensi otomatis '.$assessmentSubject->subject->name.' berhasil disimpan.');
+    }
+
+    public function updateLearningObjective(
+        Request $request,
+        AssessmentSubject $assessmentSubject,
+        MidtermReportAccess $access,
+        MidtermReportService $reports,
+    ): RedirectResponse {
+        $assessmentSubject->loadMissing(['assessmentPeriod', 'schoolClass', 'subject']);
+        $this->assertContext($assessmentSubject->assessmentPeriod, $assessmentSubject->schoolClass);
+        abort_unless($access->canConfigure($request->user()), 403);
+
+        $validated = $request->validate([
+            'learning_objective' => ['required', 'string', 'max:4000'],
+        ]);
+        $objective = collect(preg_split('/\R/u', trim($validated['learning_objective'])) ?: [])
+            ->map(fn (string $line) => trim($line))
+            ->filter()
+            ->implode(PHP_EOL);
+
+        DB::transaction(function () use ($assessmentSubject, $objective, $reports): void {
+            $assessmentSubject->update(['learning_objective' => $objective]);
+            $assessmentSubject->midtermResults()->get()->each(
+                fn (MidtermSubjectResult $result) => $result->update([
+                    'description' => $reports->subjectDescription((float) $result->score, $objective),
+                ]),
+            );
+        });
+
+        return back()->with('status', 'Tujuan pembelajaran '.$assessmentSubject->subject->name.' berhasil diperbarui.');
+    }
+
+    public function updateReportSettings(
+        Request $request,
+        AssessmentPeriod $assessmentPeriod,
+        SchoolClass $schoolClass,
+        MidtermReportAccess $access,
+    ): RedirectResponse {
+        $this->assertContext($assessmentPeriod, $schoolClass);
+        abort_unless($access->canConfigure($request->user()), 403);
+        $validated = $request->validate([
+            'report_place' => ['required', 'string', 'max:120'],
+            'report_date' => ['required', 'date'],
+        ]);
+
+        $assessmentPeriod->update([
+            'report_place' => trim($validated['report_place']),
+            'report_date' => $validated['report_date'],
+        ]);
+
+        return back()->with('status', 'Tempat dan tanggal rapor ATS berhasil disimpan.');
     }
 
     public function updateAttendance(
@@ -242,8 +295,6 @@ class MidtermReportEntryController extends Controller
         $validated = $request->validate([
             'ratings' => ['required', 'array'],
             'ratings.*' => ['required', Rule::enum(ExtracurricularRating::class)],
-            'descriptions' => ['nullable', 'array'],
-            'descriptions.*' => ['nullable', 'string', 'max:1000'],
         ]);
         $participantIds = $extracurricular->participants()->where('school_class_id', $schoolClass->id)->pluck('students.id');
 
@@ -255,7 +306,6 @@ class MidtermReportEntryController extends Controller
                 }
 
                 $rating = ExtracurricularRating::from($ratingValue);
-                $description = trim((string) ($validated['descriptions'][$studentId] ?? ''));
                 ExtracurricularGrade::query()->updateOrCreate(
                     [
                         'assessment_period_id' => $assessmentPeriod->id,
@@ -264,7 +314,7 @@ class MidtermReportEntryController extends Controller
                     ],
                     [
                         'rating' => $rating,
-                        'description' => $description !== '' ? $description : $rating->defaultDescription($extracurricular->name),
+                        'description' => $rating->defaultDescription($extracurricular->name),
                         'graded_by_user_id' => $request->user()->id,
                     ],
                 );

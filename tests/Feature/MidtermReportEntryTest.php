@@ -21,22 +21,26 @@ class MidtermReportEntryTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_subject_teacher_can_save_scores_learning_objective_and_descriptions(): void
+    public function test_admin_sets_objective_and_assigned_teacher_only_enters_score(): void
     {
         [$period, $class, $student, $subject] = $this->makeContext();
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
         $teacher = User::factory()->create(['role' => UserRole::Teacher]);
         $subject->update(['teacher_user_id' => $teacher->id]);
 
+        $this->actingAs($admin)->put(route('reports.midterm.learning-objective.update', $subject), [
+            'learning_objective' => "Menganalisis informasi dalam teks laporan.\n\nMenyajikan hasil analisis secara runtut.",
+        ])->assertSessionHasNoErrors();
+
         $this->actingAs($teacher)->put(route('reports.midterm.subject-results.update', $subject), [
-            'learning_objective' => 'Menganalisis informasi dalam teks laporan.',
             'results' => [
-                $student->id => ['score' => 88, 'description' => ''],
+                $student->id => ['score' => 88, 'description' => 'Deskripsi manual tidak boleh digunakan.'],
             ],
         ])->assertSessionHasNoErrors();
 
         $this->assertDatabaseHas('assessment_subjects', [
             'id' => $subject->id,
-            'learning_objective' => 'Menganalisis informasi dalam teks laporan.',
+            'learning_objective' => "Menganalisis informasi dalam teks laporan.\nMenyajikan hasil analisis secara runtut.",
         ]);
         $this->assertDatabaseHas('midterm_subject_results', [
             'assessment_subject_id' => $subject->id,
@@ -44,13 +48,39 @@ class MidtermReportEntryTest extends TestCase
             'score' => 88,
             'recorded_by_user_id' => $teacher->id,
         ]);
-        $this->assertStringContainsString('sangat baik', $subject->midtermResults()->firstOrFail()->description);
+        $result = $subject->midtermResults()->firstOrFail();
+        $this->assertStringContainsString('sangat baik', $result->description);
+        $this->assertStringNotContainsString('Deskripsi manual', $result->description);
+
+        $this->actingAs($admin)->put(route('reports.midterm.learning-objective.update', $subject), [
+            'learning_objective' => 'Menyusun teks laporan yang logis.',
+        ])->assertSessionHasNoErrors();
+        $this->assertStringContainsString('menyusun teks laporan', $result->fresh()->description);
 
         $otherTeacher = User::factory()->create(['role' => UserRole::Teacher]);
         $this->actingAs($otherTeacher)->put(route('reports.midterm.subject-results.update', $subject), [
-            'learning_objective' => 'Tidak boleh diubah.',
             'results' => [$student->id => ['score' => 10]],
         ])->assertForbidden();
+        $this->actingAs($teacher)->put(route('reports.midterm.learning-objective.update', $subject), [
+            'learning_objective' => 'Guru tidak boleh mengubah TP.',
+        ])->assertForbidden();
+    }
+
+    public function test_admin_can_set_report_place_and_date(): void
+    {
+        [$period, $class] = $this->makeContext();
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+
+        $this->actingAs($admin)->put(route('reports.midterm.settings.update', [$period, $class]), [
+            'report_place' => 'Jakarta',
+            'report_date' => '2026-09-18',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('assessment_periods', [
+            'id' => $period->id,
+            'report_place' => 'Jakarta',
+            'report_date' => '2026-09-18',
+        ]);
     }
 
     public function test_homeroom_teacher_can_record_attendance_but_other_teacher_cannot(): void
@@ -102,7 +132,7 @@ class MidtermReportEntryTest extends TestCase
 
         $this->actingAs($coach)->put(route('reports.midterm.extracurriculars.grades', [$period, $class, $activity]), [
             'ratings' => [$student->id => ExtracurricularRating::VeryGood->value],
-            'descriptions' => [$student->id => ''],
+            'descriptions' => [$student->id => 'Keterangan manual tidak boleh digunakan.'],
         ])->assertSessionHasNoErrors();
 
         $this->assertDatabaseHas('extracurricular_grades', [
@@ -112,7 +142,9 @@ class MidtermReportEntryTest extends TestCase
             'rating' => ExtracurricularRating::VeryGood->value,
             'graded_by_user_id' => $coach->id,
         ]);
-        $this->assertStringContainsString('sangat baik', $activity->grades()->firstOrFail()->description);
+        $description = $activity->grades()->firstOrFail()->description;
+        $this->assertStringContainsString('sangat baik', $description);
+        $this->assertStringNotContainsString('Keterangan manual', $description);
     }
 
     public function test_midterm_print_contains_description_extracurricular_and_attendance(): void
@@ -122,6 +154,7 @@ class MidtermReportEntryTest extends TestCase
         $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
         $homeroom = User::factory()->create(['role' => UserRole::Teacher, 'name' => 'Wali Kelas Contoh']);
         $class->update(['homeroom_teacher_user_id' => $homeroom->id]);
+        $period->update(['report_place' => 'Jakarta Barat', 'report_date' => '2026-09-18']);
         $subject->update(['learning_objective' => 'Memahami teks laporan.']);
         $subject->midtermResults()->create([
             'student_id' => $student->id,
@@ -162,6 +195,7 @@ class MidtermReportEntryTest extends TestCase
             ->assertSee('Aktif dan disiplin mengikuti latihan.')
             ->assertSee('Pertahankan prestasi belajar.')
             ->assertSee('Wali Kelas Contoh')
+            ->assertSee('Jakarta Barat, 18 September 2026')
             ->assertDontSee('<strong>TP:</strong>', false);
     }
 

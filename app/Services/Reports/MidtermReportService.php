@@ -4,6 +4,7 @@ namespace App\Services\Reports;
 
 use App\Enums\AssessmentType;
 use App\Enums\AttemptStatus;
+use App\Enums\Semester;
 use App\Models\AssessmentPeriod;
 use App\Models\AssessmentSubject;
 use App\Models\Extracurricular;
@@ -120,6 +121,8 @@ class MidtermReportService
         return [
             'period' => $period->loadMissing('academicYear'),
             'schoolClass' => $schoolClass->loadMissing(['academicYear', 'homeroomTeacher']),
+            'phase' => $this->phase($schoolClass->grade_level),
+            'semesterNumber' => $period->semester === Semester::Odd ? 1 : 2,
             'subjects' => $subjects,
             'extracurriculars' => $extracurriculars,
             'rows' => $rows,
@@ -138,6 +141,18 @@ class MidtermReportService
             $score >= 76 => 'Menunjukkan penguasaan baik dalam '.$target.'.',
             $score >= 66 => 'Menunjukkan penguasaan cukup dalam '.$target.' dan perlu meningkatkan konsistensi.',
             default => 'Perlu peningkatan dan bimbingan dalam '.$target.'.',
+        };
+    }
+
+    public function phase(int $gradeLevel): string
+    {
+        return match (true) {
+            $gradeLevel <= 2 => 'A',
+            $gradeLevel <= 4 => 'B',
+            $gradeLevel <= 6 => 'C',
+            $gradeLevel <= 9 => 'D',
+            $gradeLevel === 10 => 'E',
+            default => 'F',
         };
     }
 

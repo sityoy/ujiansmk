@@ -169,6 +169,8 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             Route::get('/{assessmentPeriod}/{schoolClass}/edit', [MidtermReportEntryController::class, 'edit'])->name('edit');
             Route::get('/{assessmentPeriod}/{schoolClass}/{student}/print', [MidtermReportController::class, 'print'])->name('print');
             Route::put('/subjects/{assessmentSubject}', [MidtermReportEntryController::class, 'updateSubjectResults'])->name('subject-results.update');
+            Route::put('/subjects/{assessmentSubject}/learning-objective', [MidtermReportEntryController::class, 'updateLearningObjective'])->name('learning-objective.update');
+            Route::put('/{assessmentPeriod}/{schoolClass}/settings', [MidtermReportEntryController::class, 'updateReportSettings'])->name('settings.update');
             Route::put('/{assessmentPeriod}/{schoolClass}/attendance', [MidtermReportEntryController::class, 'updateAttendance'])->name('attendance.update');
             Route::post('/{assessmentPeriod}/{schoolClass}/extracurriculars', [MidtermReportEntryController::class, 'storeExtracurricular'])->name('extracurriculars.store');
             Route::patch('/{assessmentPeriod}/{schoolClass}/extracurriculars/{extracurricular}', [MidtermReportEntryController::class, 'updateExtracurricular'])->name('extracurriculars.update');

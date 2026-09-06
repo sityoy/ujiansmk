@@ -68,6 +68,15 @@ class MidtermReportServiceTest extends TestCase
         );
     }
 
+    public function test_phase_matches_smk_grade_levels(): void
+    {
+        $service = app(MidtermReportService::class);
+
+        $this->assertSame('E', $service->phase(10));
+        $this->assertSame('F', $service->phase(11));
+        $this->assertSame('F', $service->phase(12));
+    }
+
     private function makeReportData(): array
     {
         $academicYear = AcademicYear::create([

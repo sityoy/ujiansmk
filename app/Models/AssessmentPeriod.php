@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'academic_year_id', 'code', 'name', 'type', 'semester', 'sequence_no',
-    'starts_on', 'ends_on', 'status',
+    'starts_on', 'ends_on', 'report_place', 'report_date', 'status',
 ])]
 class AssessmentPeriod extends Model
 {
@@ -24,6 +24,7 @@ class AssessmentPeriod extends Model
             'status' => PeriodStatus::class,
             'starts_on' => 'date',
             'ends_on' => 'date',
+            'report_date' => 'date',
         ];
     }
 
