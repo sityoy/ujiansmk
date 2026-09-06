@@ -4,6 +4,7 @@ use App\Http\Controllers\AcademicDataController;
 use App\Http\Controllers\AttendanceSecurityController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordChangeController;
+use App\Http\Controllers\CampusController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExamOperationsController;
 use App\Http\Controllers\ExamGradingController;
@@ -112,9 +113,6 @@ Route::middleware(['auth', 'active'])->group(function (): void {
         ->name('scheduling.')
         ->group(function (): void {
             Route::get('/', [SchedulingController::class, 'index'])->name('index');
-            Route::post('/campuses', [SchedulingController::class, 'storeCampus'])->name('campuses.store');
-            Route::patch('/campuses/{campus}/toggle', [SchedulingController::class, 'toggleCampus'])->name('campuses.toggle');
-
             Route::post('/periods', [SchedulingController::class, 'storePeriod'])->name('periods.store');
             Route::patch('/periods/{assessmentPeriod}/status', [SchedulingController::class, 'updatePeriodStatus'])->name('periods.status');
             Route::delete('/periods/{assessmentPeriod}', [SchedulingController::class, 'destroyPeriod'])->name('periods.destroy');
@@ -131,6 +129,17 @@ Route::middleware(['auth', 'active'])->group(function (): void {
                 ->name('assign-class');
             Route::post('/makeup/move', [SchedulingController::class, 'moveToMakeup'])->name('makeup.move');
 
+        });
+
+    Route::prefix('scheduling/campuses')
+        ->middleware('role:super_admin,committee,principal')
+        ->name('scheduling.campuses.')
+        ->group(function (): void {
+            Route::get('/', [CampusController::class, 'index'])->name('index');
+            Route::post('/', [CampusController::class, 'store'])->name('store');
+            Route::put('/{campus}', [CampusController::class, 'update'])->name('update');
+            Route::patch('/{campus}/toggle', [CampusController::class, 'toggle'])->name('toggle');
+            Route::delete('/{campus}', [CampusController::class, 'destroy'])->name('destroy');
         });
 
     Route::get('/question-bank', [QuestionBankController::class, 'catalog'])

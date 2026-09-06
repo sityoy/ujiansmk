@@ -55,8 +55,14 @@
                 @endif
 
                 @if (in_array($currentRole, ['super_admin', 'committee'], true))
-                    <a href="{{ route('scheduling.index') }}" class="rounded-xl px-4 py-3 {{ request()->routeIs('scheduling.*') && !request()->routeIs('scheduling.questions.*') ? 'bg-cyan-400 text-slate-950 font-semibold' : 'text-slate-300 hover:bg-white/5' }}">
+                    <a href="{{ route('scheduling.index') }}" class="rounded-xl px-4 py-3 {{ request()->routeIs('scheduling.*') && !request()->routeIs('scheduling.questions.*', 'scheduling.campuses.*') ? 'bg-cyan-400 text-slate-950 font-semibold' : 'text-slate-300 hover:bg-white/5' }}">
                         Penjadwalan
+                    </a>
+                @endif
+
+                @if (in_array($currentRole, ['super_admin', 'committee', 'principal'], true))
+                    <a href="{{ route('scheduling.campuses.index') }}" class="rounded-xl px-4 py-3 {{ request()->routeIs('scheduling.campuses.*') ? 'bg-cyan-400 text-slate-950 font-semibold' : 'text-slate-300 hover:bg-white/5' }}">
+                        Lokasi & radius
                     </a>
                 @endif
 

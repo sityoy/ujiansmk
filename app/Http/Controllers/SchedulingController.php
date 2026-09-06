@@ -40,7 +40,10 @@ class SchedulingController extends Controller
 
         return view('scheduling.index', [
             'academicYears' => AcademicYear::query()->orderByDesc('starts_on')->get(),
-            'campuses' => Campus::query()->orderBy('name')->get(),
+            'campuses' => Campus::query()
+                ->withCount(['examSessions', 'dailyCheckins'])
+                ->orderBy('name')
+                ->get(),
             'subjects' => Subject::query()->where('is_active', true)->orderBy('name')->get(),
             'teachers' => User::query()->where('role', UserRole::Teacher)->where('is_active', true)->orderBy('name')->get(),
             'classes' => SchoolClass::query()->with('academicYear')->orderBy('name')->get(),
@@ -89,28 +92,6 @@ class SchedulingController extends Controller
             'sessionClassId' => $sessionClassId,
             'sessionSearch' => $sessionSearch,
         ]);
-    }
-
-    public function storeCampus(Request $request): RedirectResponse
-    {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'latitude' => ['required', 'numeric', 'between:-90,90'],
-            'longitude' => ['required', 'numeric', 'between:-180,180'],
-            'radius_meters' => ['required', 'integer', 'between:10,5000'],
-            'max_accuracy_meters' => ['required', 'integer', 'between:5,500'],
-        ]);
-
-        Campus::create([...$validated, 'is_active' => true]);
-
-        return back()->with('status', 'Lokasi ujian berhasil ditambahkan.');
-    }
-
-    public function toggleCampus(Campus $campus): RedirectResponse
-    {
-        $campus->update(['is_active' => ! $campus->is_active]);
-
-        return back()->with('status', 'Status lokasi berhasil diperbarui.');
     }
 
     public function storePeriod(Request $request): RedirectResponse

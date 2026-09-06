@@ -75,6 +75,68 @@ class SchedulingManagementTest extends TestCase
         $this->actingAs($teacher)->get(route('scheduling.index'))->assertForbidden();
     }
 
+    public function test_principal_can_manage_locations_without_full_scheduling_access(): void
+    {
+        $this->withoutVite();
+        $principal = User::factory()->create(['role' => UserRole::Principal]);
+        $teacher = User::factory()->create(['role' => UserRole::Teacher]);
+        $campus = Campus::create([
+            'name' => 'Gedung Lama',
+            'latitude' => -6.2000000,
+            'longitude' => 106.8166667,
+            'radius_meters' => 100,
+            'max_accuracy_meters' => 50,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($principal)
+            ->get(route('scheduling.campuses.index'))
+            ->assertOk()
+            ->assertSee('Lokasi dan Radius Ujian')
+            ->assertSee('Gedung Lama');
+        $this->get(route('scheduling.index'))->assertForbidden();
+
+        $this->put(route('scheduling.campuses.update', $campus), [
+            'name' => 'Gedung Utama',
+            'latitude' => -6.2010000,
+            'longitude' => 106.8170000,
+            'radius_meters' => 175,
+            'max_accuracy_meters' => 35,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $campus->refresh();
+        $this->assertSame('Gedung Utama', $campus->name);
+        $this->assertSame(175, $campus->radius_meters);
+        $this->assertSame(35, $campus->max_accuracy_meters);
+
+        $this->actingAs($teacher)->get(route('scheduling.campuses.index'))->assertForbidden();
+    }
+
+    public function test_unused_location_can_be_deleted_but_used_location_is_preserved(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        [, , , $usedCampus] = $this->makeSchedule();
+        $unusedCampus = Campus::create([
+            'name' => 'Lokasi Sementara',
+            'latitude' => -6.2100000,
+            'longitude' => 106.8200000,
+            'radius_meters' => 100,
+            'max_accuracy_meters' => 50,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->delete(route('scheduling.campuses.destroy', $unusedCampus))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+        $this->assertDatabaseMissing('campuses', ['id' => $unusedCampus->id]);
+
+        $this->delete(route('scheduling.campuses.destroy', $usedCampus))
+            ->assertRedirect()
+            ->assertSessionHasErrors('campus');
+        $this->assertDatabaseHas('campuses', ['id' => $usedCampus->id]);
+    }
+
     public function test_session_end_is_calculated_and_class_time_conflicts_are_rejected(): void
     {
         $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);

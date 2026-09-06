@@ -26,41 +26,7 @@
     </div>
 
     <div class="grid gap-6 xl:grid-cols-2">
-        <section class="rounded-3xl border border-white/10 bg-white/[0.035] p-6">
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">01 · Lokasi</p>
-            <h2 class="mt-2 text-xl font-semibold text-white">Lokasi dan radius ujian</h2>
-
-            <form method="POST" action="{{ route('scheduling.campuses.store') }}" class="mt-6 grid gap-3 sm:grid-cols-2">
-                @csrf
-                <input name="name" required placeholder="Nama lokasi/kampus"
-                    class="sm:col-span-2 rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400">
-                <input type="number" step="0.0000001" name="latitude" required placeholder="Latitude"
-                    class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400">
-                <input type="number" step="0.0000001" name="longitude" required placeholder="Longitude"
-                    class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400">
-                <input type="number" name="radius_meters" value="100" min="10" max="5000" required placeholder="Radius (meter)"
-                    class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400">
-                <input type="number" name="max_accuracy_meters" value="50" min="5" max="500" required placeholder="Akurasi GPS maksimum"
-                    class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400">
-                <button class="sm:col-span-2 rounded-xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950">Simpan lokasi</button>
-            </form>
-
-            <div class="mt-5 space-y-2">
-                @forelse ($campuses as $campus)
-                    <div class="flex items-center justify-between rounded-xl border border-white/10 bg-slate-950/40 p-3">
-                        <div>
-                            <p class="text-sm font-medium text-white">{{ $campus->name }}</p>
-                            <p class="text-xs text-slate-500">Radius {{ $campus->radius_meters }} m · akurasi ≤ {{ $campus->max_accuracy_meters }} m</p>
-                        </div>
-                        <form method="POST" action="{{ route('scheduling.campuses.toggle', $campus) }}">@csrf @method('PATCH')
-                            <button class="text-xs {{ $campus->is_active ? 'text-emerald-300' : 'text-slate-500' }}">{{ $campus->is_active ? 'Aktif' : 'Nonaktif' }}</button>
-                        </form>
-                    </div>
-                @empty
-                    <p class="text-sm text-slate-500">Belum ada lokasi ujian.</p>
-                @endforelse
-            </div>
-        </section>
+        @include('campuses.partials.manager')
 
         <section class="rounded-3xl border border-white/10 bg-white/[0.035] p-6">
             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-violet-300">02 · Periode</p>
