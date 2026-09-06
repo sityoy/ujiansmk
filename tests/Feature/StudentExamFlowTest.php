@@ -369,6 +369,81 @@ class StudentExamFlowTest extends TestCase
         $this->assertNotNull($attempt->fresh()->security_locked_at);
     }
 
+    public function test_super_admin_can_reset_violations_without_changing_answers_or_deadline(): void
+    {
+        [$student, $assignment, $questions] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $attempts = app(ExamAttemptService::class);
+        $deadline = $attempts->deadline($attempt)->toIso8601String();
+        $attempts->saveAnswer($attempt, $questions[0], 'A');
+        $this->lockAttempt($student, $attempt);
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+
+        $this->actingAs($admin)->post(route('operations.attempts.reset-violations', $attempt), [
+            'reason' => 'Gangguan perangkat siswa sudah diverifikasi.',
+        ])->assertSessionHasNoErrors()->assertSessionHas('status');
+
+        $attempt->refresh();
+        $this->assertSame(0, (int) $attempt->violation_count);
+        $this->assertNull($attempt->security_locked_at);
+        $this->assertSame(2, (int) $attempt->security_lock_version);
+        $this->assertSame(AttemptStatus::InProgress, $attempt->status);
+        $this->assertSame($deadline, $attempts->deadline($attempt)->toIso8601String());
+        $this->assertDatabaseCount('exam_answers', 1);
+        $this->assertSame(3, $attempt->securityIncidents()->count());
+        $audit = $attempt->securityIncidents()->where('category', 'supervisor_reset')->firstOrFail();
+        $this->assertSame($admin->id, $audit->details['reviewer_id']);
+        $this->assertSame(2, $audit->details['previous_count']);
+
+        $this->travel(4)->seconds();
+        $this->securityEvent($student, $attempt)->assertJson(['violations' => 1, 'locked' => false]);
+    }
+
+    public function test_committee_can_reset_a_warning_but_proctor_cannot_reset_violations(): void
+    {
+        [$student, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $this->securityEvent($student, $attempt)->assertJson(['violations' => 1]);
+        $url = route('operations.attempts.reset-violations', $attempt);
+        $proctor = User::factory()->create(['role' => UserRole::Proctor]);
+        $this->actingAs($proctor)->post($url, ['reason' => 'Perangkat sudah diperiksa.'])->assertForbidden();
+        $this->assertSame(1, (int) $attempt->fresh()->violation_count);
+
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $this->actingAs($committee)->post($url, ['reason' => 'Perangkat sudah diperiksa.'])
+            ->assertSessionHasNoErrors();
+        $this->assertSame(0, (int) $attempt->fresh()->violation_count);
+        $this->assertSame(1, (int) $attempt->fresh()->security_lock_version);
+    }
+
+    public function test_reset_violations_requires_a_reason_and_an_active_attempt(): void
+    {
+        [$student, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $this->securityEvent($student, $attempt)->assertJson(['violations' => 1]);
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $url = route('operations.attempts.reset-violations', $attempt);
+
+        $this->actingAs($admin)->post($url, ['reason' => ''])->assertSessionHasErrors('reason');
+        $this->assertSame(1, (int) $attempt->fresh()->violation_count);
+        $attempt->update(['status' => AttemptStatus::Submitted, 'submitted_at' => now()]);
+        $this->post($url, ['reason' => 'Reset sesudah ujian selesai.'])->assertSessionHasErrors('security');
+        $this->assertSame(1, (int) $attempt->fresh()->violation_count);
+    }
+
+    public function test_only_admin_and_committee_see_the_reset_control(): void
+    {
+        [$student, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $this->securityEvent($student, $attempt)->assertJson(['violations' => 1]);
+        $route = route('operations.sessions.show', $assignment->examSession);
+
+        $proctor = User::factory()->create(['role' => UserRole::Proctor]);
+        $this->actingAs($proctor)->get($route)->assertOk()->assertDontSee('Reset pelanggaran ke 0');
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $this->actingAs($committee)->get($route)->assertOk()->assertSee('Reset pelanggaran ke 0');
+    }
+
     public function test_another_student_or_device_cannot_report_or_inspect_security(): void
     {
         [$user, $assignment] = $this->makeExam();

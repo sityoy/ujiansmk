@@ -120,6 +120,16 @@ class ExamOperationsController extends Controller
         return back()->with('status', 'Pemeriksaan dicatat. Jawaban, batas waktu, dan riwayat pelanggaran tetap dipertahankan.');
     }
 
+    public function resetViolations(Request $request, ExamAttempt $attempt, ExamSecurityService $security): RedirectResponse
+    {
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'min:5', 'max:1000'],
+        ]);
+        $security->resetViolations($attempt, $request->user(), $validated['reason']);
+
+        return back()->with('status', 'Hitungan pelanggaran direset ke 0. Jawaban, waktu, dan riwayat pengawasan tetap dipertahankan.');
+    }
+
     public function updateSessionStatus(
         Request $request,
         ExamSession $examSession,

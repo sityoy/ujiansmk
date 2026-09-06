@@ -145,6 +145,9 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             Route::get('/sessions/{examSession}', [ExamOperationsController::class, 'show'])->name('sessions.show');
             Route::post('/attempts/{attempt}/security-review', [ExamOperationsController::class, 'reviewSecurity'])
                 ->name('attempts.security-review');
+            Route::post('/attempts/{attempt}/reset-violations', [ExamOperationsController::class, 'resetViolations'])
+                ->middleware('role:super_admin,committee')
+                ->name('attempts.reset-violations');
             Route::patch('/sessions/{examSession}/status', [ExamOperationsController::class, 'updateSessionStatus'])
                 ->name('sessions.status');
         });

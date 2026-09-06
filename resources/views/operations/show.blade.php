@@ -73,7 +73,7 @@
                                     <details class="mt-2 text-xs">
                                         <summary class="cursor-pointer text-cyan-300">Riwayat pengawasan</summary>
                                         @forelse ($attempt->securityIncidents as $incident)
-                                            <p class="mt-3 leading-5">{{ $incident->occurred_at->format('d/m H:i:s') }} · {{ ['tab_hidden' => 'Halaman tidak terlihat', 'fullscreen_exit' => 'Keluar layar penuh', 'supervisor_resume' => 'Diizinkan lanjut', 'supervisor_submit' => 'Dikumpulkan pengawas'][$incident->category] ?? $incident->category }}
+                                            <p class="mt-3 leading-5">{{ $incident->occurred_at->format('d/m H:i:s') }} · {{ ['tab_hidden' => 'Halaman tidak terlihat', 'fullscreen_exit' => 'Keluar layar penuh', 'supervisor_resume' => 'Diizinkan lanjut', 'supervisor_submit' => 'Dikumpulkan pengawas', 'supervisor_reset' => 'Hitungan pelanggaran direset'][$incident->category] ?? $incident->category }}
                                                 @if (array_key_exists('counted', $incident->details ?? [])) · {{ $incident->details['counted'] ? 'Dihitung' : 'Sinyal bersamaan; tidak dihitung ulang' }} @endif
                                                 @if (isset($incident->details['reason']))<br>{{ $incident->details['reviewer_name'] ?? 'Pengawas' }}: {{ $incident->details['reason'] }}@endif
                                             </p>
@@ -95,6 +95,16 @@
                                             </select>
                                             <p class="text-xs leading-5 text-slate-400">Jika diizinkan lanjut, hitungan tetap 2/2 dan kejadian berikutnya langsung mengunci kembali.</p>
                                             <button class="rounded-lg bg-amber-400 px-3 py-2 text-xs font-semibold text-slate-950">Simpan keputusan</button>
+                                        </form>
+                                    @endif
+                                    @if ($attempt->security_enabled && $attempt->status->value === 'in_progress' && $attempt->violation_count > 0 && in_array(auth()->user()->role->value, ['super_admin', 'committee'], true))
+                                        <form method="POST" action="{{ route('operations.attempts.reset-violations', $attempt) }}" class="mt-3 space-y-2 border-t border-white/10 pt-3" onsubmit="return confirm('Reset hitungan pelanggaran peserta ke 0? Jawaban dan riwayat tetap disimpan.')">
+                                            @csrf
+                                            <label class="block text-xs text-rose-200">Alasan reset pelanggaran (wajib)
+                                                <textarea name="reason" required minlength="5" maxlength="1000" rows="2" class="mt-1 w-full rounded-lg border border-white/20 bg-slate-950 p-2 text-white"></textarea>
+                                            </label>
+                                            <p class="text-xs leading-5 text-slate-400">Reset membuka kunci dan memberi jatah 2 pelanggaran baru. Jawaban, batas waktu asli, dan riwayat kejadian tidak dihapus.</p>
+                                            <button class="rounded-lg border border-rose-300/40 px-3 py-2 text-xs font-semibold text-rose-200">Reset pelanggaran ke 0</button>
                                         </form>
                                     @endif
                                 @endif

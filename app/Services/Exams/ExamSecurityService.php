@@ -91,4 +91,53 @@ class ExamSecurityService
             }
         });
     }
+
+    public function resetViolations(ExamAttempt $attempt, User $reviewer, string $reason): void
+    {
+        DB::transaction(function () use ($attempt, $reviewer, $reason): void {
+            $attempt = ExamAttempt::query()->lockForUpdate()->findOrFail($attempt->id);
+            if ($attempt->status !== AttemptStatus::InProgress) {
+                throw ValidationException::withMessages([
+                    'security' => 'Pelanggaran hanya dapat direset ketika ujian masih berlangsung.',
+                ]);
+            }
+            if (! $attempt->security_enabled) {
+                throw ValidationException::withMessages([
+                    'security' => 'Penguncian keamanan tidak aktif pada ujian ini.',
+                ]);
+            }
+            if (app(ExamAttemptService::class)->isExpired($attempt)) {
+                throw ValidationException::withMessages([
+                    'security' => 'Waktu ujian sudah habis. Pelanggaran tidak dapat direset.',
+                ]);
+            }
+            if ($attempt->violation_count < 1 && ! $attempt->security_locked_at) {
+                throw ValidationException::withMessages([
+                    'security' => 'Peserta ini tidak memiliki pelanggaran yang perlu direset.',
+                ]);
+            }
+
+            $previousCount = (int) $attempt->violation_count;
+            $previousVersion = (int) $attempt->security_lock_version;
+            $attempt->forceFill([
+                'violation_count' => 0,
+                'security_locked_at' => null,
+                // Invalidate a review form that was opened before this reset.
+                'security_lock_version' => $previousVersion + 1,
+            ])->save();
+            $attempt->securityIncidents()->create([
+                'category' => 'supervisor_reset',
+                'severity' => 0,
+                'occurred_at' => now(),
+                'details' => [
+                    'reviewer_id' => $reviewer->id,
+                    'reviewer_name' => $reviewer->name,
+                    'reason' => $reason,
+                    'previous_count' => $previousCount,
+                    'previous_lock_version' => $previousVersion,
+                    'new_lock_version' => $previousVersion + 1,
+                ],
+            ]);
+        });
+    }
 }
