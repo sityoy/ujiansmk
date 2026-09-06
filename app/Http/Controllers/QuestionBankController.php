@@ -140,12 +140,24 @@ class QuestionBankController extends Controller
             DB::transaction(function () use ($assessmentSubject, $question): void {
                 $this->assertEditable($assessmentSubject);
                 $question->delete();
+
+                ExamQuestion::query()
+                    ->where('assessment_subject_id', $assessmentSubject->id)
+                    ->orderBy('position')
+                    ->lockForUpdate()
+                    ->get()
+                    ->each(function (ExamQuestion $remainingQuestion, int $index): void {
+                        $newPosition = $index + 1;
+                        if ((int) $remainingQuestion->position !== $newPosition) {
+                            $remainingQuestion->update(['position' => $newPosition]);
+                        }
+                    });
             });
         } catch (QueryException) {
             return back()->withErrors(['question' => 'Soal tidak dapat dihapus karena sudah digunakan.']);
         }
 
-        return back()->with('status', 'Soal berhasil dihapus.');
+        return back()->with('status', 'Soal berhasil dihapus dan nomor soal telah dirapikan.');
     }
 
     private function assertEditable(AssessmentSubject $component): void

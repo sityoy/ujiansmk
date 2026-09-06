@@ -100,6 +100,47 @@ class QuestionBankAccessTest extends TestCase
         $this->get(route('scheduling.questions.index', $other))->assertOk();
     }
 
+    public function test_deleting_questions_renumbers_remaining_questions_without_gaps(): void
+    {
+        [$teacher, , $assigned] = $this->makeComponents();
+
+        foreach (range(1, 4) as $position) {
+            $assigned->questions()->create([
+                'question_type' => ExamQuestionType::ShortAnswer,
+                'question_text' => 'Pertanyaan '.$position,
+                'points' => 1,
+                'position' => $position,
+            ]);
+        }
+
+        $questions = $assigned->questions()->get();
+        $this->actingAs($teacher)
+            ->delete(route('scheduling.questions.destroy', [$assigned, $questions[0]]))
+            ->assertRedirect()
+            ->assertSessionHas('status', 'Soal berhasil dihapus dan nomor soal telah dirapikan.');
+
+        $this->assertSame(
+            [
+                ['question_text' => 'Pertanyaan 2', 'position' => 1],
+                ['question_text' => 'Pertanyaan 3', 'position' => 2],
+                ['question_text' => 'Pertanyaan 4', 'position' => 3],
+            ],
+            $assigned->questions()->get(['question_text', 'position'])->toArray(),
+        );
+
+        $middleQuestion = $assigned->questions()->where('position', 2)->firstOrFail();
+        $this->delete(route('scheduling.questions.destroy', [$assigned, $middleQuestion]))
+            ->assertRedirect();
+
+        $this->assertSame(
+            [
+                ['question_text' => 'Pertanyaan 2', 'position' => 1],
+                ['question_text' => 'Pertanyaan 4', 'position' => 2],
+            ],
+            $assigned->questions()->get(['question_text', 'position'])->toArray(),
+        );
+    }
+
     /** @return array{User, User, AssessmentSubject, AssessmentSubject} */
     private function makeComponents(): array
     {
