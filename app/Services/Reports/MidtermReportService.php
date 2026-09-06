@@ -132,16 +132,76 @@ class MidtermReportService
 
     public function subjectDescription(float $score, ?string $learningObjective): string
     {
-        $objective = rtrim(trim((string) $learningObjective), ". \t\n\r\0\x0B");
-        $objective = preg_replace('/^(peserta didik|siswa)\s+(mampu\s+)?/iu', '', $objective) ?? $objective;
-        $target = $objective !== '' ? lcfirst($objective) : 'kompetensi yang dinilai pada ATS';
+        return $this->learningOutcome($score, $learningObjective)['description'];
+    }
 
-        return match (true) {
-            $score >= 86 => 'Menunjukkan penguasaan sangat baik dalam '.$target.'.',
-            $score >= 76 => 'Menunjukkan penguasaan baik dalam '.$target.'.',
-            $score >= 66 => 'Menunjukkan penguasaan cukup dalam '.$target.' dan perlu meningkatkan konsistensi.',
-            default => 'Perlu peningkatan dan bimbingan dalam '.$target.'.',
-        };
+    public function objectives(?string $learningObjective): array
+    {
+        return collect(preg_split('/\R/u', trim((string) $learningObjective)) ?: [])
+            ->map(function (string $objective): string {
+                $objective = rtrim(trim($objective), ". \t\n\r\0\x0B");
+
+                return preg_replace(
+                    '/^(?:(?:peserta didik|siswa)\s+)?(?:diharapkan\s+)?mampu\s+|^(?:peserta didik|siswa)\s+/iu',
+                    '',
+                    $objective,
+                ) ?? $objective;
+            })
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    public function learningOutcome(
+        float $score,
+        ?string $learningObjective,
+        array $achievedObjectives = [],
+        array $improvementObjectives = [],
+    ): array {
+        $objectives = $this->objectives($learningObjective);
+        $achieved = collect($achievedObjectives)
+            ->map(fn ($item) => rtrim(trim((string) $item), '.'))
+            ->filter(fn (string $item) => in_array($item, $objectives, true))
+            ->unique()
+            ->values();
+        $improvement = collect($improvementObjectives)
+            ->map(fn ($item) => rtrim(trim((string) $item), '.'))
+            ->filter(fn (string $item) => in_array($item, $objectives, true) && ! $achieved->containsStrict($item))
+            ->unique()
+            ->values();
+
+        if ($achieved->isEmpty() && $improvement->isEmpty()) {
+            if ($score >= 76) {
+                $achieved = collect($objectives);
+            } else {
+                $improvement = collect($objectives);
+            }
+        }
+
+        $parts = [];
+        if ($achieved->isNotEmpty()) {
+            $level = match (true) {
+                $score >= 86 => 'sangat baik',
+                $score >= 76 => 'baik',
+                default => 'cukup',
+            };
+            $parts[] = 'Menunjukkan penguasaan '.$level.' dalam '.$achieved->map(fn ($item) => lcfirst($item))->implode('; ').'.';
+        }
+        if ($improvement->isNotEmpty()) {
+            $parts[] = 'Perlu meningkatkan penguasaan dalam '.$improvement->map(fn ($item) => lcfirst($item))->implode('; ').'.';
+        }
+        if ($parts === []) {
+            $parts[] = $score >= 76
+                ? 'Menunjukkan penguasaan baik dalam kompetensi yang dinilai pada ATS.'
+                : 'Perlu peningkatan dan bimbingan dalam kompetensi yang dinilai pada ATS.';
+        }
+
+        return [
+            'achieved' => $achieved->all(),
+            'improvement' => $improvement->all(),
+            'description' => implode(' ', $parts),
+        ];
     }
 
     public function phase(int $gradeLevel): string

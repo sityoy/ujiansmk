@@ -10,39 +10,41 @@
     @endif
 
     <div class="flex flex-wrap items-center justify-between gap-3">
-        <a href="{{ route('reports.midterm.show', [$period, $schoolClass]) }}" class="text-sm text-cyan-300">← Kembali ke daftar rapor</a>
+        <a href="{{ $canPrint ? route('reports.midterm.show', [$period, $schoolClass]) : route('reports.midterm.index') }}" class="text-sm text-cyan-300">← Kembali ke daftar rapor</a>
         <p class="text-xs text-slate-500">Wali kelas: {{ $schoolClass->homeroomTeacher?->name ?? 'belum ditetapkan' }}</p>
     </div>
 
     <section class="mt-6 rounded-3xl border border-cyan-400/20 bg-cyan-400/[0.045] p-6">
         <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Alur Pengisian</p>
         <h2 class="mt-2 text-xl font-semibold text-white">Data rapor dibagi sesuai tugas guru</h2>
-        <p class="mt-3 max-w-4xl text-sm leading-6 text-slate-400">Panitia atau super admin menyiapkan TP dan tanggal cetak. Guru mapel cukup mengisi nilai; capaian kompetensi dibuat otomatis. Guru pembina cukup memilih predikat ekstrakurikuler; keterangannya juga dibuat otomatis. Wali kelas mengisi ketidakhadiran dan catatan.</p>
+        <p class="mt-3 max-w-4xl text-sm leading-6 text-slate-400">Guru mapel yang ditugaskan menyiapkan TP, mengisi nilai, dan memilih TP yang tercapai atau perlu ditingkatkan; capaian kompetensi dibuat otomatis. Guru pembina cukup memilih predikat ekstrakurikuler. Wali kelas mengisi ketidakhadiran dan catatan. Panitia mengatur kebutuhan cetak rapor.</p>
     </section>
 
-    <section class="mt-6 rounded-3xl border border-sky-400/20 bg-sky-400/[0.035] p-6">
-        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-sky-300">Pengaturan Cetak</p>
-        <h2 class="mt-2 text-xl font-semibold text-white">Tempat dan tanggal rapor</h2>
-        @if ($canConfigure)
-            <form method="POST" action="{{ route('reports.midterm.settings.update', [$period, $schoolClass]) }}" class="mt-5 grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
-                @csrf @method('PUT')
-                <label class="text-sm text-slate-300">Tempat penerbitan
-                    <input name="report_place" value="{{ old('report_place', $period->report_place) }}" required maxlength="120" placeholder="Contoh: Jakarta"
-                        class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3">
-                </label>
-                <label class="text-sm text-slate-300">Tanggal rapor
-                    <input type="date" name="report_date" value="{{ old('report_date', $period->report_date?->format('Y-m-d') ?? $period->ends_on?->format('Y-m-d')) }}" required
-                        class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3">
-                </label>
-                <button class="rounded-xl bg-sky-400 px-5 py-3 text-sm font-semibold text-slate-950">Simpan pengaturan</button>
-            </form>
-        @else
-            <p class="mt-3 text-sm text-slate-400">
-                {{ $period->report_place ?: 'Tempat belum diatur' }} ·
-                {{ ($period->report_date ?? $period->ends_on)?->translatedFormat('d F Y') }}
-            </p>
-        @endif
-    </section>
+    @if ($canConfigure || $canPrint)
+        <section class="mt-6 rounded-3xl border border-sky-400/20 bg-sky-400/[0.035] p-6">
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-sky-300">Pengaturan Cetak</p>
+            <h2 class="mt-2 text-xl font-semibold text-white">Tempat dan tanggal rapor</h2>
+            @if ($canConfigure)
+                <form method="POST" action="{{ route('reports.midterm.settings.update', [$period, $schoolClass]) }}" class="mt-5 grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
+                    @csrf @method('PUT')
+                    <label class="text-sm text-slate-300">Tempat penerbitan
+                        <input name="report_place" value="{{ old('report_place', $period->report_place) }}" required maxlength="120" placeholder="Contoh: Jakarta"
+                            class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3">
+                    </label>
+                    <label class="text-sm text-slate-300">Tanggal rapor
+                        <input type="date" name="report_date" value="{{ old('report_date', $period->report_date?->format('Y-m-d') ?? $period->ends_on?->format('Y-m-d')) }}" required
+                            class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3">
+                    </label>
+                    <button class="rounded-xl bg-sky-400 px-5 py-3 text-sm font-semibold text-slate-950">Simpan pengaturan</button>
+                </form>
+            @else
+                <p class="mt-3 text-sm text-slate-400">
+                    {{ $period->report_place ?: 'Tempat belum diatur' }} ·
+                    {{ ($period->report_date ?? $period->ends_on)?->translatedFormat('d F Y') }}
+                </p>
+            @endif
+        </section>
+    @endif
 
     <section class="mt-6 space-y-4">
         <div>
@@ -52,6 +54,8 @@
 
         @forelse ($subjects as $assessmentSubject)
             @php($canEditSubject = $subjectPermissions[$assessmentSubject->id] ?? false)
+            @php($canEditObjective = $learningObjectivePermissions[$assessmentSubject->id] ?? false)
+            @php($objectiveList = $objectiveOptions[$assessmentSubject->id] ?? [])
             <details class="rounded-2xl border border-white/10 bg-white/[0.035]" @if($subjects->count() === 1) open @endif>
                 <summary class="cursor-pointer list-none px-5 py-4">
                     <div class="flex flex-wrap items-center justify-between gap-3">
@@ -64,20 +68,20 @@
                 </summary>
 
                 <div class="space-y-5 border-t border-white/10 p-5">
-                    @if ($canConfigure)
+                    @if ($canEditObjective)
                         <form method="POST" action="{{ route('reports.midterm.learning-objective.update', $assessmentSubject) }}" class="rounded-xl border border-violet-400/15 bg-violet-400/[0.035] p-4">
                             @csrf @method('PUT')
                             <label class="block text-sm font-medium text-slate-200">Tujuan Pembelajaran (dasar capaian)
                                 <textarea name="learning_objective" rows="4" required maxlength="4000" placeholder="Masukkan satu TP per baris."
                                     class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm leading-6 outline-none focus:border-violet-400">{{ old('learning_objective', $assessmentSubject->learning_objective) }}</textarea>
                             </label>
-                            <p class="mt-2 text-xs text-slate-500">Satu baris untuk satu TP. Jika TP diubah, capaian siswa yang nilainya sudah tersimpan akan diperbarui otomatis.</p>
+                            <p class="mt-2 text-xs text-slate-500">Satu baris untuk satu TP. TP hanya dapat dikelola oleh guru mapel yang ditugaskan. Jika TP diubah, capaian siswa yang sudah memiliki nilai ikut diperbarui.</p>
                             <button class="mt-3 rounded-lg border border-violet-400/30 px-4 py-2 text-xs font-semibold text-violet-200">Simpan TP mapel</button>
                         </form>
                     @else
                         <div class="rounded-xl border border-white/10 bg-slate-950/50 p-4">
                             <p class="text-xs font-semibold uppercase tracking-[0.14em] text-violet-300">Tujuan Pembelajaran</p>
-                            <p class="mt-2 whitespace-pre-line text-sm leading-6 text-slate-300">{{ $assessmentSubject->learning_objective ?: 'TP belum disiapkan oleh panitia.' }}</p>
+                            <p class="mt-2 whitespace-pre-line text-sm leading-6 text-slate-300">{{ $assessmentSubject->learning_objective ?: 'TP belum disiapkan oleh guru mata pelajaran.' }}</p>
                         </div>
                     @endif
 
@@ -85,17 +89,31 @@
                         @if ($assessmentSubject->learning_objective)
                         <form method="POST" action="{{ route('reports.midterm.subject-results.update', $assessmentSubject) }}">
                             @csrf @method('PUT')
-                            <p class="text-xs text-slate-500">Masukkan nilai akhir saja. Sistem membuat capaian kompetensi otomatis dari nilai dan TP yang telah disiapkan.</p>
+                            <p class="text-xs text-slate-500">Masukkan nilai akhir, lalu pilih TP yang tercapai optimal dan yang perlu ditingkatkan. Jika tidak ada pilihan, sistem menentukannya otomatis berdasarkan nilai.</p>
                             <div class="mt-5 overflow-x-auto">
                                 <table class="min-w-full text-left text-xs">
-                                    <thead class="border-b border-white/10 text-slate-500"><tr><th class="px-3 py-3">Peserta Didik</th><th class="w-28 px-3 py-3">Nilai Akhir</th><th class="min-w-96 px-3 py-3">Capaian Kompetensi Otomatis</th></tr></thead>
+                                    <thead class="border-b border-white/10 text-slate-500"><tr><th class="min-w-48 px-3 py-3">Peserta Didik</th><th class="w-28 px-3 py-3">Nilai Akhir</th><th class="min-w-[24rem] px-3 py-3">TP Tercapai Optimal</th><th class="min-w-[24rem] px-3 py-3">TP Perlu Peningkatan</th></tr></thead>
                                     <tbody class="divide-y divide-white/5">
                                         @foreach ($rows->sortBy(fn ($item) => $item['student']->full_name) as $row)
                                             @php($result = $assessmentSubject->midtermResults->firstWhere('student_id', $row['student']->id))
+                                            @php($currentScore = $result?->score ?? $row['scores'][$assessmentSubject->id])
+                                            @php($defaultAchieved = $result?->achieved_objectives ?? ($currentScore !== null && (float) $currentScore >= 76 ? $objectiveList : []))
+                                            @php($defaultImprovement = $result?->improvement_objectives ?? ($currentScore !== null && (float) $currentScore < 76 ? $objectiveList : []))
+                                            @php($achievedSelections = collect(old('results.'.$row['student']->id.'.achieved_objectives', $defaultAchieved)))
+                                            @php($improvementSelections = collect(old('results.'.$row['student']->id.'.improvement_objectives', $defaultImprovement)))
                                             <tr>
-                                                <td class="px-3 py-3"><span class="font-medium text-white">{{ $row['student']->full_name }}</span><span class="mt-1 block text-slate-600">{{ $row['student']->student_number }}</span></td>
-                                                <td class="px-3 py-3"><input type="number" name="results[{{ $row['student']->id }}][score]" value="{{ old('results.'.$row['student']->id.'.score', $result?->score ?? $row['scores'][$assessmentSubject->id]) }}" min="0" max="100" step="0.01" class="w-24 rounded-lg border border-white/10 bg-slate-950 px-3 py-2"></td>
-                                                <td class="px-3 py-3 leading-5 text-slate-400">{{ $result?->description ?: 'Akan dibuat setelah nilai disimpan.' }}</td>
+                                                <td class="px-3 py-3"><span class="font-medium text-white">{{ $row['student']->full_name }}</span><span class="mt-1 block text-slate-600">NIS/NISN: {{ $row['student']->student_number }} / {{ $row['student']->nisn ?? '—' }}</span>@if($result?->description)<span class="mt-3 block text-[11px] leading-5 text-slate-500">{{ $result->description }}</span>@endif</td>
+                                                <td class="px-3 py-3"><input type="number" name="results[{{ $row['student']->id }}][score]" value="{{ old('results.'.$row['student']->id.'.score', $currentScore) }}" min="0" max="100" step="0.01" class="w-24 rounded-lg border border-white/10 bg-slate-950 px-3 py-2"></td>
+                                                <td class="space-y-2 px-3 py-3">
+                                                    @foreach ($objectiveList as $objective)
+                                                        <label class="flex items-start gap-2 leading-5 text-slate-300"><input type="checkbox" name="results[{{ $row['student']->id }}][achieved_objectives][]" value="{{ $objective }}" @checked($achievedSelections->containsStrict($objective)) class="mt-1"> <span>{{ $objective }}</span></label>
+                                                    @endforeach
+                                                </td>
+                                                <td class="space-y-2 px-3 py-3">
+                                                    @foreach ($objectiveList as $objective)
+                                                        <label class="flex items-start gap-2 leading-5 text-slate-300"><input type="checkbox" name="results[{{ $row['student']->id }}][improvement_objectives][]" value="{{ $objective }}" @checked($improvementSelections->containsStrict($objective)) class="mt-1"> <span>{{ $objective }}</span></label>
+                                                    @endforeach
+                                                </td>
                                             </tr>
                                         @endforeach
                                     </tbody>
@@ -104,7 +122,7 @@
                             <button class="mt-4 rounded-xl bg-violet-400 px-5 py-3 text-sm font-semibold text-slate-950">Simpan nilai</button>
                         </form>
                         @else
-                            <p class="rounded-xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm text-amber-200">Nilai belum dapat diisi karena TP mapel belum disiapkan oleh panitia atau super admin.</p>
+                            <p class="rounded-xl border border-amber-400/20 bg-amber-400/10 p-4 text-sm text-amber-200">Nilai belum dapat diisi karena guru mata pelajaran yang ditugaskan belum menyiapkan TP.</p>
                         @endif
                     @else
                         <p class="text-sm text-slate-500">Bagian ini diisi guru mata pelajaran yang ditetapkan pada Penjadwalan.</p>

@@ -40,6 +40,17 @@ class MidtermReportAccess
             || ($user->role === UserRole::Teacher && $subject->teacher_user_id === $user->id);
     }
 
+    public function canManageLearningObjective(User $user, AssessmentSubject $subject): bool
+    {
+        return $user->role === UserRole::Teacher && $subject->teacher_user_id === $user->id;
+    }
+
+    public function canPrint(User $user, SchoolClass $schoolClass): bool
+    {
+        return in_array($user->role, [UserRole::SuperAdmin, UserRole::Committee, UserRole::Principal], true)
+            || ($user->role === UserRole::Teacher && $schoolClass->homeroom_teacher_user_id === $user->id);
+    }
+
     public function canRecordAttendance(User $user, SchoolClass $schoolClass): bool
     {
         return in_array($user->role, [UserRole::SuperAdmin, UserRole::Committee], true)

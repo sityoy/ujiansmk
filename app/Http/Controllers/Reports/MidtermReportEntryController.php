@@ -36,6 +36,15 @@ class MidtermReportEntryController extends Controller
         abort_unless($access->canView($request->user(), $assessmentPeriod, $schoolClass), 403);
 
         $report = $reports->build($assessmentPeriod, $schoolClass);
+        $canConfigure = $access->canConfigure($request->user());
+        $canPrint = $access->canPrint($request->user(), $schoolClass);
+        $subjects = $report['subjects'];
+        if (! $canConfigure && ! $canPrint) {
+            $subjects = $subjects
+                ->filter(fn (AssessmentSubject $subject) => $access->canManageSubject($request->user(), $subject))
+                ->values();
+        }
+
         $extracurriculars = Extracurricular::query()
             ->where('academic_year_id', $assessmentPeriod->academic_year_id)
             ->with([
@@ -45,16 +54,29 @@ class MidtermReportEntryController extends Controller
             ])
             ->orderBy('name')
             ->get();
+        if (! $canConfigure && ! $canPrint) {
+            $extracurriculars = $extracurriculars
+                ->filter(fn (Extracurricular $activity) => $access->canManageExtracurricular($request->user(), $activity))
+                ->values();
+        }
 
         return view('reports.midterm.edit', [
             ...$report,
+            'subjects' => $subjects,
             'teachers' => User::query()->where('role', UserRole::Teacher)->where('is_active', true)->orderBy('name')->get(),
             'extracurriculars' => $extracurriculars,
             'ratings' => ExtracurricularRating::cases(),
-            'canConfigure' => $access->canConfigure($request->user()),
+            'canConfigure' => $canConfigure,
+            'canPrint' => $canPrint,
             'canRecordAttendance' => $access->canRecordAttendance($request->user(), $schoolClass),
-            'subjectPermissions' => $report['subjects']->mapWithKeys(
+            'subjectPermissions' => $subjects->mapWithKeys(
                 fn (AssessmentSubject $subject) => [$subject->id => $access->canManageSubject($request->user(), $subject)],
+            ),
+            'learningObjectivePermissions' => $subjects->mapWithKeys(
+                fn (AssessmentSubject $subject) => [$subject->id => $access->canManageLearningObjective($request->user(), $subject)],
+            ),
+            'objectiveOptions' => $subjects->mapWithKeys(
+                fn (AssessmentSubject $subject) => [$subject->id => $reports->objectives($subject->learning_objective)],
             ),
             'extracurricularPermissions' => $extracurriculars->mapWithKeys(
                 fn (Extracurricular $activity) => [$activity->id => $access->canManageExtracurricular($request->user(), $activity)],
@@ -75,12 +97,16 @@ class MidtermReportEntryController extends Controller
         $validated = $request->validate([
             'results' => ['required', 'array'],
             'results.*.score' => ['nullable', 'numeric', 'between:0,100'],
+            'results.*.achieved_objectives' => ['nullable', 'array'],
+            'results.*.achieved_objectives.*' => ['string', 'max:2000'],
+            'results.*.improvement_objectives' => ['nullable', 'array'],
+            'results.*.improvement_objectives.*' => ['string', 'max:2000'],
         ]);
         $objective = trim((string) $assessmentSubject->learning_objective);
 
         if ($objective === '') {
             return back()->withErrors([
-                'learning_objective' => 'Tujuan pembelajaran belum diatur. Hubungi panitia atau super admin sebelum menyimpan nilai.',
+                'learning_objective' => 'Tujuan pembelajaran belum diatur. Isi dan simpan TP mata pelajaran terlebih dahulu.',
             ]);
         }
 
@@ -98,11 +124,19 @@ class MidtermReportEntryController extends Controller
                 }
 
                 $score = (float) $data['score'];
+                $outcome = $reports->learningOutcome(
+                    $score,
+                    $objective,
+                    $data['achieved_objectives'] ?? [],
+                    $data['improvement_objectives'] ?? [],
+                );
                 MidtermSubjectResult::query()->updateOrCreate(
                     ['assessment_subject_id' => $assessmentSubject->id, 'student_id' => $studentId],
                     [
                         'score' => $score,
-                        'description' => $reports->subjectDescription($score, $objective),
+                        'description' => $outcome['description'],
+                        'achieved_objectives' => $outcome['achieved'],
+                        'improvement_objectives' => $outcome['improvement'],
                         'recorded_by_user_id' => $request->user()->id,
                     ],
                 );
@@ -120,7 +154,7 @@ class MidtermReportEntryController extends Controller
     ): RedirectResponse {
         $assessmentSubject->loadMissing(['assessmentPeriod', 'schoolClass', 'subject']);
         $this->assertContext($assessmentSubject->assessmentPeriod, $assessmentSubject->schoolClass);
-        abort_unless($access->canConfigure($request->user()), 403);
+        abort_unless($access->canManageLearningObjective($request->user(), $assessmentSubject), 403);
 
         $validated = $request->validate([
             'learning_objective' => ['required', 'string', 'max:4000'],
@@ -132,11 +166,19 @@ class MidtermReportEntryController extends Controller
 
         DB::transaction(function () use ($assessmentSubject, $objective, $reports): void {
             $assessmentSubject->update(['learning_objective' => $objective]);
-            $assessmentSubject->midtermResults()->get()->each(
-                fn (MidtermSubjectResult $result) => $result->update([
-                    'description' => $reports->subjectDescription((float) $result->score, $objective),
-                ]),
-            );
+            $assessmentSubject->midtermResults()->get()->each(function (MidtermSubjectResult $result) use ($reports, $objective): void {
+                $outcome = $reports->learningOutcome(
+                    (float) $result->score,
+                    $objective,
+                    $result->achieved_objectives ?? [],
+                    $result->improvement_objectives ?? [],
+                );
+                $result->update([
+                    'description' => $outcome['description'],
+                    'achieved_objectives' => $outcome['achieved'],
+                    'improvement_objectives' => $outcome['improvement'],
+                ]);
+            });
         });
 
         return back()->with('status', 'Tujuan pembelajaran '.$assessmentSubject->subject->name.' berhasil diperbarui.');

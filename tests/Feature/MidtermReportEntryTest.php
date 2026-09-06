@@ -21,20 +21,25 @@ class MidtermReportEntryTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_admin_sets_objective_and_assigned_teacher_only_enters_score(): void
+    public function test_assigned_teacher_sets_objectives_score_and_learning_outcomes(): void
     {
         [$period, $class, $student, $subject] = $this->makeContext();
         $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
         $teacher = User::factory()->create(['role' => UserRole::Teacher]);
         $subject->update(['teacher_user_id' => $teacher->id]);
 
-        $this->actingAs($admin)->put(route('reports.midterm.learning-objective.update', $subject), [
+        $this->actingAs($teacher)->put(route('reports.midterm.learning-objective.update', $subject), [
             'learning_objective' => "Menganalisis informasi dalam teks laporan.\n\nMenyajikan hasil analisis secara runtut.",
         ])->assertSessionHasNoErrors();
 
         $this->actingAs($teacher)->put(route('reports.midterm.subject-results.update', $subject), [
             'results' => [
-                $student->id => ['score' => 88, 'description' => 'Deskripsi manual tidak boleh digunakan.'],
+                $student->id => [
+                    'score' => 88,
+                    'achieved_objectives' => ['Menganalisis informasi dalam teks laporan'],
+                    'improvement_objectives' => ['Menyajikan hasil analisis secara runtut'],
+                    'description' => 'Deskripsi manual tidak boleh digunakan.',
+                ],
             ],
         ])->assertSessionHasNoErrors();
 
@@ -50,9 +55,12 @@ class MidtermReportEntryTest extends TestCase
         ]);
         $result = $subject->midtermResults()->firstOrFail();
         $this->assertStringContainsString('sangat baik', $result->description);
+        $this->assertStringContainsString('Perlu meningkatkan', $result->description);
         $this->assertStringNotContainsString('Deskripsi manual', $result->description);
+        $this->assertSame(['Menganalisis informasi dalam teks laporan'], $result->achieved_objectives);
+        $this->assertSame(['Menyajikan hasil analisis secara runtut'], $result->improvement_objectives);
 
-        $this->actingAs($admin)->put(route('reports.midterm.learning-objective.update', $subject), [
+        $this->actingAs($teacher)->put(route('reports.midterm.learning-objective.update', $subject), [
             'learning_objective' => 'Menyusun teks laporan yang logis.',
         ])->assertSessionHasNoErrors();
         $this->assertStringContainsString('menyusun teks laporan', $result->fresh()->description);
@@ -62,8 +70,35 @@ class MidtermReportEntryTest extends TestCase
             'results' => [$student->id => ['score' => 10]],
         ])->assertForbidden();
         $this->actingAs($teacher)->put(route('reports.midterm.learning-objective.update', $subject), [
-            'learning_objective' => 'Guru tidak boleh mengubah TP.',
+            'learning_objective' => 'Guru mata pelajaran boleh mengubah TP.',
+        ])->assertSessionHasNoErrors();
+        $this->actingAs($admin)->put(route('reports.midterm.learning-objective.update', $subject), [
+            'learning_objective' => 'Panitia atau admin tidak mengubah materi TP.',
         ])->assertForbidden();
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $this->actingAs($committee)->put(route('reports.midterm.learning-objective.update', $subject), [
+            'learning_objective' => 'Panitia juga tidak mengubah materi TP.',
+        ])->assertForbidden();
+    }
+
+    public function test_subject_teacher_cannot_print_report_unless_assigned_as_homeroom_teacher(): void
+    {
+        $this->withoutVite();
+        [$period, $class, $student, $subject] = $this->makeContext();
+        $teacher = User::factory()->create(['role' => UserRole::Teacher]);
+        $subject->update(['teacher_user_id' => $teacher->id]);
+
+        $this->actingAs($teacher)
+            ->get(route('reports.midterm.show', [$period, $class]))
+            ->assertRedirect(route('reports.midterm.edit', [$period, $class]));
+        $this->get(route('reports.midterm.edit', [$period, $class]))
+            ->assertOk()
+            ->assertSee('Tujuan Pembelajaran (dasar capaian)')
+            ->assertDontSee('Pengaturan Cetak');
+        $this->get(route('reports.midterm.print', [$period, $class, $student]))->assertForbidden();
+
+        $class->update(['homeroom_teacher_user_id' => $teacher->id]);
+        $this->get(route('reports.midterm.print', [$period, $class, $student]))->assertOk();
     }
 
     public function test_admin_can_set_report_place_and_date(): void

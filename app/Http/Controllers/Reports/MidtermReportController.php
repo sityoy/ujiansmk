@@ -8,8 +8,9 @@ use App\Models\AssessmentPeriod;
 use App\Models\SchoolProfile;
 use App\Models\SchoolClass;
 use App\Models\Student;
-use App\Services\Reports\MidtermReportService;
 use App\Services\Reports\MidtermReportAccess;
+use App\Services\Reports\MidtermReportService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
@@ -40,8 +41,12 @@ class MidtermReportController extends Controller
         SchoolClass $schoolClass,
         MidtermReportService $service,
         MidtermReportAccess $access,
-    ): View {
+    ): View|RedirectResponse {
         abort_unless($access->canView($request->user(), $assessmentPeriod, $schoolClass), 403);
+        if (! $access->canPrint($request->user(), $schoolClass)) {
+            return redirect()->route('reports.midterm.edit', [$assessmentPeriod, $schoolClass]);
+        }
+
         $report = $this->reportOrFail($service, $assessmentPeriod, $schoolClass);
         $canEdit = $report['subjects']->contains(fn ($subject) => $access->canManageSubject($request->user(), $subject))
             || $access->canRecordAttendance($request->user(), $schoolClass)
@@ -60,7 +65,7 @@ class MidtermReportController extends Controller
         MidtermReportAccess $access,
     ): View {
         abort_unless($student->school_class_id === $schoolClass->id, 404);
-        abort_unless($access->canView($request->user(), $assessmentPeriod, $schoolClass), 403);
+        abort_unless($access->canPrint($request->user(), $schoolClass), 403);
 
         $report = $this->reportOrFail($service, $assessmentPeriod, $schoolClass);
         $row = $report['rows']->first(fn (array $item) => $item['student']->is($student));

@@ -59,7 +59,7 @@ class MidtermReportServiceTest extends TestCase
     {
         $description = app(MidtermReportService::class)->subjectDescription(
             90,
-            'Peserta didik mampu menganalisis informasi dalam teks laporan.',
+            'mampu menganalisis informasi dalam teks laporan.',
         );
 
         $this->assertSame(
@@ -75,6 +75,24 @@ class MidtermReportServiceTest extends TestCase
         $this->assertSame('E', $service->phase(10));
         $this->assertSame('F', $service->phase(11));
         $this->assertSame('F', $service->phase(12));
+    }
+
+    public function test_selected_objectives_create_erapor_style_achievement(): void
+    {
+        $outcome = app(MidtermReportService::class)->learningOutcome(
+            83,
+            "Memahami sistem operasi.\nMenerapkan konektivitas jaringan.\nMemahami keamanan data.",
+            ['Memahami sistem operasi'],
+            ['Menerapkan konektivitas jaringan', 'Memahami keamanan data'],
+        );
+
+        $this->assertSame(['Memahami sistem operasi'], $outcome['achieved']);
+        $this->assertSame(
+            ['Menerapkan konektivitas jaringan', 'Memahami keamanan data'],
+            $outcome['improvement'],
+        );
+        $this->assertStringContainsString('penguasaan baik dalam memahami sistem operasi', $outcome['description']);
+        $this->assertStringContainsString('Perlu meningkatkan penguasaan', $outcome['description']);
     }
 
     private function makeReportData(): array
