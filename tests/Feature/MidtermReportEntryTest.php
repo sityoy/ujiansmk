@@ -86,7 +86,10 @@ class MidtermReportEntryTest extends TestCase
         $this->withoutVite();
         [$period, $class, $student, $subject] = $this->makeContext();
         $teacher = User::factory()->create(['role' => UserRole::Teacher]);
-        $subject->update(['teacher_user_id' => $teacher->id]);
+        $subject->update([
+            'teacher_user_id' => $teacher->id,
+            'learning_objective' => "Menganalisis informasi.\nMenyajikan hasil analisis.",
+        ]);
 
         $this->actingAs($teacher)
             ->get(route('reports.midterm.show', [$period, $class]))
@@ -94,6 +97,8 @@ class MidtermReportEntryTest extends TestCase
         $this->get(route('reports.midterm.edit', [$period, $class]))
             ->assertOk()
             ->assertSee('Tujuan Pembelajaran (dasar capaian)')
+            ->assertSee('data-objective-choice', false)
+            ->assertSee('Satu TP hanya dapat dipilih pada salah satu kolom.')
             ->assertDontSee('Pengaturan Cetak');
         $this->get(route('reports.midterm.print', [$period, $class, $student]))->assertForbidden();
 

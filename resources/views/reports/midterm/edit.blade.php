@@ -87,9 +87,9 @@
 
                     @if ($canEditSubject)
                         @if ($assessmentSubject->learning_objective)
-                        <form method="POST" action="{{ route('reports.midterm.subject-results.update', $assessmentSubject) }}">
+                        <form method="POST" action="{{ route('reports.midterm.subject-results.update', $assessmentSubject) }}" data-learning-outcome-form>
                             @csrf @method('PUT')
-                            <p class="text-xs text-slate-500">Masukkan nilai akhir, lalu pilih TP yang tercapai optimal dan yang perlu ditingkatkan. Jika tidak ada pilihan, sistem menentukannya otomatis berdasarkan nilai.</p>
+                            <p class="text-xs text-slate-500">Masukkan nilai akhir, lalu pilih TP yang tercapai optimal dan yang perlu ditingkatkan. Satu TP hanya dapat dipilih pada salah satu kolom. Jika tidak ada pilihan, sistem menentukannya otomatis berdasarkan nilai.</p>
                             <div class="mt-5 overflow-x-auto">
                                 <table class="min-w-full text-left text-xs">
                                     <thead class="border-b border-white/10 text-slate-500"><tr><th class="min-w-48 px-3 py-3">Peserta Didik</th><th class="w-28 px-3 py-3">Nilai Akhir</th><th class="min-w-[24rem] px-3 py-3">TP Tercapai Optimal</th><th class="min-w-[24rem] px-3 py-3">TP Perlu Peningkatan</th></tr></thead>
@@ -106,12 +106,12 @@
                                                 <td class="px-3 py-3"><input type="number" name="results[{{ $row['student']->id }}][score]" value="{{ old('results.'.$row['student']->id.'.score', $currentScore) }}" min="0" max="100" step="0.01" class="w-24 rounded-lg border border-white/10 bg-slate-950 px-3 py-2"></td>
                                                 <td class="space-y-2 px-3 py-3">
                                                     @foreach ($objectiveList as $objective)
-                                                        <label class="flex items-start gap-2 leading-5 text-slate-300"><input type="checkbox" name="results[{{ $row['student']->id }}][achieved_objectives][]" value="{{ $objective }}" @checked($achievedSelections->containsStrict($objective)) class="mt-1"> <span>{{ $objective }}</span></label>
+                                                        <label class="flex items-start gap-2 leading-5 text-slate-300 transition-opacity" data-objective-label><input type="checkbox" name="results[{{ $row['student']->id }}][achieved_objectives][]" value="{{ $objective }}" @checked($achievedSelections->containsStrict($objective)) data-objective-choice data-student="{{ $row['student']->id }}" data-objective-index="{{ $loop->index }}" data-outcome="achieved" class="mt-1"> <span>{{ $objective }}</span></label>
                                                     @endforeach
                                                 </td>
                                                 <td class="space-y-2 px-3 py-3">
                                                     @foreach ($objectiveList as $objective)
-                                                        <label class="flex items-start gap-2 leading-5 text-slate-300"><input type="checkbox" name="results[{{ $row['student']->id }}][improvement_objectives][]" value="{{ $objective }}" @checked($improvementSelections->containsStrict($objective)) class="mt-1"> <span>{{ $objective }}</span></label>
+                                                        <label class="flex items-start gap-2 leading-5 text-slate-300 transition-opacity" data-objective-label><input type="checkbox" name="results[{{ $row['student']->id }}][improvement_objectives][]" value="{{ $objective }}" @checked($improvementSelections->containsStrict($objective)) data-objective-choice data-student="{{ $row['student']->id }}" data-objective-index="{{ $loop->index }}" data-outcome="improvement" class="mt-1"> <span>{{ $objective }}</span></label>
                                                     @endforeach
                                                 </td>
                                             </tr>
@@ -215,4 +215,38 @@
             <p class="mt-4 text-sm text-slate-500">Bagian ini hanya dapat diisi oleh wali kelas yang ditetapkan, panitia, atau super admin.</p>
         @endif
     </section>
+
+    <script>
+        document.querySelectorAll('[data-learning-outcome-form]').forEach((form) => {
+            const pairs = new Map();
+
+            form.querySelectorAll('[data-objective-choice]').forEach((checkbox) => {
+                const key = `${checkbox.dataset.student}:${checkbox.dataset.objectiveIndex}`;
+                const pair = pairs.get(key) ?? {};
+                pair[checkbox.dataset.outcome] = checkbox;
+                pairs.set(key, pair);
+            });
+
+            pairs.forEach(({ achieved, improvement }) => {
+                if (! achieved || ! improvement) {
+                    return;
+                }
+
+                if (achieved.checked && improvement.checked) {
+                    improvement.checked = false;
+                }
+
+                const syncPair = () => {
+                    improvement.disabled = achieved.checked;
+                    achieved.disabled = improvement.checked;
+                    improvement.closest('[data-objective-label]')?.classList.toggle('opacity-40', achieved.checked);
+                    achieved.closest('[data-objective-label]')?.classList.toggle('opacity-40', improvement.checked);
+                };
+
+                achieved.addEventListener('change', syncPair);
+                improvement.addEventListener('change', syncPair);
+                syncPair();
+            });
+        });
+    </script>
 @endsection
