@@ -79,8 +79,8 @@ class MidtermReportEntryTest extends TestCase
         $this->assertDatabaseHas('assessment_periods', [
             'id' => $period->id,
             'report_place' => 'Jakarta',
-            'report_date' => '2026-09-18',
         ]);
+        $this->assertSame('2026-09-18', $period->fresh()->report_date->format('Y-m-d'));
     }
 
     public function test_homeroom_teacher_can_record_attendance_but_other_teacher_cannot(): void
