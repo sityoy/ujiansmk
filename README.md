@@ -80,6 +80,14 @@ Jangan menyalin `koneksi.php`, dump database, password, foto selfie, atau folder
 
 ## Status pengembangan
 
+### ATS isian/esai, koreksi manual, dan reset ujian
+
+Bank soal ATS hanya menerima tipe **isian singkat** dan **esai**. Jawaban siswa tidak diberi nilai otomatis; setelah dikumpulkan, guru yang ditetapkan pada komponen mapel/kelas mengoreksi melalui menu **Koreksi jawaban** dan memberi poin per soal. Panitia dan super admin juga dapat melakukan koreksi. Nilai akhir baru diterbitkan ke rapor ATS setelah koreksi disimpan.
+
+Daftar pada **Penjadwalan → 05 · Sesi Ujian** ditampilkan sebagai kelompok tertutup berdasarkan periode, mapel, dan kelas agar halaman tidak menumpuk. Buka judul yang ingin diatur untuk melihat guru, bank soal, sesi reguler, dan sesi susulan.
+
+Pada **Pelaksanaan ujian → Lihat peserta & progres**, panitia dan super admin memiliki dua tindakan berbeda: reset pelanggaran hanya mengembalikan hitungan ke 0 tanpa menghapus jawaban, sedangkan reset seluruh ujian menghapus percobaan aktif agar siswa memulai dari awal. Reset seluruh ujian wajib disertai alasan dan ringkasan percobaan lama disimpan dalam audit. Sesi yang sudah ditutup/berakhir tidak dapat direset; gunakan sesi susulan.
+
 ### Pengawasan campuran — batas dua pelanggaran
 
 Percobaan ujian baru memakai aturan: kejadian pertama diperingatkan, kejadian kedua dikunci di server. Siswa tidak dapat menyimpan jawaban baru selama terkunci, termasuk melalui permintaan langsung atau refresh. Jawaban tersimpan tidak dihapus dan waktu tidak berhenti. Scheduler tetap mengumpulkan percobaan terkunci saat kedaluwarsa. Percobaan yang sudah ada sebelum migrasi mempertahankan kebijakan lama agar pembaruan tidak mendadak menghentikan ujian berjalan.

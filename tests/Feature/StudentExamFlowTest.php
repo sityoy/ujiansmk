@@ -7,6 +7,8 @@ use App\Enums\AssignmentStatus;
 use App\Enums\AttemptStatus;
 use App\Enums\CheckinMethod;
 use App\Enums\CheckinStatus;
+use App\Enums\ExamQuestionType;
+use App\Enums\GradingStatus;
 use App\Enums\PeriodStatus;
 use App\Enums\Semester;
 use App\Enums\SessionKind;
@@ -112,11 +114,7 @@ class StudentExamFlowTest extends TestCase
         $this->actingAs($committee)
             ->post(route('scheduling.questions.store', $assignment->assessment_subject_id), [
                 'question_text' => 'Protokol untuk membuka halaman web adalah?',
-                'option_a' => 'HTTP',
-                'option_b' => 'FTP',
-                'option_c' => 'SSH',
-                'option_d' => 'SMTP',
-                'correct_answer' => 'A',
+                'question_type' => ExamQuestionType::ShortAnswer->value,
                 'points' => 1,
             ])
             ->assertRedirect()
@@ -125,6 +123,7 @@ class StudentExamFlowTest extends TestCase
         $this->assertDatabaseHas('exam_questions', [
             'assessment_subject_id' => $assignment->assessment_subject_id,
             'question_text' => 'Protokol untuk membuka halaman web adalah?',
+            'question_type' => ExamQuestionType::ShortAnswer->value,
         ]);
     }
 
@@ -180,8 +179,7 @@ class StudentExamFlowTest extends TestCase
         $this->startAttempt($assignment);
         $committee = User::factory()->create(['role' => UserRole::Committee]);
         $this->actingAs($committee)->post(route('scheduling.questions.store', $assignment->assessment_subject_id), [
-            'question_text' => 'Soal baru', 'option_a' => 'A', 'option_b' => 'B',
-            'option_c' => 'C', 'option_d' => 'D', 'correct_answer' => 'A', 'points' => 1,
+            'question_text' => 'Soal baru', 'question_type' => ExamQuestionType::Essay->value, 'points' => 1,
         ])->assertSessionHasErrors('question');
         $this->delete(route('scheduling.questions.destroy', [$assignment->assessment_subject_id, $questions[1]]))
             ->assertSessionHasErrors('question');
@@ -444,6 +442,118 @@ class StudentExamFlowTest extends TestCase
         $this->actingAs($committee)->get($route)->assertOk()->assertSee('Reset pelanggaran ke 0');
     }
 
+    public function test_ats_accepts_only_short_answer_and_essay_questions(): void
+    {
+        [, $assignment] = $this->makeExam();
+        $assignment->assessmentSubject->assessmentPeriod->update(['type' => AssessmentType::ATS]);
+        ExamQuestion::query()->where('assessment_subject_id', $assignment->assessment_subject_id)->delete();
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $url = route('scheduling.questions.store', $assignment->assessment_subject_id);
+
+        $this->actingAs($committee)->post($url, [
+            'question_type' => ExamQuestionType::MultipleChoice->value,
+            'question_text' => 'Soal pilihan ganda tidak diperbolehkan untuk ATS.',
+            'option_a' => 'A', 'option_b' => 'B', 'option_c' => 'C', 'option_d' => 'D',
+            'correct_answer' => 'A', 'points' => 1,
+        ])->assertSessionHasErrors('question_type');
+        $this->post($url, [
+            'question_type' => ExamQuestionType::Essay->value,
+            'question_text' => 'Jelaskan fungsi protokol HTTP.', 'points' => 5,
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseCount('exam_questions', 1);
+        $this->get(route('scheduling.questions.index', $assignment->assessment_subject_id))
+            ->assertOk()->assertSee('Isian Singkat')->assertSee('Esai')->assertDontSee('Pilihan Ganda');
+    }
+
+    public function test_student_cannot_start_ats_while_legacy_multiple_choice_questions_remain(): void
+    {
+        [, $assignment] = $this->makeExam();
+        $assignment->assessmentSubject->assessmentPeriod->update(['type' => AssessmentType::ATS]);
+        $this->startAttemptExpectingError($assignment, 'exam');
+        $this->assertDatabaseCount('exam_attempts', 0);
+    }
+
+    public function test_teacher_manually_grades_assigned_ats_answers(): void
+    {
+        [$student, $assignment] = $this->makeExam();
+        $assignment->assessmentSubject->assessmentPeriod->update(['type' => AssessmentType::ATS]);
+        ExamQuestion::query()->where('assessment_subject_id', $assignment->assessment_subject_id)->delete();
+        $short = ExamQuestion::create([
+            'assessment_subject_id' => $assignment->assessment_subject_id,
+            'question_type' => ExamQuestionType::ShortAnswer,
+            'question_text' => 'Apa kepanjangan HTTP?', 'points' => 4, 'position' => 1,
+        ]);
+        $essay = ExamQuestion::create([
+            'assessment_subject_id' => $assignment->assessment_subject_id,
+            'question_type' => ExamQuestionType::Essay,
+            'question_text' => 'Jelaskan cara kerja HTTP.', 'points' => 6, 'position' => 2,
+        ]);
+        $teacher = User::factory()->create(['role' => UserRole::Teacher]);
+        $assignment->assessmentSubject->update(['teacher_user_id' => $teacher->id]);
+        $assignment = $assignment->fresh();
+        $attempt = $this->startAttempt($assignment);
+        $attempts = app(ExamAttemptService::class);
+        $attempts->saveAnswer($attempt, $short, 'Hypertext Transfer Protocol');
+        $attempts->saveAnswer($attempt, $essay, 'Klien mengirim permintaan dan server memberikan respons.');
+        $attempts->submit($attempt);
+
+        $attempt->refresh();
+        $this->assertNull($attempt->score);
+        $this->assertSame(GradingStatus::Pending, $attempt->grading_status);
+        $this->actingAs($teacher)->get(route('grading.index'))->assertOk()->assertSee('Peserta Uji');
+        $this->put(route('grading.update', $attempt), [
+            'scores' => [$short->id => 4, $essay->id => 4],
+        ])->assertRedirect(route('grading.index'))->assertSessionHasNoErrors();
+
+        $attempt->refresh();
+        $this->assertSame('80.00', $attempt->score);
+        $this->assertSame(GradingStatus::Graded, $attempt->grading_status);
+        $this->assertNotNull($attempt->graded_at);
+        $this->assertSame($teacher->id, $attempt->answers()->where('exam_question_id', $essay->id)->value('graded_by_user_id'));
+
+        $otherTeacher = User::factory()->create(['role' => UserRole::Teacher]);
+        $this->actingAs($otherTeacher)->get(route('grading.show', $attempt))->assertForbidden();
+    }
+
+    public function test_admin_can_reset_entire_attempt_with_audit_and_student_can_start_again(): void
+    {
+        [$student, $assignment, $questions] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        app(ExamAttemptService::class)->saveAnswer($attempt, $questions[0], 'A');
+        $this->securityEvent($student, $attempt)->assertOk();
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $url = route('operations.assignments.reset-attempt', $assignment);
+
+        $this->actingAs($admin)->post($url, ['reason' => 'Perangkat bermasalah dan ujian harus diulang.'])
+            ->assertSessionHasNoErrors();
+        $this->assertDatabaseMissing('exam_attempts', ['id' => $attempt->id]);
+        $this->assertDatabaseCount('exam_answers', 0);
+        $this->assertSame(AssignmentStatus::Scheduled, $assignment->fresh()->status);
+        $this->assertDatabaseHas('exam_attempt_resets', [
+            'exam_assignment_id' => $assignment->id,
+            'original_attempt_id' => $attempt->id,
+            'performed_by_user_id' => $admin->id,
+        ]);
+
+        $newAttempt = $this->startAttempt($assignment->fresh());
+        $this->assertNotSame($attempt->id, $newAttempt->id);
+        $this->assertSame(0, $newAttempt->answers()->count());
+    }
+
+    public function test_proctor_cannot_reset_entire_attempt(): void
+    {
+        [, $assignment] = $this->makeExam();
+        $this->startAttempt($assignment);
+        $proctor = User::factory()->create(['role' => UserRole::Proctor]);
+
+        $this->actingAs($proctor)->post(route('operations.assignments.reset-attempt', $assignment), [
+            'reason' => 'Mencoba reset ujian peserta.',
+        ])->assertForbidden();
+        $this->assertDatabaseCount('exam_attempts', 1);
+        $this->assertDatabaseCount('exam_attempt_resets', 0);
+    }
+
     public function test_another_student_or_device_cannot_report_or_inspect_security(): void
     {
         [$user, $assignment] = $this->makeExam();
@@ -529,6 +639,23 @@ class StudentExamFlowTest extends TestCase
         );
 
         return app(ExamAttemptService::class)->start($assignment, $checkin, hash('sha256', str_repeat('a', 64)), '127.0.0.1', 'Test');
+    }
+
+    private function startAttemptExpectingError(ExamAssignment $assignment, string $errorKey): void
+    {
+        $checkin = app(DailyCheckinService::class)->checkIn(
+            $assignment->student, $assignment->examSession->campus,
+            -6.2000000, 106.8166660, 10, CheckinMethod::Face, null, 'test/selfie.jpg',
+        );
+
+        try {
+            app(ExamAttemptService::class)->start(
+                $assignment, $checkin, hash('sha256', str_repeat('a', 64)), '127.0.0.1', 'Test',
+            );
+            $this->fail('Ujian seharusnya ditolak.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey($errorKey, $exception->errors());
+        }
     }
 
     public function test_proctor_can_monitor_progress_and_search_by_nisn_without_showing_other_participants(): void
@@ -715,9 +842,9 @@ class StudentExamFlowTest extends TestCase
         $subject = Subject::create(['code' => 'INF', 'name' => 'Informatika', 'is_active' => true]);
         $period = AssessmentPeriod::create([
             'academic_year_id' => $year->id,
-            'code' => 'ATS-AKTIF',
-            'name' => 'ATS Aktif',
-            'type' => AssessmentType::ATS,
+            'code' => 'AAS-AKTIF',
+            'name' => 'AAS Aktif',
+            'type' => AssessmentType::AAS,
             'semester' => Semester::Odd,
             'starts_on' => now()->subDay()->toDateString(),
             'ends_on' => now()->addDay()->toDateString(),

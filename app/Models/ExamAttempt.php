@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AttemptStatus;
+use App\Enums\GradingStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Model;
@@ -13,15 +14,19 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'exam_assignment_id', 'daily_checkin_id', 'status', 'started_at', 'submitted_at',
     'last_seen_at', 'score', 'correct_answers', 'incorrect_answers', 'violation_count',
     'device_session_hash', 'ip_address', 'user_agent',
-    'security_enabled', 'security_locked_at', 'security_lock_version',
+    'security_enabled', 'security_locked_at', 'security_lock_version', 'grading_status', 'graded_at',
 ])]
 #[Hidden(['device_session_hash'])]
 class ExamAttempt extends Model
 {
+    protected $attributes = ['grading_status' => 'automatic'];
+
     protected function casts(): array
     {
         return [
             'status' => AttemptStatus::class,
+            'grading_status' => GradingStatus::class,
+            'graded_at' => 'datetime',
             'security_enabled' => 'boolean',
             'security_locked_at' => 'datetime',
             'security_lock_version' => 'integer',

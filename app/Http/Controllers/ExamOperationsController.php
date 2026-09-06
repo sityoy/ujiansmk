@@ -6,10 +6,12 @@ use App\Enums\SessionStatus;
 use App\Enums\AttemptStatus;
 use App\Enums\AssignmentStatus;
 use App\Models\AcademicYear;
+use App\Models\ExamAssignment;
 use App\Models\ExamAttempt;
 use App\Models\ExamSession;
 use App\Services\Exams\ExamSessionService;
 use App\Services\Exams\ExamSecurityService;
+use App\Services\Exams\ExamAttemptResetService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -100,6 +102,7 @@ class ExamOperationsController extends Controller
                 ->whereDate('attendance_date', $examSession->starts_at->toDateString())
                 ->where('campus_id', $examSession->campus_id),
             'attempt' => fn ($query) => $query->withCount('answers')->with(['securityIncidents' => fn ($events) => $events->orderBy('id')]),
+            'attemptResets' => fn ($query) => $query->with('performedBy')->latest(),
         ])->orderBy('id')->paginate(25)->withQueryString();
 
         return view('operations.show', [
@@ -128,6 +131,19 @@ class ExamOperationsController extends Controller
         $security->resetViolations($attempt, $request->user(), $validated['reason']);
 
         return back()->with('status', 'Hitungan pelanggaran direset ke 0. Jawaban, waktu, dan riwayat pengawasan tetap dipertahankan.');
+    }
+
+    public function resetAttempt(
+        Request $request,
+        ExamAssignment $assignment,
+        ExamAttemptResetService $resets,
+    ): RedirectResponse {
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'min:5', 'max:1000'],
+        ]);
+        $resets->reset($assignment, $request->user(), $validated['reason']);
+
+        return back()->with('status', 'Ujian peserta direset. Siswa dapat memulai lagi dari awal; audit reset tetap tersimpan.');
     }
 
     public function updateSessionStatus(

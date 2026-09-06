@@ -66,7 +66,15 @@
                             <td class="px-5 py-4 text-slate-300">{{ $statusLabels[$status] ?? 'Perlu pemeriksaan' }}</td>
                             <td class="px-5 py-4 text-slate-300"><p>{{ $answered }} / {{ $questionCount }} jawaban</p><progress value="{{ $answered }}" max="{{ max(1, $questionCount) }}" aria-label="Progres jawaban {{ $assignment->student->full_name }}" class="mt-2 h-2 w-24 accent-cyan-400"></progress></td>
                             <td class="whitespace-nowrap px-5 py-4 text-xs leading-6 text-slate-400">Mulai: {{ $attempt?->started_at?->format('H:i:s') ?? '—' }}<br>Simpan terakhir: {{ $attempt?->last_seen_at?->format('H:i:s') ?? '—' }}<br>Dikumpulkan: {{ $attempt?->submitted_at?->format('H:i:s') ?? '—' }}</td>
-                            <td class="px-5 py-4 text-slate-300">{{ $attempt?->score ?? '—' }}</td>
+                            <td class="px-5 py-4 text-slate-300">
+                                <p>{{ $attempt?->score ?? '—' }}</p>
+                                @if ($attempt && $attempt->grading_status->value !== 'automatic')
+                                    <p class="mt-1 text-xs {{ $attempt->grading_status->value === 'graded' ? 'text-emerald-300' : 'text-amber-300' }}">{{ $attempt->grading_status->label() }}</p>
+                                    @if (in_array(auth()->user()->role->value, ['super_admin', 'committee'], true))
+                                        <a href="{{ route('grading.show', $attempt) }}" class="mt-2 inline-flex text-xs text-violet-300">Buka koreksi →</a>
+                                    @endif
+                                @endif
+                            </td>
                             <td class="min-w-72 px-5 py-4 text-slate-300">
                                 <p>{{ $attempt?->violation_count ?? 0 }}{{ $attempt?->security_enabled ? '/2' : '' }}</p>
                                 @if ($attempt)
@@ -107,6 +115,25 @@
                                             <button class="rounded-lg border border-rose-300/40 px-3 py-2 text-xs font-semibold text-rose-200">Reset pelanggaran ke 0</button>
                                         </form>
                                     @endif
+                                    @if (in_array(auth()->user()->role->value, ['super_admin', 'committee'], true) && $session->status->value !== 'closed' && now()->lt($session->ends_at))
+                                        <details class="mt-3 border-t border-white/10 pt-3">
+                                            <summary class="cursor-pointer text-xs font-semibold text-rose-300">Reset seluruh ujian peserta</summary>
+                                            <form method="POST" action="{{ route('operations.assignments.reset-attempt', $assignment) }}" class="mt-3 space-y-2" onsubmit="return confirm('Reset SELURUH ujian peserta? Semua jawaban percobaan ini dihapus dan siswa harus mulai kembali dari awal.')">
+                                                @csrf
+                                                <textarea name="reason" required minlength="5" maxlength="1000" rows="2" placeholder="Alasan reset seluruh ujian..." class="w-full rounded-lg border border-rose-300/30 bg-slate-950 p-2 text-xs text-white"></textarea>
+                                                <p class="text-xs leading-5 text-slate-400">Jawaban aktif dihapus dan peserta kembali ke status belum mulai. Ringkasan percobaan lama, petugas, dan alasan tetap tersimpan sebagai audit.</p>
+                                                <button class="rounded-lg bg-rose-400 px-3 py-2 text-xs font-semibold text-slate-950">Reset ujian dari awal</button>
+                                            </form>
+                                        </details>
+                                    @endif
+                                @endif
+                                @if ($assignment->attemptResets->isNotEmpty())
+                                    <details class="mt-3 text-xs text-slate-400">
+                                        <summary class="cursor-pointer text-rose-200">Riwayat reset ujian ({{ $assignment->attemptResets->count() }})</summary>
+                                        @foreach ($assignment->attemptResets as $reset)
+                                            <p class="mt-2 leading-5">{{ $reset->created_at->format('d/m/Y H:i:s') }} · {{ $reset->performedBy?->name ?? 'Akun dihapus' }}<br>{{ $reset->reason }}</p>
+                                        @endforeach
+                                    </details>
                                 @endif
                             </td>
                         </tr>

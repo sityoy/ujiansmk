@@ -66,6 +66,12 @@
                     </a>
                 @endif
 
+                @if (in_array($currentRole, ['super_admin', 'committee', 'teacher'], true))
+                    <a href="{{ route('grading.index') }}" class="rounded-xl px-4 py-3 {{ request()->routeIs('grading.*') ? 'bg-cyan-400 text-slate-950 font-semibold' : 'text-slate-300 hover:bg-white/5' }}">
+                        Koreksi jawaban
+                    </a>
+                @endif
+
                 @if (in_array($currentRole, ['super_admin', 'committee', 'proctor'], true))
                     <a href="{{ route('operations.index') }}" class="rounded-xl px-4 py-3 {{ request()->routeIs('operations.*') ? 'bg-cyan-400 text-slate-950 font-semibold' : 'text-slate-300 hover:bg-white/5' }}">
                         Pelaksanaan ujian

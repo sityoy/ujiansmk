@@ -141,6 +141,10 @@
                         <option value="">Pilih kelas</option>
                         @foreach ($classes as $class)<option value="{{ $class->id }}">{{ $class->name }} · {{ $class->academicYear->name }}</option>@endforeach
                     </select>
+                    <select name="teacher_user_id" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
+                        <option value="">Guru pengoreksi (dapat diatur nanti)</option>
+                        @foreach ($teachers as $teacher)<option value="{{ $teacher->id }}">{{ $teacher->name }} · {{ $teacher->email }}</option>@endforeach
+                    </select>
                     <button class="w-full rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-slate-950">Tambahkan ke periode</button>
                 </form>
             </div>
@@ -156,7 +160,15 @@
         <div class="space-y-5">
             @forelse ($components as $component)
                 @php($componentLocked = $component->examSessions->isNotEmpty() || $component->assignments_count > 0 || $component->questions_count > 0)
-                <article class="rounded-3xl border border-white/10 bg-white/[0.035] p-6">
+                <details class="group rounded-3xl border border-white/10 bg-white/[0.035]">
+                    <summary class="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 p-5">
+                        <div>
+                            <p class="font-semibold text-white">{{ $component->assessmentPeriod->name }} · {{ $component->subject->name }}</p>
+                            <p class="mt-1 text-xs text-slate-500">{{ $component->schoolClass->name }} · {{ $component->assessmentPeriod->academicYear->name }} · {{ $component->examSessions->count() }} sesi</p>
+                        </div>
+                        <span class="rounded-full bg-cyan-400/10 px-3 py-1 text-xs text-cyan-200">Buka pengaturan</span>
+                    </summary>
+                    <div class="border-t border-white/10 p-6">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div>
                             <p class="font-semibold text-white">{{ $component->subject->name }} · {{ $component->schoolClass->name }}</p>
@@ -194,6 +206,21 @@
                                 <button class="rounded-xl bg-amber-400 px-4 py-2.5 text-sm font-semibold text-slate-950 md:col-span-3">Simpan perubahan komponen</button>
                             </form>
                         @endif
+                    </details>
+
+                    <details class="mt-4 rounded-2xl border border-white/10 bg-slate-950/35 p-4">
+                        <summary class="cursor-pointer text-sm font-medium text-violet-300">Guru pengoreksi</summary>
+                        <form method="POST" action="{{ route('scheduling.components.teacher', $component) }}" class="mt-4 flex flex-wrap gap-3">
+                            @csrf @method('PATCH')
+                            <select name="teacher_user_id" class="min-w-64 flex-1 rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
+                                <option value="">Belum ditentukan</option>
+                                @foreach ($teachers as $teacher)
+                                    <option value="{{ $teacher->id }}" @selected($component->teacher_user_id === $teacher->id)>{{ $teacher->name }} · {{ $teacher->email }}</option>
+                                @endforeach
+                            </select>
+                            <button class="rounded-xl bg-violet-400 px-4 py-2.5 text-sm font-semibold text-slate-950">Simpan guru</button>
+                        </form>
+                        <p class="mt-2 text-xs text-slate-500">Guru terpilih hanya dapat mengoreksi jawaban mapel dan kelas ini.</p>
                     </details>
 
                     <details class="mt-5 rounded-2xl border border-white/10 bg-slate-950/35 p-4">
@@ -286,7 +313,8 @@
                             <p class="text-sm text-slate-500">Belum ada sesi untuk komponen ini.</p>
                         @endforelse
                     </div>
-                </article>
+                    </div>
+                </details>
             @empty
                 <div class="rounded-3xl border border-dashed border-white/10 p-10 text-center text-sm text-slate-500">
                     Tambahkan periode beserta mapel dan kelas sebelum membuat sesi.

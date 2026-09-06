@@ -3,8 +3,11 @@
 namespace App\Services\Exams;
 
 use App\Enums\AssignmentStatus;
+use App\Enums\AssessmentType;
 use App\Enums\AttemptStatus;
 use App\Enums\CheckinStatus;
+use App\Enums\ExamQuestionType;
+use App\Enums\GradingStatus;
 use App\Enums\SessionStatus;
 use App\Models\AssessmentSubject;
 use App\Models\DailyCheckin;
@@ -48,7 +51,7 @@ class ExamAttemptService
         ?string $ipAddress,
         ?string $userAgent,
     ): ExamAttempt {
-        $assignment->loadMissing(['examSession', 'assessmentSubject.questions']);
+        $assignment->loadMissing(['examSession', 'assessmentSubject.questions', 'assessmentSubject.assessmentPeriod']);
         $session = $assignment->examSession;
         $existing = $assignment->attempt;
 
@@ -89,6 +92,14 @@ class ExamAttemptService
 
         if ($assignment->assessmentSubject->questions->isEmpty()) {
             throw ValidationException::withMessages(['exam' => 'Soal belum tersedia. Hubungi panitia ujian.']);
+        }
+        if ($assignment->assessmentSubject->assessmentPeriod->type === AssessmentType::ATS
+            && $assignment->assessmentSubject->questions->contains(
+                fn (ExamQuestion $question): bool => $question->question_type === ExamQuestionType::MultipleChoice,
+            )) {
+            throw ValidationException::withMessages([
+                'exam' => 'Bank soal ATS masih memiliki pilihan ganda. ATS hanya boleh memakai isian singkat dan esai.',
+            ]);
         }
 
         $attempt = ExamAttempt::create([
@@ -144,8 +155,13 @@ class ExamAttemptService
             throw ValidationException::withMessages(['answer' => 'Soal tidak termasuk dalam ujian ini.']);
         }
 
-        if (! array_key_exists($answer, $question->options)) {
-            throw ValidationException::withMessages(['answer' => 'Pilihan jawaban tidak tersedia.']);
+        $answer = trim($answer);
+        if ($question->question_type === ExamQuestionType::MultipleChoice) {
+            if (! array_key_exists($answer, $question->options ?? [])) {
+                throw ValidationException::withMessages(['answer' => 'Pilihan jawaban tidak tersedia.']);
+            }
+        } elseif ($answer === '' || mb_strlen($answer) > 10000) {
+            throw ValidationException::withMessages(['answer' => 'Jawaban wajib diisi dan maksimal 10.000 karakter.']);
         }
 
         $saved = ExamAnswer::query()->updateOrCreate(
@@ -155,7 +171,12 @@ class ExamAttemptService
             ],
             [
                 'answer' => $answer,
-                'is_correct' => $answer === $question->correct_answer,
+                'is_correct' => $question->question_type === ExamQuestionType::MultipleChoice
+                    ? $answer === $question->correct_answer
+                    : null,
+                'points_awarded' => null,
+                'graded_by_user_id' => null,
+                'graded_at' => null,
                 'answered_at' => now(),
             ],
         );
@@ -177,19 +198,33 @@ class ExamAttemptService
             $lockedAttempt->load(['assignment.assessmentSubject.questions', 'answers']);
             $questions = $lockedAttempt->assignment->assessmentSubject->questions;
             $answers = $lockedAttempt->answers->keyBy('exam_question_id');
+            $requiresManualGrading = $questions->contains(
+                fn (ExamQuestion $question): bool => $question->question_type->requiresManualGrading(),
+            );
             $totalPoints = (float) $questions->sum(fn (ExamQuestion $question) => (float) $question->points);
             $earnedPoints = (float) $questions->sum(function (ExamQuestion $question) use ($answers): float {
+                if ($question->question_type->requiresManualGrading()) {
+                    return (float) ($answers->get($question->id)?->points_awarded ?? 0);
+                }
+
                 return $answers->get($question->id)?->is_correct ? (float) $question->points : 0.0;
             });
+            $automaticQuestions = $questions->filter(
+                fn (ExamQuestion $question): bool => $question->question_type === ExamQuestionType::MultipleChoice,
+            );
             $correct = $answers->where('is_correct', true)->count();
 
             $lockedAttempt->update([
                 'status' => AttemptStatus::Submitted,
                 'submitted_at' => now(),
                 'last_seen_at' => now(),
-                'score' => $totalPoints > 0 ? round(($earnedPoints / $totalPoints) * 100, 2) : 0,
+                'score' => $requiresManualGrading
+                    ? null
+                    : ($totalPoints > 0 ? round(($earnedPoints / $totalPoints) * 100, 2) : 0),
+                'grading_status' => $requiresManualGrading ? GradingStatus::Pending : GradingStatus::Automatic,
+                'graded_at' => $requiresManualGrading ? null : now(),
                 'correct_answers' => $correct,
-                'incorrect_answers' => max(0, $questions->count() - $correct),
+                'incorrect_answers' => max(0, $automaticQuestions->count() - $correct),
             ]);
             $lockedAttempt->assignment->update(['status' => AssignmentStatus::Completed]);
 

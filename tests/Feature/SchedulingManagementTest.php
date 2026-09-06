@@ -172,6 +172,21 @@ class SchedulingManagementTest extends TestCase
             ->assertSessionHasErrors('component');
     }
 
+    public function test_admin_can_assign_a_grading_teacher_and_session_groups_are_collapsed(): void
+    {
+        $this->withoutVite();
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $teacher = User::factory()->create(['role' => UserRole::Teacher, 'is_active' => true]);
+        [$component] = $this->makeSchedule();
+
+        $this->actingAs($admin)->patch(route('scheduling.components.teacher', $component), [
+            'teacher_user_id' => $teacher->id,
+        ])->assertSessionHasNoErrors();
+        $this->assertSame($teacher->id, $component->fresh()->teacher_user_id);
+        $this->get(route('scheduling.index'))->assertOk()
+            ->assertSee('Buka pengaturan')->assertSee('Guru pengoreksi');
+    }
+
     private function makeSchedule(): array
     {
         $year = AcademicYear::create([

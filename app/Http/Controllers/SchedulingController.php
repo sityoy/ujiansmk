@@ -8,6 +8,7 @@ use App\Enums\PeriodStatus;
 use App\Enums\Semester;
 use App\Enums\SessionKind;
 use App\Enums\SessionStatus;
+use App\Enums\UserRole;
 use App\Models\AcademicYear;
 use App\Models\AssessmentPeriod;
 use App\Models\AssessmentSubject;
@@ -16,6 +17,7 @@ use App\Models\ExamAssignment;
 use App\Models\ExamSession;
 use App\Models\SchoolClass;
 use App\Models\Subject;
+use App\Models\User;
 use App\Services\Exams\ExamAssignmentService;
 use App\Services\Exams\ExamSessionService;
 use Illuminate\Database\QueryException;
@@ -36,6 +38,7 @@ class SchedulingController extends Controller
             'academicYears' => AcademicYear::query()->orderByDesc('starts_on')->get(),
             'campuses' => Campus::query()->orderBy('name')->get(),
             'subjects' => Subject::query()->where('is_active', true)->orderBy('name')->get(),
+            'teachers' => User::query()->where('role', UserRole::Teacher)->where('is_active', true)->orderBy('name')->get(),
             'classes' => SchoolClass::query()->with('academicYear')->orderBy('name')->get(),
             'periods' => AssessmentPeriod::query()
                 ->with('academicYear')
@@ -46,7 +49,7 @@ class SchedulingController extends Controller
                 ->with([
                     'assessmentPeriod.academicYear',
                     'subject',
-                    'schoolClass',
+                    'schoolClass', 'teacher',
                     'examSessions' => fn ($query) => $query
                         ->with('campus')
                         ->withCount('assignments')
@@ -155,6 +158,12 @@ class SchedulingController extends Controller
         $validated = $request->validate([
             'assessment_period_id' => ['required', 'exists:assessment_periods,id'],
             'subject_id' => ['required', 'exists:subjects,id'],
+            'teacher_user_id' => [
+                'nullable',
+                Rule::exists('users', 'id')->where(fn ($query) => $query
+                    ->where('role', UserRole::Teacher->value)
+                    ->where('is_active', true)),
+            ],
             'school_class_id' => [
                 'required',
                 'exists:school_classes,id',
@@ -206,6 +215,23 @@ class SchedulingController extends Controller
         $assessmentSubject->update($validated);
 
         return back()->with('status', 'Komponen asesmen berhasil diperbarui.');
+    }
+
+    public function updateComponentTeacher(Request $request, AssessmentSubject $assessmentSubject): RedirectResponse
+    {
+        $validated = $request->validate([
+            'teacher_user_id' => [
+                'nullable',
+                Rule::exists('users', 'id')->where(fn ($query) => $query
+                    ->where('role', UserRole::Teacher->value)
+                    ->where('is_active', true)),
+            ],
+        ]);
+        $assessmentSubject->update([
+            'teacher_user_id' => $validated['teacher_user_id'] ?? null,
+        ]);
+
+        return back()->with('status', 'Guru pengoreksi berhasil diperbarui.');
     }
 
     public function destroyComponent(AssessmentSubject $assessmentSubject): RedirectResponse

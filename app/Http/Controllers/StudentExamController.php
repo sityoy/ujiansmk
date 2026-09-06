@@ -114,7 +114,7 @@ class StudentExamController extends Controller
         $student = $this->student($request);
         $this->assertAttemptOwner($attempt, $student);
         $attempts->assertDevice($attempt, $this->deviceHash($request));
-        $validated = $request->validate(['answer' => ['required', Rule::in(['A', 'B', 'C', 'D'])]]);
+        $validated = $request->validate(['answer' => ['required', 'string', 'max:10000']]);
         $attempts->saveAnswer($attempt, $question, $validated['answer']);
 
         return response()->json(['saved' => true, 'saved_at' => now()->format('H:i:s')]);

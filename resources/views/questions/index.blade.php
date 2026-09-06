@@ -18,25 +18,35 @@
 
     <div class="mt-6 grid gap-6 xl:grid-cols-[420px_1fr]">
         <section class="rounded-3xl border border-white/10 bg-white/[0.035] p-6">
-            <h2 class="text-xl font-semibold text-white">Tambah soal pilihan ganda</h2>
+            <h2 class="text-xl font-semibold text-white">Tambah soal</h2>
+            @if ($assessmentSubject->assessmentPeriod->type->value === 'ats')
+                <p class="mt-2 text-sm text-cyan-200">Khusus ATS: tersedia isian singkat dan esai. Seluruh jawaban dikoreksi manual.</p>
+            @endif
             @if ($isLocked)
                 <p class="mt-3 text-sm text-amber-300">Bank soal terkunci karena sudah ada siswa yang mulai ujian. Isi dan bobot soal dipertahankan untuk menjaga konsistensi nilai reguler dan susulan.</p>
             @endif
             <fieldset @disabled($isLocked)>
             <form method="POST" action="{{ route('scheduling.questions.store', $assessmentSubject) }}" class="mt-5 space-y-3">
                 @csrf
+                <select id="question-type" name="question_type" required class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
+                    @foreach ($questionTypes as $type)
+                        <option value="{{ $type->value }}" @selected(old('question_type') === $type->value)>{{ $type->label() }}</option>
+                    @endforeach
+                </select>
                 <textarea name="question_text" rows="5" required placeholder="Tuliskan pertanyaan..." class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-violet-400">{{ old('question_text') }}</textarea>
-                @foreach (['A', 'B', 'C', 'D'] as $option)
-                    <div class="grid grid-cols-[36px_1fr] items-center gap-2">
-                        <span class="grid size-9 place-items-center rounded-lg bg-slate-900 text-xs font-semibold text-violet-300">{{ $option }}</span>
-                        <input name="option_{{ strtolower($option) }}" value="{{ old('option_'.strtolower($option)) }}" required placeholder="Pilihan {{ $option }}" class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-violet-400">
-                    </div>
-                @endforeach
-                <div class="grid gap-3 sm:grid-cols-2">
-                    <select name="correct_answer" required class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
+                <div id="multiple-choice-fields" class="space-y-3">
+                    @foreach (['A', 'B', 'C', 'D'] as $option)
+                        <div class="grid grid-cols-[36px_1fr] items-center gap-2">
+                            <span class="grid size-9 place-items-center rounded-lg bg-slate-900 text-xs font-semibold text-violet-300">{{ $option }}</span>
+                            <input name="option_{{ strtolower($option) }}" value="{{ old('option_'.strtolower($option)) }}" placeholder="Pilihan {{ $option }}" class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-violet-400">
+                        </div>
+                    @endforeach
+                    <select name="correct_answer" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
                         <option value="">Jawaban benar</option>
                         @foreach (['A', 'B', 'C', 'D'] as $option)<option value="{{ $option }}">Pilihan {{ $option }}</option>@endforeach
                     </select>
+                </div>
+                <div class="grid gap-3 sm:grid-cols-2">
                     <input type="number" name="points" value="1" min="0.01" max="1000" step="0.01" required placeholder="Bobot" class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
                 </div>
                 <button class="w-full rounded-xl bg-violet-400 px-4 py-3 text-sm font-semibold text-slate-950">Simpan soal</button>
@@ -49,7 +59,7 @@
                 <article class="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
                     <div class="flex items-start justify-between gap-4">
                         <div>
-                            <p class="text-xs font-semibold text-violet-300">Soal {{ $question->position }} · {{ number_format((float) $question->points, 2, ',', '.') }} poin</p>
+                            <p class="text-xs font-semibold text-violet-300">Soal {{ $question->position }} · {{ $question->question_type->label() }} · {{ number_format((float) $question->points, 2, ',', '.') }} poin</p>
                             <p class="mt-2 whitespace-pre-line text-sm leading-6 text-white">{{ $question->question_text }}</p>
                         </div>
                         <form method="POST" action="{{ route('scheduling.questions.destroy', [$assessmentSubject, $question]) }}" onsubmit="return confirm('Hapus soal ini?')">
@@ -57,17 +67,32 @@
                             <button @disabled($isLocked) class="text-xs text-rose-300 disabled:opacity-40">Hapus</button>
                         </form>
                     </div>
-                    <div class="mt-4 grid gap-2 sm:grid-cols-2">
-                        @foreach ($question->options as $key => $option)
-                            <div class="rounded-xl border px-3 py-2 text-xs {{ $key === $question->correct_answer ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200' : 'border-white/10 text-slate-400' }}">
-                                <span class="font-semibold">{{ $key }}.</span> {{ $option }}
-                            </div>
-                        @endforeach
-                    </div>
+                    @if ($question->question_type->value === 'multiple_choice')
+                        <div class="mt-4 grid gap-2 sm:grid-cols-2">
+                            @foreach ($question->options as $key => $option)
+                                <div class="rounded-xl border px-3 py-2 text-xs {{ $key === $question->correct_answer ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200' : 'border-white/10 text-slate-400' }}">
+                                    <span class="font-semibold">{{ $key }}.</span> {{ $option }}
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <p class="mt-4 text-xs text-amber-200">Tidak memakai kunci otomatis; guru memberi nilai setelah ujian dikumpulkan.</p>
+                    @endif
                 </article>
             @empty
                 <div class="rounded-3xl border border-dashed border-white/10 p-12 text-center text-sm text-slate-500">Belum ada soal untuk mapel dan kelas ini.</div>
             @endforelse
         </section>
     </div>
+    <script>
+        const questionType = document.getElementById('question-type');
+        const choiceFields = document.getElementById('multiple-choice-fields');
+        const syncQuestionType = () => {
+            const enabled = questionType.value === 'multiple_choice';
+            choiceFields.hidden = !enabled;
+            choiceFields.querySelectorAll('input, select').forEach(field => { field.required = enabled; field.disabled = !enabled; });
+        };
+        questionType.addEventListener('change', syncQuestionType);
+        syncQuestionType();
+    </script>
 @endsection

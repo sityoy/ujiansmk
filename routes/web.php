@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordChangeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExamOperationsController;
+use App\Http\Controllers\ExamGradingController;
 use App\Http\Controllers\QuestionBankController;
 use App\Http\Controllers\Reports\MidtermReportController;
 use App\Http\Controllers\SchedulingController;
@@ -111,6 +112,7 @@ Route::middleware(['auth', 'active'])->group(function (): void {
 
             Route::post('/components', [SchedulingController::class, 'storeComponent'])->name('components.store');
             Route::patch('/components/{assessmentSubject}', [SchedulingController::class, 'updateComponent'])->name('components.update');
+            Route::patch('/components/{assessmentSubject}/teacher', [SchedulingController::class, 'updateComponentTeacher'])->name('components.teacher');
             Route::delete('/components/{assessmentSubject}', [SchedulingController::class, 'destroyComponent'])->name('components.destroy');
 
             Route::post('/sessions', [SchedulingController::class, 'storeSession'])->name('sessions.store');
@@ -137,6 +139,15 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             Route::get('/{assessmentPeriod}/{schoolClass}/{student}/print', [MidtermReportController::class, 'print'])->name('print');
         });
 
+    Route::prefix('grading')
+        ->middleware('role:super_admin,committee,teacher')
+        ->name('grading.')
+        ->group(function (): void {
+            Route::get('/', [ExamGradingController::class, 'index'])->name('index');
+            Route::get('/attempts/{attempt}', [ExamGradingController::class, 'show'])->name('show');
+            Route::put('/attempts/{attempt}', [ExamGradingController::class, 'update'])->name('update');
+        });
+
     Route::prefix('operations')
         ->middleware('role:super_admin,committee,proctor')
         ->name('operations.')
@@ -148,6 +159,9 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             Route::post('/attempts/{attempt}/reset-violations', [ExamOperationsController::class, 'resetViolations'])
                 ->middleware('role:super_admin,committee')
                 ->name('attempts.reset-violations');
+            Route::post('/assignments/{assignment}/reset-attempt', [ExamOperationsController::class, 'resetAttempt'])
+                ->middleware('role:super_admin,committee')
+                ->name('assignments.reset-attempt');
             Route::patch('/sessions/{examSession}/status', [ExamOperationsController::class, 'updateSessionStatus'])
                 ->name('sessions.status');
         });

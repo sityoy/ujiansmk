@@ -93,7 +93,7 @@
                             <td class="px-5 py-4 text-slate-400">{{ $attempt->assignment->assessmentSubject->subject->name }}</td>
                             <td class="px-5 py-4 text-slate-300">{{ str($attempt->status->value)->replace('_', ' ')->title() }}</td>
                             <td class="px-5 py-4 text-slate-400">{{ $attempt->last_seen_at?->format('d/m/Y H:i:s') ?? '—' }}</td>
-                            <td class="px-5 py-4 text-slate-300">{{ $attempt->score ?? '—' }}</td>
+                            <td class="px-5 py-4 text-slate-300">{{ $attempt->score ?? '—' }}@if ($attempt->grading_status->value === 'pending')<br><span class="text-xs text-amber-300">Menunggu koreksi</span>@endif</td>
                             <td class="px-5 py-4 {{ $attempt->violation_count ? 'text-rose-300' : 'text-slate-500' }}">{{ $attempt->violation_count }}</td>
                         </tr>
                     @empty
