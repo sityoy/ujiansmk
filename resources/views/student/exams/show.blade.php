@@ -14,8 +14,8 @@
                 <section class="mx-auto mt-12 max-w-xl rounded-3xl border border-amber-400/30 bg-slate-900 p-6 shadow-xl">
                     <p class="text-xs font-semibold uppercase tracking-widest text-amber-300">Pengawasan ujian · batas 2 pelanggaran</p>
                     <h2 id="security-title" class="mt-4 text-2xl font-semibold">Siap masuk mode ujian?</h2>
-                    <p id="security-message" aria-live="polite" class="mt-4 text-sm leading-7 text-slate-300">Tetap berada di halaman ujian dan gunakan layar penuh jika tersedia. Kejadian pertama mendapat peringatan; kejadian kedua mengunci ujian untuk diperiksa pengawas. Waktu tetap berjalan.</p>
-                    <p class="mt-3 text-xs leading-6 text-slate-400">Matikan notifikasi sebelum mulai. Gangguan teknis dapat diperiksa pengawas. Sinyal browser bukan bukti pasti kecurangan.</p>
+                    <p id="security-message" aria-live="polite" class="mt-4 text-sm leading-7 text-slate-300">Mode Galak memantau layar penuh, perpindahan aplikasi/tab, kehilangan fokus, bilah notifikasi, split screen, tombol terlarang, dan navigasi keluar. Kejadian pertama mendapat peringatan; kejadian kedua mengunci ujian untuk diperiksa pengawas. Waktu tetap berjalan.</p>
+                    <p class="mt-3 text-xs leading-6 text-slate-400">Tutup gelembung aplikasi, aktifkan Jangan Ganggu, dan jangan menarik bilah sistem. Gangguan teknis tetap dapat diperiksa serta direset oleh panitia.</p>
                     <button id="security-continue" type="button" class="mt-6 w-full rounded-xl bg-cyan-400 px-5 py-3 font-semibold text-slate-950">Saya paham, masuk mode ujian</button>
                     <p id="security-network" aria-live="polite" class="mt-3 text-sm text-amber-300"></p>
                 </section>
@@ -199,7 +199,7 @@
 
     </script>
     @if ($attempt->security_enabled)
-        <script src="{{ asset('js/exam-security.js') }}?v=20260904-1" defer></script>
+        <script src="{{ asset('js/exam-security.js') }}?v=20260907-1" defer></script>
     @else
         <script>
             document.addEventListener('visibilitychange', () => {

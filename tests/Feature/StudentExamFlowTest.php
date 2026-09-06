@@ -577,6 +577,31 @@ class StudentExamFlowTest extends TestCase
         $this->assertSame(0, (int) $attempt->fresh()->violation_count);
     }
 
+    public function test_strict_browser_signals_are_recorded_with_safe_context(): void
+    {
+        [$user, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $context = [
+            'viewport_width' => 412,
+            'viewport_height' => 915,
+            'screen_width' => 412,
+            'screen_height' => 915,
+            'pixel_ratio' => 2.625,
+        ];
+
+        $this->securityEvent($user, $attempt, null, 'window_blur', $context)
+            ->assertOk()->assertJson(['violations' => 1, 'locked' => false]);
+        $incident = $attempt->securityIncidents()->firstOrFail();
+        $this->assertSame('window_blur', $incident->category);
+        $this->assertSame(412, $incident->details['context']['viewport_width']);
+
+        $this->travel(4)->seconds();
+        $this->securityEvent($user, $attempt, null, 'viewport_change', [
+            ...$context,
+            'viewport_width' => 206,
+        ])->assertOk()->assertJson(['violations' => 2, 'locked' => true]);
+    }
+
     public function test_locked_exam_still_expires_and_cannot_be_released_after_deadline(): void
     {
         [$user, $assignment] = $this->makeExam();
@@ -616,11 +641,19 @@ class StudentExamFlowTest extends TestCase
             ->assertOk()->assertJson(['locked' => false, 'status' => 'submitted']);
     }
 
-    private function securityEvent(User $user, ExamAttempt $attempt, ?string $eventId = null, string $category = 'tab_hidden'): \Illuminate\Testing\TestResponse
+    private function securityEvent(
+        User $user,
+        ExamAttempt $attempt,
+        ?string $eventId = null,
+        string $category = 'tab_hidden',
+        array $context = [],
+    ): \Illuminate\Testing\TestResponse
     {
         return $this->actingAs($user)->withSession(['exam_device_token' => str_repeat('a', 64)])
             ->postJson(route('student.exams.incident', $attempt), [
-                'event_id' => $eventId ?? (string) Str::uuid(), 'category' => $category,
+                'event_id' => $eventId ?? (string) Str::uuid(),
+                'category' => $category,
+                'context' => $context,
             ]);
     }
 

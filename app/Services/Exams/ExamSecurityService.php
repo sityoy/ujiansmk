@@ -12,6 +12,16 @@ class ExamSecurityService
 {
     public const LIMIT = 2;
 
+    public const CLIENT_CATEGORIES = [
+        'tab_hidden',
+        'fullscreen_exit',
+        'window_blur',
+        'system_gesture',
+        'viewport_change',
+        'restricted_action',
+        'navigation_attempt',
+    ];
+
     public function state(ExamAttempt $attempt): array
     {
         return [
@@ -25,9 +35,10 @@ class ExamSecurityService
         ];
     }
 
-    public function record(ExamAttempt $attempt, string $category, string $eventId): array
+    /** @param array<string, mixed> $context */
+    public function record(ExamAttempt $attempt, string $category, string $eventId, array $context = []): array
     {
-        return DB::transaction(function () use ($attempt, $category, $eventId): array {
+        return DB::transaction(function () use ($attempt, $category, $eventId, $context): array {
             $attempt = ExamAttempt::query()->lockForUpdate()->findOrFail($attempt->id);
             $attempts = app(ExamAttemptService::class);
             if ($attempt->status !== AttemptStatus::InProgress) {
@@ -46,7 +57,7 @@ class ExamSecurityService
             $attempt->securityIncidents()->create([
                 'event_id' => $eventId, 'category' => $category,
                 'severity' => $duplicateSignal ? 0 : 1,
-                'details' => ['counted' => ! $duplicateSignal], 'occurred_at' => now(),
+                'details' => ['counted' => ! $duplicateSignal, 'context' => $context], 'occurred_at' => now(),
             ]);
 
             if (! $duplicateSignal) {

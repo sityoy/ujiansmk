@@ -142,11 +142,22 @@ class StudentExamController extends Controller
         $attempts->assertDevice($attempt, $this->deviceHash($request));
 
         $validated = $request->validate([
-            'category' => ['required', Rule::in(['tab_hidden', 'fullscreen_exit'])],
+            'category' => ['required', Rule::in(ExamSecurityService::CLIENT_CATEGORIES)],
             'event_id' => ['nullable', 'uuid'],
+            'context' => ['nullable', 'array:viewport_width,viewport_height,screen_width,screen_height,pixel_ratio'],
+            'context.viewport_width' => ['nullable', 'integer', 'between:0,10000'],
+            'context.viewport_height' => ['nullable', 'integer', 'between:0,10000'],
+            'context.screen_width' => ['nullable', 'integer', 'between:0,10000'],
+            'context.screen_height' => ['nullable', 'integer', 'between:0,10000'],
+            'context.pixel_ratio' => ['nullable', 'numeric', 'between:0.1,20'],
         ]);
 
-        $state = $security->record($attempt, $validated['category'], $validated['event_id'] ?? (string) Str::uuid());
+        $state = $security->record(
+            $attempt,
+            $validated['category'],
+            $validated['event_id'] ?? (string) Str::uuid(),
+            $validated['context'] ?? [],
+        );
 
         return response()->json(['recorded' => true, ...$state])->header('Cache-Control', 'no-store');
     }

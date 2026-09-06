@@ -10,19 +10,24 @@ function element(extra = {}) {
 }
 const settle = () => new Promise(resolve => setImmediate(resolve));
 function setup({ supported = true, denied = false, initiallyLocked = false, storage = new Map() } = {}) {
+    let focused = true;
     const root = element({ dataset: { stateUrl: '/state', eventUrl: '/events', indexUrl: '/exams', attemptId: '1', locked: initiallyLocked ? '1' : '0' } });
     const nodes = Object.fromEntries(['security-panel', 'security-title', 'security-message', 'security-network', 'security-continue', 'security-count'].map(id => [id, element()]));
     nodes['exam-security'] = root;
     nodes['exam-content'] = initiallyLocked ? null : element({ hidden: true, disabled: true, contains: () => true });
     const doc = { ...element(), hidden: false, fullscreenEnabled: supported, fullscreenElement: null,
+        activeElement: null, hasFocus: () => focused,
         getElementById: id => nodes[id], querySelector: () => ({ content: 'csrf' }) };
-    const win = { ...element(), dispatched: [], location: { reloads: 0, reload() { this.reloads++; }, replace(url) { this.replaced = url; } },
+    const win = { ...element(), dispatched: [], innerWidth: 1080, innerHeight: 1920, devicePixelRatio: 2,
+        screen: { width: 1080, height: 1920, availWidth: 1080, availHeight: 1920 },
+        history: { pushes: 0, pushState() { this.pushes++; } },
+        location: { href: '/attempts/1', reloads: 0, reload() { this.reloads++; }, replace(url) { this.replaced = url; } },
         dispatchEvent(event) { this.dispatched.push(event.type); } };
     doc.documentElement = { requestFullscreen: async () => {
         if (denied) throw Error('denied');
         doc.fullscreenElement = doc.documentElement;
         doc.listeners.fullscreenchange();
-    } };
+    }, style: {} };
     const page = { nodes, doc, win, posts: [], fail: false, storage, state: {
         status: 'in_progress', locked: initiallyLocked, enabled: true, violations: initiallyLocked ? 2 : 0,
         deadline: '2026-09-04T11:00:00Z', server_time: '2026-09-04T10:00:00Z',
@@ -49,6 +54,7 @@ function setup({ supported = true, denied = false, initiallyLocked = false, stor
         },
     });
     page.enter = () => nodes['security-continue'].listeners.click();
+    page.setFocus = value => { focused = value; };
     return page;
 }
 
@@ -130,6 +136,38 @@ test('intentional submission confirmation does not count a fullscreen exit', asy
     page.win.examSecurity.returnToExam();
     assert.equal(page.posts.length, 0);
     assert.equal(page.win.examSecurity.isBlocked(), true);
+});
+
+test('window blur and a top-edge system gesture are strict violations', async () => {
+    const page = setup();
+    await page.enter();
+    page.setFocus(false);
+    page.win.listeners.blur();
+    await new Promise(resolve => setTimeout(resolve, 300));
+    await settle();
+    assert.equal(page.posts[0].category, 'window_blur');
+    assert.equal(page.state.violations, 1);
+
+    page.setFocus(true);
+    page.win.listeners.focus();
+    await page.enter();
+    page.doc.listeners.touchstart({ touches: [{ clientY: 8 }], cancelable: true, preventDefault() {} });
+    page.doc.listeners.touchmove({ touches: [{ clientY: 110 }] });
+    await settle();
+    assert.equal(page.posts[1].category, 'system_gesture');
+    assert.equal(page.state.locked, true);
+});
+
+test('a large viewport reduction is reported as possible split screen', async () => {
+    const page = setup();
+    await page.enter();
+    page.win.innerWidth = 600;
+    page.win.listeners.resize();
+    await new Promise(resolve => setTimeout(resolve, 700));
+    await settle();
+    assert.equal(page.posts[0].category, 'viewport_change');
+    assert.equal(page.posts[0].context.viewport_width, 600);
+    assert.equal(page.state.violations, 1);
 });
 
 test('locked page reloads only when a supervisor releases it and redirects when finalized', async () => {
