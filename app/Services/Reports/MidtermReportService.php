@@ -1,0 +1,275 @@
+<?php
+
+namespace App\Services\Reports;
+
+use App\Enums\AssessmentType;
+use App\Enums\AttemptStatus;
+use App\Enums\Semester;
+use App\Models\AssessmentPeriod;
+use App\Models\AssessmentSubject;
+use App\Models\Extracurricular;
+use App\Models\MidtermAttendanceSummary;
+use App\Models\SchoolClass;
+use App\Models\Student;
+use Illuminate\Support\Collection;
+use InvalidArgumentException;
+
+class MidtermReportService
+{
+    public function printLayout(AssessmentPeriod $period): array
+    {
+        $paperSize = in_array($period->report_paper_size, ['a4', 'f4'], true)
+            ? $period->report_paper_size
+            : 'f4';
+        [$paperWidth, $paperHeight] = $paperSize === 'a4'
+            ? [210.0, 297.0]
+            : [215.9, 330.2];
+        $clamp = fn ($value, int $default, int $minimum, int $maximum): int => min(
+            $maximum,
+            max($minimum, is_numeric($value) ? (int) $value : $default),
+        );
+
+        return [
+            'paper_size' => $paperSize,
+            'paper_label' => strtoupper($paperSize),
+            'paper_width_mm' => $paperWidth,
+            'paper_height_mm' => $paperHeight,
+            'margin_top_mm' => $clamp($period->report_margin_top_mm, 8, 5, 25),
+            'margin_right_mm' => $clamp($period->report_margin_right_mm, 8, 5, 25),
+            'margin_bottom_mm' => $clamp($period->report_margin_bottom_mm, 8, 5, 25),
+            'margin_left_mm' => $clamp($period->report_margin_left_mm, 8, 5, 25),
+            'scale_percent' => $clamp($period->report_scale_percent, 90, 70, 100),
+        ];
+    }
+
+    public function build(AssessmentPeriod $period, SchoolClass $schoolClass): array
+    {
+        if ($period->type !== AssessmentType::ATS) {
+            throw new InvalidArgumentException('Rapor hanya tersedia untuk Asesmen Tengah Semester.');
+        }
+
+        if ($period->academic_year_id !== $schoolClass->academic_year_id) {
+            throw new InvalidArgumentException('Periode asesmen dan kelas berasal dari tahun ajaran yang berbeda.');
+        }
+
+        $subjects = AssessmentSubject::query()
+            ->with(['subject', 'midtermResults'])
+            ->where('assessment_period_id', $period->id)
+            ->where('school_class_id', $schoolClass->id)
+            ->get()
+            ->sortBy(fn (AssessmentSubject $item) => $item->subject->name)
+            ->values();
+
+        $subjectIds = $subjects->pluck('id');
+        $extracurriculars = Extracurricular::query()
+            ->where('academic_year_id', $period->academic_year_id)
+            ->where('is_active', true)
+            ->whereHas('participants', fn ($query) => $query->where('school_class_id', $schoolClass->id))
+            ->with([
+                'participants' => fn ($query) => $query->where('school_class_id', $schoolClass->id),
+                'grades' => fn ($query) => $query->where('assessment_period_id', $period->id),
+            ])
+            ->orderBy('name')
+            ->get();
+        $attendance = MidtermAttendanceSummary::query()
+            ->where('assessment_period_id', $period->id)
+            ->whereHas('student', fn ($query) => $query->where('school_class_id', $schoolClass->id))
+            ->get()
+            ->keyBy('student_id');
+
+        $students = Student::query()
+            ->where('school_class_id', $schoolClass->id)
+            ->where('is_active', true)
+            ->with([
+                'examAssignments' => fn ($query) => $query
+                    ->whereIn('assessment_subject_id', $subjectIds)
+                    ->with('attempt'),
+            ])
+            ->orderBy('full_name')
+            ->get();
+
+        $rows = $students->map(function (Student $student) use ($subjects, $extracurriculars, $attendance): array {
+            $assignments = $student->examAssignments->keyBy('assessment_subject_id');
+            $scores = [];
+            $descriptions = [];
+            $total = 0.0;
+            $submittedCount = 0;
+
+            foreach ($subjects as $assessmentSubject) {
+                $attempt = $assignments->get($assessmentSubject->id)?->attempt;
+                $result = $assessmentSubject->midtermResults->firstWhere('student_id', $student->id);
+                $attemptScore = $attempt?->status === AttemptStatus::Submitted && $attempt->score !== null
+                    ? (float) $attempt->score
+                    : null;
+                $score = $result ? (float) $result->score : $attemptScore;
+
+                $scores[$assessmentSubject->id] = $score;
+                $descriptions[$assessmentSubject->id] = $result?->description
+                    ?: ($score !== null ? $this->subjectDescription($score, $assessmentSubject->learning_objective) : null);
+
+                if ($score !== null) {
+                    $total += $score;
+                    $submittedCount++;
+                }
+            }
+
+            $subjectCount = $subjects->count();
+
+            return [
+                'student' => $student,
+                'scores' => $scores,
+                'descriptions' => $descriptions,
+                'total' => round($total, 2),
+                'average' => $subjectCount > 0 ? round($total / $subjectCount, 2) : 0.0,
+                'submitted_count' => $submittedCount,
+                'subject_count' => $subjectCount,
+                'is_complete' => $subjectCount > 0 && $submittedCount === $subjectCount,
+                'rank' => null,
+                'extracurriculars' => $extracurriculars->map(function (Extracurricular $extracurricular) use ($student): array {
+                    $grade = $extracurricular->grades->firstWhere('student_id', $student->id);
+
+                    return [
+                        'activity' => $extracurricular,
+                        'rating' => $grade?->rating,
+                        'description' => $grade?->description,
+                    ];
+                })->filter(fn (array $item) => $item['activity']->participants->contains('id', $student->id))->values(),
+                'attendance' => $attendance->get($student->id) ?? new MidtermAttendanceSummary([
+                    'sick_days' => 0,
+                    'excused_days' => 0,
+                    'unexcused_days' => 0,
+                ]),
+            ];
+        });
+
+        $rows = $this->applyRanking($rows, $subjects->isNotEmpty());
+
+        return [
+            'period' => $period->loadMissing('academicYear'),
+            'schoolClass' => $schoolClass->loadMissing(['academicYear', 'homeroomTeacher']),
+            'phase' => $this->phase($schoolClass->grade_level),
+            'semesterNumber' => $period->semester === Semester::Odd ? 1 : 2,
+            'subjects' => $subjects,
+            'extracurriculars' => $extracurriculars,
+            'rows' => $rows,
+            'is_complete' => $rows->isNotEmpty() && $rows->every(fn (array $row) => $row['is_complete']),
+        ];
+    }
+
+    public function subjectDescription(float $score, ?string $learningObjective): string
+    {
+        return $this->learningOutcome($score, $learningObjective)['description'];
+    }
+
+    public function objectives(?string $learningObjective): array
+    {
+        return collect(preg_split('/\R/u', trim((string) $learningObjective)) ?: [])
+            ->map(function (string $objective): string {
+                $objective = rtrim(trim($objective), ". \t\n\r\0\x0B");
+
+                return preg_replace(
+                    '/^(?:(?:peserta didik|siswa)\s+)?(?:diharapkan\s+)?mampu\s+|^(?:peserta didik|siswa)\s+/iu',
+                    '',
+                    $objective,
+                ) ?? $objective;
+            })
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    public function learningOutcome(
+        float $score,
+        ?string $learningObjective,
+        array $achievedObjectives = [],
+        array $improvementObjectives = [],
+    ): array {
+        $objectives = $this->objectives($learningObjective);
+        $achieved = collect($achievedObjectives)
+            ->map(fn ($item) => rtrim(trim((string) $item), '.'))
+            ->filter(fn (string $item) => in_array($item, $objectives, true))
+            ->unique()
+            ->values();
+        $improvement = collect($improvementObjectives)
+            ->map(fn ($item) => rtrim(trim((string) $item), '.'))
+            ->filter(fn (string $item) => in_array($item, $objectives, true) && ! $achieved->containsStrict($item))
+            ->unique()
+            ->values();
+
+        if ($achieved->isEmpty() && $improvement->isEmpty()) {
+            if ($score >= 76) {
+                $achieved = collect($objectives);
+            } else {
+                $improvement = collect($objectives);
+            }
+        }
+
+        $parts = [];
+        if ($achieved->isNotEmpty()) {
+            $level = match (true) {
+                $score >= 86 => 'sangat baik',
+                $score >= 76 => 'baik',
+                default => 'cukup',
+            };
+            $parts[] = 'Menunjukkan penguasaan '.$level.' dalam '.$achieved->map(fn ($item) => lcfirst($item))->implode('; ').'.';
+        }
+        if ($improvement->isNotEmpty()) {
+            $parts[] = 'Perlu meningkatkan penguasaan dalam '.$improvement->map(fn ($item) => lcfirst($item))->implode('; ').'.';
+        }
+        if ($parts === []) {
+            $parts[] = $score >= 76
+                ? 'Menunjukkan penguasaan baik dalam kompetensi yang dinilai pada ATS.'
+                : 'Perlu peningkatan dan bimbingan dalam kompetensi yang dinilai pada ATS.';
+        }
+
+        return [
+            'achieved' => $achieved->all(),
+            'improvement' => $improvement->all(),
+            'description' => implode(' ', $parts),
+        ];
+    }
+
+    public function phase(int $gradeLevel): string
+    {
+        return match (true) {
+            $gradeLevel <= 2 => 'A',
+            $gradeLevel <= 4 => 'B',
+            $gradeLevel <= 6 => 'C',
+            $gradeLevel <= 9 => 'D',
+            $gradeLevel === 10 => 'E',
+            default => 'F',
+        };
+    }
+
+    private function applyRanking(Collection $rows, bool $hasSubjects): Collection
+    {
+        $rows = $rows
+            ->sort(function (array $left, array $right): int {
+                $scoreComparison = $right['total'] <=> $left['total'];
+
+                return $scoreComparison !== 0
+                    ? $scoreComparison
+                    : strcasecmp($left['student']->full_name, $right['student']->full_name);
+            })
+            ->values();
+
+        $lastTotal = null;
+        $currentRank = 0;
+
+        return $rows->map(function (array $row, int $index) use (&$lastTotal, &$currentRank, $hasSubjects): array {
+            if (! $hasSubjects) {
+                return $row;
+            }
+
+            if ($lastTotal === null || abs($row['total'] - $lastTotal) > 0.0001) {
+                $currentRank = $index + 1;
+                $lastTotal = $row['total'];
+            }
+
+            $row['rank'] = $currentRank;
+
+            return $row;
+        });
+    }
+}
