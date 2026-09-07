@@ -77,6 +77,31 @@ class MidtermReportServiceTest extends TestCase
         $this->assertSame('F', $service->phase(12));
     }
 
+    public function test_print_layout_uses_f4_defaults_and_safe_limits(): void
+    {
+        [$period] = $this->makeReportData();
+        $period->forceFill([
+            'report_paper_size' => 'invalid',
+            'report_margin_top_mm' => 1,
+            'report_margin_right_mm' => 99,
+            'report_scale_percent' => 50,
+        ]);
+
+        $layout = app(MidtermReportService::class)->printLayout($period);
+
+        $this->assertSame('f4', $layout['paper_size']);
+        $this->assertSame(215.9, $layout['paper_width_mm']);
+        $this->assertSame(330.2, $layout['paper_height_mm']);
+        $this->assertSame(5, $layout['margin_top_mm']);
+        $this->assertSame(25, $layout['margin_right_mm']);
+        $this->assertSame(70, $layout['scale_percent']);
+
+        $period->forceFill(['report_paper_size' => 'a4']);
+        $a4Layout = app(MidtermReportService::class)->printLayout($period);
+        $this->assertSame(210.0, $a4Layout['paper_width_mm']);
+        $this->assertSame(297.0, $a4Layout['paper_height_mm']);
+    }
+
     public function test_selected_objectives_create_erapor_style_achievement(): void
     {
         $outcome = app(MidtermReportService::class)->learningOutcome(

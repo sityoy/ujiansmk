@@ -76,6 +76,7 @@ class MidtermReportController extends Controller
             ...$report,
             'row' => $row,
             'letterheadData' => $this->letterheadData(),
+            'printLayout' => $service->printLayout($assessmentPeriod),
         ]);
     }
 

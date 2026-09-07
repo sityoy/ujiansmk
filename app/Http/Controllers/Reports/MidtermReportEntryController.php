@@ -195,14 +195,26 @@ class MidtermReportEntryController extends Controller
         $validated = $request->validate([
             'report_place' => ['required', 'string', 'max:120'],
             'report_date' => ['required', 'date'],
+            'report_paper_size' => ['required', Rule::in(['a4', 'f4'])],
+            'report_margin_top_mm' => ['required', 'integer', 'between:5,25'],
+            'report_margin_right_mm' => ['required', 'integer', 'between:5,25'],
+            'report_margin_bottom_mm' => ['required', 'integer', 'between:5,25'],
+            'report_margin_left_mm' => ['required', 'integer', 'between:5,25'],
+            'report_scale_percent' => ['required', 'integer', 'between:70,100'],
         ]);
 
         $assessmentPeriod->update([
             'report_place' => trim($validated['report_place']),
             'report_date' => $validated['report_date'],
+            'report_paper_size' => $validated['report_paper_size'],
+            'report_margin_top_mm' => $validated['report_margin_top_mm'],
+            'report_margin_right_mm' => $validated['report_margin_right_mm'],
+            'report_margin_bottom_mm' => $validated['report_margin_bottom_mm'],
+            'report_margin_left_mm' => $validated['report_margin_left_mm'],
+            'report_scale_percent' => $validated['report_scale_percent'],
         ]);
 
-        return back()->with('status', 'Tempat dan tanggal rapor ATS berhasil disimpan.');
+        return back()->with('status', 'Tempat, tanggal, ukuran kertas, margin, dan skala rapor ATS berhasil disimpan.');
     }
 
     public function updateAttendance(

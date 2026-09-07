@@ -106,7 +106,7 @@ class MidtermReportEntryTest extends TestCase
         $this->get(route('reports.midterm.print', [$period, $class, $student]))->assertOk();
     }
 
-    public function test_admin_can_set_report_place_and_date(): void
+    public function test_admin_can_set_report_identity_and_print_layout(): void
     {
         [$period, $class] = $this->makeContext();
         $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
@@ -114,11 +114,23 @@ class MidtermReportEntryTest extends TestCase
         $this->actingAs($admin)->put(route('reports.midterm.settings.update', [$period, $class]), [
             'report_place' => 'Jakarta',
             'report_date' => '2026-09-18',
+            'report_paper_size' => 'f4',
+            'report_margin_top_mm' => 8,
+            'report_margin_right_mm' => 9,
+            'report_margin_bottom_mm' => 10,
+            'report_margin_left_mm' => 11,
+            'report_scale_percent' => 85,
         ])->assertSessionHasNoErrors();
 
         $this->assertDatabaseHas('assessment_periods', [
             'id' => $period->id,
             'report_place' => 'Jakarta',
+            'report_paper_size' => 'f4',
+            'report_margin_top_mm' => 8,
+            'report_margin_right_mm' => 9,
+            'report_margin_bottom_mm' => 10,
+            'report_margin_left_mm' => 11,
+            'report_scale_percent' => 85,
         ]);
         $this->assertSame('2026-09-18', $period->fresh()->report_date->format('Y-m-d'));
     }
@@ -194,7 +206,16 @@ class MidtermReportEntryTest extends TestCase
         $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
         $homeroom = User::factory()->create(['role' => UserRole::Teacher, 'name' => 'Wali Kelas Contoh']);
         $class->update(['homeroom_teacher_user_id' => $homeroom->id]);
-        $period->update(['report_place' => 'Jakarta Barat', 'report_date' => '2026-09-18']);
+        $period->update([
+            'report_place' => 'Jakarta Barat',
+            'report_date' => '2026-09-18',
+            'report_paper_size' => 'f4',
+            'report_margin_top_mm' => 8,
+            'report_margin_right_mm' => 9,
+            'report_margin_bottom_mm' => 10,
+            'report_margin_left_mm' => 11,
+            'report_scale_percent' => 85,
+        ]);
         $subject->update(['learning_objective' => 'Memahami teks laporan.']);
         $subject->midtermResults()->create([
             'student_id' => $student->id,
@@ -236,6 +257,9 @@ class MidtermReportEntryTest extends TestCase
             ->assertSee('Pertahankan prestasi belajar.')
             ->assertSee('Wali Kelas Contoh')
             ->assertSee('Jakarta Barat, 18 September 2026')
+            ->assertSee('size: 215.9mm 330.2mm', false)
+            ->assertSee('margin: 8mm 9mm 10mm 11mm', false)
+            ->assertSee('zoom: 0.85', false)
             ->assertDontSee('<strong>TP:</strong>', false);
     }
 

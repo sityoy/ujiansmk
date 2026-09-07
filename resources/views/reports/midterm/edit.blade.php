@@ -23,25 +23,51 @@
     @if ($canConfigure || $canPrint)
         <section class="mt-6 rounded-3xl border border-sky-400/20 bg-sky-400/[0.035] p-6">
             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-sky-300">Pengaturan Cetak</p>
-            <h2 class="mt-2 text-xl font-semibold text-white">Tempat dan tanggal rapor</h2>
+            <h2 class="mt-2 text-xl font-semibold text-white">Identitas dan tata letak rapor</h2>
             @if ($canConfigure)
-                <form method="POST" action="{{ route('reports.midterm.settings.update', [$period, $schoolClass]) }}" class="mt-5 grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
+                <form method="POST" action="{{ route('reports.midterm.settings.update', [$period, $schoolClass]) }}" class="mt-5 space-y-5">
                     @csrf @method('PUT')
-                    <label class="text-sm text-slate-300">Tempat penerbitan
-                        <input name="report_place" value="{{ old('report_place', $period->report_place) }}" required maxlength="120" placeholder="Contoh: Jakarta"
-                            class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3">
-                    </label>
-                    <label class="text-sm text-slate-300">Tanggal rapor
-                        <input type="date" name="report_date" value="{{ old('report_date', $period->report_date?->format('Y-m-d') ?? $period->ends_on?->format('Y-m-d')) }}" required
-                            class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3">
-                    </label>
-                    <button class="rounded-xl bg-sky-400 px-5 py-3 text-sm font-semibold text-slate-950">Simpan pengaturan</button>
+                    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                        <label class="text-sm text-slate-300">Tempat penerbitan
+                            <input name="report_place" value="{{ old('report_place', $period->report_place) }}" required maxlength="120" placeholder="Contoh: Jakarta"
+                                class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3">
+                        </label>
+                        <label class="text-sm text-slate-300">Tanggal rapor
+                            <input type="date" name="report_date" value="{{ old('report_date', $period->report_date?->format('Y-m-d') ?? $period->ends_on?->format('Y-m-d')) }}" required
+                                class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3">
+                        </label>
+                        <label class="text-sm text-slate-300">Ukuran kertas
+                            <select name="report_paper_size" required class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3">
+                                <option value="f4" @selected(old('report_paper_size', $period->report_paper_size ?? 'f4') === 'f4')>F4 / Folio (215,9 × 330,2 mm)</option>
+                                <option value="a4" @selected(old('report_paper_size', $period->report_paper_size ?? 'f4') === 'a4')>A4 (210 × 297 mm)</option>
+                            </select>
+                        </label>
+                        <label class="text-sm text-slate-300">Skala isi
+                            <div class="mt-2 flex items-center gap-2"><input type="number" name="report_scale_percent" value="{{ old('report_scale_percent', $period->report_scale_percent ?? 90) }}" min="70" max="100" required class="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3"><span class="text-slate-500">%</span></div>
+                        </label>
+                    </div>
+                    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        @foreach ([
+                            'report_margin_top_mm' => ['Atas', $period->report_margin_top_mm ?? 8],
+                            'report_margin_right_mm' => ['Kanan', $period->report_margin_right_mm ?? 8],
+                            'report_margin_bottom_mm' => ['Bawah', $period->report_margin_bottom_mm ?? 8],
+                            'report_margin_left_mm' => ['Kiri', $period->report_margin_left_mm ?? 8],
+                        ] as $field => [$label, $default])
+                            <label class="text-sm text-slate-300">Margin {{ $label }}
+                                <div class="mt-2 flex items-center gap-2"><input type="number" name="{{ $field }}" value="{{ old($field, $default) }}" min="5" max="25" required class="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3"><span class="text-slate-500">mm</span></div>
+                            </label>
+                        @endforeach
+                    </div>
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <p class="text-xs leading-5 text-slate-500">Rekomendasi satu lembar: F4, margin 8 mm, skala 90%. Jika isi masih turun ke halaman kedua, kecilkan skala secara bertahap.</p>
+                        <button class="rounded-xl bg-sky-400 px-5 py-3 text-sm font-semibold text-slate-950">Simpan pengaturan</button>
+                    </div>
                 </form>
             @else
-                <p class="mt-3 text-sm text-slate-400">
-                    {{ $period->report_place ?: 'Tempat belum diatur' }} ·
-                    {{ ($period->report_date ?? $period->ends_on)?->translatedFormat('d F Y') }}
-                </p>
+                <div class="mt-3 space-y-1 text-sm text-slate-400">
+                    <p>{{ $period->report_place ?: 'Tempat belum diatur' }} · {{ ($period->report_date ?? $period->ends_on)?->translatedFormat('d F Y') }}</p>
+                    <p>{{ strtoupper($period->report_paper_size ?? 'f4') }} · Margin {{ $period->report_margin_top_mm ?? 8 }}/{{ $period->report_margin_right_mm ?? 8 }}/{{ $period->report_margin_bottom_mm ?? 8 }}/{{ $period->report_margin_left_mm ?? 8 }} mm · Skala {{ $period->report_scale_percent ?? 90 }}%</p>
+                </div>
             @endif
         </section>
     @endif

@@ -16,6 +16,32 @@ use InvalidArgumentException;
 
 class MidtermReportService
 {
+    public function printLayout(AssessmentPeriod $period): array
+    {
+        $paperSize = in_array($period->report_paper_size, ['a4', 'f4'], true)
+            ? $period->report_paper_size
+            : 'f4';
+        [$paperWidth, $paperHeight] = $paperSize === 'a4'
+            ? [210.0, 297.0]
+            : [215.9, 330.2];
+        $clamp = fn ($value, int $default, int $minimum, int $maximum): int => min(
+            $maximum,
+            max($minimum, is_numeric($value) ? (int) $value : $default),
+        );
+
+        return [
+            'paper_size' => $paperSize,
+            'paper_label' => strtoupper($paperSize),
+            'paper_width_mm' => $paperWidth,
+            'paper_height_mm' => $paperHeight,
+            'margin_top_mm' => $clamp($period->report_margin_top_mm, 8, 5, 25),
+            'margin_right_mm' => $clamp($period->report_margin_right_mm, 8, 5, 25),
+            'margin_bottom_mm' => $clamp($period->report_margin_bottom_mm, 8, 5, 25),
+            'margin_left_mm' => $clamp($period->report_margin_left_mm, 8, 5, 25),
+            'scale_percent' => $clamp($period->report_scale_percent, 90, 70, 100),
+        ];
+    }
+
     public function build(AssessmentPeriod $period, SchoolClass $schoolClass): array
     {
         if ($period->type !== AssessmentType::ATS) {

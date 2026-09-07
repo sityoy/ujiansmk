@@ -98,7 +98,7 @@ Rapor ATS memiliki data terpisah dari percobaan CBT agar nilai asesmen kertas te
 
 Super admin menetapkan wali kelas pada Data Akademik. Wali kelas mengisi rekap sakit, izin, tanpa keterangan, dan catatan wali kelas. Panitia/super admin menambahkan kegiatan ekstrakurikuler serta pesertanya, sedangkan guru pembina cukup memberi predikat Sangat Baik, Baik, Cukup, atau Kurang. Keterangan ekstrakurikuler selalu dibuat otomatis sesuai predikat.
 
-Cetak rapor memuat KOP sekolah, nilai dan capaian kompetensi mapel, ekstrakurikuler, ketidakhadiran, catatan wali kelas, rata-rata, serta peringkat. Kelas X menggunakan Fase E dan kelas XI–XII menggunakan Fase F. Tempat dan tanggal penerbitan diatur per periode ATS sehingga tidak mengikuti tanggal saat cetak. Cetak hanya dapat diakses super admin, panitia, kepala sekolah, dan guru yang ditugaskan sebagai wali kelas. KOP bawaan SMK Islam Bahagia dapat diganti melalui Identitas Sekolah.
+Cetak rapor memuat KOP sekolah, nilai dan capaian kompetensi mapel, ekstrakurikuler, ketidakhadiran, catatan wali kelas, rata-rata, serta peringkat. Kelas X menggunakan Fase E dan kelas XI–XII menggunakan Fase F. Tempat, tanggal, ukuran kertas A4/F4, margin empat sisi, dan skala isi diatur per periode ATS sehingga rapor dapat diringkas menjadi satu lembar. Cetak hanya dapat diakses super admin, panitia, kepala sekolah, dan guru yang ditugaskan sebagai wali kelas. KOP bawaan SMK Islam Bahagia dapat diganti melalui Identitas Sekolah.
 
 ### ATS isian/esai, koreksi manual, dan reset ujian
 
