@@ -5,6 +5,10 @@
 @section('heading', 'Rapor ATS · '.$schoolClass->name)
 
 @section('content')
+    @if ($errors->any())
+        <div class="mb-6 rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">{{ $errors->first() }}</div>
+    @endif
+
     <div class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
             <a href="{{ route('reports.midterm.index') }}" class="text-xs font-medium text-cyan-300 hover:text-cyan-200">← Kembali ke periode ATS</a>
@@ -20,6 +24,69 @@
             </span>
         </div>
     </div>
+
+    <section class="mt-6 rounded-3xl border border-sky-400/20 bg-sky-400/[0.035] p-6">
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-sky-300">Cetak Nilai Rapor Siswa</p>
+        <h2 class="mt-2 text-xl font-semibold text-white">Pengaturan Hasil Cetak</h2>
+
+        @if ($canConfigure)
+            <form method="POST" action="{{ route('reports.midterm.settings.update', [$period, $schoolClass]) }}" class="mt-5 space-y-5">
+                @csrf @method('PUT')
+                <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+                    <label class="text-sm font-medium text-slate-300">Ukuran Kertas
+                        <select name="report_paper_size" required class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 font-normal">
+                            <option value="a4" @selected(old('report_paper_size', $period->report_paper_size ?? 'f4') === 'a4')>A4 (210 × 297 mm)</option>
+                            <option value="f4" @selected(old('report_paper_size', $period->report_paper_size ?? 'f4') === 'f4')>F4 / Folio (215,9 × 330,2 mm)</option>
+                        </select>
+                    </label>
+                    @foreach ([
+                        'report_margin_left_mm' => ['Margin Kiri (mm)', $period->report_margin_left_mm ?? 8],
+                        'report_margin_right_mm' => ['Margin Kanan (mm)', $period->report_margin_right_mm ?? 8],
+                        'report_margin_top_mm' => ['Margin Atas (mm)', $period->report_margin_top_mm ?? 8],
+                        'report_margin_bottom_mm' => ['Margin Bawah (mm)', $period->report_margin_bottom_mm ?? 8],
+                    ] as $field => [$label, $default])
+                        <label class="text-sm font-medium text-slate-300">{{ $label }}
+                            <input type="number" name="{{ $field }}" value="{{ old($field, $default) }}" min="5" max="25" required class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 font-normal">
+                        </label>
+                    @endforeach
+                </div>
+
+                <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+                    <label class="text-sm font-medium text-slate-300">Tempat Penerbitan
+                        <input name="report_place" value="{{ old('report_place', $period->report_place) }}" required maxlength="120" placeholder="Contoh: Jakarta" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 font-normal">
+                    </label>
+                    <label class="text-sm font-medium text-slate-300">Tanggal Rapor
+                        <input type="date" name="report_date" value="{{ old('report_date', $period->report_date?->format('Y-m-d') ?? $period->ends_on?->format('Y-m-d')) }}" required class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 font-normal">
+                    </label>
+                    <label class="text-sm font-medium text-slate-300">Skala Isi
+                        <div class="mt-2 flex items-center gap-2"><input type="number" name="report_scale_percent" value="{{ old('report_scale_percent', $period->report_scale_percent ?? 90) }}" min="70" max="100" required class="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 font-normal"><span class="text-slate-500">%</span></div>
+                    </label>
+                    <label class="text-sm font-medium text-slate-300">Posisi Tanda Tangan KS
+                        <input value="Di bawah Orang Tua/Wali dan Wali Kelas" disabled class="mt-2 w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 font-normal text-slate-500">
+                    </label>
+                    <label class="text-sm font-medium text-slate-300">Pilih Kelas
+                        <select data-report-class-picker class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 font-normal">
+                            @foreach ($printClasses as $class)
+                                <option value="{{ route('reports.midterm.show', [$period, $class]) }}" @selected($class->is($schoolClass))>{{ $class->name }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
+                    <p class="text-xs leading-5 text-slate-500">Setiap rapor dimulai dari halaman 1. Nama wali kelas terisi otomatis. Rekomendasi satu lembar: F4, margin 8 mm, skala 90%.</p>
+                    <button class="rounded-xl bg-sky-400 px-5 py-3 text-sm font-semibold text-slate-950">Simpan Pengaturan</button>
+                </div>
+            </form>
+        @else
+            <div class="mt-4 grid gap-3 text-sm text-slate-400 md:grid-cols-2 xl:grid-cols-4">
+                <p><span class="block text-xs text-slate-600">Ukuran Kertas</span>{{ strtoupper($period->report_paper_size ?? 'f4') }}</p>
+                <p><span class="block text-xs text-slate-600">Margin Kiri/Kanan/Atas/Bawah</span>{{ $period->report_margin_left_mm ?? 8 }}/{{ $period->report_margin_right_mm ?? 8 }}/{{ $period->report_margin_top_mm ?? 8 }}/{{ $period->report_margin_bottom_mm ?? 8 }} mm</p>
+                <p><span class="block text-xs text-slate-600">Tempat dan Tanggal</span>{{ $period->report_place ?: 'Belum diatur' }} · {{ ($period->report_date ?? $period->ends_on)?->translatedFormat('d F Y') }}</p>
+                <p><span class="block text-xs text-slate-600">Skala Isi</span>{{ $period->report_scale_percent ?? 90 }}%</p>
+            </div>
+        @endif
+    </section>
 
     <section class="mt-6 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035]">
         <div class="overflow-x-auto">
@@ -63,4 +130,10 @@
             </table>
         </div>
     </section>
+
+    <script>
+        document.querySelector('[data-report-class-picker]')?.addEventListener('change', (event) => {
+            window.location.assign(event.target.value);
+        });
+    </script>
 @endsection

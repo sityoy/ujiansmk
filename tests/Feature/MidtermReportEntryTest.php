@@ -246,6 +246,15 @@ class MidtermReportEntryTest extends TestCase
         ]);
 
         $this->actingAs($admin)
+            ->get(route('reports.midterm.show', [$period, $class]))
+            ->assertOk()
+            ->assertSee('Pengaturan Hasil Cetak')
+            ->assertSee('Ukuran Kertas')
+            ->assertSee('Margin Kiri (mm)')
+            ->assertSee('Posisi Tanda Tangan KS')
+            ->assertSee('Pilih Kelas');
+
+        $this->actingAs($admin)
             ->get(route('reports.midterm.print', [$period, $class, $student]))
             ->assertOk()
             ->assertSee('Laporan Hasil Belajar')

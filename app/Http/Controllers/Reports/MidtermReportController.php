@@ -52,8 +52,20 @@ class MidtermReportController extends Controller
             || $access->canRecordAttendance($request->user(), $schoolClass)
             || $report['extracurriculars']->contains(fn ($activity) => $access->canManageExtracurricular($request->user(), $activity))
             || $access->canConfigure($request->user());
+        $printClasses = SchoolClass::query()
+            ->where('academic_year_id', $assessmentPeriod->academic_year_id)
+            ->whereHas('assessmentSubjects', fn ($query) => $query->where('assessment_period_id', $assessmentPeriod->id))
+            ->orderBy('name')
+            ->get()
+            ->filter(fn (SchoolClass $class) => $access->canPrint($request->user(), $class))
+            ->values();
 
-        return view('reports.midterm.show', [...$report, 'canEdit' => $canEdit]);
+        return view('reports.midterm.show', [
+            ...$report,
+            'canEdit' => $canEdit,
+            'canConfigure' => $access->canConfigure($request->user()),
+            'printClasses' => $printClasses,
+        ]);
     }
 
     public function print(
