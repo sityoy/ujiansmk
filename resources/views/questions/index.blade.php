@@ -27,7 +27,7 @@
                 <p class="mt-3 text-sm text-amber-300">Bank soal terkunci karena sudah ada siswa yang mulai ujian. Isi dan bobot soal dipertahankan untuk menjaga konsistensi nilai reguler dan susulan.</p>
             @endif
             <fieldset @disabled($isLocked)>
-            <form method="POST" action="{{ route('scheduling.questions.store', $assessmentSubject) }}" class="mt-5 space-y-3">
+            <form method="POST" action="{{ route('scheduling.questions.store', $assessmentSubject) }}" enctype="multipart/form-data" class="mt-5 space-y-3">
                 @csrf
                 <select id="question-type" name="question_type" required class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
                     @foreach ($questionTypes as $type)
@@ -35,8 +35,13 @@
                     @endforeach
                 </select>
                 <textarea name="question_text" rows="5" required placeholder="Tuliskan pertanyaan..." class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-violet-400">{{ old('question_text') }}</textarea>
+                <div>
+                    <label class="mb-2 block text-xs font-medium text-slate-400">Gambar soal (opsional)</label>
+                    <input type="file" name="question_image" accept="image/jpeg,image/png,image/webp" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-400 file:px-3 file:py-2 file:font-semibold file:text-slate-950">
+                    <p class="mt-2 text-xs leading-5 text-amber-200">Untuk soal Bahasa Arab, disarankan menggunakan gambar agar bentuk huruf, harakat, dan tata letak tetap akurat. Format JPG, PNG, atau WebP; maksimal 4 MB.</p>
+                </div>
                 <div id="multiple-choice-fields" class="space-y-3">
-                    @foreach (['A', 'B', 'C', 'D'] as $option)
+                    @foreach (['A', 'B', 'C', 'D', 'E'] as $option)
                         <div class="grid grid-cols-[36px_1fr] items-center gap-2">
                             <span class="grid size-9 place-items-center rounded-lg bg-slate-900 text-xs font-semibold text-violet-300">{{ $option }}</span>
                             <input name="option_{{ strtolower($option) }}" value="{{ old('option_'.strtolower($option)) }}" placeholder="Pilihan {{ $option }}" class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-violet-400">
@@ -44,7 +49,7 @@
                     @endforeach
                     <select name="correct_answer" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
                         <option value="">Jawaban benar</option>
-                        @foreach (['A', 'B', 'C', 'D'] as $option)<option value="{{ $option }}">Pilihan {{ $option }}</option>@endforeach
+                        @foreach (['A', 'B', 'C', 'D', 'E'] as $option)<option value="{{ $option }}">Pilihan {{ $option }}</option>@endforeach
                     </select>
                 </div>
                 <div>
@@ -64,6 +69,9 @@
                         <div>
                             <p class="text-xs font-semibold text-violet-300">Soal {{ $question->position }} · {{ $question->question_type->label() }} · {{ number_format((float) $question->points, 2, ',', '.') }} poin</p>
                             <p class="mt-2 whitespace-pre-line text-sm leading-6 text-white">{{ $question->question_text }}</p>
+                            @if ($question->question_image_path)
+                                <img src="{{ Storage::url($question->question_image_path) }}" alt="Gambar soal {{ $question->position }}" loading="lazy" class="mt-4 max-h-96 w-auto max-w-full rounded-xl border border-white/10 bg-white object-contain p-2">
+                            @endif
                         </div>
                         <div class="flex shrink-0 items-center gap-3">
                             @unless ($isLocked)
@@ -88,7 +96,7 @@
                     @endif
 
                     @unless ($isLocked)
-                        <form id="question-edit-{{ $question->id }}" method="POST" action="{{ route('scheduling.questions.update', [$assessmentSubject, $question]) }}" class="question-edit-form mt-5 hidden space-y-3 border-t border-white/10 pt-5">
+                        <form id="question-edit-{{ $question->id }}" method="POST" action="{{ route('scheduling.questions.update', [$assessmentSubject, $question]) }}" enctype="multipart/form-data" class="question-edit-form mt-5 hidden space-y-3 border-t border-white/10 pt-5">
                             @csrf @method('PUT')
                             <p class="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-300">Edit soal {{ $question->position }}</p>
                             <select name="question_type" required class="edit-question-type w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
@@ -97,8 +105,13 @@
                                 @endforeach
                             </select>
                             <textarea name="question_text" rows="4" required class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-cyan-400">{{ $question->question_text }}</textarea>
+                            <div>
+                                <label class="mb-2 block text-xs font-medium text-slate-400">Ganti gambar soal (opsional)</label>
+                                <input type="file" name="question_image" accept="image/jpeg,image/png,image/webp" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-400 file:px-3 file:py-2 file:font-semibold file:text-slate-950">
+                                <p class="mt-2 text-xs text-slate-500">Kosongkan jika gambar lama tetap digunakan. Soal Bahasa Arab disarankan memakai gambar.</p>
+                            </div>
                             <div class="edit-choice-fields space-y-3">
-                                @foreach (['A', 'B', 'C', 'D'] as $option)
+                                @foreach (['A', 'B', 'C', 'D', 'E'] as $option)
                                     <div class="grid grid-cols-[36px_1fr] items-center gap-2">
                                         <span class="grid size-9 place-items-center rounded-lg bg-slate-900 text-xs font-semibold text-violet-300">{{ $option }}</span>
                                         <input name="option_{{ strtolower($option) }}" value="{{ $question->options[$option] ?? '' }}" placeholder="Pilihan {{ $option }}" class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-cyan-400">
@@ -106,7 +119,7 @@
                                 @endforeach
                                 <select name="correct_answer" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
                                     <option value="">Jawaban benar</option>
-                                    @foreach (['A', 'B', 'C', 'D'] as $option)
+                                    @foreach (['A', 'B', 'C', 'D', 'E'] as $option)
                                         <option value="{{ $option }}" @selected($question->correct_answer === $option)>Pilihan {{ $option }}</option>
                                     @endforeach
                                 </select>
