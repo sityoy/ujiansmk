@@ -14,6 +14,8 @@ use App\Models\SchoolClass;
 use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class QuestionBankAccessTest extends TestCase
@@ -84,6 +86,41 @@ class QuestionBankAccessTest extends TestCase
 
         $this->delete(route('scheduling.questions.destroy', [$other, $question]))->assertForbidden();
         $this->assertDatabaseCount('exam_questions', 1);
+    }
+
+    public function test_multiple_choice_supports_option_e_and_optional_image(): void
+    {
+        Storage::fake('public');
+        [$teacher, , $assigned] = $this->makeComponents();
+        $assigned->assessmentPeriod()->update(['type' => AssessmentType::AAS]);
+
+        $this->actingAs($teacher)
+            ->post(route('scheduling.questions.store', $assigned), [
+                'question_type' => ExamQuestionType::MultipleChoice->value,
+                'question_text' => 'Pilih jawaban yang benar.',
+                'option_a' => 'Pilihan A',
+                'option_b' => 'Pilihan B',
+                'option_c' => 'Pilihan C',
+                'option_d' => 'Pilihan D',
+                'option_e' => 'Pilihan E',
+                'correct_answer' => 'E',
+                'question_image' => UploadedFile::fake()->image('soal-arab.png', 800, 600),
+                'points' => 2,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $question = $assigned->questions()->firstOrFail();
+        $this->assertSame('Pilihan E', $question->options['E']);
+        $this->assertSame('E', $question->correct_answer);
+        $this->assertNotNull($question->question_image_path);
+        Storage::disk('public')->assertExists($question->question_image_path);
+
+        $this->actingAs($teacher)
+            ->get(route('scheduling.questions.index', $assigned))
+            ->assertOk()
+            ->assertSee('Pilihan E')
+            ->assertSee('Soal Bahasa Arab');
     }
 
     public function test_committee_can_oversee_all_question_banks(): void
