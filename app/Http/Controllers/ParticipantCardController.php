@@ -11,7 +11,7 @@ use Illuminate\View\View;
 
 class ParticipantCardController extends Controller
 {
-    public function print(Request $request): View
+    public function generate(Request $request): View
     {
         $validated = $request->validate([
             'school_class_id' => ['required', 'exists:school_classes,id'],
