@@ -74,15 +74,25 @@
                                     <p class="mt-2 font-medium text-white">{{ $period->name }}</p>
                                     <p class="text-xs text-slate-500">{{ $period->academicYear->name }} · {{ $period->code }} · {{ $period->assessment_subjects_count }} komponen</p>
                                 </div>
-                                <form method="POST" action="{{ route('scheduling.periods.status', $period) }}" class="flex items-center gap-2">
-                                    @csrf @method('PATCH')
-                                    <select name="status" class="rounded-lg border border-white/10 bg-slate-950 px-2 py-1.5 text-xs">
-                                        @foreach ($periodStatuses as $status)
-                                            <option value="{{ $status->value }}" @selected($period->status === $status)>{{ $statusLabels[$status->value] }}</option>
-                                        @endforeach
-                                    </select>
-                                    <button class="text-xs text-cyan-300">Simpan</button>
-                                </form>
+                                <div class="flex flex-col items-end gap-2">
+                                    <form method="POST" action="{{ route('scheduling.periods.status', $period) }}" class="flex items-center gap-2">
+                                        @csrf @method('PATCH')
+                                        <select name="status" class="rounded-lg border border-white/10 bg-slate-950 px-2 py-1.5 text-xs">
+                                            @foreach ($periodStatuses as $status)
+                                                <option value="{{ $status->value }}" @selected($period->status === $status)>{{ $statusLabels[$status->value] }}</option>
+                                            @endforeach
+                                        </select>
+                                        <button class="text-xs text-cyan-300">Simpan</button>
+                                    </form>
+                                    @if ($period->assessment_subjects_count === 0)
+                                        <form method="POST" action="{{ route('scheduling.periods.destroy', $period) }}" onsubmit="return confirm('Hapus periode kosong ini?')">
+                                            @csrf @method('DELETE')
+                                            <button class="text-xs text-rose-300">Hapus periode</button>
+                                        </form>
+                                    @else
+                                        <span class="max-w-56 text-right text-[11px] leading-4 text-slate-500">Sudah digunakan—pilih status Selesai untuk mengarsipkan dan menjaga jawaban serta nilai peserta.</span>
+                                    @endif
+                                </div>
                             </div>
                         </div>
                     @empty
