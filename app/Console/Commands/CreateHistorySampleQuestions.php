@@ -10,12 +10,42 @@ use Illuminate\Support\Facades\DB;
 
 class CreateHistorySampleQuestions extends Command
 {
-    protected $signature = 'questions:sample-history {assessment_subject_id : ID komponen mapel Sejarah}';
+    protected $signature = 'questions:sample-history {assessment_subject_id? : ID komponen mapel Sejarah}';
 
     protected $description = 'Memasukkan 30 contoh soal pilihan ganda Sejarah Indonesia dengan opsi A-E';
 
     public function handle(): int
     {
+        if (! $this->argument('assessment_subject_id')) {
+            $components = AssessmentSubject::query()
+                ->with(['assessmentPeriod', 'subject', 'schoolClass'])
+                ->whereHas('subject', fn ($query) => $query->where('name', 'like', '%Sejarah%'))
+                ->withCount('questions')
+                ->orderByDesc('id')
+                ->get();
+
+            if ($components->isEmpty()) {
+                $this->warn('Belum ada komponen mapel Sejarah. Buat mapel-kelas dan periode terlebih dahulu.');
+
+                return self::SUCCESS;
+            }
+
+            $this->table(
+                ['ID', 'Periode', 'Mapel', 'Kelas', 'Jenis', 'Jumlah soal'],
+                $components->map(fn ($item) => [
+                    $item->id,
+                    $item->assessmentPeriod->name,
+                    $item->subject->name,
+                    $item->schoolClass->name,
+                    strtoupper($item->assessmentPeriod->type->value),
+                    $item->questions_count,
+                ])->all(),
+            );
+            $this->line('Jalankan kembali: php artisan questions:sample-history ID');
+
+            return self::SUCCESS;
+        }
+
         $component = AssessmentSubject::query()
             ->with(['assessmentPeriod', 'subject', 'schoolClass'])
             ->find($this->argument('assessment_subject_id'));
