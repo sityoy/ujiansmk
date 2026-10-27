@@ -215,6 +215,21 @@
                     Akun login otomatis dibuat. Username dan password awal memakai NISN; jika NISN kosong, memakai NIS.
                     Kolom Password boleh diisi untuk menentukan password awal lain.
                 </p>
+                <form method="POST" action="{{ route('academic.students.participant-cards') }}" target="_blank"
+                    onsubmit="return confirm('Password seluruh siswa aktif pada kelas ini akan direset menjadi NISN atau NIS. Lanjutkan dan cetak kartu?')"
+                    class="mt-5 grid max-w-xl gap-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.04] p-4 sm:grid-cols-[1fr_auto]">
+                    @csrf
+                    <div>
+                        <label class="mb-2 block text-xs font-medium text-amber-200">Cetak kartu akun peserta per kelas</label>
+                        <select name="school_class_id" required class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
+                            <option value="">Pilih kelas</option>
+                            @foreach ($classOptions as $class)<option value="{{ $class->id }}">{{ $class->name }} · {{ $class->academicYear->name }}</option>@endforeach
+                        </select>
+                    </div>
+                    <button class="self-end rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-slate-950">Reset & cetak kartu</button>
+                    <p class="sm:col-span-2 text-xs leading-5 text-amber-100/70">Agar akun pada kartu pasti dapat dipakai, username dan password diatur menjadi NISN. Jika NISN kosong, sistem memakai NIS.</p>
+                </form>
+
                 <div class="mt-5 flex flex-wrap gap-3">
                     <a href="{{ route('academic.students.template') }}" class="rounded-xl border border-cyan-400/30 px-4 py-2.5 text-sm font-medium text-cyan-200 hover:bg-cyan-400/10">Unduh template Excel</a>
                     <a href="{{ route('academic.students.export') }}" class="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-medium text-slate-200 hover:bg-white/5">Ekspor seluruh siswa</a>
