@@ -13,6 +13,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -83,8 +84,9 @@ class QuestionBankController extends Controller
         $this->authorizeAccess($request, $assessmentSubject);
         $validated = $this->validateQuestion($request, $assessmentSubject);
 
-        DB::transaction(function () use ($assessmentSubject, $validated): void {
+        DB::transaction(function () use ($request, $assessmentSubject, $validated): void {
             $this->assertEditable($assessmentSubject);
+            $imagePath = $request->file('question_image')?->store('exam-questions', 'public');
             $position = (int) ExamQuestion::query()
                 ->where('assessment_subject_id', $assessmentSubject->id)
                 ->lockForUpdate()
@@ -92,6 +94,7 @@ class QuestionBankController extends Controller
 
             $assessmentSubject->questions()->create([
                 ...$this->questionAttributes($validated),
+                'question_image_path' => $imagePath,
                 'position' => $position,
             ]);
         });
@@ -111,13 +114,21 @@ class QuestionBankController extends Controller
 
         $validated = $this->validateQuestion($request, $assessmentSubject);
 
-        DB::transaction(function () use ($assessmentSubject, $question, $validated): void {
+        DB::transaction(function () use ($request, $assessmentSubject, $question, $validated): void {
             $this->assertEditable($assessmentSubject);
             $editableQuestion = ExamQuestion::query()
                 ->where('assessment_subject_id', $assessmentSubject->id)
                 ->lockForUpdate()
                 ->findOrFail($question->id);
-            $editableQuestion->update($this->questionAttributes($validated));
+            $attributes = $this->questionAttributes($validated);
+            if ($request->hasFile('question_image')) {
+                $newImagePath = $request->file('question_image')->store('exam-questions', 'public');
+                if ($editableQuestion->question_image_path) {
+                    Storage::disk('public')->delete($editableQuestion->question_image_path);
+                }
+                $attributes['question_image_path'] = $newImagePath;
+            }
+            $editableQuestion->update($attributes);
         });
 
         return back()->with('status', 'Soal berhasil diperbarui.');
@@ -139,7 +150,11 @@ class QuestionBankController extends Controller
         try {
             DB::transaction(function () use ($assessmentSubject, $question): void {
                 $this->assertEditable($assessmentSubject);
+                $imagePath = $question->question_image_path;
                 $question->delete();
+                if ($imagePath) {
+                    Storage::disk('public')->delete($imagePath);
+                }
 
                 ExamQuestion::query()
                     ->where('assessment_subject_id', $assessmentSubject->id)
@@ -185,7 +200,9 @@ class QuestionBankController extends Controller
             'option_b' => ['required_if:question_type,multiple_choice', 'nullable', 'string', 'max:2000'],
             'option_c' => ['required_if:question_type,multiple_choice', 'nullable', 'string', 'max:2000'],
             'option_d' => ['required_if:question_type,multiple_choice', 'nullable', 'string', 'max:2000'],
-            'correct_answer' => ['required_if:question_type,multiple_choice', 'nullable', Rule::in(['A', 'B', 'C', 'D'])],
+            'option_e' => ['required_if:question_type,multiple_choice', 'nullable', 'string', 'max:2000'],
+            'correct_answer' => ['required_if:question_type,multiple_choice', 'nullable', Rule::in(['A', 'B', 'C', 'D', 'E'])],
+            'question_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
             'points' => ['required', 'numeric', 'between:0.01,1000'],
         ]);
     }
@@ -207,6 +224,7 @@ class QuestionBankController extends Controller
                     'B' => trim($validated['option_b']),
                     'C' => trim($validated['option_c']),
                     'D' => trim($validated['option_d']),
+                    'E' => trim($validated['option_e']),
                 ]
                 : null,
             'correct_answer' => $isMultipleChoice ? $validated['correct_answer'] : null,
