@@ -96,7 +96,7 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             Route::get('/students/template', [StudentSpreadsheetController::class, 'template'])->name('students.template');
             Route::get('/students/export', [StudentSpreadsheetController::class, 'export'])->name('students.export');
             Route::post('/students/import', [StudentSpreadsheetController::class, 'import'])->name('students.import');
-            Route::post('/students/participant-cards', [ParticipantCardController::class, 'print'])->name('students.participant-cards');
+            Route::post('/students/participant-cards', [ParticipantCardController::class, 'generate'])->name('students.participant-cards');
             Route::patch('/students/{student}/toggle', [AcademicDataController::class, 'toggleStudent'])->name('students.toggle');
             Route::delete('/students/{student}', [AcademicDataController::class, 'destroyStudent'])->name('students.destroy');
         });
