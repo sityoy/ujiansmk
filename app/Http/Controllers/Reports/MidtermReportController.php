@@ -69,24 +69,6 @@ class MidtermReportController extends Controller
         ]);
     }
 
-    public function printScores(
-        Request $request,
-        AssessmentPeriod $assessmentPeriod,
-        SchoolClass $schoolClass,
-        MidtermReportService $service,
-        MidtermReportAccess $access,
-    ): View {
-        abort_unless($access->canPrint($request->user(), $schoolClass), 403);
-
-        $report = $this->reportOrFail($service, $assessmentPeriod, $schoolClass);
-
-        return view('reports.midterm.print-scores', [
-            ...$report,
-            'school' => SchoolProfile::query()->first(),
-            'letterheadData' => $this->letterheadData(),
-        ]);
-    }
-
     public function print(
         Request $request,
         AssessmentPeriod $assessmentPeriod,
