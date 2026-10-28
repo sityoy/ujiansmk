@@ -216,7 +216,6 @@
                     Kolom Password boleh diisi untuk menentukan password awal lain.
                 </p>
                 <form method="POST" action="{{ route('academic.students.participant-cards') }}" target="_blank"
-                    onsubmit="return confirm('Password seluruh siswa aktif pada kelas ini akan direset menjadi NISN atau NIS. Lanjutkan dan cetak kartu?')"
                     class="mt-5 grid max-w-xl gap-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.04] p-4 sm:grid-cols-[1fr_auto]">
                     @csrf
                     <div>
@@ -226,8 +225,8 @@
                             @foreach ($classOptions as $class)<option value="{{ $class->id }}">{{ $class->name }} · {{ $class->academicYear->name }}</option>@endforeach
                         </select>
                     </div>
-                    <button class="self-end rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-slate-950">Reset & cetak kartu</button>
-                    <p class="sm:col-span-2 text-xs leading-5 text-amber-100/70">Agar akun pada kartu pasti dapat dipakai, username dan password diatur menjadi NISN. Jika NISN kosong, sistem memakai NIS.</p>
+                    <button class="self-end rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-slate-950">Cetak kartu</button>
+                    <p class="sm:col-span-2 text-xs leading-5 text-amber-100/70">Pencetakan tidak mengubah akun atau password. Kartu menampilkan username aktif dan password awal NISN/NIS sebagai pengingat.</p>
                 </form>
 
                 <div class="mt-5 flex flex-wrap gap-3">
