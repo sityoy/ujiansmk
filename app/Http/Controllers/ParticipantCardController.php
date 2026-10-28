@@ -6,7 +6,6 @@ use App\Models\SchoolClass;
 use App\Models\SchoolProfile;
 use App\Models\Student;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class ParticipantCardController extends Controller
@@ -25,18 +24,6 @@ class ParticipantCardController extends Controller
             ->whereHas('user')
             ->orderBy('full_name')
             ->get();
-
-        DB::transaction(function () use ($students): void {
-            foreach ($students as $student) {
-                $login = $student->nisn ?: $student->student_number;
-                $student->user->update([
-                    'username' => $login,
-                    'password' => $login,
-                    'must_change_password' => false,
-                    'is_active' => true,
-                ]);
-            }
-        });
 
         return view('academic.participant-cards', [
             'school' => SchoolProfile::query()->first(),
