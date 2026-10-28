@@ -25,12 +25,12 @@
         @if (!$questionCount || !$statistics['total'] || !$session->campus->is_active)
             <p class="mt-4 text-sm text-amber-300">Perlu dilengkapi: {{ collect([!$questionCount ? 'bank soal masih kosong' : null, !$statistics['total'] ? 'belum ada peserta ditempatkan' : null, !$session->campus->is_active ? 'lokasi tidak aktif' : null])->filter()->implode('; ') }}.</p>
         @endif
-        <p class="mt-4 text-xs text-slate-500">Data dimuat {{ now()->format('d/m/Y H:i:s') }} ({{ config('app.timezone') }}). Halaman ini tidak memperbarui otomatis. Absensi di bawah sesuai tanggal dan lokasi sesi, bukan selalu hari ini.</p>
+        <p class="mt-4 text-xs text-slate-500">Data dimuat {{ now()->format('d/m/Y H:i:s') }} ({{ config('app.timezone') }}). Progres peserta diperbarui otomatis setiap 15 detik saat halaman aktif. Pembaruan terakhir: <span data-progress-updated>{{ now()->format('H:i:s') }}</span>. Absensi sesuai tanggal dan lokasi sesi.</p>
     </section>
 
     <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         @foreach (['total' => 'Total peserta', 'scheduled' => 'Belum mulai', 'in_progress' => 'Berjalan (termasuk terkunci)', 'locked' => 'Perlu pemeriksaan', 'submitted' => 'Dikumpulkan', 'absent' => 'Tidak hadir ujian'] as $key => $label)
-            <div class="rounded-2xl border border-white/10 bg-white/[0.035] p-4"><p class="text-xs text-slate-400">{{ $label }}</p><p class="mt-2 text-2xl font-semibold text-cyan-300">{{ $statistics[$key] }}</p></div>
+            <div class="rounded-2xl border border-white/10 bg-white/[0.035] p-4"><p class="text-xs text-slate-400">{{ $label }}</p><p class="mt-2 text-2xl font-semibold text-cyan-300" data-progress-stat="{{ $key }}">{{ $statistics[$key] }}</p></div>
         @endforeach
     </div>
 
@@ -60,11 +60,11 @@
                             $checkin = $assignment->student->dailyCheckins->first();
                             $answered = $attempt?->answers_count ?? 0;
                         @endphp
-                        <tr>
+                        <tr data-progress-assignment="{{ $assignment->id }}">
                             <td class="px-5 py-4"><p class="font-medium text-white">{{ $assignment->student->full_name }}</p><p class="mt-1 text-xs text-slate-500">NIS {{ $assignment->student->student_number }} · NISN {{ $assignment->student->nisn ?: '—' }}</p></td>
                             <td class="px-5 py-4 text-xs {{ $checkin?->status->value === 'verified' ? 'text-emerald-300' : 'text-amber-300' }}">{{ $checkin ? $checkinLabels[$checkin->status->value] : 'Belum tercatat' }}</td>
-                            <td class="px-5 py-4 text-slate-300">{{ $statusLabels[$status] ?? 'Perlu pemeriksaan' }}</td>
-                            <td class="px-5 py-4 text-slate-300"><p>{{ $answered }} / {{ $questionCount }} jawaban</p><progress value="{{ $answered }}" max="{{ max(1, $questionCount) }}" aria-label="Progres jawaban {{ $assignment->student->full_name }}" class="mt-2 h-2 w-24 accent-cyan-400"></progress></td>
+                            <td class="px-5 py-4 text-slate-300" data-progress-status>{{ $statusLabels[$status] ?? 'Perlu pemeriksaan' }}</td>
+                            <td class="px-5 py-4 text-slate-300"><p><span data-progress-answered>{{ $answered }}</span> / {{ $questionCount }} jawaban</p><progress data-progress-bar value="{{ $answered }}" max="{{ max(1, $questionCount) }}" aria-label="Progres jawaban {{ $assignment->student->full_name }}" class="mt-2 h-2 w-24 accent-cyan-400"></progress></td>
                             <td class="whitespace-nowrap px-5 py-4 text-xs leading-6 text-slate-400">Mulai: {{ $attempt?->started_at?->format('H:i:s') ?? '—' }}<br>Simpan terakhir: {{ $attempt?->last_seen_at?->format('H:i:s') ?? '—' }}<br>Dikumpulkan: {{ $attempt?->submitted_at?->format('H:i:s') ?? '—' }}</td>
                             <td class="px-5 py-4 text-slate-300">
                                 <p>{{ $attempt?->score ?? '—' }}</p>
@@ -148,5 +148,54 @@
     </section>
     @if (in_array(auth()->user()->role->value, ['super_admin', 'committee'], true))
         <p class="mt-5 text-sm text-slate-400">Peserta tidak hadir dapat dipindahkan melalui <a href="{{ route('scheduling.index') }}#peserta-susulan" class="text-cyan-300">Penjadwalan → Peserta Susulan</a>. Penugasan lama dipindahkan, bukan dibuat ganda; siswa yang sudah mulai tidak dapat dipindahkan.</p>
+    @endif
+
+    @if ($session->status->value !== 'closed' && $participants->isNotEmpty())
+        <script>
+            (() => {
+                const rows = [...document.querySelectorAll('[data-progress-assignment]')];
+                const assignmentIds = rows.map((row) => Number(row.dataset.progressAssignment));
+                const labels = @json($statusLabels);
+                const url = new URL(@json(route('operations.sessions.progress', $session)), window.location.origin);
+                assignmentIds.forEach((id) => url.searchParams.append('assignment_ids[]', id));
+                let loading = false;
+
+                const refreshProgress = async () => {
+                    if (loading || document.hidden) return;
+                    loading = true;
+                    try {
+                        const response = await fetch(url, {headers: {'Accept': 'application/json'}});
+                        if (!response.ok) return;
+                        const data = await response.json();
+                        Object.entries(data.statistics ?? {}).forEach(([key, value]) => {
+                            const element = document.querySelector('[data-progress-stat="' + key + '"]');
+                            if (element) element.textContent = value;
+                        });
+                        rows.forEach((row) => {
+                            const participant = data.participants?.[row.dataset.progressAssignment];
+                            if (!participant) return;
+                            const status = row.querySelector('[data-progress-status]');
+                            const answered = row.querySelector('[data-progress-answered]');
+                            const bar = row.querySelector('[data-progress-bar]');
+                            if (status) status.textContent = labels[participant.status] ?? 'Perlu pemeriksaan';
+                            if (answered) answered.textContent = participant.answered;
+                            if (bar) bar.value = participant.answered;
+                        });
+                        const updated = document.querySelector('[data-progress-updated]');
+                        if (updated) updated.textContent = data.updated_at;
+                    } catch (_) {
+                        // Jaringan sementara terputus: pertahankan data terakhir dan coba lagi nanti.
+                    } finally {
+                        loading = false;
+                    }
+                };
+
+                const timer = setInterval(refreshProgress, 15000);
+                document.addEventListener('visibilitychange', () => {
+                    if (!document.hidden) refreshProgress();
+                });
+                window.addEventListener('beforeunload', () => clearInterval(timer), {once: true});
+            })();
+        </script>
     @endif
 @endsection
