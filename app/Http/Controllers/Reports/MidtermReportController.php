@@ -24,9 +24,10 @@ class MidtermReportController extends Controller
             ->where('type', AssessmentType::ATS)
             ->with(['academicYear', 'assessmentSubjects.schoolClass'])
             ->latest('starts_on')
-            ->get();
+            ->paginate(10)
+            ->withQueryString();
 
-        $periods->each(function (AssessmentPeriod $period) use ($request, $access): void {
+        $periods->getCollection()->each(function (AssessmentPeriod $period) use ($request, $access): void {
             $classes = $period->assessmentSubjects->pluck('schoolClass')->filter()->unique('id')->sortBy('name')
                 ->filter(fn (SchoolClass $schoolClass) => $access->canView($request->user(), $period, $schoolClass));
             $period->setRelation('accessibleClasses', $classes->values());
@@ -65,6 +66,24 @@ class MidtermReportController extends Controller
             'canEdit' => $canEdit,
             'canConfigure' => $access->canConfigure($request->user()),
             'printClasses' => $printClasses,
+        ]);
+    }
+
+    public function printScores(
+        Request $request,
+        AssessmentPeriod $assessmentPeriod,
+        SchoolClass $schoolClass,
+        MidtermReportService $service,
+        MidtermReportAccess $access,
+    ): View {
+        abort_unless($access->canPrint($request->user(), $schoolClass), 403);
+
+        $report = $this->reportOrFail($service, $assessmentPeriod, $schoolClass);
+
+        return view('reports.midterm.print-scores', [
+            ...$report,
+            'school' => SchoolProfile::query()->first(),
+            'letterheadData' => $this->letterheadData(),
         ]);
     }
 
