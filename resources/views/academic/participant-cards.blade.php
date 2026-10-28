@@ -48,9 +48,9 @@
                     <div class="row"><span>NIS / NISN</span><span>:</span><span>{{ $student->student_number }} / {{ $student->nisn ?? '—' }}</span></div>
                     <div class="login">
                         <div class="row"><span>Username</span><span>:</span><strong>{{ $login }}</strong></div>
-                        <div class="row"><span>Password</span><span>:</span><strong>{{ $login }}</strong></div>
+                        <div class="row"><span>Password awal</span><span>:</span><strong>{{ $login }}</strong></div>
                     </div>
-                    <div class="note">Simpan kartu ini dan jangan membagikan akun kepada orang lain.</div>
+                    <div class="note">Pencetakan tidak mereset password. Jika password pernah diganti, gunakan password terakhir. Simpan kartu ini dan jangan membagikan akun kepada orang lain.</div>
                 </div>
             </section>
         @empty
