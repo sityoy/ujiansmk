@@ -195,6 +195,8 @@ Route::middleware(['auth', 'active'])->group(function (): void {
         ->group(function (): void {
             Route::get('/', [ExamOperationsController::class, 'index'])->name('index');
             Route::get('/sessions/{examSession}', [ExamOperationsController::class, 'show'])->name('sessions.show');
+            Route::get('/sessions/{examSession}/progress', [ExamOperationsController::class, 'progress'])
+                ->middleware('throttle:6,1')->name('sessions.progress');
             Route::post('/attempts/{attempt}/security-review', [ExamOperationsController::class, 'reviewSecurity'])
                 ->name('attempts.security-review');
             Route::post('/attempts/{attempt}/reset-violations', [ExamOperationsController::class, 'resetViolations'])
