@@ -68,15 +68,20 @@ class QuestionBankController extends Controller
             'assessmentPeriod.academicYear',
             'subject',
             'schoolClass',
-            'questions',
         ]);
+        $questions = $assessmentSubject->questions()
+            ->orderBy('position')
+            ->paginate(20)
+            ->withQueryString();
+        $questionCount = $assessmentSubject->questions()->count();
+        $totalPoints = (float) $assessmentSubject->questions()->sum('points');
 
         $isLocked = $assessmentSubject->assignments()->whereHas('attempt')->exists();
         $questionTypes = $assessmentSubject->assessmentPeriod->type === AssessmentType::ATS
             ? [ExamQuestionType::ShortAnswer, ExamQuestionType::Essay]
             : ExamQuestionType::cases();
 
-        return view('questions.index', compact('assessmentSubject', 'isLocked', 'questionTypes'));
+        return view('questions.index', compact('assessmentSubject', 'questions', 'questionCount', 'totalPoints', 'isLocked', 'questionTypes'));
     }
 
     public function store(Request $request, AssessmentSubject $assessmentSubject): RedirectResponse
