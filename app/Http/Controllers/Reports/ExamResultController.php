@@ -23,8 +23,8 @@ class ExamResultController extends Controller
     public function index(Request $request): View
     {
         $periods = AssessmentPeriod::query()
-            ->where('type', '!=', AssessmentType::ATS)
-            ->where('status', PeriodStatus::Closed)
+            ->where('type', '!=', AssessmentType::ATS->value)
+            ->where('status', PeriodStatus::Closed->value)
             ->with(['academicYear', 'assessmentSubjects.schoolClass'])
             ->latest('ends_on')
             ->paginate(10)
@@ -70,7 +70,7 @@ class ExamResultController extends Controller
 
         $attempts = ExamAttempt::query()
             ->with('assignment')
-            ->whereIn('status', [AttemptStatus::Submitted, AttemptStatus::Terminated])
+            ->whereIn('status', [AttemptStatus::Submitted->value, AttemptStatus::Terminated->value])
             ->whereNotNull('score')
             ->whereHas('assignment', fn ($query) => $query->whereIn('assessment_subject_id', $subjects->pluck('id')))
             ->get()
