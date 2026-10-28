@@ -12,6 +12,7 @@ use App\Models\ExamSession;
 use App\Services\Exams\ExamSessionService;
 use App\Services\Exams\ExamSecurityService;
 use App\Services\Exams\ExamAttemptResetService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -108,6 +109,50 @@ class ExamOperationsController extends Controller
         return view('operations.show', [
             'session' => $examSession, 'participants' => $participants,
             'statistics' => $statistics, 'filters' => $filters, 'statusLabels' => $statusLabels,
+        ]);
+    }
+
+    public function progress(Request $request, ExamSession $examSession): JsonResponse
+    {
+        $validated = $request->validate([
+            'assignment_ids' => ['required', 'array', 'max:25'],
+            'assignment_ids.*' => ['integer'],
+        ]);
+
+        $roster = $examSession->assignments();
+        $statistics = [
+            'total' => (clone $roster)->count(),
+            'scheduled' => (clone $roster)->whereDoesntHave('attempt')->where('status', AssignmentStatus::Scheduled)->count(),
+            'in_progress' => (clone $roster)->whereHas('attempt', fn ($query) => $query->where('status', AttemptStatus::InProgress))->count(),
+            'submitted' => (clone $roster)->whereHas('attempt', fn ($query) => $query->where('status', AttemptStatus::Submitted))->count(),
+            'locked' => (clone $roster)->whereHas('attempt', fn ($query) => $query->where('status', AttemptStatus::InProgress)->whereNotNull('security_locked_at'))->count(),
+            'absent' => (clone $roster)->whereDoesntHave('attempt')->where('status', AssignmentStatus::Absent)->count(),
+        ];
+
+        $participants = $examSession->assignments()
+            ->whereIn('id', $validated['assignment_ids'])
+            ->with(['attempt' => fn ($query) => $query->withCount('answers')])
+            ->get()
+            ->mapWithKeys(function (ExamAssignment $assignment): array {
+                $attempt = $assignment->attempt;
+                $status = $attempt?->status->value ?? $assignment->status->value;
+                if ($status === AttemptStatus::InProgress->value && $attempt?->security_locked_at) {
+                    $status = 'locked';
+                }
+
+                return [(string) $assignment->id => [
+                    'status' => $status,
+                    'answered' => $attempt?->answers_count ?? 0,
+                    'last_seen_at' => $attempt?->last_seen_at?->format('H:i:s'),
+                    'score' => $attempt?->score,
+                    'violations' => $attempt?->violation_count ?? 0,
+                ]];
+            });
+
+        return response()->json([
+            'statistics' => $statistics,
+            'participants' => $participants,
+            'updated_at' => now()->format('H:i:s'),
         ]);
     }
 
