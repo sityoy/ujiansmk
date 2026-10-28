@@ -88,6 +88,13 @@
         @endif
     </section>
 
+    <div class="mt-6 flex flex-wrap justify-end gap-3">
+        <a href="{{ route('reports.midterm.scores.print', [$period, $schoolClass]) }}" target="_blank"
+            class="rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2.5 text-sm font-semibold text-cyan-200 hover:bg-cyan-400/20">
+            Cetak rekap nilai periode
+        </a>
+    </div>
+
     <section class="mt-6 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035]">
         <div class="overflow-x-auto">
             <table class="min-w-full text-left text-sm">
