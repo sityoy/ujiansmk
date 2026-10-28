@@ -11,6 +11,7 @@ use App\Http\Controllers\ExamGradingController;
 use App\Http\Controllers\QuestionBankController;
 use App\Http\Controllers\ParticipantCardController;
 use App\Http\Controllers\Reports\MidtermReportController;
+use App\Http\Controllers\Reports\ExamResultController;
 use App\Http\Controllers\Reports\MidtermReportEntryController;
 use App\Http\Controllers\SchedulingController;
 use App\Http\Controllers\Settings\SchoolProfileController;
@@ -160,6 +161,14 @@ Route::middleware(['auth', 'active'])->group(function (): void {
                 ->name('questions.update');
             Route::delete('/components/{assessmentSubject}/questions/{question}', [QuestionBankController::class, 'destroy'])
                 ->name('questions.destroy');
+        });
+
+    Route::prefix('reports/exam-results')
+        ->middleware('role:super_admin,committee,teacher')
+        ->name('reports.exam-results.')
+        ->group(function (): void {
+            Route::get('/', [ExamResultController::class, 'index'])->name('index');
+            Route::get('/{assessmentPeriod}/{schoolClass}/print', [ExamResultController::class, 'print'])->name('print');
         });
 
     Route::prefix('reports/midterm')
