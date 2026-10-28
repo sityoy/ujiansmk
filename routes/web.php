@@ -178,7 +178,6 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             Route::get('/', [MidtermReportController::class, 'index'])->name('index');
             Route::get('/{assessmentPeriod}/{schoolClass}', [MidtermReportController::class, 'show'])->name('show');
             Route::get('/{assessmentPeriod}/{schoolClass}/edit', [MidtermReportEntryController::class, 'edit'])->name('edit');
-            Route::get('/{assessmentPeriod}/{schoolClass}/scores/print', [MidtermReportController::class, 'printScores'])->name('scores.print');
             Route::get('/{assessmentPeriod}/{schoolClass}/{student}/print', [MidtermReportController::class, 'print'])->name('print');
             Route::put('/subjects/{assessmentSubject}', [MidtermReportEntryController::class, 'updateSubjectResults'])->name('subject-results.update');
             Route::put('/subjects/{assessmentSubject}/learning-objective', [MidtermReportEntryController::class, 'updateLearningObjective'])->name('learning-objective.update');
