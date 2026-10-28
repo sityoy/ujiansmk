@@ -13,7 +13,7 @@
         <a href="{{ route('question-bank.index') }}" class="text-xs font-medium text-violet-300">← Kembali ke daftar bank soal</a>
         <p class="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-violet-300">{{ $assessmentSubject->assessmentPeriod->name }}</p>
         <h2 class="mt-2 text-2xl font-semibold text-white">{{ $assessmentSubject->subject->name }} · {{ $assessmentSubject->schoolClass->name }}</h2>
-        <p class="mt-2 text-sm text-slate-400">{{ $assessmentSubject->assessmentPeriod->academicYear->name }} · {{ $assessmentSubject->questions->count() }} soal · Total bobot {{ number_format((float) $assessmentSubject->questions->sum('points'), 2, ',', '.') }}</p>
+        <p class="mt-2 text-sm text-slate-400">{{ $assessmentSubject->assessmentPeriod->academicYear->name }} · {{ $questionCount }} soal · Total bobot {{ number_format($totalPoints, 2, ',', '.') }}</p>
     </section>
 
     <div class="mt-6 grid gap-6 xl:grid-cols-[420px_1fr]">
@@ -63,7 +63,7 @@
         </section>
 
         <section class="space-y-3">
-            @forelse ($assessmentSubject->questions as $question)
+            @forelse ($questions as $question)
                 <article class="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
                     <div class="flex items-start justify-between gap-4">
                         <div>
@@ -140,6 +140,12 @@
             @endforelse
         </section>
     </div>
+    @if ($questions->hasPages())
+        <div class="mt-6 rounded-2xl border border-white/10 bg-white/[0.025] p-4">
+            <p class="mb-3 text-xs text-slate-500">Menampilkan soal {{ $questions->firstItem() }}–{{ $questions->lastItem() }} dari {{ $questions->total() }} soal · 20 soal per halaman.</p>
+            {{ $questions->links() }}
+        </div>
+    @endif
     <script>
         const questionType = document.getElementById('question-type');
         const choiceFields = document.getElementById('multiple-choice-fields');
