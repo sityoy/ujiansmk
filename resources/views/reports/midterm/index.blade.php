@@ -43,5 +43,8 @@
                 </div>
             @endforelse
         </div>
+        @if ($periods->hasPages())
+            <div class="mt-6">{{ $periods->links() }}</div>
+        @endif
     </section>
 @endsection
