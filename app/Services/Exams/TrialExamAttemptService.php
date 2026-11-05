@@ -69,8 +69,8 @@ class TrialExamAttemptService
 
             $questions = $attempt->trialExam->questionBank->questions()->orderBy('position')->get();
             $saved = $attempt->answers()->get()->keyBy('trial_question_id');
-            $totalPoints = (float) $questions->sum('points');
-            $earnedPoints = 0.0;
+            $questionCount = $questions->count();
+            $questionWeight = app(ExamScoreCalculator::class)->multipleChoiceWeight($questionCount);
             $correctAnswers = 0;
 
             foreach ($questions as $question) {
@@ -80,13 +80,12 @@ class TrialExamAttemptService
                 $answer = filled($raw) ? Str::upper(trim((string) $raw)) : null;
                 $correct = $answer !== null
                     && hash_equals(Str::upper(trim((string) $question->correct_answer)), $answer);
-                $awarded = $correct ? (float) $question->points : 0.0;
+                $awarded = $correct ? $questionWeight : 0.0;
 
                 TrialAnswer::updateOrCreate(
                     ['trial_attempt_id' => $attempt->id, 'trial_question_id' => $question->id],
                     ['answer' => $answer, 'is_correct' => $correct, 'points_awarded' => $awarded]
                 );
-                $earnedPoints += $awarded;
                 $correctAnswers += $correct ? 1 : 0;
             }
 
@@ -94,7 +93,7 @@ class TrialExamAttemptService
                 'status' => 'submitted',
                 'submitted_at' => now(),
                 'last_seen_at' => now(),
-                'score' => $totalPoints > 0 ? round(($earnedPoints / $totalPoints) * 100, 2) : 0,
+                'score' => app(ExamScoreCalculator::class)->multipleChoiceScore($correctAnswers, $questionCount),
                 'correct_answers' => $correctAnswers,
                 'total_questions' => $questions->count(),
             ]);

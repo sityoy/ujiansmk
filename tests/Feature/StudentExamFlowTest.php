@@ -87,7 +87,7 @@ class StudentExamFlowTest extends TestCase
             ->assertRedirect(route('student.exams.index'));
 
         $this->assertSame('submitted', $attempt->refresh()->status->value);
-        $this->assertSame('50.00', $attempt->score);
+        $this->assertSame('35.00', $attempt->score);
         $this->assertSame(1, $attempt->correct_answers);
         $this->assertSame(1, $attempt->incorrect_answers);
         $this->assertSame(AssignmentStatus::Completed, $assignment->refresh()->status);
@@ -154,7 +154,7 @@ class StudentExamFlowTest extends TestCase
         ])->assertSessionHasNoErrors();
 
         $this->assertSame(AttemptStatus::Submitted, $attempt->refresh()->status);
-        $this->assertSame('50.00', $attempt->score);
+        $this->assertSame('35.00', $attempt->score);
         $this->patch(route('operations.sessions.status', $session), ['status' => 'active'])
             ->assertSessionHasErrors('status');
         $this->assertSame(SessionStatus::Closed, $session->refresh()->status);
@@ -230,7 +230,7 @@ class StudentExamFlowTest extends TestCase
         $this->travel(1)->minutes();
         $this->artisan('exams:finalize-expired')->assertSuccessful();
         $this->assertSame(AttemptStatus::Submitted, $attempt->fresh()->status);
-        $this->assertSame('50.00', $attempt->fresh()->score);
+        $this->assertSame('35.00', $attempt->fresh()->score);
         $this->assertSame($submittedAt, $attempt->fresh()->submitted_at->toDateTimeString());
     }
 
@@ -347,7 +347,7 @@ class StudentExamFlowTest extends TestCase
             'action' => 'submit', 'reason' => 'Pemeriksaan selesai, ujian diakhiri.', 'lock_version' => 1,
         ])->assertSessionHasNoErrors();
         $this->assertSame(AttemptStatus::Submitted, $attempt->fresh()->status);
-        $this->assertSame('50.00', $attempt->fresh()->score);
+        $this->assertSame('35.00', $attempt->fresh()->score);
         $this->get(route('operations.sessions.show', $assignment->examSession))->assertOk()
             ->assertSee('Pemeriksaan selesai, ujian diakhiri.')->assertDontSee('Simpan keputusan');
     }

@@ -27,6 +27,7 @@ class StudentExamController extends Controller
             ->with([
                 'assessmentSubject.assessmentPeriod',
                 'assessmentSubject.subject',
+                'assessmentSubject.questions',
                 'examSession.campus',
                 'attempt',
             ])

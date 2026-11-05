@@ -115,6 +115,9 @@ class QuestionBankAccessTest extends TestCase
         $this->assertSame('E', $question->correct_answer);
         $this->assertNotNull($question->question_image_path);
         Storage::disk('public')->assertExists($question->question_image_path);
+        $this->actingAs($teacher)
+            ->get(route('scheduling.questions.export', $assigned))
+            ->assertOk()->assertDownload();
 
         $this->actingAs($teacher)
             ->get(route('scheduling.questions.index', $assigned))

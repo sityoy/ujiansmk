@@ -29,6 +29,9 @@
                 $attendanceReason = app(\App\Services\Attendance\AttendanceAvailability::class)->reason($assignment, $checkin);
                 $canAttend = $attendanceReason === null;
                 $hasCheckin = $checkin?->status->value === 'verified' && $checkin->campus_id === $session->campus_id;
+                $pgCount = $assignment->assessmentSubject->questions
+                    ->filter(fn ($question) => $question->question_type->value === 'multiple_choice')->count();
+                $pgWeight = $pgCount > 0 ? 70 / $pgCount : 0;
             @endphp
             <article class="rounded-3xl border border-white/10 bg-white/[0.035] p-6">
                 <div class="flex flex-wrap items-start justify-between gap-4">
@@ -70,8 +73,18 @@
                     @elseif ($attendanceReason)
                         <span class="text-sm text-amber-300">{{ $attendanceReason }}</span>
                     @elseif ($isOpen && $hasCheckin)
-                        <form method="POST" action="{{ route('student.exams.start', $assignment) }}" onsubmit="return confirm('Mulai ujian sekarang? Waktu akan langsung berjalan.')">
+                        <div class="w-full rounded-2xl border border-amber-400/25 bg-amber-400/[0.06] p-4 text-sm">
+                            <p class="font-semibold text-amber-200">Peringatan sebelum memulai ujian</p>
+                            <ul class="mt-2 list-disc space-y-1 pl-5 text-xs leading-5 text-slate-300">
+                                <li>Layar penuh wajib. Jangan berpindah tab/aplikasi, membuka bubble, split screen, bilah notifikasi, tombol kembali, atau keluar dari halaman.</li>
+                                <li>Pelanggaran pertama mendapat peringatan; pelanggaran kedua mengunci ujian. Waktu tetap berjalan.</li>
+                                <li>Aktifkan mode Jangan Ganggu dan tutup aplikasi lain sebelum memulai.</li>
+                                @if ($pgCount > 0)<li>Bobot maksimal PG adalah 70 poin: 70 ÷ {{ $pgCount }} = sekitar {{ number_format($pgWeight, 4, ',', '.') }} poin per jawaban benar.</li>@endif
+                            </ul>
+                        </div>
+                        <form method="POST" action="{{ route('student.exams.start', $assignment) }}" onsubmit="return confirm('Mulai ujian sekarang? Waktu akan langsung berjalan.')" class="space-y-3">
                             @csrf
+                            <label class="flex items-start gap-2 text-xs text-slate-300"><input type="checkbox" required class="mt-0.5">Saya sudah membaca dan menyetujui aturan ujian.</label>
                             <button class="rounded-xl bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950">Mulai ujian</button>
                         </form>
                     @elseif (! $isOpen)

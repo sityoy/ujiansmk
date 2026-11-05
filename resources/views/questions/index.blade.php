@@ -15,6 +15,7 @@
         <h2 class="mt-2 text-2xl font-semibold text-white">{{ $assessmentSubject->subject->name }} · Kelas {{ $gradeLevel }}</h2>
         <p class="mt-2 text-sm text-slate-400">{{ $assessmentSubject->assessmentPeriod->academicYear->name }} · {{ $questionCount }} soal · Total bobot {{ number_format($totalPoints, 2, ',', '.') }}</p>
         <p class="mt-2 text-xs text-cyan-200">Perubahan di sini otomatis berlaku untuk seluruh rombel Kelas {{ $gradeLevel }} pada mapel dan periode yang sama.</p>
+        <div class="mt-4"><a href="{{ route('scheduling.questions.export', $assessmentSubject) }}" class="inline-flex rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-2.5 text-sm font-semibold text-emerald-200">Ekspor PG ke Excel</a></div>
     </section>
 
     <div class="mt-6 grid gap-6 xl:grid-cols-[420px_1fr]">
@@ -57,7 +58,7 @@
                     <label for="question-points" class="mb-2 block text-xs font-medium text-slate-400">Bobot maksimal soal</label>
                     <input id="question-points" type="number" name="points" value="{{ old('points', $assessmentSubject->assessmentPeriod->type->value === 'ats' ? 3 : 1) }}" min="0.01" max="1000" step="0.01" required placeholder="Bobot" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
                 </div>
-                <p class="text-xs leading-5 text-slate-500">Nilai akhir dihitung: poin diperoleh ÷ total bobot × 100. Total bobot disarankan 100 agar mudah diperiksa.</p>
+                <p class="text-xs leading-5 text-slate-500">Untuk PG, sistem menghitung otomatis maksimal 70 poin dengan rumus 70 ÷ jumlah soal PG. Isian/esai pada ujian campuran mengisi maksimal 30 poin; ATS tanpa PG tetap dinilai maksimal 100 melalui koreksi manual.</p>
                 <button class="w-full rounded-xl bg-violet-400 px-4 py-3 text-sm font-semibold text-slate-950">Simpan soal</button>
             </form>
             </fieldset>

@@ -183,6 +183,7 @@ Route::middleware(['auth', 'active'])->group(function (): void {
         ->group(function (): void {
             Route::get('/', [TrialQuestionBankController::class, 'index'])->name('index');
             Route::post('/', [TrialQuestionBankController::class, 'store'])->name('store');
+            Route::get('/{trialQuestionBank}/questions/export', [TrialQuestionBankController::class, 'export'])->name('questions.export');
             Route::get('/{trialQuestionBank}/questions', [TrialQuestionBankController::class, 'questions'])->name('questions.index');
             Route::post('/{trialQuestionBank}/questions', [TrialQuestionBankController::class, 'storeQuestion'])->name('questions.store');
             Route::put('/{trialQuestionBank}/questions/{question}', [TrialQuestionBankController::class, 'updateQuestion'])->name('questions.update');
@@ -198,6 +199,8 @@ Route::middleware(['auth', 'active'])->group(function (): void {
         ->middleware('role:super_admin,committee,teacher')
         ->name('scheduling.')
         ->group(function (): void {
+            Route::get('/components/{assessmentSubject}/questions/export', [QuestionBankController::class, 'export'])
+                ->name('questions.export');
             Route::get('/components/{assessmentSubject}/questions', [QuestionBankController::class, 'index'])
                 ->name('questions.index');
             Route::post('/components/{assessmentSubject}/questions', [QuestionBankController::class, 'store'])

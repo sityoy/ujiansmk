@@ -47,18 +47,10 @@ class ExamGradingService
 
             $attempt->load('answers');
             $answers = $attempt->answers->keyBy('exam_question_id');
-            $totalPoints = (float) $questions->sum(fn (ExamQuestion $question): float => (float) $question->points);
-            $earnedPoints = (float) $questions->sum(function (ExamQuestion $question) use ($answers): float {
-                $answer = $answers->get($question->id);
-                if ($question->question_type === ExamQuestionType::MultipleChoice) {
-                    return $answer?->is_correct ? (float) $question->points : 0.0;
-                }
-
-                return (float) ($answer?->points_awarded ?? 0);
-            });
+            $calculatedScore = app(ExamScoreCalculator::class)->score($questions, $answers);
 
             $attempt->update([
-                'score' => $totalPoints > 0 ? round(($earnedPoints / $totalPoints) * 100, 2) : 0,
+                'score' => $calculatedScore,
                 'grading_status' => GradingStatus::Graded,
                 'graded_at' => now(),
             ]);

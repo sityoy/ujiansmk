@@ -16,6 +16,8 @@
                     <h2 id="security-title" class="mt-4 text-2xl font-semibold">Siap masuk mode ujian?</h2>
                     <p id="security-message" aria-live="polite" class="mt-4 text-sm leading-7 text-slate-300">Mode Galak memantau layar penuh, perpindahan aplikasi/tab, kehilangan fokus, bilah notifikasi, split screen, tombol terlarang, dan navigasi keluar. Kejadian pertama mendapat peringatan; kejadian kedua mengunci ujian untuk diperiksa pengawas. Waktu tetap berjalan.</p>
                     <p class="mt-3 text-xs leading-6 text-slate-400">Tutup gelembung aplikasi, aktifkan Jangan Ganggu, dan jangan menarik bilah sistem. Gangguan teknis tetap dapat diperiksa serta direset oleh panitia.</p>
+                    @php($pgCount = $questions->filter(fn ($question) => $question->question_type->value === 'multiple_choice')->count())
+                    @if ($pgCount > 0)<p class="mt-3 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.06] p-3 text-sm text-cyan-100">Bobot PG: maksimal 70 poin. Setiap jawaban benar bernilai sekitar <strong>{{ number_format(70 / $pgCount, 4, ',', '.') }}</strong> poin dari {{ $pgCount }} soal.</p>@endif
                     <button id="security-continue" type="button" class="mt-6 w-full rounded-xl bg-cyan-400 px-5 py-3 font-semibold text-slate-950">Saya paham, masuk mode ujian</button>
                     <p id="security-network" aria-live="polite" class="mt-3 text-sm text-amber-300"></p>
                 </section>

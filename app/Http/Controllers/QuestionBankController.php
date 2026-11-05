@@ -8,6 +8,8 @@ use App\Enums\UserRole;
 use App\Models\AssessmentPeriod;
 use App\Models\AssessmentSubject;
 use App\Models\ExamQuestion;
+use App\Services\Exams\ExamScoreCalculator;
+use App\Services\Students\StudentSpreadsheetService;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
@@ -15,9 +17,11 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class QuestionBankController extends Controller
 {
@@ -110,6 +114,46 @@ class QuestionBankController extends Controller
             'assessmentSubject', 'questions', 'questionCount', 'totalPoints',
             'isLocked', 'questionTypes', 'gradeLevel'
         ));
+    }
+
+    public function export(
+        Request $request,
+        AssessmentSubject $assessmentSubject,
+        StudentSpreadsheetService $spreadsheet,
+        ExamScoreCalculator $scores,
+    ): BinaryFileResponse {
+        $this->authorizeAccess($request, $assessmentSubject);
+        $assessmentSubject->load(['assessmentPeriod.academicYear', 'subject', 'schoolClass']);
+        $questions = $assessmentSubject->questions()
+            ->where('question_type', ExamQuestionType::MultipleChoice->value)
+            ->orderBy('position')
+            ->get();
+        $weight = $scores->multipleChoiceWeight($questions->count());
+        $rows = $questions->values()->map(fn (ExamQuestion $question, int $index): array => [
+            $index + 1,
+            $question->question_text,
+            $question->options['A'] ?? '',
+            $question->options['B'] ?? '',
+            $question->options['C'] ?? '',
+            $question->options['D'] ?? '',
+            $question->options['E'] ?? '',
+            $question->correct_answer,
+            number_format($weight, 4, '.', ''),
+            $question->question_image_path ? Storage::url($question->question_image_path) : '',
+        ])->all();
+
+        $path = $spreadsheet->createWorkbook(
+            ['No', 'Pertanyaan', 'Pilihan A', 'Pilihan B', 'Pilihan C', 'Pilihan D', 'Pilihan E', 'Kunci', 'Bobot PG', 'Gambar'],
+            $rows,
+            'PG Ujian Inti',
+        );
+        $filename = 'bank-soal-pg-inti-'.Str::slug($assessmentSubject->subject->name)
+            .'-kelas-'.$assessmentSubject->schoolClass->grade_level
+            .'-'.now()->format('Y-m-d-His').'.xlsx';
+
+        return response()->download($path, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ])->deleteFileAfterSend(true);
     }
 
     public function store(Request $request, AssessmentSubject $assessmentSubject): RedirectResponse

@@ -201,14 +201,7 @@ class ExamAttemptService
             $requiresManualGrading = $questions->contains(
                 fn (ExamQuestion $question): bool => $question->question_type->requiresManualGrading(),
             );
-            $totalPoints = (float) $questions->sum(fn (ExamQuestion $question) => (float) $question->points);
-            $earnedPoints = (float) $questions->sum(function (ExamQuestion $question) use ($answers): float {
-                if ($question->question_type->requiresManualGrading()) {
-                    return (float) ($answers->get($question->id)?->points_awarded ?? 0);
-                }
-
-                return $answers->get($question->id)?->is_correct ? (float) $question->points : 0.0;
-            });
+            $calculatedScore = app(ExamScoreCalculator::class)->score($questions, $answers);
             $automaticQuestions = $questions->filter(
                 fn (ExamQuestion $question): bool => $question->question_type === ExamQuestionType::MultipleChoice,
             );
@@ -220,7 +213,7 @@ class ExamAttemptService
                 'last_seen_at' => now(),
                 'score' => $requiresManualGrading
                     ? null
-                    : ($totalPoints > 0 ? round(($earnedPoints / $totalPoints) * 100, 2) : 0),
+                    : $calculatedScore,
                 'grading_status' => $requiresManualGrading ? GradingStatus::Pending : GradingStatus::Automatic,
                 'graded_at' => $requiresManualGrading ? null : now(),
                 'correct_answers' => $correct,

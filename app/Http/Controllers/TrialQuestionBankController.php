@@ -7,14 +7,18 @@ use App\Models\AssessmentSubject;
 use App\Models\Subject;
 use App\Models\TrialQuestion;
 use App\Models\TrialQuestionBank;
+use App\Services\Exams\ExamScoreCalculator;
+use App\Services\Students\StudentSpreadsheetService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class TrialQuestionBankController extends Controller
 {
@@ -100,6 +104,43 @@ class TrialQuestionBankController extends Controller
             'totalPoints' => (float) $trialQuestionBank->questions()->sum('points'),
             'isLocked' => $this->isLocked($trialQuestionBank),
         ]);
+    }
+
+    public function export(
+        Request $request,
+        TrialQuestionBank $trialQuestionBank,
+        StudentSpreadsheetService $spreadsheet,
+        ExamScoreCalculator $scores,
+    ): BinaryFileResponse {
+        $this->authorizeBank($request, $trialQuestionBank);
+        $trialQuestionBank->load('subject');
+        $questions = $trialQuestionBank->questions()->get();
+        $weight = $scores->multipleChoiceWeight($questions->count());
+        $rows = $questions->values()->map(fn (TrialQuestion $question, int $index): array => [
+            $index + 1,
+            $question->question_text,
+            $question->options['A'] ?? '',
+            $question->options['B'] ?? '',
+            $question->options['C'] ?? '',
+            $question->options['D'] ?? '',
+            $question->options['E'] ?? '',
+            $question->correct_answer,
+            number_format($weight, 4, '.', ''),
+            $question->question_image_path ? Storage::url($question->question_image_path) : '',
+        ])->all();
+
+        $path = $spreadsheet->createWorkbook(
+            ['No', 'Pertanyaan', 'Pilihan A', 'Pilihan B', 'Pilihan C', 'Pilihan D', 'Pilihan E', 'Kunci', 'Bobot PG', 'Gambar'],
+            $rows,
+            'PG Uji Coba',
+        );
+        $filename = 'bank-soal-pg-uji-coba-'.Str::slug($trialQuestionBank->subject->name)
+            .'-kelas-'.$trialQuestionBank->grade_level
+            .'-'.now()->format('Y-m-d-His').'.xlsx';
+
+        return response()->download($path, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ])->deleteFileAfterSend(true);
     }
 
     public function storeQuestion(Request $request, TrialQuestionBank $trialQuestionBank): RedirectResponse

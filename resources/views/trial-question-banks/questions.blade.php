@@ -11,7 +11,9 @@
         <a href="{{ route('trial-question-banks.index') }}" class="text-xs text-cyan-300">← Kembali ke bank soal uji coba</a>
         <p class="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">{{ $bank->subject->name }} · Kelas {{ $bank->grade_level }}</p>
         <h2 class="mt-2 text-2xl font-semibold text-white">{{ $bank->name }}</h2>
-        <p class="mt-2 text-sm text-slate-400">{{ $questionCount }} soal · Total bobot {{ number_format($totalPoints, 2, ',', '.') }} · Tidak tercampur dengan bank Ujian Inti</p>
+        <p class="mt-2 text-sm text-slate-400">{{ $questionCount }} soal · Tidak tercampur dengan bank Ujian Inti</p>
+        <p class="mt-2 text-xs text-cyan-200">Bobot PG otomatis: 70 ÷ {{ max(1, $questionCount) }} = sekitar {{ number_format($questionCount > 0 ? 70 / $questionCount : 0, 4, ',', '.') }} poin per jawaban benar.</p>
+        <div class="mt-4"><a href="{{ route('trial-question-banks.questions.export', $bank) }}" class="inline-flex rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-2.5 text-sm font-semibold text-emerald-200">Ekspor PG ke Excel</a></div>
         @if ($isLocked)<p class="mt-3 text-sm text-amber-300">Bank terkunci karena sudah ada peserta yang memulai uji coba.</p>@endif
     </section>
 

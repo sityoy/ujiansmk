@@ -36,6 +36,9 @@ class TrialExamFlowTest extends TestCase
     {
         [$trial, $question] = $this->makeTrial();
 
+        $this->get(route('tryout.entry', $trial))
+            ->assertOk()->assertSee('Bobot maksimal PG adalah 70 poin');
+
         $this->post(route('tryout.start', $trial), [
             'participant_name' => 'Peserta Uji Coba',
             'participant_identifier' => '1234567890',
@@ -76,6 +79,8 @@ class TrialExamFlowTest extends TestCase
         $this->get(route('trial-question-banks.questions.index', $trial->questionBank))
             ->assertOk()
             ->assertSee('Proklamasi Indonesia terjadi pada?');
+        $this->get(route('trial-question-banks.questions.export', $trial->questionBank))
+            ->assertOk()->assertDownload();
         $this->get(route('tryouts.index'))
             ->assertOk()
             ->assertSee('Uji Coba Sejarah')
@@ -96,7 +101,7 @@ class TrialExamFlowTest extends TestCase
             ->assertSee('Jawaban berhasil dikumpulkan')
             ->assertDontSee('100,00')
             ->assertDontSee('1 jawaban benar');
-        $this->assertSame('100.00', $attempt->fresh()->score);
+        $this->assertSame('70.00', $attempt->fresh()->score);
     }
 
     private function makeTrial(): array
