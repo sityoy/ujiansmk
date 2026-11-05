@@ -18,6 +18,8 @@ use App\Http\Controllers\Settings\SchoolProfileController;
 use App\Http\Controllers\StudentAttendanceController;
 use App\Http\Controllers\StudentExamController;
 use App\Http\Controllers\StudentSpreadsheetController;
+use App\Http\Controllers\TrialExamController;
+use App\Http\Controllers\TrialExamPublicController;
 use App\Http\Controllers\SubjectSpreadsheetController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\UserSpreadsheetController;
@@ -30,6 +32,16 @@ Route::get('/health', fn () => response()->json([
 ]));
 
 Route::redirect('/', '/login');
+
+Route::prefix('tryout')->name('tryout.')->group(function (): void {
+    Route::get('/{trialExam:slug}', [TrialExamPublicController::class, 'entry'])->name('entry');
+    Route::post('/{trialExam:slug}/start', [TrialExamPublicController::class, 'start'])
+        ->middleware('throttle:20,1')->name('start');
+    Route::get('/{trialExam:slug}/attempts/{trialAttempt}', [TrialExamPublicController::class, 'show'])->name('show');
+    Route::post('/{trialExam:slug}/attempts/{trialAttempt}/submit', [TrialExamPublicController::class, 'submit'])
+        ->middleware('throttle:10,1')->name('submit');
+    Route::get('/{trialExam:slug}/attempts/{trialAttempt}/result', [TrialExamPublicController::class, 'result'])->name('result');
+});
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [LoginController::class, 'create'])->name('login');
@@ -143,6 +155,16 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             Route::put('/{campus}', [CampusController::class, 'update'])->name('update');
             Route::patch('/{campus}/toggle', [CampusController::class, 'toggle'])->name('toggle');
             Route::delete('/{campus}', [CampusController::class, 'destroy'])->name('destroy');
+        });
+
+    Route::prefix('tryouts')
+        ->middleware('role:super_admin,committee')
+        ->name('tryouts.')
+        ->group(function (): void {
+            Route::get('/', [TrialExamController::class, 'index'])->name('index');
+            Route::post('/', [TrialExamController::class, 'store'])->name('store');
+            Route::patch('/{trialExam}/toggle', [TrialExamController::class, 'toggle'])->name('toggle');
+            Route::delete('/{trialExam}', [TrialExamController::class, 'destroy'])->name('destroy');
         });
 
     Route::get('/question-bank', [QuestionBankController::class, 'catalog'])
