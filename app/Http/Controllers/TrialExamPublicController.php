@@ -143,7 +143,7 @@ class TrialExamPublicController extends Controller
             'context.viewport_width' => ['nullable', 'integer', 'between:0,10000'],
             'context.viewport_height' => ['nullable', 'integer', 'between:0,10000'],
             'context.screen_width' => ['nullable', 'integer', 'between:0,10000'],
-            'context.viewport_height' => ['nullable', 'integer', 'between:0,10000'],
+            'context.screen_height' => ['nullable', 'integer', 'between:0,10000'],
             'context.pixel_ratio' => ['nullable', 'numeric', 'between:0.1,20'],
         ]);
         $state = $security->record(

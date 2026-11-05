@@ -27,6 +27,11 @@ class TrialExamAttemptService
 
     public function saveAnswer(TrialAttempt $attempt, ExamQuestion $question, string $answer): void
     {
+        if ($attempt->status === 'in_progress' && $this->isExpired($attempt)) {
+            $this->submit($attempt, [], true);
+            throw ValidationException::withMessages(['attempt' => 'Waktu ujian sudah habis.']);
+        }
+
         DB::transaction(function () use ($attempt, $question, $answer): void {
             $attempt = TrialAttempt::query()->lockForUpdate()->with('trialExam')->findOrFail($attempt->id);
             $this->assertWritable($attempt);
@@ -108,7 +113,6 @@ class TrialExamAttemptService
             throw ValidationException::withMessages(['attempt' => 'Ujian uji coba sudah selesai.']);
         }
         if ($this->isExpired($attempt)) {
-            $this->submit($attempt, [], true);
             throw ValidationException::withMessages(['attempt' => 'Waktu ujian sudah habis.']);
         }
         if ($attempt->security_locked_at) {
