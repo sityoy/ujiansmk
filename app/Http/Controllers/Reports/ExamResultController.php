@@ -7,6 +7,7 @@ use App\Enums\AttemptStatus;
 use App\Enums\PeriodStatus;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
+use App\Models\AcademicYear;
 use App\Models\AssessmentPeriod;
 use App\Models\AssessmentSubject;
 use App\Models\ExamAttempt;
@@ -15,6 +16,7 @@ use App\Models\SchoolProfile;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
@@ -22,9 +24,16 @@ class ExamResultController extends Controller
 {
     public function index(Request $request): View
     {
+        $filters = $request->validate([
+            'academic_year_id' => ['nullable', 'integer', 'exists:academic_years,id'],
+            'type' => ['nullable', Rule::enum(AssessmentType::class)],
+            'status' => ['nullable', Rule::enum(PeriodStatus::class)],
+        ]);
+
         $periods = AssessmentPeriod::query()
-            ->where('type', '!=', AssessmentType::ATS->value)
-            ->where('status', PeriodStatus::Closed->value)
+            ->when($filters['academic_year_id'] ?? null, fn ($query, $year) => $query->where('academic_year_id', $year))
+            ->when($filters['type'] ?? null, fn ($query, $type) => $query->where('type', $type))
+            ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->with(['academicYear', 'assessmentSubjects.schoolClass'])
             ->latest('ends_on')
             ->paginate(10)
@@ -40,7 +49,13 @@ class ExamResultController extends Controller
             $period->setRelation('accessibleClasses', $classes->values());
         });
 
-        return view('reports.exam-results.index', compact('periods'));
+        return view('reports.exam-results.index', [
+            'periods' => $periods,
+            'academicYears' => AcademicYear::query()->orderByDesc('starts_on')->get(),
+            'assessmentTypes' => AssessmentType::cases(),
+            'periodStatuses' => PeriodStatus::cases(),
+            'filters' => $filters,
+        ]);
     }
 
     public function print(
@@ -48,8 +63,6 @@ class ExamResultController extends Controller
         AssessmentPeriod $assessmentPeriod,
         SchoolClass $schoolClass,
     ): View {
-        abort_if($assessmentPeriod->type === AssessmentType::ATS, 404);
-        abort_unless($assessmentPeriod->status === PeriodStatus::Closed, 404);
         abort_unless($this->canPrint($request->user(), $schoolClass), 403);
 
         $subjects = AssessmentSubject::query()
