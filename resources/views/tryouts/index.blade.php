@@ -55,9 +55,10 @@
                                 <span class="rounded-full px-2.5 py-1 text-xs {{ $trial->is_active ? 'bg-emerald-400/10 text-emerald-300' : 'bg-slate-400/10 text-slate-400' }}">{{ $trial->is_active ? 'Aktif' : 'Nonaktif' }}</span>
                             </div>
                             <p class="mt-2 text-sm text-slate-400">{{ $trial->assessmentSubject->subject->name }} · {{ $trial->assessmentSubject->schoolClass->name }} · {{ $trial->assessmentSubject->assessmentPeriod->name }}</p>
-                            <p class="mt-1 text-xs text-slate-500">{{ $trial->duration_minutes }} menit · {{ $trial->attempts_count }} peserta · Rata-rata {{ is_null($trial->attempts_avg_score) ? '—' : number_format($trial->attempts_avg_score, 2, ',', '.') }}</p>
+                            <p class="mt-1 text-xs text-slate-500">{{ $trial->duration_minutes }} menit · {{ $trial->attempts_count }} peserta · Nilai tidak ditampilkan kepada peserta</p>
                         </div>
-                        <div class="flex gap-2">
+                        <div class="flex flex-wrap gap-2">
+                            <a href="{{ route('tryouts.participants', $trial) }}" class="rounded-xl bg-violet-400/10 px-3 py-2 text-xs font-semibold text-violet-200">Lihat peserta</a>
                             <form method="POST" action="{{ route('tryouts.toggle', $trial) }}">@csrf @method('PATCH')<button class="rounded-xl border border-white/10 px-3 py-2 text-xs text-cyan-200">{{ $trial->is_active ? 'Nonaktifkan' : 'Aktifkan' }}</button></form>
                             <form method="POST" action="{{ route('tryouts.destroy', $trial) }}" onsubmit="return confirm('Hapus ujian uji coba ini?')">@csrf @method('DELETE')<button class="rounded-xl border border-rose-400/20 px-3 py-2 text-xs text-rose-300">Hapus</button></form>
                         </div>

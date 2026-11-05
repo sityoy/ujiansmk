@@ -64,7 +64,7 @@
                     @elseif ($attempt?->status->value === 'in_progress')
                         <a href="{{ route('student.exams.show', $attempt) }}" class="rounded-xl bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950">Lanjutkan ujian</a>
                     @elseif ($attempt?->status->value === 'submitted')
-                        <span class="rounded-xl bg-emerald-400/10 px-5 py-3 text-sm font-medium text-emerald-200">Ujian sudah dikumpulkan</span>
+                        <span class="rounded-xl bg-emerald-400/10 px-5 py-3 text-sm font-medium text-emerald-200">Ujian sudah dikumpulkan. Nilai tidak ditampilkan kepada peserta.</span>
                     @elseif ($attempt?->status->value === 'terminated')
                         <span class="text-sm text-rose-300">Ujian dihentikan. Hubungi pengawas.</span>
                     @elseif ($attendanceReason)

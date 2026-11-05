@@ -38,6 +38,12 @@ Route::prefix('tryout')->name('tryout.')->group(function (): void {
     Route::post('/{trialExam:slug}/start', [TrialExamPublicController::class, 'start'])
         ->middleware('throttle:20,1')->name('start');
     Route::get('/{trialExam:slug}/attempts/{trialAttempt}', [TrialExamPublicController::class, 'show'])->name('show');
+    Route::get('/{trialExam:slug}/attempts/{trialAttempt}/security', [TrialExamPublicController::class, 'securityState'])
+        ->middleware('throttle:30,1')->name('security');
+    Route::put('/{trialExam:slug}/attempts/{trialAttempt}/questions/{question}', [TrialExamPublicController::class, 'answer'])
+        ->middleware('throttle:120,1')->name('answer');
+    Route::post('/{trialExam:slug}/attempts/{trialAttempt}/incidents', [TrialExamPublicController::class, 'incident'])
+        ->middleware('throttle:30,1')->name('incident');
     Route::post('/{trialExam:slug}/attempts/{trialAttempt}/submit', [TrialExamPublicController::class, 'submit'])
         ->middleware('throttle:10,1')->name('submit');
     Route::get('/{trialExam:slug}/attempts/{trialAttempt}/result', [TrialExamPublicController::class, 'result'])->name('result');
@@ -163,6 +169,9 @@ Route::middleware(['auth', 'active'])->group(function (): void {
         ->group(function (): void {
             Route::get('/', [TrialExamController::class, 'index'])->name('index');
             Route::post('/', [TrialExamController::class, 'store'])->name('store');
+            Route::get('/{trialExam}', [TrialExamController::class, 'show'])->name('participants');
+            Route::post('/{trialExam}/attempts/{trialAttempt}/reset-violations', [TrialExamController::class, 'resetViolations'])
+                ->name('attempts.reset-violations');
             Route::patch('/{trialExam}/toggle', [TrialExamController::class, 'toggle'])->name('toggle');
             Route::delete('/{trialExam}', [TrialExamController::class, 'destroy'])->name('destroy');
         });
