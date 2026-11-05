@@ -20,6 +20,7 @@ use App\Http\Controllers\StudentExamController;
 use App\Http\Controllers\StudentSpreadsheetController;
 use App\Http\Controllers\TrialExamController;
 use App\Http\Controllers\TrialExamPublicController;
+use App\Http\Controllers\TrialQuestionBankController;
 use App\Http\Controllers\SubjectSpreadsheetController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\UserSpreadsheetController;
@@ -176,6 +177,19 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             Route::delete('/{trialExam}', [TrialExamController::class, 'destroy'])->name('destroy');
         });
 
+    Route::prefix('trial-question-banks')
+        ->middleware('role:super_admin,committee,teacher')
+        ->name('trial-question-banks.')
+        ->group(function (): void {
+            Route::get('/', [TrialQuestionBankController::class, 'index'])->name('index');
+            Route::post('/', [TrialQuestionBankController::class, 'store'])->name('store');
+            Route::get('/{trialQuestionBank}/questions', [TrialQuestionBankController::class, 'questions'])->name('questions.index');
+            Route::post('/{trialQuestionBank}/questions', [TrialQuestionBankController::class, 'storeQuestion'])->name('questions.store');
+            Route::put('/{trialQuestionBank}/questions/{question}', [TrialQuestionBankController::class, 'updateQuestion'])->name('questions.update');
+            Route::delete('/{trialQuestionBank}/questions/{question}', [TrialQuestionBankController::class, 'destroyQuestion'])->name('questions.destroy');
+            Route::delete('/{trialQuestionBank}', [TrialQuestionBankController::class, 'destroy'])->name('destroy');
+        });
+
     Route::get('/question-bank', [QuestionBankController::class, 'catalog'])
         ->middleware('role:super_admin,committee,teacher')
         ->name('question-bank.index');
@@ -260,3 +274,4 @@ Route::middleware(['auth', 'active'])->group(function (): void {
 
     });
 });
+

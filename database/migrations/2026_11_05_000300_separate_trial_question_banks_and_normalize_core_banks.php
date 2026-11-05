@@ -71,7 +71,7 @@ return new class extends Migration
                 'subject_id' => $component->subject_id,
                 'teacher_user_id' => $component->teacher_user_id ?? null,
                 'grade_level' => $component->grade_level,
-                'name' => mb_substr('Migrasi - '.$trial->title, 0, 150),
+                'name' => mb_substr('Migrasi - '.$trial->title.' #'.$trial->id, 0, 150),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -189,3 +189,4 @@ return new class extends Migration
         Schema::dropIfExists('trial_question_banks');
     }
 };
+

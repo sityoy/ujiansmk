@@ -74,7 +74,10 @@
 
                 @if (in_array($currentRole, ['super_admin', 'committee', 'teacher'], true))
                     <a href="{{ route('question-bank.index') }}" class="rounded-xl px-4 py-3 {{ request()->routeIs('question-bank.*', 'scheduling.questions.*') ? 'bg-cyan-400 text-slate-950 font-semibold' : 'text-slate-300 hover:bg-white/5' }}">
-                        Bank soal
+                        Bank soal inti
+                    </a>
+                    <a href="{{ route('trial-question-banks.index') }}" class="rounded-xl px-4 py-3 {{ request()->routeIs('trial-question-banks.*') ? 'bg-cyan-400 text-slate-950 font-semibold' : 'text-slate-300 hover:bg-white/5' }}">
+                        Bank soal uji coba
                     </a>
                 @endif
 
@@ -149,3 +152,4 @@
     </div>
 </body>
 </html>
+

@@ -1,8 +1,8 @@
 @extends('layouts.app')
 
-@section('title', 'Bank Soal')
+@section('title', 'Bank Soal Ujian Inti')
 @section('eyebrow', 'Penjadwalan')
-@section('heading', 'Bank Soal Ujian')
+@section('heading', 'Bank Soal Ujian Inti')
 
 @section('content')
     @if ($errors->any())
@@ -12,8 +12,9 @@
     <section class="rounded-3xl border border-violet-400/20 bg-violet-400/[0.045] p-6">
         <a href="{{ route('question-bank.index') }}" class="text-xs font-medium text-violet-300">← Kembali ke daftar bank soal</a>
         <p class="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-violet-300">{{ $assessmentSubject->assessmentPeriod->name }}</p>
-        <h2 class="mt-2 text-2xl font-semibold text-white">{{ $assessmentSubject->subject->name }} · {{ $assessmentSubject->schoolClass->name }}</h2>
+        <h2 class="mt-2 text-2xl font-semibold text-white">{{ $assessmentSubject->subject->name }} · Kelas {{ $gradeLevel }}</h2>
         <p class="mt-2 text-sm text-slate-400">{{ $assessmentSubject->assessmentPeriod->academicYear->name }} · {{ $questionCount }} soal · Total bobot {{ number_format($totalPoints, 2, ',', '.') }}</p>
+        <p class="mt-2 text-xs text-cyan-200">Perubahan di sini otomatis berlaku untuk seluruh rombel Kelas {{ $gradeLevel }} pada mapel dan periode yang sama.</p>
     </section>
 
     <div class="mt-6 grid gap-6 xl:grid-cols-[420px_1fr]">
@@ -136,7 +137,7 @@
                     @endunless
                 </article>
             @empty
-                <div class="rounded-3xl border border-dashed border-white/10 p-12 text-center text-sm text-slate-500">Belum ada soal untuk mapel dan kelas ini.</div>
+                <div class="rounded-3xl border border-dashed border-white/10 p-12 text-center text-sm text-slate-500">Belum ada soal untuk mapel dan tingkat ini.</div>
             @endforelse
         </section>
     </div>
@@ -185,3 +186,4 @@
         });
     </script>
 @endsection
+

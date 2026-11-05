@@ -13,7 +13,7 @@
     </div>
 
     <section class="rounded-3xl border border-cyan-400/20 bg-cyan-400/[0.04] p-6">
-        <p class="text-xs uppercase tracking-wider text-cyan-300">{{ $trialExam->assessmentSubject->subject->name }} · {{ $trialExam->assessmentSubject->schoolClass->name }}</p>
+        <p class="text-xs uppercase tracking-wider text-cyan-300">{{ $trialExam->questionBank->subject->name }} · Kelas {{ $trialExam->questionBank->grade_level }}</p>
         <h2 class="mt-2 text-2xl font-semibold">{{ $trialExam->title }}</h2>
         <p class="mt-2 text-sm text-slate-400">{{ $trialExam->duration_minutes }} menit · Kode {{ $trialExam->access_code }} · Nilai peserta tidak ditampilkan</p>
     </section>
@@ -61,3 +61,4 @@
         @if($attempts->hasPages())<div class="p-5">{{ $attempts->links() }}</div>@endif
     </section>
 @endsection
+

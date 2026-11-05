@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\ExamQuestionType;
-use App\Models\ExamQuestion;
 use App\Models\TrialAttempt;
 use App\Models\TrialExam;
+use App\Models\TrialQuestion;
 use App\Services\Exams\TrialExamAttemptService;
 use App\Services\Exams\TrialExamSecurityService;
 use Illuminate\Http\JsonResponse;
@@ -20,7 +19,7 @@ class TrialExamPublicController extends Controller
 {
     public function entry(TrialExam $trialExam): View
     {
-        $trialExam->load(['assessmentSubject.subject', 'assessmentSubject.schoolClass', 'assessmentSubject.assessmentPeriod']);
+        $trialExam->load(['questionBank.subject']);
 
         return view('tryouts.entry', [
             'trialExam' => $trialExam,
@@ -93,7 +92,7 @@ class TrialExamPublicController extends Controller
             'trialExam' => $trialExam,
             'attempt' => $trialAttempt,
             'questions' => $questions,
-            'answers' => $trialAttempt->answers->keyBy('exam_question_id'),
+            'answers' => $trialAttempt->answers->keyBy('trial_question_id'),
             'deadline' => $attempts->deadline($trialAttempt),
         ]);
     }
@@ -102,7 +101,7 @@ class TrialExamPublicController extends Controller
         Request $request,
         TrialExam $trialExam,
         TrialAttempt $trialAttempt,
-        ExamQuestion $question,
+        TrialQuestion $question,
         TrialExamAttemptService $attempts,
     ): JsonResponse {
         $this->authorizeAttempt($trialExam, $trialAttempt);
@@ -180,9 +179,7 @@ class TrialExamPublicController extends Controller
 
     private function questions(TrialExam $trialExam)
     {
-        return $trialExam->assessmentSubject->questions()
-            ->where('question_type', ExamQuestionType::MultipleChoice->value)
-            ->orderBy('position')->get();
+        return $trialExam->questionBank->questions()->orderBy('position')->get();
     }
 
     private function authorizeAttempt(TrialExam $trialExam, TrialAttempt $trialAttempt): void
@@ -202,3 +199,4 @@ class TrialExamPublicController extends Controller
         return 'trial_question_order_'.$attempt->id;
     }
 }
+

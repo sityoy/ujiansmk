@@ -17,15 +17,16 @@
                 <h2 class="mt-2 text-xl font-semibold">Ujian tanpa akun siswa</h2>
                 <p class="mt-2 text-sm leading-6 text-slate-400">Peserta membuka tautan khusus, mengisi nama dan kode bersama, lalu mengerjakan soal PG.</p>
             </div>
-            <label class="block text-sm text-slate-300">Bank soal/mapel
-                <select name="assessment_subject_id" required class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3">
+            <label class="block text-sm text-slate-300">Bank soal uji coba
+                <select name="trial_question_bank_id" required class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3">
                     <option value="">Pilih bank soal</option>
-                    @foreach ($components as $component)
-                        <option value="{{ $component->id }}" @selected(old('assessment_subject_id') == $component->id)>
-                            {{ $component->subject->name }} · {{ $component->schoolClass->name }} · {{ $component->assessmentPeriod->name }} ({{ $component->pg_questions_count }} PG)
+                    @foreach ($banks as $bank)
+                        <option value="{{ $bank->id }}" @selected(old('trial_question_bank_id') == $bank->id)>
+                            {{ $bank->name }} · {{ $bank->subject->name }} · Kelas {{ $bank->grade_level }} ({{ $bank->questions_count }} PG)
                         </option>
                     @endforeach
                 </select>
+                <a href="{{ route('trial-question-banks.index') }}" class="mt-2 inline-block text-xs text-cyan-300">Kelola bank soal uji coba →</a>
             </label>
             <label class="block text-sm text-slate-300">Judul
                 <input name="title" value="{{ old('title') }}" required placeholder="Uji Coba Sejarah" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3">
@@ -54,7 +55,7 @@
                                 <h2 class="text-lg font-semibold text-white">{{ $trial->title }}</h2>
                                 <span class="rounded-full px-2.5 py-1 text-xs {{ $trial->is_active ? 'bg-emerald-400/10 text-emerald-300' : 'bg-slate-400/10 text-slate-400' }}">{{ $trial->is_active ? 'Aktif' : 'Nonaktif' }}</span>
                             </div>
-                            <p class="mt-2 text-sm text-slate-400">{{ $trial->assessmentSubject->subject->name }} · {{ $trial->assessmentSubject->schoolClass->name }} · {{ $trial->assessmentSubject->assessmentPeriod->name }}</p>
+                            <p class="mt-2 text-sm text-slate-400">{{ $trial->questionBank->subject->name }} · Kelas {{ $trial->questionBank->grade_level }} · {{ $trial->questionBank->name }}</p>
                             <p class="mt-1 text-xs text-slate-500">{{ $trial->duration_minutes }} menit · {{ $trial->attempts_count }} peserta · Nilai tidak ditampilkan kepada peserta</p>
                         </div>
                         <div class="flex flex-wrap gap-2">
@@ -78,3 +79,4 @@
         </section>
     </div>
 @endsection
+

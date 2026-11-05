@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\ExamQuestionType;
 use App\Models\AssessmentSubject;
 use App\Models\TrialAttempt;
 use App\Models\TrialExam;
+use App\Models\TrialQuestionBank;
 use App\Services\Exams\TrialExamSecurityService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,24 +19,23 @@ class TrialExamController extends Controller
     {
         return view('tryouts.index', [
             'trialExams' => TrialExam::query()
-                ->with(['assessmentSubject.assessmentPeriod.academicYear', 'assessmentSubject.subject', 'assessmentSubject.schoolClass'])
+                ->with(['questionBank.subject', 'assessmentSubject.assessmentPeriod.academicYear'])
                 ->withCount('attempts')
                 ->latest()
                 ->paginate(10),
-            'components' => AssessmentSubject::query()
-                ->with(['assessmentPeriod.academicYear', 'subject', 'schoolClass'])
-                ->withCount(['questions as pg_questions_count' => fn ($query) => $query
-                    ->where('question_type', ExamQuestionType::MultipleChoice->value)])
-                ->whereHas('questions', fn ($query) => $query
-                    ->where('question_type', ExamQuestionType::MultipleChoice->value))
-                ->orderByDesc('id')
+            'banks' => TrialQuestionBank::query()
+                ->with('subject')
+                ->withCount('questions')
+                ->whereHas('questions')
+                ->orderBy('grade_level')
+                ->orderBy('name')
                 ->get(),
         ]);
     }
 
     public function show(TrialExam $trialExam): View
     {
-        $trialExam->load(['assessmentSubject.assessmentPeriod.academicYear', 'assessmentSubject.subject', 'assessmentSubject.schoolClass']);
+        $trialExam->load(['questionBank.subject', 'assessmentSubject.assessmentPeriod.academicYear']);
 
         $base = $trialExam->attempts();
         return view('tryouts.participants', [
@@ -56,7 +55,7 @@ class TrialExamController extends Controller
     {
         $request->merge(['access_code' => Str::upper(trim((string) $request->input('access_code')))]);
         $validated = $request->validate([
-            'assessment_subject_id' => ['required', 'integer', 'exists:assessment_subjects,id'],
+            'trial_question_bank_id' => ['required', 'integer', 'exists:trial_question_banks,id'],
             'title' => ['required', 'string', 'max:150'],
             'access_code' => ['required', 'string', 'max:50', 'regex:/^[A-Z0-9-]+$/', Rule::unique('trial_exams', 'access_code')],
             'duration_minutes' => ['required', 'integer', 'min:10', 'max:300'],
@@ -65,11 +64,18 @@ class TrialExamController extends Controller
             'is_active' => ['nullable', 'boolean'],
         ]);
 
+        $bank = TrialQuestionBank::query()->whereKey($validated['trial_question_bank_id'])
+            ->whereHas('questions')->firstOrFail();
         $component = AssessmentSubject::query()
-            ->whereKey($validated['assessment_subject_id'])
-            ->whereHas('questions', fn ($query) => $query
-                ->where('question_type', ExamQuestionType::MultipleChoice->value))
-            ->firstOrFail();
+            ->where('subject_id', $bank->subject_id)
+            ->whereHas('schoolClass', fn ($query) => $query->where('grade_level', $bank->grade_level))
+            ->whereHas('assessmentPeriod.academicYear', fn ($query) => $query->where('is_active', true))
+            ->latest('id')
+            ->first()
+            ?? AssessmentSubject::query()
+                ->where('subject_id', $bank->subject_id)
+                ->whereHas('schoolClass', fn ($query) => $query->where('grade_level', $bank->grade_level))
+                ->latest('id')->firstOrFail();
 
         $slugBase = Str::slug($validated['title']) ?: 'uji-coba';
         $slug = $slugBase;
@@ -80,6 +86,7 @@ class TrialExamController extends Controller
         TrialExam::create([
             ...$validated,
             'assessment_subject_id' => $component->id,
+            'trial_question_bank_id' => $bank->id,
             'slug' => $slug,
             'is_active' => $request->boolean('is_active'),
         ]);
@@ -118,3 +125,4 @@ class TrialExamController extends Controller
         return back()->with('status', 'Ujian uji coba dihapus.');
     }
 }
+

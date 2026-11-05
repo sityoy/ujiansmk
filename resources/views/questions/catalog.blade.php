@@ -1,16 +1,16 @@
 @extends('layouts.app')
 
-@section('title', 'Bank Soal')
+@section('title', 'Bank Soal Ujian Inti')
 @section('eyebrow', 'Guru & Asesmen')
-@section('heading', 'Bank Soal')
+@section('heading', 'Bank Soal Ujian Inti')
 
 @section('content')
     <section class="rounded-3xl border border-violet-400/20 bg-violet-400/[0.045] p-6">
         <p class="text-xs font-semibold uppercase tracking-[0.18em] text-violet-300">Ruang Kerja Guru</p>
-        <h2 class="mt-2 text-2xl font-semibold text-white">Soal sesuai mapel dan kelas</h2>
+        <h2 class="mt-2 text-2xl font-semibold text-white">Satu bank soal untuk setiap tingkat</h2>
         <p class="mt-2 max-w-4xl text-sm leading-6 text-slate-400">
             Guru hanya dapat membuka komponen yang ditugaskan kepadanya oleh Panitia/Super Admin.
-            Bank soal tersedia untuk ATS, AAS/AAT, UUB, dan asesmen lainnya. ATS tetap khusus isian singkat dan esai.
+            Bank soal inti dipisahkan dari bank soal uji coba. Kelas 10, 11, dan 12 masing-masing memakai satu bank per mapel dan periode, sehingga tidak lagi menumpuk berdasarkan rombel X.1, X.2, atau XI.3. ATS tetap khusus isian singkat dan esai.
         </p>
     </section>
 
@@ -21,10 +21,10 @@
                 <option value="{{ $period->id }}" @selected($periodId === $period->id)>{{ $period->name }} · {{ $period->academicYear->name }}</option>
             @endforeach
         </select>
-        <select name="class_id" class="rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2.5 text-sm">
-            <option value="">Semua kelas</option>
-            @foreach ($classes as $class)
-                <option value="{{ $class->id }}" @selected($classId === $class->id)>{{ $class->name }} · {{ $class->academicYear->name }}</option>
+        <select name="grade_level" class="rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2.5 text-sm">
+            <option value="">Semua tingkat</option>
+            @foreach ($gradeLevels as $level)
+                <option value="{{ $level }}" @selected($gradeLevel === $level)>Kelas {{ $level }}</option>
             @endforeach
         </select>
         <input name="q" value="{{ $search }}" placeholder="Cari mapel atau kode"
@@ -41,7 +41,7 @@
                     <span class="text-xs text-slate-500">{{ $component->questions_count }} soal</span>
                 </div>
                 <h3 class="mt-4 text-lg font-semibold text-white">{{ $component->subject->name }}</h3>
-                <p class="mt-1 text-sm text-slate-400">{{ $component->schoolClass->name }} · {{ $component->assessmentPeriod->name }}</p>
+                <p class="mt-1 text-sm text-slate-400">Kelas {{ $component->grade_level }} · {{ $component->assessmentPeriod->name }}</p>
                 <p class="mt-1 text-xs text-slate-500">{{ $component->assessmentPeriod->academicYear->name }} · Total bobot {{ number_format((float) ($component->questions_sum_points ?? 0), 2, ',', '.') }}</p>
                 @if (auth()->user()->role->value !== 'teacher')
                     <p class="mt-3 text-xs text-slate-500">Guru: {{ $component->teacher?->name ?? 'belum ditetapkan' }}</p>
@@ -59,3 +59,4 @@
         <div class="mt-5 rounded-2xl border border-white/10 bg-white/[0.025] p-4">{{ $components->links() }}</div>
     @endif
 @endsection
+

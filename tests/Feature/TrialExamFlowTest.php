@@ -9,11 +9,12 @@ use App\Enums\UserRole;
 use App\Models\AcademicYear;
 use App\Models\AssessmentPeriod;
 use App\Models\AssessmentSubject;
-use App\Models\ExamQuestion;
 use App\Models\SchoolClass;
 use App\Models\Subject;
 use App\Models\TrialAttempt;
 use App\Models\TrialExam;
+use App\Models\TrialQuestion;
+use App\Models\TrialQuestionBank;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -69,6 +70,16 @@ class TrialExamFlowTest extends TestCase
             ->assertSee('Peserta Uji Coba')
             ->assertSee('Terkunci')
             ->assertDontSee('100,00');
+        $this->get(route('trial-question-banks.index'))
+            ->assertOk()
+            ->assertSee('Latihan Sejarah Kelas 10');
+        $this->get(route('trial-question-banks.questions.index', $trial->questionBank))
+            ->assertOk()
+            ->assertSee('Proklamasi Indonesia terjadi pada?');
+        $this->get(route('tryouts.index'))
+            ->assertOk()
+            ->assertSee('Uji Coba Sejarah')
+            ->assertSee('Kelas 10');
 
         $this->post(route('tryouts.attempts.reset-violations', [$trial, $attempt]), [
             'reason' => 'Gangguan teknis perangkat peserta.',
@@ -117,8 +128,13 @@ class TrialExamFlowTest extends TestCase
             'subject_id' => $subject->id,
             'school_class_id' => $class->id,
         ]);
-        $question = ExamQuestion::create([
-            'assessment_subject_id' => $component->id,
+        $bank = TrialQuestionBank::create([
+            'subject_id' => $subject->id,
+            'grade_level' => 10,
+            'name' => 'Latihan Sejarah Kelas 10',
+        ]);
+        $question = TrialQuestion::create([
+            'trial_question_bank_id' => $bank->id,
             'question_text' => 'Proklamasi Indonesia terjadi pada?',
             'options' => ['A' => '17 Agustus 1945', 'B' => '18 Agustus 1945', 'C' => '1 Juni 1945', 'D' => '20 Mei 1908', 'E' => '28 Oktober 1928'],
             'correct_answer' => 'A',
@@ -127,6 +143,7 @@ class TrialExamFlowTest extends TestCase
         ]);
         $trial = TrialExam::create([
             'assessment_subject_id' => $component->id,
+            'trial_question_bank_id' => $bank->id,
             'title' => 'Uji Coba Sejarah',
             'slug' => 'uji-coba-sejarah',
             'access_code' => 'SJR-SMKBHG',
@@ -137,3 +154,4 @@ class TrialExamFlowTest extends TestCase
         return [$trial, $question];
     }
 }
+

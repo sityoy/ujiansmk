@@ -7,7 +7,7 @@
         <section class="rounded-3xl border border-cyan-400/20 bg-cyan-400/[0.04] p-7">
             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Akses peserta</p>
             <h1 class="mt-3 text-3xl font-semibold">{{ $trialExam->title }}</h1>
-            <p class="mt-3 text-slate-400">{{ $trialExam->assessmentSubject->subject->name }} · {{ $trialExam->duration_minutes }} menit · {{ $questionCount }} soal PG</p>
+            <p class="mt-3 text-slate-400">{{ $trialExam->questionBank->subject->name }} · Kelas {{ $trialExam->questionBank->grade_level }} · {{ $trialExam->duration_minutes }} menit · {{ $questionCount }} soal PG</p>
         </section>
 
         @if ($errors->any())<div class="mt-5 rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">{{ $errors->first() }}</div>@endif
@@ -26,3 +26,4 @@
         @endif
     </div>
 @endsection
+

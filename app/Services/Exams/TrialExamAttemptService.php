@@ -2,10 +2,9 @@
 
 namespace App\Services\Exams;
 
-use App\Enums\ExamQuestionType;
-use App\Models\ExamQuestion;
 use App\Models\TrialAnswer;
 use App\Models\TrialAttempt;
+use App\Models\TrialQuestion;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -25,7 +24,7 @@ class TrialExamAttemptService
         return now()->greaterThanOrEqualTo($this->deadline($attempt));
     }
 
-    public function saveAnswer(TrialAttempt $attempt, ExamQuestion $question, string $answer): void
+    public function saveAnswer(TrialAttempt $attempt, TrialQuestion $question, string $answer): void
     {
         if ($attempt->status === 'in_progress' && $this->isExpired($attempt)) {
             $this->submit($attempt, [], true);
@@ -37,13 +36,12 @@ class TrialExamAttemptService
             $this->assertWritable($attempt);
 
             abort_unless(
-                $question->assessment_subject_id === $attempt->trialExam->assessment_subject_id
-                && $question->question_type === ExamQuestionType::MultipleChoice,
+                $question->trial_question_bank_id === $attempt->trialExam->trial_question_bank_id,
                 404
             );
 
             TrialAnswer::updateOrCreate(
-                ['trial_attempt_id' => $attempt->id, 'exam_question_id' => $question->id],
+                ['trial_attempt_id' => $attempt->id, 'trial_question_id' => $question->id],
                 ['answer' => Str::upper(trim($answer))]
             );
             $attempt->update(['last_seen_at' => now()]);
@@ -55,7 +53,7 @@ class TrialExamAttemptService
     {
         return DB::transaction(function () use ($attempt, $submittedAnswers, $allowLocked): TrialAttempt {
             $attempt = TrialAttempt::query()->lockForUpdate()
-                ->with('trialExam.assessmentSubject')->findOrFail($attempt->id);
+                ->with('trialExam.questionBank')->findOrFail($attempt->id);
 
             if ($attempt->status === 'submitted') {
                 return $attempt;
@@ -69,10 +67,8 @@ class TrialExamAttemptService
                 throw ValidationException::withMessages(['security' => 'Ujian terkunci. Hubungi panitia untuk pemeriksaan.']);
             }
 
-            $questions = $attempt->trialExam->assessmentSubject->questions()
-                ->where('question_type', ExamQuestionType::MultipleChoice->value)
-                ->orderBy('position')->get();
-            $saved = $attempt->answers()->get()->keyBy('exam_question_id');
+            $questions = $attempt->trialExam->questionBank->questions()->orderBy('position')->get();
+            $saved = $attempt->answers()->get()->keyBy('trial_question_id');
             $totalPoints = (float) $questions->sum('points');
             $earnedPoints = 0.0;
             $correctAnswers = 0;
@@ -87,7 +83,7 @@ class TrialExamAttemptService
                 $awarded = $correct ? (float) $question->points : 0.0;
 
                 TrialAnswer::updateOrCreate(
-                    ['trial_attempt_id' => $attempt->id, 'exam_question_id' => $question->id],
+                    ['trial_attempt_id' => $attempt->id, 'trial_question_id' => $question->id],
                     ['answer' => $answer, 'is_correct' => $correct, 'points_awarded' => $awarded]
                 );
                 $earnedPoints += $awarded;
@@ -120,3 +116,4 @@ class TrialExamAttemptService
         }
     }
 }
+

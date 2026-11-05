@@ -178,6 +178,44 @@ class QuestionBankAccessTest extends TestCase
         );
     }
 
+    public function test_core_question_bank_is_grouped_and_synchronized_by_grade_level(): void
+    {
+        $this->withoutVite();
+        [$teacher, , $assigned] = $this->makeComponents();
+        $secondClass = SchoolClass::create([
+            'academic_year_id' => $assigned->schoolClass->academic_year_id,
+            'name' => 'X-2',
+            'grade_level' => 10,
+        ]);
+        $sibling = AssessmentSubject::create([
+            'assessment_period_id' => $assigned->assessment_period_id,
+            'subject_id' => $assigned->subject_id,
+            'school_class_id' => $secondClass->id,
+            'teacher_user_id' => $teacher->id,
+        ]);
+
+        $this->actingAs($teacher)
+            ->post(route('scheduling.questions.store', $assigned), [
+                'question_type' => ExamQuestionType::ShortAnswer->value,
+                'question_text' => 'Soal bersama Kelas 10.',
+                'points' => 3,
+            ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('exam_questions', [
+            'assessment_subject_id' => $assigned->id,
+            'question_text' => 'Soal bersama Kelas 10.',
+        ]);
+        $this->assertDatabaseHas('exam_questions', [
+            'assessment_subject_id' => $sibling->id,
+            'question_text' => 'Soal bersama Kelas 10.',
+        ]);
+        $this->get(route('question-bank.index'))
+            ->assertOk()
+            ->assertSee('Kelas 10')
+            ->assertDontSee('X-1')
+            ->assertDontSee('X-2');
+    }
+
     /** @return array{User, User, AssessmentSubject, AssessmentSubject} */
     private function makeComponents(): array
     {
@@ -222,3 +260,4 @@ class QuestionBankAccessTest extends TestCase
         return [$teacher, $otherTeacher, $assigned, $other];
     }
 }
+
