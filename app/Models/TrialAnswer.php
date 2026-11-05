@@ -6,9 +6,11 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['trial_attempt_id', 'exam_question_id', 'answer', 'is_correct', 'points_awarded'])]
+#[Fillable(['trial_attempt_id', 'trial_question_id', 'answer', 'is_correct', 'points_awarded'])]
 class TrialAnswer extends Model
 {
+    protected $table = 'trial_responses';
+
     protected function casts(): array
     {
         return [
@@ -24,6 +26,6 @@ class TrialAnswer extends Model
 
     public function question(): BelongsTo
     {
-        return $this->belongsTo(ExamQuestion::class, 'exam_question_id');
+        return $this->belongsTo(TrialQuestion::class, 'trial_question_id');
     }
 }

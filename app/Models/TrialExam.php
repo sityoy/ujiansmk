@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['assessment_subject_id', 'title', 'slug', 'access_code', 'duration_minutes', 'starts_at', 'ends_at', 'is_active'])]
+#[Fillable(['assessment_subject_id', 'trial_question_bank_id', 'title', 'slug', 'access_code', 'duration_minutes', 'starts_at', 'ends_at', 'is_active'])]
 class TrialExam extends Model
 {
     protected function casts(): array
@@ -28,6 +28,11 @@ class TrialExam extends Model
     public function assessmentSubject(): BelongsTo
     {
         return $this->belongsTo(AssessmentSubject::class);
+    }
+
+    public function questionBank(): BelongsTo
+    {
+        return $this->belongsTo(TrialQuestionBank::class, 'trial_question_bank_id');
     }
 
     public function attempts(): HasMany
