@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Enums\UserRole;
+use App\Models\DailyCheckin;
 use App\Models\ExamAnswer;
 use App\Models\ExamAttempt;
 use App\Models\Student;
@@ -120,6 +121,11 @@ class PurgeExaminedStudents extends Command
 
         $targetIds = $backupRows->pluck('student_id')->map(fn ($id) => (int) $id);
         $userIds = $backupRows->pluck('user_id')->filter()->map(fn ($id) => (int) $id)->unique();
+        $selfiePaths = DailyCheckin::query()
+            ->whereIn('student_id', $targetIds)
+            ->pluck('selfie_path')
+            ->filter()
+            ->unique();
 
         try {
             DB::transaction(function () use ($targetIds, $userIds): void {
@@ -137,7 +143,11 @@ class PurgeExaminedStudents extends Command
             return self::FAILURE;
         }
 
-        $this->info($studentCount.' siswa beserta akun dan riwayat ujiannya berhasil dihapus.');
+        foreach ($selfiePaths as $selfiePath) {
+            Storage::delete($selfiePath);
+        }
+
+        $this->info($studentCount.' siswa beserta akun, absensi, berkas selfie, dan riwayat ujiannya berhasil dihapus.');
         $this->line('Daftar identitas sebelum penghapusan: storage/app/private/'.$backupPath);
 
         return self::SUCCESS;
