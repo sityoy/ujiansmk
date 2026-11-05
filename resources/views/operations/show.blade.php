@@ -64,7 +64,7 @@
                             <td class="px-5 py-4"><p class="font-medium text-white">{{ $assignment->student->full_name }}</p><p class="mt-1 text-xs text-slate-500">NIS {{ $assignment->student->student_number }} · NISN {{ $assignment->student->nisn ?: '—' }}</p></td>
                             <td class="px-5 py-4 text-xs {{ $checkin?->status->value === 'verified' ? 'text-emerald-300' : 'text-amber-300' }}">{{ $checkin ? $checkinLabels[$checkin->status->value] : 'Belum tercatat' }}</td>
                             <td class="px-5 py-4 text-slate-300" data-progress-status>{{ $statusLabels[$status] ?? 'Perlu pemeriksaan' }}</td>
-                            <td class="px-5 py-4 text-slate-300"><p><span data-progress-answered>{{ $answered }}</span> / {{ $questionCount }} jawaban</p><progress data-progress-bar value="{{ $answered }}" max="{{ max(1, $questionCount) }}" aria-label="Progres jawaban {{ $assignment->student->full_name }}" class="mt-2 h-2 w-24 accent-cyan-400"></progress></td>
+                            <td class="px-5 py-4 text-slate-300"><p data-progress-label data-progress-total="{{ $questionCount }}" aria-label="{{ $answered }} / {{ $questionCount }} jawaban"><span data-progress-answered>{{ $answered }}</span> / {{ $questionCount }} jawaban</p><progress data-progress-bar value="{{ $answered }}" max="{{ max(1, $questionCount) }}" aria-label="Progres jawaban {{ $assignment->student->full_name }}" class="mt-2 h-2 w-24 accent-cyan-400"></progress></td>
                             <td class="whitespace-nowrap px-5 py-4 text-xs leading-6 text-slate-400">Mulai: {{ $attempt?->started_at?->format('H:i:s') ?? '—' }}<br>Simpan terakhir: {{ $attempt?->last_seen_at?->format('H:i:s') ?? '—' }}<br>Dikumpulkan: {{ $attempt?->submitted_at?->format('H:i:s') ?? '—' }}</td>
                             <td class="px-5 py-4 text-slate-300">
                                 <p>{{ $attempt?->score ?? '—' }}</p>
@@ -179,6 +179,8 @@
                             const bar = row.querySelector('[data-progress-bar]');
                             if (status) status.textContent = labels[participant.status] ?? 'Perlu pemeriksaan';
                             if (answered) answered.textContent = participant.answered;
+                            const progressLabel = row.querySelector('[data-progress-label]');
+                            if (progressLabel) progressLabel.setAttribute('aria-label', participant.answered + ' / ' + progressLabel.dataset.progressTotal + ' jawaban');
                             if (bar) bar.value = participant.answered;
                         });
                         const updated = document.querySelector('[data-progress-updated]');
