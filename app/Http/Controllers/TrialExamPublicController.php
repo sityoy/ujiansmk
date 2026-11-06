@@ -1,0 +1,203 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\TrialAttempt;
+use App\Models\TrialExam;
+use App\Models\TrialQuestion;
+use App\Services\Exams\TrialExamAttemptService;
+use App\Services\Exams\TrialExamSecurityService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use Illuminate\View\View;
+
+class TrialExamPublicController extends Controller
+{
+    public function entry(TrialExam $trialExam): View
+    {
+        $trialExam->load(['questionBank.subject']);
+
+        return view('tryouts.entry', [
+            'trialExam' => $trialExam,
+            'available' => $trialExam->isAvailable(),
+            'questionCount' => $this->questions($trialExam)->count(),
+        ]);
+    }
+
+    public function start(Request $request, TrialExam $trialExam): RedirectResponse
+    {
+        $validated = $request->validate([
+            'participant_name' => ['required', 'string', 'max:120'],
+            'participant_identifier' => ['nullable', 'string', 'max:50'],
+            'access_code' => ['required', 'string', 'max:50'],
+        ]);
+
+        if (! $trialExam->isAvailable()) {
+            throw ValidationException::withMessages(['access_code' => 'Ujian uji coba belum dibuka atau sudah ditutup.']);
+        }
+        if (! hash_equals($trialExam->access_code, Str::upper(trim($validated['access_code'])))) {
+            throw ValidationException::withMessages(['access_code' => 'Kode ujian uji coba tidak sesuai.']);
+        }
+
+        $questions = $this->questions($trialExam);
+        if ($questions->isEmpty()) {
+            throw ValidationException::withMessages(['access_code' => 'Bank soal pilihan ganda belum tersedia.']);
+        }
+
+        $token = Str::random(64);
+        $attempt = TrialAttempt::create([
+            'trial_exam_id' => $trialExam->id,
+            'participant_name' => $validated['participant_name'],
+            'participant_identifier' => $validated['participant_identifier'] ?? null,
+            'session_token_hash' => hash('sha256', $token),
+            'status' => 'in_progress',
+            'started_at' => now(),
+            'last_seen_at' => now(),
+            'ip_address' => $request->ip(),
+            'user_agent' => Str::limit((string) $request->userAgent(), 1000, ''),
+            'total_questions' => $questions->count(),
+        ]);
+
+        session()->put($this->tokenKey($attempt), $token);
+        session()->put($this->orderKey($attempt), $questions->pluck('id')->shuffle()->all());
+
+        return redirect()->route('tryout.show', [$trialExam, $attempt]);
+    }
+
+    public function show(
+        TrialExam $trialExam,
+        TrialAttempt $trialAttempt,
+        TrialExamAttemptService $attempts,
+    ): View|RedirectResponse {
+        $this->authorizeAttempt($trialExam, $trialAttempt);
+        $trialExam->loadMissing('questionBank.subject');
+
+        if ($trialAttempt->status === 'in_progress' && $attempts->isExpired($trialAttempt)) {
+            $attempts->submit($trialAttempt, [], true);
+        }
+        if ($trialAttempt->fresh()->status === 'submitted') {
+            return redirect()->route('tryout.result', [$trialExam, $trialAttempt]);
+        }
+
+        $trialAttempt->load('answers');
+        $order = session()->get($this->orderKey($trialAttempt), []);
+        $positions = array_flip($order);
+        $questions = $this->questions($trialExam)
+            ->sortBy(fn ($question) => $positions[$question->id] ?? PHP_INT_MAX)->values();
+
+        return view('tryouts.show', [
+            'trialExam' => $trialExam,
+            'attempt' => $trialAttempt,
+            'questions' => $questions,
+            'answers' => $trialAttempt->answers->keyBy('trial_question_id'),
+            'deadline' => $attempts->deadline($trialAttempt),
+        ]);
+    }
+
+    public function answer(
+        Request $request,
+        TrialExam $trialExam,
+        TrialAttempt $trialAttempt,
+        TrialQuestion $question,
+        TrialExamAttemptService $attempts,
+    ): JsonResponse {
+        $this->authorizeAttempt($trialExam, $trialAttempt);
+        $validated = $request->validate(['answer' => ['required', 'string', 'max:10']]);
+        $attempts->saveAnswer($trialAttempt, $question, $validated['answer']);
+
+        return response()->json(['saved' => true, 'saved_at' => now()->format('H:i:s')]);
+    }
+
+    public function submit(
+        Request $request,
+        TrialExam $trialExam,
+        TrialAttempt $trialAttempt,
+        TrialExamAttemptService $attempts,
+    ): RedirectResponse {
+        $this->authorizeAttempt($trialExam, $trialAttempt);
+        $validated = $request->validate([
+            'answers' => ['nullable', 'array'],
+            'answers.*' => ['nullable', 'string', 'max:10'],
+        ]);
+        $attempts->submit($trialAttempt, $validated['answers'] ?? []);
+        session()->forget($this->orderKey($trialAttempt));
+
+        return redirect()->route('tryout.result', [$trialExam, $trialAttempt]);
+    }
+
+    public function incident(
+        Request $request,
+        TrialExam $trialExam,
+        TrialAttempt $trialAttempt,
+        TrialExamSecurityService $security,
+    ): JsonResponse {
+        $this->authorizeAttempt($trialExam, $trialAttempt);
+        $validated = $request->validate([
+            'category' => ['required', Rule::in(TrialExamSecurityService::CLIENT_CATEGORIES)],
+            'event_id' => ['nullable', 'uuid'],
+            'context' => ['nullable', 'array:viewport_width,viewport_height,screen_width,screen_height,pixel_ratio'],
+            'context.viewport_width' => ['nullable', 'integer', 'between:0,10000'],
+            'context.viewport_height' => ['nullable', 'integer', 'between:0,10000'],
+            'context.screen_width' => ['nullable', 'integer', 'between:0,10000'],
+            'context.screen_height' => ['nullable', 'integer', 'between:0,10000'],
+            'context.pixel_ratio' => ['nullable', 'numeric', 'between:0.1,20'],
+        ]);
+        $state = $security->record(
+            $trialAttempt,
+            $validated['category'],
+            $validated['event_id'] ?? (string) Str::uuid(),
+            $validated['context'] ?? [],
+        );
+
+        return response()->json(['recorded' => true, ...$state])->header('Cache-Control', 'no-store');
+    }
+
+    public function securityState(
+        TrialExam $trialExam,
+        TrialAttempt $trialAttempt,
+        TrialExamAttemptService $attempts,
+        TrialExamSecurityService $security,
+    ): JsonResponse {
+        $this->authorizeAttempt($trialExam, $trialAttempt);
+        if ($trialAttempt->status === 'in_progress' && $attempts->isExpired($trialAttempt)) {
+            $trialAttempt = $attempts->submit($trialAttempt, [], true);
+        }
+
+        return response()->json($security->state($trialAttempt->fresh()))->header('Cache-Control', 'no-store');
+    }
+
+    public function result(TrialExam $trialExam, TrialAttempt $trialAttempt): View
+    {
+        $this->authorizeAttempt($trialExam, $trialAttempt);
+        abort_unless($trialAttempt->status === 'submitted', 404);
+
+        return view('tryouts.result', compact('trialExam', 'trialAttempt'));
+    }
+
+    private function questions(TrialExam $trialExam)
+    {
+        return $trialExam->questionBank->questions()->orderBy('position')->get();
+    }
+
+    private function authorizeAttempt(TrialExam $trialExam, TrialAttempt $trialAttempt): void
+    {
+        abort_unless($trialAttempt->trial_exam_id === $trialExam->id, 404);
+        $token = (string) session()->get($this->tokenKey($trialAttempt));
+        abort_unless($token !== '' && hash_equals($trialAttempt->session_token_hash, hash('sha256', $token)), 403);
+    }
+
+    private function tokenKey(TrialAttempt $attempt): string
+    {
+        return 'trial_attempt_token_'.$attempt->id;
+    }
+
+    private function orderKey(TrialAttempt $attempt): string
+    {
+        return 'trial_question_order_'.$attempt->id;
+    }
+}
+
