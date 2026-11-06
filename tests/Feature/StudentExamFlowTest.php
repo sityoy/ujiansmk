@@ -272,7 +272,9 @@ class StudentExamFlowTest extends TestCase
         $attempt = $this->startAttempt($assignment);
         $this->actingAs($user)->withSession(['exam_device_token' => str_repeat('a', 64)])
             ->get(route('student.exams.show', $attempt))->assertOk()
-            ->assertSee('Coba simpan lagi')->assertSee('remainingAtLoad', false);
+            ->assertSee('Coba simpan lagi')->assertSee('remainingAtLoad', false)
+            ->assertSee('Peserta Uji')->assertSee('S-001')->assertSee('IX-2')
+            ->assertSee('Informatika')->assertSee('data-theme-toggle', false);
     }
 
     public function test_second_security_event_locks_answers_and_hides_questions_after_reload(): void

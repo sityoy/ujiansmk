@@ -24,10 +24,23 @@
             </div>
         </div>
     @endif
-    <div class="sticky top-3 z-20 mb-6 flex items-center justify-between gap-4 rounded-2xl border border-cyan-400/30 bg-slate-950/95 px-5 py-4 shadow-xl backdrop-blur">
+    <div class="exam-toolbar sticky top-3 z-20 mb-6 grid grid-cols-2 gap-4 rounded-2xl border border-cyan-400/30 bg-slate-950/95 px-5 py-4 shadow-xl backdrop-blur lg:grid-cols-[auto_1fr_1fr_auto] lg:items-center">
         <div>
             <p class="text-xs text-slate-500">Sisa waktu</p>
             <p id="exam-timer" class="mt-1 font-mono text-xl font-semibold text-cyan-300">--:--:--</p>
+        </div>
+        <div class="min-w-0 lg:border-l lg:border-white/10 lg:pl-4">
+            <p class="text-[0.65rem] font-semibold uppercase tracking-widest text-cyan-300">Peserta</p>
+            <p class="mt-1 truncate text-sm font-semibold text-white">{{ $student->full_name }}</p>
+            <p class="mt-1 text-xs text-slate-400">
+                NIS/NISN: {{ collect([$student->student_number, $student->nisn])->filter()->join(' / ') ?: '-' }}
+                · Kelas {{ $student->schoolClass?->name ?? '-' }}
+            </p>
+        </div>
+        <div class="min-w-0 lg:border-l lg:border-white/10 lg:pl-4">
+            <p class="text-[0.65rem] font-semibold uppercase tracking-widest text-cyan-300">Mata Pelajaran</p>
+            <p class="mt-1 truncate text-sm font-semibold text-white">{{ $attempt->assignment->assessmentSubject->subject->name }}</p>
+            <p class="mt-1 truncate text-xs text-slate-400">{{ $attempt->assignment->assessmentSubject->assessmentPeriod->name }}</p>
         </div>
         <div class="text-right">
             <p id="save-status" class="text-xs text-slate-400">Jawaban tersimpan otomatis</p>

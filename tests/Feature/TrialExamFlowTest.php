@@ -49,7 +49,11 @@ class TrialExamFlowTest extends TestCase
         $this->get(route('tryout.show', [$trial, $attempt]))
             ->assertOk()
             ->assertSee('Pengamanan sama dengan Ujian Inti')
-            ->assertSee('Pelanggaran 0/2');
+            ->assertSee('Pelanggaran 0/2')
+            ->assertSee('Peserta Uji Coba')
+            ->assertSee('1234567890')
+            ->assertSee('Sejarah')
+            ->assertSee('data-theme-toggle', false);
 
         $this->postJson(route('tryout.incident', [$trial, $attempt]), [
             'event_id' => (string) Str::uuid(),

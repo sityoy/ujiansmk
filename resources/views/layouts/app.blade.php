@@ -9,6 +9,16 @@
 
     @fonts
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script>
+        (() => {
+            try {
+                const savedTheme = localStorage.getItem('ujiansmk-theme');
+                document.documentElement.dataset.theme = savedTheme === 'light' ? 'light' : 'dark';
+            } catch (error) {
+                document.documentElement.dataset.theme = 'dark';
+            }
+        })();
+    </script>
 </head>
 <body class="min-h-screen bg-slate-950 text-slate-100 antialiased">
     @php($schoolName = $schoolProfile?->name ?? 'Nama Sekolah')
@@ -122,6 +132,10 @@
                         <h1 class="mt-1 text-xl font-semibold text-white">@yield('heading', 'Dashboard')</h1>
                     </div>
                     <div class="flex items-center gap-3">
+                        <button type="button" data-theme-toggle>
+                            <span data-theme-icon aria-hidden="true">☀</span>
+                            <span data-theme-label class="hidden md:inline">Terang</span>
+                        </button>
                         <div class="hidden text-right sm:block">
                             <p class="text-sm font-medium text-white">{{ auth()->user()->name }}</p>
                             <p class="text-xs text-slate-400">{{ auth()->user()->role->label() }}</p>

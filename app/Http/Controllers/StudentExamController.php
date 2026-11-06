@@ -80,6 +80,7 @@ class StudentExamController extends Controller
         $student = $this->student($request);
         $this->assertAttemptOwner($attempt, $student);
         $attempts->assertDevice($attempt, $this->deviceHash($request));
+        $student->loadMissing('schoolClass');
 
         if ($attempt->status !== AttemptStatus::InProgress) {
             return redirect()->route('student.exams.index')->with('status', 'Ujian tersebut sudah selesai.');
@@ -99,6 +100,7 @@ class StudentExamController extends Controller
         ]);
 
         return view($attempt->security_locked_at ? 'student.exams.locked' : 'student.exams.show', [
+            'student' => $student,
             'attempt' => $attempt,
             'questions' => $attempt->assignment->assessmentSubject->questions,
             'answers' => $attempt->answers->keyBy('exam_question_id'),

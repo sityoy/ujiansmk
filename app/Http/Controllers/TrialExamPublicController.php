@@ -74,6 +74,7 @@ class TrialExamPublicController extends Controller
         TrialExamAttemptService $attempts,
     ): View|RedirectResponse {
         $this->authorizeAttempt($trialExam, $trialAttempt);
+        $trialExam->loadMissing('questionBank.subject');
 
         if ($trialAttempt->status === 'in_progress' && $attempts->isExpired($trialAttempt)) {
             $attempts->submit($trialAttempt, [], true);

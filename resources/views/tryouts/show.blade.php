@@ -25,10 +25,23 @@
 
     <form id="trial-form" method="POST" action="{{ route('tryout.submit', [$trialExam, $attempt]) }}">
         @csrf
-        <div class="sticky top-0 z-10 mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-slate-950/95 p-4 shadow-xl">
-            <div><p class="font-semibold">{{ $trialExam->title }}</p><p class="text-xs text-slate-400">{{ $attempt->participant_name }} · {{ $questions->count() }} soal</p></div>
-            <div class="flex items-center gap-3">
-                <div class="text-right"><span id="timer" class="rounded-xl bg-amber-400/10 px-3 py-2 font-mono text-amber-200">--:--</span><p id="save-status" class="mt-2 text-xs text-slate-500">Jawaban tersimpan otomatis</p></div>
+        <div class="exam-toolbar sticky top-0 z-10 mb-6 grid grid-cols-2 gap-4 rounded-2xl border border-white/10 bg-slate-950/95 p-4 shadow-xl lg:grid-cols-[1fr_1fr_auto_auto] lg:items-center">
+            <div class="min-w-0">
+                <p class="text-[0.65rem] font-semibold uppercase tracking-widest text-cyan-300">Peserta Uji Coba</p>
+                <p class="mt-1 truncate font-semibold text-white">{{ $attempt->participant_name }}</p>
+                <p class="mt-1 text-xs text-slate-400">Nomor peserta: {{ $attempt->participant_identifier ?: '-' }}</p>
+            </div>
+            <div class="min-w-0 lg:border-l lg:border-white/10 lg:pl-4">
+                <p class="text-[0.65rem] font-semibold uppercase tracking-widest text-cyan-300">Mata Pelajaran</p>
+                <p class="mt-1 truncate font-semibold text-white">{{ $trialExam->questionBank->subject->name }}</p>
+                <p class="mt-1 truncate text-xs text-slate-400">{{ $trialExam->title }} · {{ $questions->count() }} soal</p>
+            </div>
+            <div class="text-right">
+                <p class="text-[0.65rem] font-semibold uppercase tracking-widest text-slate-500">Sisa waktu</p>
+                <span id="timer" class="mt-1 inline-flex rounded-xl bg-amber-400/10 px-3 py-2 font-mono text-amber-200">--:--</span>
+                <p id="save-status" class="mt-2 text-xs text-slate-500">Jawaban tersimpan otomatis</p>
+            </div>
+            <div class="flex items-center justify-end">
                 <span id="security-count" class="rounded-xl bg-rose-400/10 px-3 py-2 text-xs text-rose-200">Pelanggaran {{ $attempt->violation_count }}/2</span>
             </div>
         </div>
