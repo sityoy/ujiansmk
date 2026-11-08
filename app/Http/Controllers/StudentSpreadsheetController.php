@@ -47,6 +47,12 @@ class StudentSpreadsheetController extends Controller
 
     public function import(Request $request, StudentSpreadsheetService $spreadsheet): RedirectResponse
     {
+        // Creating many student accounts requires one secure password hash per new user.
+        // Keep the normal PHP limit for other pages, but allow this bulk operation to finish.
+        if (function_exists('set_time_limit')) {
+            set_time_limit(600);
+        }
+
         $validated = $request->validate([
             'school_class_id' => ['nullable', 'exists:school_classes,id'],
             'spreadsheet' => ['required', 'file', 'max:10240'],
