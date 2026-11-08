@@ -182,7 +182,7 @@ Route::middleware(['auth', 'active'])->group(function (): void {
         });
 
     Route::prefix('trial-question-banks')
-        ->middleware('role:super_admin,committee,teacher')
+        ->middleware('role:super_admin,committee')
         ->name('trial-question-banks.')
         ->group(function (): void {
             Route::get('/', [TrialQuestionBankController::class, 'index'])->name('index');
