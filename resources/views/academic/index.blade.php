@@ -211,7 +211,7 @@
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">05 · Excel</p>
                 <h2 class="mt-2 text-xl font-semibold text-white">Impor dan ekspor siswa</h2>
                 <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-                    Unduh template, isi banyak siswa sekaligus, lalu pilih kelas tujuan. NIS wajib; NISN dan email opsional.
+                    Unduh template untuk impor per kelas, atau unggah kembali file “Ekspor seluruh siswa” agar kelas dan tahun ajaran dibaca otomatis. NIS wajib; NISN dan email opsional.
                     Akun login otomatis dibuat. Username dan password awal memakai NISN; jika NISN kosong, memakai NIS.
                     Kolom Password boleh diisi untuk menentukan password awal lain.
                 </p>
@@ -237,14 +237,14 @@
 
             <form method="POST" action="{{ route('academic.students.import') }}" enctype="multipart/form-data" class="space-y-3">
                 @csrf
-                <select name="school_class_id" required class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
-                    <option value="">Pilih kelas tujuan impor</option>
+                <select name="school_class_id" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
+                    <option value="">Otomatis dari kolom Kelas & Tahun Ajaran</option>
                     @foreach ($classOptions as $class)<option value="{{ $class->id }}">{{ $class->name }} · {{ $class->academicYear->name }}</option>@endforeach
                 </select>
                 <input type="file" name="spreadsheet" accept=".xlsx,.csv" required
                     class="block w-full rounded-xl border border-dashed border-white/15 bg-slate-950/50 px-4 py-3 text-sm text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-400 file:px-3 file:py-2 file:font-semibold file:text-slate-950">
                 <button class="w-full rounded-xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950">Impor data siswa</button>
-                <p class="text-xs text-slate-500">Format: XLSX/CSV, maksimal 10 MB dan 2.000 siswa sekali impor.</p>
+                <p class="text-xs text-slate-500">Format: XLSX/CSV, maksimal 10 MB dan 2.000 siswa sekali impor. Untuk file ekspor seluruh siswa, biarkan pilihan kelas pada mode otomatis.</p>
                 <p class="text-xs leading-5 text-amber-200/80">Password tidak ikut diekspor. Saat impor ulang, password lama tetap dipertahankan jika kolom Password kosong.</p>
             </form>
         </div>
