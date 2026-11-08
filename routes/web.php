@@ -172,6 +172,7 @@ Route::middleware(['auth', 'active'])->group(function (): void {
         ->group(function (): void {
             Route::get('/', [TrialExamController::class, 'index'])->name('index');
             Route::post('/', [TrialExamController::class, 'store'])->name('store');
+            Route::get('/cards/all', [TrialExamController::class, 'allCards'])->name('cards.all');
             Route::get('/{trialExam}/cards', [TrialExamController::class, 'cards'])->name('cards');
             Route::get('/{trialExam}', [TrialExamController::class, 'show'])->name('participants');
             Route::post('/{trialExam}/attempts/{trialAttempt}/reset-violations', [TrialExamController::class, 'resetViolations'])
