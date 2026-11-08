@@ -10,6 +10,7 @@ use App\Models\AcademicYear;
 use App\Models\AssessmentPeriod;
 use App\Models\AssessmentSubject;
 use App\Models\SchoolClass;
+use App\Models\Student;
 use App\Models\Subject;
 use App\Models\TrialAttempt;
 use App\Models\TrialExam;
@@ -39,15 +40,19 @@ class TrialExamFlowTest extends TestCase
         [$trial, $question] = $this->makeTrial();
 
         $this->get(route('tryout.entry', $trial))
-            ->assertOk()->assertSee('Bobot maksimal PG adalah 70 poin');
+            ->assertOk()
+            ->assertSee('Bobot maksimal PG adalah 70 poin')
+            ->assertSee('Nama peserta diambil otomatis dari data siswa');
 
         $this->post(route('tryout.start', $trial), [
-            'participant_name' => 'Peserta Uji Coba',
+            'participant_name' => 'Nama Tidak Boleh Dipakai',
             'participant_identifier' => '1234567890',
             'access_code' => 'SJR-SMKBHG',
         ])->assertRedirect();
 
         $attempt = TrialAttempt::query()->firstOrFail();
+        $this->assertSame('Peserta Uji Coba', $attempt->participant_name);
+        $this->assertSame('1234567890', $attempt->participant_identifier);
         $this->get(route('tryout.show', [$trial, $attempt]))
             ->assertOk()
             ->assertSee('Pengamanan sama dengan Ujian Inti')
@@ -91,6 +96,12 @@ class TrialExamFlowTest extends TestCase
             ->assertOk()
             ->assertSee('Uji Coba Sejarah')
             ->assertSee('Kelas 10');
+        $this->get(route('tryouts.cards', $trial))
+            ->assertOk()
+            ->assertSee('KARTU PESERTA UJIAN UJI COBA')
+            ->assertSee('Peserta Uji Coba')
+            ->assertSee('1234567890')
+            ->assertSee('SJR-SMKBHG');
 
         $this->post(route('tryouts.attempts.reset-violations', [$trial, $attempt]), [
             'reason' => 'Gangguan teknis perangkat peserta.',
@@ -195,6 +206,19 @@ class TrialExamFlowTest extends TestCase
             'academic_year_id' => $year->id,
             'name' => 'X-1',
             'grade_level' => 10,
+        ]);
+        $studentUser = User::factory()->create([
+            'role' => UserRole::Student,
+            'is_active' => true,
+            'must_change_password' => false,
+        ]);
+        Student::create([
+            'user_id' => $studentUser->id,
+            'school_class_id' => $class->id,
+            'student_number' => '1233',
+            'nisn' => '1234567890',
+            'full_name' => 'Peserta Uji Coba',
+            'is_active' => true,
         ]);
         $subject = Subject::create(['code' => 'SJR', 'name' => 'Sejarah', 'is_active' => true]);
         $period = AssessmentPeriod::create([
