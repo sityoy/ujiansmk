@@ -251,28 +251,68 @@
         </div>
     </section>
 
-    <section class="mt-6 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035]">
-        <div class="border-b border-white/10 p-6">
-            <h2 class="text-xl font-semibold text-white">Daftar siswa</h2>
-            <p class="mt-1 text-sm text-slate-500">Maksimal 20 data per halaman.</p>
+    <section id="student-list" class="scroll-mt-5 mt-6 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035]">
+        <div class="border-b border-white/10 p-5 md:p-6">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <h2 class="text-xl font-semibold text-white">Daftar siswa</h2>
+                    <p class="mt-1 text-sm text-slate-500">Cari berdasarkan nama, NIS, NISN, username, atau email.</p>
+                </div>
+                <span class="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1.5 text-xs font-semibold text-cyan-200">
+                    {{ $studentPerPage === 'all' ? $students->count() : $students->total() }} siswa
+                </span>
+            </div>
+
+            <form method="GET" action="{{ route('academic.index') }}#student-list" class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(220px,1fr)_minmax(200px,280px)_150px_auto]">
+                <input type="hidden" name="class_year" value="{{ $classYearId }}">
+                <input type="hidden" name="class_per_page" value="{{ $classPerPage }}">
+                <label class="text-xs font-medium text-slate-400">
+                    Pencarian siswa
+                    <input name="student_search" value="{{ $studentSearch }}" placeholder="Nama, NIS, NISN, username..."
+                        class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-cyan-400">
+                </label>
+                <label class="text-xs font-medium text-slate-400">
+                    Kelas
+                    <select name="student_class" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
+                        <option value="">Semua kelas</option>
+                        @foreach ($classOptions as $class)
+                            <option value="{{ $class->id }}" @selected($studentClassId === $class->id)>{{ $class->name }} · {{ $class->academicYear->name }}</option>
+                        @endforeach
+                    </select>
+                </label>
+                <label class="text-xs font-medium text-slate-400">
+                    Data per halaman
+                    <select name="student_per_page" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
+                        @foreach (['20' => '20 data', '50' => '50 data', '100' => '100 data', 'all' => 'Semua data'] as $value => $label)
+                            <option value="{{ $value }}" @selected($studentPerPage === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </label>
+                <div class="flex items-end gap-2 sm:col-span-2 xl:col-span-1">
+                    <button class="flex-1 rounded-xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950">Tampilkan</button>
+                    <a href="{{ route('academic.index', ['class_year' => $classYearId, 'class_per_page' => $classPerPage]) }}#student-list"
+                        class="rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-slate-300 hover:bg-white/5">Reset</a>
+                </div>
+            </form>
         </div>
+
         <div class="overflow-x-auto">
-            <table class="min-w-full text-left text-sm">
+            <table class="responsive-data-table min-w-full text-left text-sm">
                 <thead class="bg-slate-950/60 text-xs uppercase tracking-wider text-slate-500">
                     <tr><th class="px-5 py-4">NIS</th><th class="px-5 py-4">NISN</th><th class="px-5 py-4">Nama</th><th class="px-5 py-4">Kelas</th><th class="px-5 py-4">Login</th><th class="px-5 py-4 text-right">Aksi</th></tr>
                 </thead>
                 <tbody class="divide-y divide-white/5">
                     @forelse ($students as $student)
                         <tr>
-                            <td class="px-5 py-4 text-slate-400">{{ $student->student_number }}</td>
-                            <td class="px-5 py-4 text-slate-400">{{ $student->nisn ?? '—' }}</td>
-                            <td class="px-5 py-4 font-medium text-white">{{ $student->full_name }}</td>
-                            <td class="px-5 py-4 text-slate-400">{{ $student->schoolClass->name }}</td>
-                            <td class="px-5 py-4 text-slate-400">
+                            <td data-label="NIS" class="px-5 py-4 text-slate-400">{{ $student->student_number }}</td>
+                            <td data-label="NISN" class="px-5 py-4 text-slate-400">{{ $student->nisn ?? '—' }}</td>
+                            <td data-label="Nama" class="px-5 py-4 font-medium text-white">{{ $student->full_name }}</td>
+                            <td data-label="Kelas" class="px-5 py-4 text-slate-400">{{ $student->schoolClass->name }}</td>
+                            <td data-label="Login" class="px-5 py-4 text-slate-400">
                                 <span class="block">{{ $student->user?->username ?? 'Belum dibuat' }}</span>
                                 @if ($student->user?->email)<span class="mt-1 block text-xs text-slate-600">{{ $student->user->email }}</span>@endif
                             </td>
-                            <td class="px-5 py-4">
+                            <td data-label="Aksi" class="px-5 py-4">
                                 <div class="flex justify-end gap-3">
                                     <form method="POST" action="{{ route('academic.students.toggle', $student) }}">@csrf @method('PATCH')
                                         <button class="text-xs {{ $student->is_active ? 'text-emerald-300' : 'text-slate-500' }}">{{ $student->is_active ? 'Aktif' : 'Nonaktif' }}</button>
@@ -284,13 +324,24 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6" class="px-6 py-12 text-center text-slate-500">Belum ada siswa.</td></tr>
+                        <tr><td colspan="6" class="px-6 py-12 text-center text-slate-500">Data siswa tidak ditemukan.</td></tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
-        @if ($students->hasPages())
-            <div class="border-t border-white/10 p-5">{{ $students->links() }}</div>
-        @endif
+
+        <div class="border-t border-white/10 p-5">
+            <div class="text-xs text-slate-500">
+                @if ($studentPerPage === 'all')
+                    Menampilkan seluruh {{ $students->count() }} data siswa.
+                @else
+                    Menampilkan data {{ $students->firstItem() ?? 0 }}–{{ $students->lastItem() ?? 0 }} dari {{ $students->total() }} siswa.
+                @endif
+            </div>
+            @if ($studentPerPage !== 'all' && $students->hasPages())
+                <div class="mt-4">{{ $students->links() }}</div>
+            @endif
+        </div>
+
     </section>
 @endsection
