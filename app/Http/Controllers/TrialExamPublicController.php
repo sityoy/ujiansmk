@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Student;
 use App\Models\TrialAttempt;
 use App\Models\TrialExam;
 use App\Models\TrialQuestion;
@@ -31,8 +32,7 @@ class TrialExamPublicController extends Controller
     public function start(Request $request, TrialExam $trialExam): RedirectResponse
     {
         $validated = $request->validate([
-            'participant_name' => ['required', 'string', 'max:120'],
-            'participant_identifier' => ['nullable', 'string', 'max:50'],
+            'participant_identifier' => ['required', 'string', 'max:50'],
             'access_code' => ['required', 'string', 'max:50'],
         ]);
 
@@ -43,6 +43,33 @@ class TrialExamPublicController extends Controller
             throw ValidationException::withMessages(['access_code' => 'Kode ujian uji coba tidak sesuai.']);
         }
 
+        $identifier = trim($validated['participant_identifier']);
+        $student = Student::query()
+            ->with('schoolClass')
+            ->where('is_active', true)
+            ->whereHas('schoolClass', fn ($query) => $query->where('grade_level', $trialExam->questionBank->grade_level))
+            ->where(function ($query) use ($identifier): void {
+                $query->where('student_number', $identifier)
+                    ->orWhere('nisn', $identifier);
+            })
+            ->first();
+
+        if (! $student) {
+            throw ValidationException::withMessages([
+                'participant_identifier' => 'NIS/NISN tidak ditemukan sebagai siswa aktif pada tingkat kelas ujian ini.',
+            ]);
+        }
+
+        $participantIdentifier = $student->nisn ?: $student->student_number;
+        if (TrialAttempt::query()
+            ->where('trial_exam_id', $trialExam->id)
+            ->where('participant_identifier', $participantIdentifier)
+            ->exists()) {
+            throw ValidationException::withMessages([
+                'participant_identifier' => 'Siswa ini sudah pernah memulai Ujian Uji Coba tersebut.',
+            ]);
+        }
+
         $questions = $this->questions($trialExam);
         if ($questions->isEmpty()) {
             throw ValidationException::withMessages(['access_code' => 'Bank soal pilihan ganda belum tersedia.']);
@@ -51,8 +78,8 @@ class TrialExamPublicController extends Controller
         $token = Str::random(64);
         $attempt = TrialAttempt::create([
             'trial_exam_id' => $trialExam->id,
-            'participant_name' => $validated['participant_name'],
-            'participant_identifier' => $validated['participant_identifier'] ?? null,
+            'participant_name' => $student->full_name,
+            'participant_identifier' => $participantIdentifier,
             'session_token_hash' => hash('sha256', $token),
             'status' => 'in_progress',
             'started_at' => now(),
