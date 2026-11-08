@@ -176,4 +176,85 @@ class UserManagementTest extends TestCase
             ->assertOk()
             ->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     }
+
+    public function test_super_admin_can_print_temporary_staff_credentials_without_super_admin_accounts(): void
+    {
+        $admin = User::factory()->create([
+            'role' => UserRole::SuperAdmin,
+            'email' => 'admin@example.test',
+            'password' => 'AdminRahasia123',
+        ]);
+        $otherAdmin = User::factory()->create([
+            'role' => UserRole::SuperAdmin,
+            'email' => 'admin2@example.test',
+            'password' => 'AdminDuaRahasia123',
+        ]);
+        $teacher = User::factory()->create([
+            'role' => UserRole::Teacher,
+            'name' => 'Guru Cetak',
+            'email' => 'guru.cetak@example.test',
+            'password' => 'PasswordLama123',
+            'must_change_password' => false,
+            'is_active' => true,
+        ]);
+        $committee = User::factory()->create([
+            'role' => UserRole::Committee,
+            'name' => 'Panitia Tidak Dipilih',
+            'password' => 'PanitiaLama123',
+            'must_change_password' => false,
+            'is_active' => true,
+        ]);
+        $inactiveTeacher = User::factory()->create([
+            'role' => UserRole::Teacher,
+            'name' => 'Guru Nonaktif',
+            'password' => 'NonaktifLama123',
+            'must_change_password' => false,
+            'is_active' => false,
+        ]);
+
+        $adminPassword = $admin->password;
+        $otherAdminPassword = $otherAdmin->password;
+        $committeePassword = $committee->password;
+        $inactivePassword = $inactiveTeacher->password;
+
+        $response = $this->actingAs($admin)->post(route('users.credentials.print'), [
+            'role' => UserRole::Teacher->value,
+        ]);
+
+        $response->assertOk()
+            ->assertSee('Guru Cetak')
+            ->assertSee('guru.cetak@example.test')
+            ->assertDontSee('admin@example.test')
+            ->assertDontSee('Panitia Tidak Dipilih')
+            ->assertDontSee('Guru Nonaktif')
+            ->assertHeader('x-robots-tag', 'noindex, nofollow')
+            ->assertViewHas('credentials', function ($credentials) use ($teacher): bool {
+                if ($credentials->count() !== 1) {
+                    return false;
+                }
+
+                $credential = $credentials->first();
+
+                return $credential['id'] === $teacher->id
+                    && Hash::check($credential['password'], $teacher->fresh()->password);
+            });
+
+        $this->assertTrue($teacher->fresh()->must_change_password);
+        $this->assertNotSame(Hash::make('PasswordLama123'), $teacher->fresh()->password);
+        $this->assertSame($adminPassword, $admin->fresh()->password);
+        $this->assertSame($otherAdminPassword, $otherAdmin->fresh()->password);
+        $this->assertSame($committeePassword, $committee->fresh()->password);
+        $this->assertSame($inactivePassword, $inactiveTeacher->fresh()->password);
+        $this->assertFalse($inactiveTeacher->fresh()->must_change_password);
+    }
+
+    public function test_non_super_admin_cannot_print_staff_credentials(): void
+    {
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+
+        $this->actingAs($committee)
+            ->post(route('users.credentials.print'))
+            ->assertForbidden();
+    }
+
 }

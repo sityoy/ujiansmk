@@ -38,6 +38,10 @@ class UserManagementController extends Controller
                 ->paginate(10)
                 ->withQueryString(),
             'roles' => $managedUsers->roles(),
+            'printRoles' => array_values(array_filter(
+                $managedUsers->roles(),
+                fn (UserRole $role): bool => $role !== UserRole::SuperAdmin,
+            )),
             'editingUser' => $editingUser,
             'search' => $search,
             'selectedRole' => $role,

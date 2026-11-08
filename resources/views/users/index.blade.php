@@ -64,6 +64,31 @@
         </section>
     </div>
 
+    <section class="mt-6 rounded-3xl border border-cyan-400/20 bg-cyan-400/[0.045] p-6">
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Kartu Akun Petugas</p>
+        <h2 class="mt-2 text-xl font-semibold text-white">Siapkan dan cetak akun</h2>
+        <p class="mt-2 max-w-4xl text-sm leading-6 text-slate-400">
+            Cetak akun Panitia, Guru, Pengawas, dan Kepala Sekolah. Super Admin tidak pernah disertakan.
+            Proses ini mereset password akun aktif yang dipilih menjadi password sementara dan pengguna wajib menggantinya saat login pertama.
+        </p>
+        <form method="POST" action="{{ route('users.credentials.print') }}" target="_blank"
+            onsubmit="return confirm('Password akun aktif yang dipilih akan direset menjadi password sementara. Lanjutkan dan buka lembar cetak?')"
+            class="mt-5 flex flex-wrap items-end gap-3">
+            @csrf
+            <label class="grid min-w-[240px] gap-2 text-xs text-slate-400">
+                Hak akses yang dicetak
+                <select name="role" class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-200">
+                    <option value="">Semua petugas (tanpa Super Admin)</option>
+                    @foreach ($printRoles as $role)
+                        <option value="{{ $role->value }}">{{ $role->label() }}</option>
+                    @endforeach
+                </select>
+            </label>
+            <button class="rounded-xl bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950">Buat password &amp; cetak</button>
+        </form>
+        <p class="mt-3 text-xs leading-5 text-amber-200/80">Password sementara hanya ditampilkan pada lembar cetak. Simpan PDF atau langsung cetak sebelum menutup halaman.</p>
+    </section>
+
     @if ($editingUser)
         <section id="edit-account" class="mt-6 rounded-3xl border border-amber-400/20 bg-amber-400/[0.045] p-6">
             <div class="flex flex-wrap items-start justify-between gap-3">
@@ -142,6 +167,14 @@
                             </td>
                             <td class="px-5 py-4">
                                 <div class="flex items-center justify-end gap-3">
+                                    @if ($account->role->value !== 'super_admin' && $account->is_active)
+                                        <form method="POST" action="{{ route('users.credentials.print') }}" target="_blank"
+                                            onsubmit="return confirm('Password {{ addslashes($account->name) }} akan direset menjadi password sementara. Lanjutkan?')">
+                                            @csrf
+                                            <input type="hidden" name="user_id" value="{{ $account->id }}">
+                                            <button class="text-xs text-emerald-300">Cetak akun</button>
+                                        </form>
+                                    @endif
                                     <a href="{{ route('users.index', [...request()->query(), 'edit' => $account->id]) }}#edit-account" class="text-xs text-amber-300">Edit</a>
                                     <form method="POST" action="{{ route('users.toggle', $account) }}">@csrf @method('PATCH')
                                         <button class="text-xs {{ $account->is(auth()->user()) ? 'cursor-not-allowed text-slate-600' : 'text-cyan-300' }}" {{ $account->is(auth()->user()) ? 'disabled' : '' }}>

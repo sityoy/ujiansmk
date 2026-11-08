@@ -23,6 +23,7 @@ use App\Http\Controllers\TrialExamPublicController;
 use App\Http\Controllers\TrialQuestionBankController;
 use App\Http\Controllers\SubjectSpreadsheetController;
 use App\Http\Controllers\UserManagementController;
+use App\Http\Controllers\UserCredentialPrintController;
 use App\Http\Controllers\UserSpreadsheetController;
 use Illuminate\Support\Facades\Route;
 
@@ -125,6 +126,7 @@ Route::middleware(['auth', 'active'])->group(function (): void {
         Route::post('/users', [UserManagementController::class, 'store'])->name('users.store');
         Route::put('/users/{user}', [UserManagementController::class, 'update'])->name('users.update');
         Route::patch('/users/{user}/toggle', [UserManagementController::class, 'toggle'])->name('users.toggle');
+        Route::post('/users/credentials/print', [UserCredentialPrintController::class, 'generate'])->name('users.credentials.print');
         Route::get('/users-spreadsheet/template', [UserSpreadsheetController::class, 'template'])->name('users.template');
         Route::get('/users-spreadsheet/export', [UserSpreadsheetController::class, 'export'])->name('users.export');
         Route::post('/users-spreadsheet/import', [UserSpreadsheetController::class, 'import'])->name('users.import');
