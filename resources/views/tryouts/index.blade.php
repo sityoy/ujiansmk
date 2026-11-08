@@ -9,6 +9,16 @@
         <div class="mb-6 rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">{{ $errors->first() }}</div>
     @endif
 
+    @if ($trialExams->total() > 0)
+        <div class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.04] px-5 py-4">
+            <div>
+                <p class="text-sm font-semibold text-white">Kartu gabungan seluruh Ujian Uji Coba</p>
+                <p class="mt-1 text-xs leading-5 text-slate-400">Satu kartu per siswa berisi seluruh tautan dan kode Uji Coba yang sesuai dengan tingkat kelasnya.</p>
+            </div>
+            <a href="{{ route('tryouts.cards.all') }}" target="_blank" class="rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950">Cetak kartu semua link</a>
+        </div>
+    @endif
+
     <div class="grid gap-6 xl:grid-cols-[380px_1fr]">
         @if ($banks->isNotEmpty())
         <form method="POST" action="{{ route('tryouts.store') }}" class="space-y-4 rounded-3xl border border-white/10 bg-white/[0.035] p-6">
@@ -16,7 +26,7 @@
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Buat tautan baru</p>
                 <h2 class="mt-2 text-xl font-semibold">Ujian tanpa akun siswa</h2>
-                <p class="mt-2 text-sm leading-6 text-slate-400">Peserta membuka tautan khusus, mengisi nama dan kode bersama, lalu mengerjakan soal PG.</p>
+                <p class="mt-2 text-sm leading-6 text-slate-400">Peserta membuka tautan khusus, memasukkan NIS/NISN dan kode bersama, lalu mengerjakan soal PG.</p>
             </div>
             <label class="block text-sm text-slate-300">Bank soal uji coba
                 <select name="trial_question_bank_id" required class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3">
