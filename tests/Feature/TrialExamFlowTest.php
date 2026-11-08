@@ -102,6 +102,13 @@ class TrialExamFlowTest extends TestCase
             ->assertSee('Peserta Uji Coba')
             ->assertSee('1234567890')
             ->assertSee('SJR-SMKBHG');
+        $this->get(route('tryouts.cards.all'))
+            ->assertOk()
+            ->assertSee('KARTU SELURUH UJIAN UJI COBA')
+            ->assertSee('Peserta Uji Coba')
+            ->assertSee('Uji Coba Sejarah')
+            ->assertSee('SJR-SMKBHG')
+            ->assertSee(route('tryout.entry', $trial));
 
         $this->post(route('tryouts.attempts.reset-violations', [$trial, $attempt]), [
             'reason' => 'Gangguan teknis perangkat peserta.',
