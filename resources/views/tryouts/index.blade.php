@@ -10,6 +10,7 @@
     @endif
 
     <div class="grid gap-6 xl:grid-cols-[380px_1fr]">
+        @if ($banks->isNotEmpty())
         <form method="POST" action="{{ route('tryouts.store') }}" class="space-y-4 rounded-3xl border border-white/10 bg-white/[0.035] p-6">
             @csrf
             <div>
@@ -45,6 +46,14 @@
             <label class="flex items-center gap-3 text-sm text-slate-300"><input type="checkbox" name="is_active" value="1" @checked(old('is_active')) class="size-4 rounded border-white/20 bg-slate-950">Langsung aktifkan</label>
             <button class="w-full rounded-xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950">Buat ujian uji coba</button>
         </form>
+        @else
+            <section class="rounded-3xl border border-emerald-400/20 bg-emerald-400/[0.05] p-6">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">Konfigurasi lengkap</p>
+                <h2 class="mt-2 text-xl font-semibold">Semua bank soal sudah dibuatkan ujian</h2>
+                <p class="mt-2 text-sm leading-6 text-slate-400">Bank soal yang sudah digunakan tidak dapat dibuat menjadi Ujian Uji Coba kedua. Kelola ujian yang tersedia di daftar sebelah kanan.</p>
+                <a href="{{ route('trial-question-banks.index') }}" class="mt-4 inline-block text-sm font-semibold text-cyan-300">Kelola bank soal uji coba →</a>
+            </section>
+        @endif
 
         <section class="space-y-4">
             @forelse ($trialExams as $trial)
