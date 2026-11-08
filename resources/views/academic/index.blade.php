@@ -245,6 +245,7 @@
                     class="block w-full rounded-xl border border-dashed border-white/15 bg-slate-950/50 px-4 py-3 text-sm text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-400 file:px-3 file:py-2 file:font-semibold file:text-slate-950">
                 <button class="w-full rounded-xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950">Impor data siswa</button>
                 <p class="text-xs text-slate-500">Format: XLSX/CSV, maksimal 10 MB dan 2.000 siswa sekali impor. Untuk file ekspor seluruh siswa, biarkan pilihan kelas pada mode otomatis.</p>
+                <p class="text-xs leading-5 text-cyan-200/80">Impor siswa baru dapat memerlukan beberapa menit karena sistem membuat dan mengenkripsi password setiap akun. Jangan menutup atau memuat ulang halaman selama proses berjalan.</p>
                 <p class="text-xs leading-5 text-amber-200/80">Password tidak ikut diekspor. Saat impor ulang, password lama tetap dipertahankan jika kolom Password kosong.</p>
             </form>
         </div>
