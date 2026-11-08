@@ -36,7 +36,18 @@
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
-            .toolbar, .warning { display: none !important; }
+            .toolbar { display: none !important; }
+            .warning {
+                display: block !important;
+                width: 100% !important;
+                margin: 0 0 6mm !important;
+                border-radius: 7px;
+                padding: 8px 10px;
+                font-size: 9.5px;
+                line-height: 1.4;
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
             .sheet {
                 display: grid !important;
                 width: 100% !important;
