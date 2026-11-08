@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\AssessmentSubject;
+use App\Models\SchoolProfile;
+use App\Models\Student;
 use App\Models\TrialAttempt;
 use App\Models\TrialExam;
 use App\Models\TrialQuestionBank;
@@ -52,6 +54,30 @@ class TrialExamController extends Controller
                 'locked' => (clone $base)->where('status', 'in_progress')->whereNotNull('security_locked_at')->count(),
                 'submitted' => (clone $base)->where('status', 'submitted')->count(),
             ],
+        ]);
+    }
+
+    public function cards(TrialExam $trialExam): View
+    {
+        $trialExam->load('questionBank.subject');
+        $students = Student::query()
+            ->with('schoolClass.academicYear')
+            ->where('is_active', true)
+            ->whereHas('schoolClass', fn ($query) => $query->where('grade_level', $trialExam->questionBank->grade_level))
+            ->orderBy(
+                Student::query()
+                    ->select('name')
+                    ->from('school_classes')
+                    ->whereColumn('school_classes.id', 'students.school_class_id')
+                    ->limit(1),
+            )
+            ->orderBy('full_name')
+            ->get();
+
+        return view('tryouts.cards', [
+            'school' => SchoolProfile::query()->first(),
+            'trialExam' => $trialExam,
+            'students' => $students,
         ]);
     }
 
