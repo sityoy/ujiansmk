@@ -46,9 +46,9 @@ class UserCredentialPrintController extends Controller
                 fn ($query) => $query->where('role', $validated['role']),
             );
 
-        $accountIds = $query->pluck('id');
+        $accountIds = $query->pluck('id')->all();
 
-        if ($accountIds->isEmpty()) {
+        if ($accountIds === []) {
             throw ValidationException::withMessages([
                 'account_print' => 'Tidak ada akun aktif yang dapat dicetak untuk pilihan tersebut.',
             ]);
