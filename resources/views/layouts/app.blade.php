@@ -93,7 +93,9 @@
                                 @endif
                                 @if (in_array($currentRole, ['super_admin', 'committee', 'teacher'], true))
                                     <a href="{{ route('question-bank.index') }}" class="block rounded-lg px-3 py-2.5 {{ request()->routeIs('question-bank.*', 'scheduling.questions.*') ? 'bg-cyan-400 text-slate-950 font-semibold' : 'text-slate-400 hover:bg-white/5 hover:text-white' }}">Bank soal inti</a>
+                                    @if (in_array($currentRole, ['super_admin', 'committee'], true))
                                     <a href="{{ route('trial-question-banks.index') }}" class="block rounded-lg px-3 py-2.5 {{ request()->routeIs('trial-question-banks.*') ? 'bg-cyan-400 text-slate-950 font-semibold' : 'text-slate-400 hover:bg-white/5 hover:text-white' }}">Bank soal uji coba</a>
+                                    @endif
                                     <a href="{{ route('grading.index') }}" class="block rounded-lg px-3 py-2.5 {{ request()->routeIs('grading.*') ? 'bg-cyan-400 text-slate-950 font-semibold' : 'text-slate-400 hover:bg-white/5 hover:text-white' }}">Koreksi jawaban</a>
                                 @endif
                                 @if (in_array($currentRole, ['super_admin', 'committee', 'proctor'], true))
