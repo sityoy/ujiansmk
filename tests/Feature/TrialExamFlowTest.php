@@ -16,6 +16,8 @@ use App\Models\TrialExam;
 use App\Models\TrialQuestion;
 use App\Models\TrialQuestionBank;
 use App\Models\User;
+use App\Services\Exams\ExamSecurityService;
+use App\Services\Exams\TrialExamSecurityService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -106,6 +108,38 @@ class TrialExamFlowTest extends TestCase
             ->assertDontSee('100,00')
             ->assertDontSee('1 jawaban benar');
         $this->assertSame('70.00', $attempt->fresh()->score);
+    }
+
+    public function test_trial_question_bank_cannot_create_more_than_one_trial_exam(): void
+    {
+        [$trial] = $this->makeTrial();
+        $admin = User::factory()->create([
+            'role' => UserRole::SuperAdmin,
+            'is_active' => true,
+            'must_change_password' => false,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('tryouts.store'), [
+                'trial_question_bank_id' => $trial->trial_question_bank_id,
+                'title' => 'Uji Coba Sejarah Duplikat',
+                'access_code' => 'SJR-DUPLIKAT',
+                'duration_minutes' => 60,
+                'is_active' => '1',
+            ])
+            ->assertSessionHasErrors('trial_question_bank_id');
+
+        $this->assertSame(1, TrialExam::query()->count());
+        $this->get(route('tryouts.index'))
+            ->assertOk()
+            ->assertViewHas('banks', fn ($banks): bool => $banks->doesntContain('id', $trial->trial_question_bank_id));
+    }
+
+    public function test_trial_and_core_exam_keep_the_same_strict_security_policy(): void
+    {
+        $this->assertSame(2, ExamSecurityService::LIMIT);
+        $this->assertSame(ExamSecurityService::LIMIT, TrialExamSecurityService::LIMIT);
+        $this->assertSame(ExamSecurityService::CLIENT_CATEGORIES, TrialExamSecurityService::CLIENT_CATEGORIES);
     }
 
     private function makeTrial(): array
