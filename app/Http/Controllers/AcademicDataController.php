@@ -31,6 +31,28 @@ class AcademicDataController extends Controller
             ->orderByDesc('academic_year_id')
             ->orderBy('name');
 
+        $studentSearch = trim($request->string('student_search')->toString());
+        $studentClassId = $request->filled('student_class') ? $request->integer('student_class') : null;
+        $studentPerPage = $request->string('student_per_page')->toString();
+        $studentPerPage = in_array($studentPerPage, ['20', '50', '100', 'all'], true)
+            ? $studentPerPage
+            : '20';
+        $studentQuery = Student::query()
+            ->with(['schoolClass.academicYear', 'user'])
+            ->when($studentSearch !== '', function ($query) use ($studentSearch): void {
+                $query->where(function ($searchQuery) use ($studentSearch): void {
+                    $searchQuery
+                        ->where('full_name', 'like', '%'.$studentSearch.'%')
+                        ->orWhere('student_number', 'like', '%'.$studentSearch.'%')
+                        ->orWhere('nisn', 'like', '%'.$studentSearch.'%')
+                        ->orWhereHas('user', fn ($userQuery) => $userQuery
+                            ->where('username', 'like', '%'.$studentSearch.'%')
+                            ->orWhere('email', 'like', '%'.$studentSearch.'%'));
+                });
+            })
+            ->when($studentClassId, fn ($query) => $query->where('school_class_id', $studentClassId))
+            ->orderBy('full_name');
+
         return view('academic.index', [
             'academicYears' => AcademicYear::query()
                 ->withCount('classes')
@@ -52,10 +74,15 @@ class AcademicDataController extends Controller
                 : $classQuery->paginate(5, ['*'], 'class_page')->withQueryString(),
             'classPerPage' => $classPerPage,
             'classYearId' => $classYearId,
-            'students' => Student::query()
-                ->with(['schoolClass.academicYear', 'user'])
-                ->orderBy('full_name')
-                ->paginate(20),
+            'students' => $studentPerPage === 'all'
+                ? $studentQuery->get()
+                : $studentQuery
+                    ->paginate((int) $studentPerPage, ['*'], 'student_page')
+                    ->withQueryString()
+                    ->fragment('student-list'),
+            'studentSearch' => $studentSearch,
+            'studentClassId' => $studentClassId,
+            'studentPerPage' => $studentPerPage,
         ]);
     }
 
