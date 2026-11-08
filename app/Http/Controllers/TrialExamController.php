@@ -87,6 +87,9 @@ class TrialExamController extends Controller
                 ]);
             }
 
+            // Prefer a component for the same grade. Trial banks are intentionally
+            // independent from core-exam scheduling, so fall back to another class
+            // of the same subject when that grade has not been scheduled yet.
             $component = AssessmentSubject::query()
                 ->where('subject_id', $bank->subject_id)
                 ->whereHas('schoolClass', fn ($query) => $query->where('grade_level', $bank->grade_level))
@@ -96,7 +99,23 @@ class TrialExamController extends Controller
                 ?? AssessmentSubject::query()
                     ->where('subject_id', $bank->subject_id)
                     ->whereHas('schoolClass', fn ($query) => $query->where('grade_level', $bank->grade_level))
-                    ->latest('id')->firstOrFail();
+                    ->latest('id')
+                    ->first()
+                ?? AssessmentSubject::query()
+                    ->where('subject_id', $bank->subject_id)
+                    ->whereHas('assessmentPeriod.academicYear', fn ($query) => $query->where('is_active', true))
+                    ->latest('id')
+                    ->first()
+                ?? AssessmentSubject::query()
+                    ->where('subject_id', $bank->subject_id)
+                    ->latest('id')
+                    ->first();
+
+            if (! $component) {
+                throw ValidationException::withMessages([
+                    'trial_question_bank_id' => 'Mapel bank soal belum memiliki referensi pada data penjadwalan. Tambahkan mapel tersebut ke salah satu periode terlebih dahulu.',
+                ]);
+            }
 
             $slugBase = Str::slug($validated['title']) ?: 'uji-coba';
             $slug = $slugBase;
