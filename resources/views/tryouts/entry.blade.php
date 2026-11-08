@@ -24,8 +24,10 @@
             </div>
             <form method="POST" action="{{ route('tryout.start', $trialExam) }}" class="mt-5 space-y-4 rounded-3xl border border-white/10 bg-white/[0.035] p-7">
                 @csrf
-                <label class="block text-sm text-slate-300">Nama lengkap<input name="participant_name" value="{{ old('participant_name') }}" required autocomplete="name" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3"></label>
-                <label class="block text-sm text-slate-300">NIS/NISN (opsional)<input name="participant_identifier" value="{{ old('participant_identifier') }}" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3"></label>
+                <label class="block text-sm text-slate-300">NIS atau NISN
+                    <input name="participant_identifier" value="{{ old('participant_identifier') }}" required autocomplete="username" inputmode="numeric" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3" placeholder="Masukkan NIS/NISN terdaftar">
+                    <span class="mt-2 block text-xs leading-5 text-slate-500">Nama peserta diambil otomatis dari data siswa. NIS/NISN harus sesuai dengan tingkat kelas ujian.</span>
+                </label>
                 <label class="block text-sm text-slate-300">Kode ujian<input name="access_code" required autocomplete="off" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 uppercase tracking-wider" placeholder="SJR-SMKBHG"></label>
                 <label class="flex items-start gap-2 text-xs text-slate-300"><input type="checkbox" required class="mt-0.5">Saya sudah membaca dan menyetujui aturan ujian.</label>
                 <button class="w-full rounded-xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950">Mulai ujian uji coba</button>
