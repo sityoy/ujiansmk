@@ -217,7 +217,7 @@
 
     </script>
     @if ($attempt->security_enabled)
-        <script src="{{ asset('js/exam-security.js') }}?v=20260907-1" defer></script>
+        <script src="{{ asset('js/exam-security.js') }}?v=20261108-2" defer></script>
     @else
         <script>
             document.addEventListener('visibilitychange', () => {
