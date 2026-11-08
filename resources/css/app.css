@@ -204,3 +204,173 @@ html[data-theme='light'] textarea::placeholder {
     color: rgb(100 116 139);
     opacity: 1;
 }
+
+
+/* Responsive application shell and collapsible sidebar. */
+.app-shell {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    transition: grid-template-columns 180ms ease;
+}
+
+.app-sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    width: 280px;
+    height: 100vh;
+    overflow-y: auto;
+    transition: transform 180ms ease, opacity 180ms ease, visibility 180ms ease;
+}
+
+.app-main {
+    min-width: 0;
+}
+
+.app-sidebar-overlay {
+    display: none;
+}
+
+html.sidebar-collapsed .app-shell {
+    grid-template-columns: 0 minmax(0, 1fr);
+}
+
+html.sidebar-collapsed .app-sidebar {
+    transform: translateX(-100%);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+[data-nav-group] > summary {
+    list-style: none;
+}
+
+[data-nav-group] > summary::-webkit-details-marker {
+    display: none;
+}
+
+[data-nav-group] .nav-chevron {
+    transition: transform 160ms ease;
+}
+
+[data-nav-group][open] .nav-chevron {
+    transform: rotate(180deg);
+}
+
+@media (max-width: 1023px) {
+    .app-shell {
+        display: block;
+    }
+
+    .app-sidebar {
+        position: fixed;
+        inset: 0 auto 0 0;
+        width: min(86vw, 300px);
+        max-width: 300px;
+        transform: translateX(-102%);
+        opacity: 1;
+        visibility: hidden;
+        box-shadow: 20px 0 45px rgb(2 6 23 / 0.42);
+        pointer-events: none;
+    }
+
+    html.sidebar-collapsed .app-sidebar {
+        transform: translateX(-102%);
+        opacity: 1;
+    }
+
+    html.sidebar-open .app-sidebar {
+        transform: translateX(0);
+        visibility: visible;
+        pointer-events: auto;
+    }
+
+    .app-sidebar-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 35;
+        display: block;
+        background: rgb(2 6 23 / 0.72);
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 180ms ease, visibility 180ms ease;
+        pointer-events: none;
+    }
+
+    html.sidebar-open .app-sidebar-overlay {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+    }
+
+    html.sidebar-open body {
+        overflow: hidden;
+    }
+}
+
+/* Mobile student table becomes readable cards instead of a wide floating table. */
+@media (max-width: 767px) {
+    .responsive-data-table {
+        min-width: 0;
+        padding: 0.75rem;
+    }
+
+    .responsive-data-table thead {
+        display: none;
+    }
+
+    .responsive-data-table tbody {
+        display: grid;
+        gap: 0.75rem;
+    }
+
+    .responsive-data-table tbody tr {
+        display: block;
+        overflow: hidden;
+        border: 1px solid rgb(255 255 255 / 0.1);
+        border-radius: 1rem;
+        background: rgb(15 23 42 / 0.42);
+    }
+
+    .responsive-data-table tbody td {
+        display: grid;
+        grid-template-columns: 82px minmax(0, 1fr);
+        gap: 0.75rem;
+        align-items: start;
+        border-bottom: 1px solid rgb(255 255 255 / 0.06);
+        padding: 0.7rem 0.9rem;
+        text-align: left;
+    }
+
+    .responsive-data-table tbody td:last-child {
+        border-bottom: 0;
+    }
+
+    .responsive-data-table tbody td[data-label]::before {
+        content: attr(data-label);
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        color: rgb(100 116 139);
+        text-transform: uppercase;
+    }
+
+    .responsive-data-table tbody td:not([data-label]) {
+        display: block;
+        text-align: center;
+    }
+
+    .responsive-data-table tbody td[data-label='Aksi'] > div {
+        justify-content: flex-start;
+    }
+
+    html[data-theme='light'] .responsive-data-table tbody tr {
+        border-color: rgb(203 213 225);
+        background: rgb(255 255 255 / 0.98);
+    }
+
+    html[data-theme='light'] .responsive-data-table tbody td {
+        border-color: rgb(226 232 240);
+    }
+}
