@@ -9,7 +9,10 @@
 
     <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
         <a href="{{ route('tryouts.index') }}" class="text-sm text-cyan-300">← Ujian uji coba</a>
-        <a href="{{ route('tryout.entry', $trialExam) }}" target="_blank" class="rounded-xl border border-white/10 px-4 py-2 text-sm text-slate-300">Buka tautan peserta</a>
+        <div class="flex flex-wrap gap-2">
+            <a href="{{ route('tryouts.cards', $trialExam) }}" target="_blank" class="rounded-xl bg-cyan-400/10 px-4 py-2 text-sm font-semibold text-cyan-200">Cetak kartu peserta</a>
+            <a href="{{ route('tryout.entry', $trialExam) }}" target="_blank" class="rounded-xl border border-white/10 px-4 py-2 text-sm text-slate-300">Buka tautan peserta</a>
+        </div>
     </div>
 
     <section class="rounded-3xl border border-cyan-400/20 bg-cyan-400/[0.04] p-6">
@@ -33,7 +36,7 @@
                     @forelse ($attempts as $attempt)
                         @php($locked = $attempt->status === 'in_progress' && $attempt->security_locked_at)
                         <tr>
-                            <td class="px-5 py-4"><p class="font-medium text-white">{{ $attempt->participant_name }}</p><p class="mt-1 text-xs text-slate-500">{{ $attempt->participant_identifier ?: 'NIS/NISN tidak diisi' }}</p></td>
+                            <td class="px-5 py-4"><p class="font-medium text-white">{{ $attempt->participant_name }}</p><p class="mt-1 text-xs text-slate-500">{{ $attempt->participant_identifier }}</p></td>
                             <td class="whitespace-nowrap px-5 py-4 text-slate-400">{{ $attempt->started_at->format('d/m/Y H:i:s') }}</td>
                             <td class="whitespace-nowrap px-5 py-4 text-slate-400">{{ $attempt->submitted_at?->format('d/m/Y H:i:s') ?? '—' }}</td>
                             <td class="px-5 py-4"><span class="rounded-full px-2.5 py-1 text-xs {{ $locked ? 'bg-rose-400/10 text-rose-200' : ($attempt->status === 'submitted' ? 'bg-emerald-400/10 text-emerald-200' : 'bg-amber-400/10 text-amber-200') }}">{{ $locked ? 'Terkunci' : ($attempt->status === 'submitted' ? 'Selesai' : 'Mengerjakan') }}</span></td>
