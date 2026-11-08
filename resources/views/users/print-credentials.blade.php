@@ -26,14 +26,31 @@
         .login { margin-top: 8px; border: 1px dashed #0891b2; border-radius: 7px; padding: 8px; background: #ecfeff; }
         .password { font-family: Consolas, monospace; font-size: 12px; letter-spacing: .3px; }
         .note { margin-top: 7px; color: #64748b; font-size: 8.5px; line-height: 1.45; }
-        @media print {
-            body { background: #fff; }
-            .toolbar, .warning { display: none; }
-            .sheet { width: auto; margin: 0; gap: 7mm; }
-        }
         @media (max-width: 760px) {
             .warning, .sheet { width: calc(100% - 24px); }
             .sheet { grid-template-columns: 1fr; }
+        }
+        @media print {
+            body {
+                background: #fff;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .toolbar, .warning { display: none !important; }
+            .sheet {
+                display: grid !important;
+                width: 100% !important;
+                margin: 0 !important;
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                gap: 6mm !important;
+                align-items: start;
+            }
+            .card {
+                width: auto !important;
+                min-height: 64mm;
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
         }
     </style>
 </head>
