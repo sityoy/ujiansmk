@@ -218,6 +218,24 @@ class AcademicDataManagementTest extends TestCase
             ->assertViewHas('students', fn ($students) => $students->count() === 2);
     }
 
+    public function test_teacher_does_not_see_or_access_trial_exam_management_menu(): void
+    {
+        $teacher = User::factory()->create([
+            'role' => UserRole::Teacher,
+            'must_change_password' => false,
+        ]);
+
+        $this->actingAs($teacher)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertDontSee('>Ujian uji coba<', false)
+            ->assertSee('Bank soal uji coba');
+
+        $this->actingAs($teacher)
+            ->get(route('tryouts.index'))
+            ->assertForbidden();
+    }
+
     public function test_non_admin_cannot_manage_academic_data(): void
     {
         $teacher = User::factory()->create(['role' => UserRole::Teacher]);
