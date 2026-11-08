@@ -48,7 +48,7 @@ class StudentSpreadsheetController extends Controller
     public function import(Request $request, StudentSpreadsheetService $spreadsheet): RedirectResponse
     {
         $validated = $request->validate([
-            'school_class_id' => ['required', 'exists:school_classes,id'],
+            'school_class_id' => ['nullable', 'exists:school_classes,id'],
             'spreadsheet' => ['required', 'file', 'max:10240'],
         ]);
 
@@ -72,7 +72,9 @@ class StudentSpreadsheetController extends Controller
             return back()->withErrors(['spreadsheet' => 'Maksimal 2.000 siswa dalam sekali impor.']);
         }
 
-        $schoolClass = SchoolClass::findOrFail($validated['school_class_id']);
+        $defaultSchoolClass = filled($validated['school_class_id'] ?? null)
+            ? SchoolClass::findOrFail($validated['school_class_id'])
+            : null;
         $preparedRows = [];
         $errors = [];
         $seenNis = [];
@@ -91,6 +93,8 @@ class StudentSpreadsheetController extends Controller
                 'password' => filled($row['password'] ?? null) ? (string) $row['password'] : null,
                 'card_uid' => filled($row['uid_kartu'] ?? null) ? trim((string) $row['uid_kartu']) : null,
                 'status' => strtolower(trim((string) ($row['status'] ?? 'aktif'))),
+                'kelas' => filled($row['kelas'] ?? null) ? trim((string) $row['kelas']) : null,
+                'tahun_ajaran' => filled($row['tahun_ajaran'] ?? null) ? trim((string) $row['tahun_ajaran']) : null,
             ];
 
             $validator = Validator::make($data, [
@@ -101,11 +105,31 @@ class StudentSpreadsheetController extends Controller
                 'password' => ['nullable', Password::min(8)->letters()->numbers()],
                 'card_uid' => ['nullable', 'string', 'max:255'],
                 'status' => ['required', 'in:aktif,nonaktif,active,inactive,1,0'],
+                'kelas' => ['nullable', 'string', 'max:100'],
+                'tahun_ajaran' => ['nullable', 'string', 'max:30'],
             ]);
 
             if ($validator->fails()) {
                 $errors[] = 'Baris '.$line.': '.$validator->errors()->first();
                 continue;
+            }
+
+            $rowSchoolClass = $defaultSchoolClass;
+            if (! $rowSchoolClass) {
+                if (! $data['kelas'] || ! $data['tahun_ajaran']) {
+                    $errors[] = 'Baris '.$line.': pilih kelas tujuan atau isi kolom Kelas dan Tahun Ajaran.';
+                    continue;
+                }
+
+                $rowSchoolClass = SchoolClass::query()
+                    ->where('name', $data['kelas'])
+                    ->whereHas('academicYear', fn ($query) => $query->where('name', $data['tahun_ajaran']))
+                    ->first();
+
+                if (! $rowSchoolClass) {
+                    $errors[] = 'Baris '.$line.': kelas '.$data['kelas'].' tahun ajaran '.$data['tahun_ajaran'].' tidak ditemukan.';
+                    continue;
+                }
             }
 
             $existing = Student::query()->where('student_number', $data['nis'])->first();
@@ -173,7 +197,7 @@ class StudentSpreadsheetController extends Controller
                 $seenCards[$cardHash] = true;
             }
 
-            $preparedRows[] = [$data, $existing];
+            $preparedRows[] = [$data, $existing, $rowSchoolClass];
         }
 
         if ($errors !== []) {
@@ -184,8 +208,8 @@ class StudentSpreadsheetController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($preparedRows, $schoolClass): void {
-            foreach ($preparedRows as [$data, $existing]) {
+        DB::transaction(function () use ($preparedRows): void {
+            foreach ($preparedRows as [$data, $existing, $schoolClass]) {
                 $student = $existing ?? new Student();
                 $user = $student->user;
                 $username = $data['nisn'] ?: $data['nis'];
