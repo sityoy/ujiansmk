@@ -229,10 +229,15 @@ class AcademicDataManagementTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk()
             ->assertDontSee('>Ujian uji coba<', false)
-            ->assertSee('Bank soal uji coba');
+            ->assertDontSee('Bank soal uji coba')
+            ->assertSee('Bank soal inti');
 
         $this->actingAs($teacher)
             ->get(route('tryouts.index'))
+            ->assertForbidden();
+
+        $this->actingAs($teacher)
+            ->get(route('trial-question-banks.index'))
             ->assertForbidden();
     }
 
