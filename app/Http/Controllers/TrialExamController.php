@@ -63,7 +63,9 @@ class TrialExamController extends Controller
         $students = Student::query()
             ->with('schoolClass.academicYear')
             ->where('is_active', true)
-            ->whereHas('schoolClass', fn ($query) => $query->where('grade_level', $trialExam->questionBank->grade_level))
+            ->whereHas('schoolClass', fn ($query) => $query
+                ->where('grade_level', $trialExam->questionBank->grade_level)
+                ->whereHas('academicYear', fn ($yearQuery) => $yearQuery->where('is_active', true)))
             ->orderBy(
                 Student::query()
                     ->select('name')
@@ -77,6 +79,47 @@ class TrialExamController extends Controller
         return view('tryouts.cards', [
             'school' => SchoolProfile::query()->first(),
             'trialExam' => $trialExam,
+            'students' => $students,
+        ]);
+    }
+
+    public function allCards(): View
+    {
+        $trialExams = TrialExam::query()
+            ->with('questionBank.subject')
+            ->get()
+            ->sortBy(fn (TrialExam $trialExam): string => sprintf(
+                '%02d-%s-%s',
+                $trialExam->questionBank->grade_level,
+                $trialExam->questionBank->subject->name,
+                $trialExam->title,
+            ))
+            ->values();
+        $gradeLevels = $trialExams
+            ->pluck('questionBank.grade_level')
+            ->unique()
+            ->values();
+
+        $students = Student::query()
+            ->with('schoolClass.academicYear')
+            ->where('is_active', true)
+            ->whereHas('schoolClass', fn ($query) => $query
+                ->whereIn('grade_level', $gradeLevels)
+                ->whereHas('academicYear', fn ($yearQuery) => $yearQuery->where('is_active', true)))
+            ->orderBy(
+                Student::query()
+                    ->select('name')
+                    ->from('school_classes')
+                    ->whereColumn('school_classes.id', 'students.school_class_id')
+                    ->limit(1),
+            )
+            ->orderBy('full_name')
+            ->get();
+
+        return view('tryouts.all-cards', [
+            'school' => SchoolProfile::query()->first(),
+            'trialExams' => $trialExams,
+            'trialsByGrade' => $trialExams->groupBy('questionBank.grade_level'),
             'students' => $students,
         ]);
     }
