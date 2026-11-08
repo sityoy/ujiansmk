@@ -9,8 +9,10 @@ use App\Models\TrialQuestionBank;
 use App\Services\Exams\TrialExamSecurityService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class TrialExamController extends Controller
@@ -27,6 +29,7 @@ class TrialExamController extends Controller
                 ->with('subject')
                 ->withCount('questions')
                 ->whereHas('questions')
+                ->whereDoesntHave('trialExams')
                 ->orderBy('grade_level')
                 ->orderBy('name')
                 ->get(),
@@ -38,6 +41,7 @@ class TrialExamController extends Controller
         $trialExam->load(['questionBank.subject', 'assessmentSubject.assessmentPeriod.academicYear']);
 
         $base = $trialExam->attempts();
+
         return view('tryouts.participants', [
             'trialExam' => $trialExam,
             'attempts' => (clone $base)->withCount('securityIncidents')
@@ -55,7 +59,12 @@ class TrialExamController extends Controller
     {
         $request->merge(['access_code' => Str::upper(trim((string) $request->input('access_code')))]);
         $validated = $request->validate([
-            'trial_question_bank_id' => ['required', 'integer', 'exists:trial_question_banks,id'],
+            'trial_question_bank_id' => [
+                'required',
+                'integer',
+                'exists:trial_question_banks,id',
+                Rule::unique('trial_exams', 'trial_question_bank_id'),
+            ],
             'title' => ['required', 'string', 'max:150'],
             'access_code' => ['required', 'string', 'max:50', 'regex:/^[A-Z0-9-]+$/', Rule::unique('trial_exams', 'access_code')],
             'duration_minutes' => ['required', 'integer', 'min:10', 'max:300'],
@@ -64,32 +73,45 @@ class TrialExamController extends Controller
             'is_active' => ['nullable', 'boolean'],
         ]);
 
-        $bank = TrialQuestionBank::query()->whereKey($validated['trial_question_bank_id'])
-            ->whereHas('questions')->firstOrFail();
-        $component = AssessmentSubject::query()
-            ->where('subject_id', $bank->subject_id)
-            ->whereHas('schoolClass', fn ($query) => $query->where('grade_level', $bank->grade_level))
-            ->whereHas('assessmentPeriod.academicYear', fn ($query) => $query->where('is_active', true))
-            ->latest('id')
-            ->first()
-            ?? AssessmentSubject::query()
+        DB::transaction(function () use ($request, $validated): void {
+            // Lock the parent bank so two simultaneous clicks cannot create duplicates.
+            $bank = TrialQuestionBank::query()
+                ->lockForUpdate()
+                ->whereKey($validated['trial_question_bank_id'])
+                ->whereHas('questions')
+                ->firstOrFail();
+
+            if ($bank->trialExams()->exists()) {
+                throw ValidationException::withMessages([
+                    'trial_question_bank_id' => 'Bank soal ini sudah dipakai pada Ujian Uji Coba. Satu bank soal hanya dapat dibuat menjadi satu ujian.',
+                ]);
+            }
+
+            $component = AssessmentSubject::query()
                 ->where('subject_id', $bank->subject_id)
                 ->whereHas('schoolClass', fn ($query) => $query->where('grade_level', $bank->grade_level))
-                ->latest('id')->firstOrFail();
+                ->whereHas('assessmentPeriod.academicYear', fn ($query) => $query->where('is_active', true))
+                ->latest('id')
+                ->first()
+                ?? AssessmentSubject::query()
+                    ->where('subject_id', $bank->subject_id)
+                    ->whereHas('schoolClass', fn ($query) => $query->where('grade_level', $bank->grade_level))
+                    ->latest('id')->firstOrFail();
 
-        $slugBase = Str::slug($validated['title']) ?: 'uji-coba';
-        $slug = $slugBase;
-        while (TrialExam::query()->where('slug', $slug)->exists()) {
-            $slug = $slugBase.'-'.Str::lower(Str::random(6));
-        }
+            $slugBase = Str::slug($validated['title']) ?: 'uji-coba';
+            $slug = $slugBase;
+            while (TrialExam::query()->where('slug', $slug)->exists()) {
+                $slug = $slugBase.'-'.Str::lower(Str::random(6));
+            }
 
-        TrialExam::create([
-            ...$validated,
-            'assessment_subject_id' => $component->id,
-            'trial_question_bank_id' => $bank->id,
-            'slug' => $slug,
-            'is_active' => $request->boolean('is_active'),
-        ]);
+            TrialExam::create([
+                ...$validated,
+                'assessment_subject_id' => $component->id,
+                'trial_question_bank_id' => $bank->id,
+                'slug' => $slug,
+                'is_active' => $request->boolean('is_active'),
+            ]);
+        });
 
         return back()->with('status', 'Ujian uji coba dibuat. Tautan dan kode sudah dapat dibagikan.');
     }
@@ -125,4 +147,3 @@ class TrialExamController extends Controller
         return back()->with('status', 'Ujian uji coba dihapus.');
     }
 }
-
