@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\UserRole;
 use App\Models\AcademicYear;
 use App\Models\SchoolClass;
+use App\Models\Student;
 use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -145,6 +146,76 @@ class AcademicDataManagementTest extends TestCase
             ->get(route('academic.index', ['class_year' => $year->id, 'class_per_page' => 'all']))
             ->assertOk()
             ->assertViewHas('classes', fn ($classes) => $classes->count() === 6);
+    }
+
+    public function test_student_list_supports_search_class_filter_page_size_and_anchor(): void
+    {
+        $admin = User::factory()->create([
+            'role' => UserRole::SuperAdmin,
+            'must_change_password' => false,
+        ]);
+        $year = AcademicYear::create([
+            'name' => '2026/2027',
+            'starts_on' => '2026-07-01',
+            'ends_on' => '2027-06-30',
+            'is_active' => true,
+        ]);
+        $classA = SchoolClass::create([
+            'academic_year_id' => $year->id,
+            'name' => 'X-1',
+            'grade_level' => 10,
+        ]);
+        $classB = SchoolClass::create([
+            'academic_year_id' => $year->id,
+            'name' => 'XI-1',
+            'grade_level' => 11,
+        ]);
+
+        foreach ([
+            [$classA, '1001', '0000000001', 'Alpha Siswa'],
+            [$classA, '1002', '0000000002', 'Beta Siswa'],
+            [$classB, '2001', '0000000003', 'Gamma Siswa'],
+        ] as [$class, $nis, $nisn, $name]) {
+            $user = User::factory()->create([
+                'role' => UserRole::Student,
+                'name' => $name,
+                'username' => $nisn,
+                'must_change_password' => false,
+            ]);
+            Student::create([
+                'user_id' => $user->id,
+                'school_class_id' => $class->id,
+                'student_number' => $nis,
+                'nisn' => $nisn,
+                'full_name' => $name,
+                'is_active' => true,
+            ]);
+        }
+
+        $this->actingAs($admin)
+            ->get(route('academic.index', [
+                'student_search' => 'Alpha',
+                'student_class' => $classA->id,
+                'student_per_page' => '50',
+            ]))
+            ->assertOk()
+            ->assertSee('data-sidebar-toggle', false)
+            ->assertSee('Master Data')
+            ->assertViewHas('students', fn ($students) => $students->count() === 1
+                && $students->first()->full_name === 'Alpha Siswa'
+                && $students->perPage() === 50
+                && $students->fragment() === 'student-list')
+            ->assertViewHas('studentSearch', 'Alpha')
+            ->assertViewHas('studentClassId', $classA->id)
+            ->assertViewHas('studentPerPage', '50');
+
+        $this->actingAs($admin)
+            ->get(route('academic.index', [
+                'student_class' => $classA->id,
+                'student_per_page' => 'all',
+            ]))
+            ->assertOk()
+            ->assertViewHas('students', fn ($students) => $students->count() === 2);
     }
 
     public function test_non_admin_cannot_manage_academic_data(): void
