@@ -135,6 +135,47 @@ class TrialExamFlowTest extends TestCase
             ->assertViewHas('banks', fn ($banks): bool => $banks->doesntContain('id', $trial->trial_question_bank_id));
     }
 
+    public function test_trial_exam_can_use_same_subject_component_when_grade_is_not_scheduled(): void
+    {
+        [$existingTrial] = $this->makeTrial();
+        $bank = TrialQuestionBank::create([
+            'subject_id' => $existingTrial->questionBank->subject_id,
+            'grade_level' => 11,
+            'name' => 'Latihan Sejarah Kelas 11',
+        ]);
+        TrialQuestion::create([
+            'trial_question_bank_id' => $bank->id,
+            'question_text' => 'Contoh pertanyaan Sejarah kelas 11?',
+            'options' => ['A' => 'Jawaban A', 'B' => 'Jawaban B', 'C' => 'Jawaban C', 'D' => 'Jawaban D', 'E' => 'Jawaban E'],
+            'correct_answer' => 'A',
+            'points' => 1,
+            'position' => 1,
+        ]);
+        $admin = User::factory()->create([
+            'role' => UserRole::SuperAdmin,
+            'is_active' => true,
+            'must_change_password' => false,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('tryouts.store'), [
+                'trial_question_bank_id' => $bank->id,
+                'title' => 'Uji Coba Sejarah Kelas 11',
+                'access_code' => 'SJR-KELAS-11',
+                'duration_minutes' => 60,
+                'is_active' => '1',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $created = TrialExam::query()
+            ->where('trial_question_bank_id', $bank->id)
+            ->firstOrFail();
+
+        $this->assertSame($existingTrial->assessment_subject_id, $created->assessment_subject_id);
+        $this->assertTrue($created->is_active);
+    }
+
     public function test_trial_and_core_exam_keep_the_same_strict_security_policy(): void
     {
         $this->assertSame(2, ExamSecurityService::LIMIT);
