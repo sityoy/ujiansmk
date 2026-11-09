@@ -38,15 +38,19 @@
                 </select>
                 <textarea name="question_text" rows="5" required placeholder="Tuliskan pertanyaan..." class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-violet-400">{{ old('question_text') }}</textarea>
                 <div>
-                    <label class="mb-2 block text-xs font-medium text-slate-400">Gambar soal (opsional)</label>
-                    <input type="file" name="question_image" accept="image/jpeg,image/png,image/webp" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-400 file:px-3 file:py-2 file:font-semibold file:text-slate-950">
-                    <p class="mt-2 text-xs leading-5 text-amber-200">Untuk soal Bahasa Arab, disarankan menggunakan gambar agar bentuk huruf, harakat, dan tata letak tetap akurat. Format JPG, PNG, atau WebP; maksimal 4 MB.</p>
+                    <label class="mb-2 block text-xs font-medium text-slate-400">File soal (opsional)</label>
+                    <input type="file" name="question_image" accept="image/jpeg,image/png,image/webp,application/pdf" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-400 file:px-3 file:py-2 file:font-semibold file:text-slate-950">
+                    <p class="mt-2 text-xs leading-5 text-amber-200">Untuk soal Bahasa Arab, disarankan menggunakan gambar agar bentuk huruf, harakat, dan tata letak tetap akurat. Format JPG, PNG, WebP, atau PDF; maksimal 5 MB.</p>
                 </div>
                 <div id="multiple-choice-fields" class="space-y-3">
                     @foreach (['A', 'B', 'C', 'D', 'E'] as $option)
-                        <div class="grid grid-cols-[36px_1fr] items-center gap-2">
-                            <span class="grid size-9 place-items-center rounded-lg bg-slate-900 text-xs font-semibold text-violet-300">{{ $option }}</span>
-                            <input name="option_{{ strtolower($option) }}" value="{{ old('option_'.strtolower($option)) }}" placeholder="Pilihan {{ $option }}" class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-violet-400">
+                        <div class="grid grid-cols-[36px_1fr] items-start gap-2">
+                            <span class="mt-1 grid size-9 place-items-center rounded-lg bg-slate-900 text-xs font-semibold text-violet-300">{{ $option }}</span>
+                            <div class="space-y-2">
+                                <input name="option_{{ strtolower($option) }}" value="{{ old('option_'.strtolower($option)) }}" placeholder="Pilihan {{ $option }}" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-violet-400">
+                                <input type="file" name="option_file_{{ strtolower($option) }}" accept="image/jpeg,image/png,image/webp,application/pdf" class="w-full rounded-lg border border-dashed border-white/10 bg-slate-950/50 px-3 py-2 text-xs text-slate-500 file:mr-2 file:rounded file:border-0 file:bg-violet-400/20 file:px-2 file:py-1 file:text-violet-200">
+                                <p class="text-[0.7rem] text-slate-500">Lampiran pilihan {{ $option }} (opsional: gambar/PDF, maks. 5 MB)</p>
+                            </div>
                         </div>
                     @endforeach
                     <select name="correct_answer" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
@@ -56,7 +60,7 @@
                 </div>
                 <div>
                     <label for="question-points" class="mb-2 block text-xs font-medium text-slate-400">Bobot maksimal soal</label>
-                    <input id="question-points" type="number" name="points" value="{{ old('points', $assessmentSubject->assessmentPeriod->type->value === 'ats' ? 3 : 1) }}" min="0.01" max="1000" step="0.01" required placeholder="Bobot" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
+                    <input id="question-points" type="number" name="points" value="{{ old('points', $assessmentSubject->assessmentPeriod->type->value === 'ats' ? 3 : 2) }}" min="0.01" max="1000" step="0.01" required placeholder="Bobot" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
                 </div>
                 <p class="text-xs leading-5 text-slate-500">Untuk PG, sistem menghitung otomatis maksimal 70 poin dengan rumus 70 ÷ jumlah soal PG. Isian/esai pada ujian campuran mengisi maksimal 30 poin; ATS tanpa PG tetap dinilai maksimal 100 melalui koreksi manual.</p>
                 <button class="w-full rounded-xl bg-violet-400 px-4 py-3 text-sm font-semibold text-slate-950">Simpan soal</button>
@@ -72,7 +76,12 @@
                             <p class="text-xs font-semibold text-violet-300">Soal {{ $question->position }} · {{ $question->question_type->label() }} · {{ number_format((float) $question->points, 2, ',', '.') }} poin</p>
                             <p class="mt-2 whitespace-pre-line text-sm leading-6 text-white">{{ $question->question_text }}</p>
                             @if ($question->question_image_path)
-                                <img src="{{ Storage::url($question->question_image_path) }}" alt="Gambar soal {{ $question->position }}" loading="lazy" class="mt-4 max-h-96 w-auto max-w-full rounded-xl border border-white/10 bg-white object-contain p-2">
+                                @php($questionFileIsImage = in_array(strtolower(pathinfo($question->question_image_path, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'webp'], true))
+                                @if ($questionFileIsImage)
+                                    <img src="{{ Storage::url($question->question_image_path) }}" alt="File soal {{ $question->position }}" loading="lazy" class="mt-4 max-h-96 w-auto max-w-full rounded-xl border border-white/10 bg-white object-contain p-2">
+                                @else
+                                    <a href="{{ Storage::url($question->question_image_path) }}" target="_blank" class="mt-4 inline-flex rounded-xl border border-cyan-400/30 px-3 py-2 text-xs font-semibold text-cyan-300">Buka file soal</a>
+                                @endif
                             @endif
                         </div>
                         <div class="flex shrink-0 items-center gap-3">
@@ -90,6 +99,9 @@
                             @foreach ($question->options as $key => $option)
                                 <div class="rounded-xl border px-3 py-2 text-xs {{ $key === $question->correct_answer ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200' : 'border-white/10 text-slate-400' }}">
                                     <span class="font-semibold">{{ $key }}.</span> {{ $option }}
+                                    @if ($question->option_file_paths[$key] ?? null)
+                                        <a href="{{ Storage::url($question->option_file_paths[$key]) }}" target="_blank" class="mt-2 block font-semibold text-cyan-300">Buka lampiran pilihan {{ $key }}</a>
+                                    @endif
                                 </div>
                             @endforeach
                         </div>
@@ -108,15 +120,19 @@
                             </select>
                             <textarea name="question_text" rows="4" required class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-cyan-400">{{ $question->question_text }}</textarea>
                             <div>
-                                <label class="mb-2 block text-xs font-medium text-slate-400">Ganti gambar soal (opsional)</label>
-                                <input type="file" name="question_image" accept="image/jpeg,image/png,image/webp" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-400 file:px-3 file:py-2 file:font-semibold file:text-slate-950">
-                                <p class="mt-2 text-xs text-slate-500">Kosongkan jika gambar lama tetap digunakan. Soal Bahasa Arab disarankan memakai gambar.</p>
+                                <label class="mb-2 block text-xs font-medium text-slate-400">Ganti file soal (opsional)</label>
+                                <input type="file" name="question_image" accept="image/jpeg,image/png,image/webp,application/pdf" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-400 file:px-3 file:py-2 file:font-semibold file:text-slate-950">
+                                <p class="mt-2 text-xs text-slate-500">Kosongkan jika file lama tetap digunakan. Soal Bahasa Arab disarankan memakai gambar.</p>
                             </div>
                             <div class="edit-choice-fields space-y-3">
                                 @foreach (['A', 'B', 'C', 'D', 'E'] as $option)
-                                    <div class="grid grid-cols-[36px_1fr] items-center gap-2">
-                                        <span class="grid size-9 place-items-center rounded-lg bg-slate-900 text-xs font-semibold text-violet-300">{{ $option }}</span>
-                                        <input name="option_{{ strtolower($option) }}" value="{{ $question->options[$option] ?? '' }}" placeholder="Pilihan {{ $option }}" class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-cyan-400">
+                                    <div class="grid grid-cols-[36px_1fr] items-start gap-2">
+                                        <span class="mt-1 grid size-9 place-items-center rounded-lg bg-slate-900 text-xs font-semibold text-violet-300">{{ $option }}</span>
+                                        <div class="space-y-2">
+                                            <input name="option_{{ strtolower($option) }}" value="{{ $question->options[$option] ?? '' }}" placeholder="Pilihan {{ $option }}" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-cyan-400">
+                                            <input type="file" name="option_file_{{ strtolower($option) }}" accept="image/jpeg,image/png,image/webp,application/pdf" class="w-full rounded-lg border border-dashed border-white/10 bg-slate-950/50 px-3 py-2 text-xs text-slate-500">
+                                            @if ($question->option_file_paths[$option] ?? null)<a href="{{ Storage::url($question->option_file_paths[$option]) }}" target="_blank" class="text-xs text-cyan-300">Lihat lampiran {{ $option }}</a>@endif
+                                        </div>
                                     </div>
                                 @endforeach
                                 <select name="correct_answer" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
@@ -159,7 +175,7 @@
             choiceFields.hidden = !enabled;
             choiceFields.querySelectorAll('input, select').forEach(field => { field.required = enabled; field.disabled = !enabled; });
             if (!pointsEdited) {
-                questionPoints.value = questionType.value === 'essay' ? '7' : (questionType.value === 'short_answer' ? '3' : '1');
+                questionPoints.value = questionType.value === 'essay' ? '7' : (questionType.value === 'short_answer' ? '3' : '2');
             }
         };
         questionType.addEventListener('change', syncQuestionType);
