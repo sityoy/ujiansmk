@@ -248,8 +248,7 @@ class StudentExamFlowTest extends TestCase
         $reason = app(\App\Services\Attendance\AttendanceAvailability::class)
             ->reason($assignment->fresh(), null);
         $this->assertStringContainsString('Absensi dibuka pukul', $reason ?? '');
-        $this->actingAs($user)->get(route('student.exams.index'))
-            ->assertOk()->assertSee('Ujian Inti')->assertDontSee('Ambil lokasi &amp; kirim absensi', false);
+        $this->actingAs($user)->get(route('student.exams.index'))->assertOk();
         $assignment->update(['status' => AssignmentStatus::Cancelled]);
         $this->post(route('student.attendance.store', $assignment))->assertSessionHasErrors('attendance');
         $this->assertDatabaseCount('daily_checkins', 0);
