@@ -26,7 +26,7 @@ class ExamGradingController extends Controller
             'assessment_period_id' => ['nullable', 'integer', 'exists:assessment_periods,id'],
             'type' => ['nullable', Rule::enum(AssessmentType::class)],
             'school_class_id' => ['nullable', 'integer', 'exists:school_classes,id'],
-            'grading_status' => ['nullable', Rule::in([GradingStatus::Pending->value, GradingStatus::Graded->value])],
+            'grading_status' => ['nullable', Rule::in(array_map(fn (GradingStatus $status): string => $status->value, GradingStatus::cases()))],
         ]);
 
         $attempts = ExamAttempt::query()
@@ -38,8 +38,6 @@ class ExamGradingController extends Controller
                 'assignment.assessmentSubject.assessmentPeriod.academicYear',
             ])
             ->where('status', AttemptStatus::Submitted)
-            ->whereHas('assignment.assessmentSubject.questions', fn ($query) => $query
-                ->whereIn('question_type', [ExamQuestionType::ShortAnswer->value, ExamQuestionType::Essay->value]))
             ->when($filters['academic_year_id'] ?? null, fn ($query, $year) => $query
                 ->whereHas('assignment.assessmentSubject.assessmentPeriod', fn ($period) => $period->where('academic_year_id', $year)))
             ->when($filters['assessment_period_id'] ?? null, fn ($query, $period) => $query
@@ -98,10 +96,16 @@ class ExamGradingController extends Controller
     ): RedirectResponse {
         $this->authorizeGrader($request, $attempt);
         $validated = $request->validate([
-            'scores' => ['required', 'array'],
-            'scores.*' => ['required', 'numeric', 'min:0'],
+            'scores' => ['nullable', 'array'],
+            'scores.*' => ['nullable', 'numeric', 'min:0'],
+            'manual_score' => ['nullable', 'numeric', 'between:0,100', 'required_without:scores'],
         ]);
-        $grading->grade($attempt, $request->user(), $validated['scores']);
+        $grading->grade(
+            $attempt,
+            $request->user(),
+            array_filter($validated['scores'] ?? [], fn ($value): bool => $value !== null && $value !== ''),
+            isset($validated['manual_score']) ? (float) $validated['manual_score'] : null,
+        );
 
         return redirect()->route('grading.index')->with('status', 'Koreksi disimpan dan nilai akhir berhasil dihitung.');
     }
