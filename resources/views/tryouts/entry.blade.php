@@ -19,15 +19,23 @@
                     <li>Layar penuh wajib. Dilarang berpindah tab/aplikasi, membuka bubble, split screen, bilah notifikasi, tombol kembali, atau keluar dari halaman.</li>
                     <li>Pelanggaran pertama mendapat peringatan; pelanggaran kedua mengunci ujian. Waktu tetap berjalan.</li>
                     <li>Aktifkan mode Jangan Ganggu dan tutup aplikasi lain sebelum mulai.</li>
-                    <li>Bobot maksimal PG adalah 70 poin: 70 ÷ {{ $questionCount }} = sekitar {{ number_format($questionCount > 0 ? 70 / $questionCount : 0, 4, ',', '.') }} poin per jawaban benar.</li>
+                    <li>Setiap jawaban PG benar bernilai tetap 2 poin. Nilai PG maksimal 100.</li>
                 </ul>
             </div>
             <form method="POST" action="{{ route('tryout.start', $trialExam) }}" class="mt-5 space-y-4 rounded-3xl border border-white/10 bg-white/[0.035] p-7">
                 @csrf
-                <label class="block text-sm text-slate-300">NIS atau NISN
-                    <input name="participant_identifier" value="{{ old('participant_identifier') }}" required autocomplete="username" inputmode="numeric" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3" placeholder="Masukkan NIS/NISN terdaftar">
-                    <span class="mt-2 block text-xs leading-5 text-slate-500">Nama peserta diambil otomatis dari data siswa. NIS/NISN harus sesuai dengan tingkat kelas ujian.</span>
-                </label>
+                @if (auth()->user()?->student)
+                    <div class="rounded-xl border border-cyan-400/20 bg-cyan-400/[0.05] p-4">
+                        <p class="text-xs text-slate-400">Peserta dari akun yang sedang login</p>
+                        <p class="mt-1 font-semibold text-cyan-200">{{ auth()->user()->student->full_name }}</p>
+                        <p class="mt-1 text-xs text-slate-500">NIS/NISN diambil otomatis dari akun siswa.</p>
+                    </div>
+                @else
+                    <label class="block text-sm text-slate-300">NIS atau NISN
+                        <input name="participant_identifier" value="{{ old('participant_identifier') }}" required autocomplete="username" inputmode="numeric" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3" placeholder="Masukkan NIS/NISN terdaftar">
+                        <span class="mt-2 block text-xs leading-5 text-slate-500">Nama peserta diambil otomatis dari data siswa. NIS/NISN harus sesuai dengan tingkat kelas ujian.</span>
+                    </label>
+                @endif
                 <label class="block text-sm text-slate-300">Kode ujian<input name="access_code" required autocomplete="off" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 uppercase tracking-wider" placeholder="SJR-SMKBHG"></label>
                 <label class="flex items-start gap-2 text-xs text-slate-300"><input type="checkbox" required class="mt-0.5">Saya sudah membaca dan menyetujui aturan ujian.</label>
                 <button class="w-full rounded-xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950">Mulai ujian uji coba</button>
