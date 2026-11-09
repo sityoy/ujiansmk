@@ -164,6 +164,7 @@ class QuestionBankController extends Controller
         DB::transaction(function () use ($request, $siblings, $validated): void {
             $this->assertEditable($siblings);
             $imagePath = $request->file('question_image')?->store('exam-questions', 'public');
+            $optionFilePaths = $this->storeOptionFiles($request, 'exam-options');
             $position = (int) ExamQuestion::query()
                 ->whereIn('assessment_subject_id', $siblings->modelKeys())
                 ->lockForUpdate()
@@ -173,6 +174,7 @@ class QuestionBankController extends Controller
                 $component->questions()->create([
                     ...$this->questionAttributes($validated),
                     'question_image_path' => $imagePath,
+                    'option_file_paths' => $optionFilePaths ?: null,
                     'position' => $position,
                 ]);
             }
@@ -195,6 +197,10 @@ class QuestionBankController extends Controller
         DB::transaction(function () use ($request, $siblings, $question, $validated): void {
             $this->assertEditable($siblings);
             $attributes = $this->questionAttributes($validated);
+            $oldOptionPaths = collect($question->option_file_paths ?? [])->filter()->values()->all();
+            $attributes['option_file_paths'] = $validated['question_type'] === ExamQuestionType::MultipleChoice->value
+                ? ($this->mergeOptionFiles($request, $question->option_file_paths ?? [], 'exam-options') ?: null)
+                : null;
             $newImagePath = null;
             if ($request->hasFile('question_image')) {
                 $newImagePath = $request->file('question_image')->store('exam-questions', 'public');
@@ -231,6 +237,7 @@ class QuestionBankController extends Controller
                     }
                 }
             }
+            $this->deleteUnusedOptionFiles($oldOptionPaths);
         });
 
         return back()->with('status', 'Soal berhasil diperbarui untuk seluruh rombel pada tingkat ini.');
@@ -255,7 +262,9 @@ class QuestionBankController extends Controller
         try {
             DB::transaction(function () use ($siblings, $matching): void {
                 $this->assertEditable($siblings);
-                $imagePaths = (clone $matching)->pluck('question_image_path')->filter()->unique();
+                $matchedQuestions = (clone $matching)->get();
+                $imagePaths = $matchedQuestions->pluck('question_image_path')->filter()->unique();
+                $optionPaths = $matchedQuestions->flatMap(fn (ExamQuestion $item) => $item->option_file_paths ?? [])->filter()->unique();
                 (clone $matching)->delete();
 
                 foreach ($siblings as $component) {
@@ -276,6 +285,7 @@ class QuestionBankController extends Controller
                         Storage::disk('public')->delete($imagePath);
                     }
                 }
+                $this->deleteUnusedOptionFiles($optionPaths->all());
             });
         } catch (QueryException) {
             return back()->withErrors(['question' => 'Soal tidak dapat dihapus karena sudah digunakan.']);
@@ -320,8 +330,13 @@ class QuestionBankController extends Controller
             'option_d' => ['required_if:question_type,multiple_choice', 'nullable', 'string', 'max:2000'],
             'option_e' => ['required_if:question_type,multiple_choice', 'nullable', 'string', 'max:2000'],
             'correct_answer' => ['required_if:question_type,multiple_choice', 'nullable', Rule::in(['A', 'B', 'C', 'D', 'E'])],
-            'question_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
-            'points' => ['required', 'numeric', 'between:0.01,1000'],
+            'question_image' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
+            'option_file_a' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
+            'option_file_b' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
+            'option_file_c' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
+            'option_file_d' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
+            'option_file_e' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
+            'points' => ['required_unless:question_type,multiple_choice', 'nullable', 'numeric', 'between:0.01,1000'],
         ]);
     }
 
@@ -340,8 +355,42 @@ class QuestionBankController extends Controller
                 'E' => trim($validated['option_e']),
             ] : null,
             'correct_answer' => $isMultipleChoice ? $validated['correct_answer'] : null,
-            'points' => $validated['points'],
+            'points' => $isMultipleChoice ? ExamScoreCalculator::MULTIPLE_CHOICE_POINTS : $validated['points'],
         ];
+    }
+
+    private function storeOptionFiles(Request $request, string $directory): array
+    {
+        $paths = [];
+        foreach (['A', 'B', 'C', 'D', 'E'] as $option) {
+            $file = $request->file('option_file_'.strtolower($option));
+            if ($file) {
+                $paths[$option] = $file->store($directory, 'public');
+            }
+        }
+
+        return $paths;
+    }
+
+    private function mergeOptionFiles(Request $request, array $existing, string $directory): array
+    {
+        $paths = $existing;
+        foreach ($this->storeOptionFiles($request, $directory) as $option => $path) {
+            $paths[$option] = $path;
+        }
+
+        return array_filter($paths);
+    }
+
+    private function deleteUnusedOptionFiles(array $paths): void
+    {
+        foreach (array_unique(array_filter($paths)) as $path) {
+            $inUse = ExamQuestion::query()->whereNotNull('option_file_paths')->get(['option_file_paths'])
+                ->contains(fn (ExamQuestion $question): bool => in_array($path, $question->option_file_paths ?? [], true));
+            if (! $inUse) {
+                Storage::disk('public')->delete($path);
+            }
+        }
     }
 
     private function authorizeAccess(Request $request, AssessmentSubject $component): EloquentCollection
