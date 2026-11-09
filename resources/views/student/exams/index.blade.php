@@ -45,19 +45,15 @@
                 </div>
 
                 @if (! $hasCheckin && $canAttend && ! $attempt)
-                    <form method="POST" action="{{ route('student.attendance.store', $assignment) }}" enctype="multipart/form-data" class="attendance-form mt-5 grid gap-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.045] p-4 md:grid-cols-2">
+                    <form method="POST" action="{{ route('student.attendance.store', $assignment) }}" class="attendance-form mt-5 rounded-2xl border border-amber-400/20 bg-amber-400/[0.045] p-4">
                         @csrf
                         <input type="hidden" name="latitude">
                         <input type="hidden" name="longitude">
                         <input type="hidden" name="accuracy_meters">
-                        <select name="method" required class="attendance-method rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
-                            <option value="face">Selfie + lokasi</option>
-                            <option value="card_face">Kartu + selfie + lokasi</option>
-                        </select>
-                        <input name="card_uid" placeholder="Tempel/masukkan UID kartu" class="card-input hidden rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
-                        <input type="file" name="selfie" accept="image/jpeg,image/png,image/webp" capture="user" required class="rounded-xl border border-dashed border-white/15 bg-slate-950/50 px-3 py-2 text-xs text-slate-400 file:mr-2 file:rounded-lg file:border-0 file:bg-amber-400 file:px-3 file:py-2 file:font-semibold file:text-slate-950">
-                        <button class="attendance-button rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-slate-950">Ambil lokasi & kirim absensi</button>
-                        <p class="attendance-message text-xs leading-5 text-slate-500 md:col-span-2">Izinkan kamera dan GPS presisi tinggi. Fitur lokasi membutuhkan HTTPS atau localhost.</p>
+                        <p class="text-sm font-semibold text-amber-200">Absensi lokasi ujian</p>
+                        <p class="mt-2 text-xs leading-5 text-slate-400">Tidak menggunakan selfie. Sistem hanya memeriksa GPS, akurasi, dan radius lokasi sekolah.</p>
+                        <button class="attendance-button mt-4 w-full rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-slate-950 sm:w-auto">Ambil lokasi & kirim absensi</button>
+                        <p class="attendance-message mt-3 text-xs leading-5 text-slate-500">Izinkan GPS presisi tinggi. Fitur lokasi membutuhkan HTTPS atau localhost.</p>
                     </form>
                 @endif
 
@@ -79,7 +75,7 @@
                                 <li>Layar penuh wajib. Jangan berpindah tab/aplikasi, membuka bubble, split screen, bilah notifikasi, tombol kembali, atau keluar dari halaman.</li>
                                 <li>Pelanggaran pertama mendapat peringatan; pelanggaran kedua mengunci ujian. Waktu tetap berjalan.</li>
                                 <li>Aktifkan mode Jangan Ganggu dan tutup aplikasi lain sebelum memulai.</li>
-                                @if ($pgCount > 0)<li>Bobot maksimal PG adalah 70 poin: 70 ÷ {{ $pgCount }} = sekitar {{ number_format($pgWeight, 4, ',', '.') }} poin per jawaban benar.</li>@endif
+                                @if ($pgCount > 0)<li>Setiap jawaban PG benar bernilai tetap 2 poin. Nilai PG maksimal 100.</li>@endif
                             </ul>
                         </div>
                         <form method="POST" action="{{ route('student.exams.start', $assignment) }}" onsubmit="return confirm('Mulai ujian sekarang? Waktu akan langsung berjalan.')" class="space-y-3">
@@ -101,13 +97,6 @@
 
     <script>
         document.querySelectorAll('.attendance-form').forEach((form) => {
-            const method = form.querySelector('.attendance-method');
-            const card = form.querySelector('.card-input');
-            method.addEventListener('change', () => {
-                card.classList.toggle('hidden', method.value !== 'card_face');
-                card.required = method.value === 'card_face';
-            });
-
             form.addEventListener('submit', (event) => {
                 if (form.dataset.located === 'yes') return;
                 event.preventDefault();
