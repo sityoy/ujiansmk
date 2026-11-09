@@ -80,7 +80,7 @@
                         </details>
                     @endif
 
-                    @if (in_array($currentRole, ['super_admin', 'committee', 'teacher', 'proctor'], true))
+                    @if (in_array($currentRole, ['super_admin', 'committee', 'teacher', 'proctor', 'principal'], true))
                         <details data-nav-group class="nav-group rounded-xl border border-white/10 bg-white/[0.025]" @if($examOpen) open @endif>
                             <summary class="flex cursor-pointer items-center justify-between gap-3 rounded-xl px-4 py-3 font-semibold {{ $examOpen ? 'text-cyan-300' : 'text-slate-300' }}">
                                 <span>Ujian</span>
@@ -98,8 +98,8 @@
                                     @endif
                                     <a href="{{ route('grading.index') }}" class="block rounded-lg px-3 py-2.5 {{ request()->routeIs('grading.*') ? 'bg-cyan-400 text-slate-950 font-semibold' : 'text-slate-400 hover:bg-white/5 hover:text-white' }}">Koreksi jawaban</a>
                                 @endif
+                                <a href="{{ route('operations.index') }}" class="block rounded-lg px-3 py-2.5 {{ request()->routeIs('operations.*') ? 'bg-cyan-400 text-slate-950 font-semibold' : 'text-slate-400 hover:bg-white/5 hover:text-white' }}">Pemantauan peserta</a>
                                 @if (in_array($currentRole, ['super_admin', 'committee', 'proctor'], true))
-                                    <a href="{{ route('operations.index') }}" class="block rounded-lg px-3 py-2.5 {{ request()->routeIs('operations.*') ? 'bg-cyan-400 text-slate-950 font-semibold' : 'text-slate-400 hover:bg-white/5 hover:text-white' }}">Pelaksanaan ujian</a>
                                     <a href="{{ route('attendance.index') }}" class="block rounded-lg px-3 py-2.5 {{ request()->routeIs('attendance.*') ? 'bg-cyan-400 text-slate-950 font-semibold' : 'text-slate-400 hover:bg-white/5 hover:text-white' }}">Absensi & keamanan</a>
                                 @endif
                             </div>
