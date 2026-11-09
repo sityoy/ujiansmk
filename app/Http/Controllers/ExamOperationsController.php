@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Enums\SessionStatus;
 use App\Enums\AttemptStatus;
 use App\Enums\AssignmentStatus;
+use App\Enums\UserRole;
 use App\Models\AcademicYear;
 use App\Models\ExamAssignment;
 use App\Models\ExamAttempt;
 use App\Models\ExamSession;
+use App\Models\TrialExam;
 use App\Services\Exams\ExamSessionService;
 use App\Services\Exams\ExamSecurityService;
 use App\Services\Exams\ExamAttemptResetService;
@@ -31,7 +33,10 @@ class ExamOperationsController extends Controller
             ->when($filters['academic_year_id'] ?? null, fn ($query, $year) => $query
                 ->whereHas('assessmentSubject.assessmentPeriod', fn ($period) => $period->where('academic_year_id', $year)))
             ->when($filters['date'] ?? null, fn ($query, $date) => $query->whereDate('starts_at', $date))
-            ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status));
+            ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
+            ->when($request->user()->role === UserRole::Teacher, fn ($query) => $query
+                ->whereHas('assessmentSubject', fn ($component) => $component
+                    ->where('teacher_user_id', $request->user()->id)));
         $attempts = ExamAttempt::query()->whereHas('assignment', fn ($query) => $query
             ->whereIn('exam_session_id', (clone $sessions)->select('id')));
 
@@ -48,6 +53,15 @@ class ExamOperationsController extends Controller
                 ->latest('started_at')
                 ->orderByDesc('id')
                 ->paginate(30, ['*'], 'attempts_page')->withQueryString(),
+            'trialExams' => TrialExam::query()
+                ->with(['questionBank.subject'])
+                ->withCount('attempts')
+                ->when($request->user()->role === UserRole::Teacher, fn ($query) => $query
+                    ->whereHas('assessmentSubject', fn ($component) => $component
+                        ->where('teacher_user_id', $request->user()->id)))
+                ->latest()
+                ->paginate(10, ['*'], 'trials_page')
+                ->withQueryString(),
             'sessionStatuses' => SessionStatus::cases(),
             'statistics' => [
                 'activeSessions' => (clone $sessions)->where('status', SessionStatus::Active)->count(),
@@ -60,6 +74,7 @@ class ExamOperationsController extends Controller
 
     public function show(Request $request, ExamSession $examSession): View
     {
+        $this->authorizeSessionAccess($request, $examSession);
         $statusLabels = [
             'scheduled' => 'Belum mulai', 'in_progress' => 'Mengerjakan',
             'submitted' => 'Dikumpulkan', 'terminated' => 'Dihentikan',
@@ -114,6 +129,7 @@ class ExamOperationsController extends Controller
 
     public function progress(Request $request, ExamSession $examSession): JsonResponse
     {
+        $this->authorizeSessionAccess($request, $examSession);
         $validated = $request->validate([
             'assignment_ids' => ['required', 'array', 'max:25'],
             'assignment_ids.*' => ['integer'],
@@ -158,6 +174,8 @@ class ExamOperationsController extends Controller
 
     public function reviewSecurity(Request $request, ExamAttempt $attempt, ExamSecurityService $security): RedirectResponse
     {
+        $this->authorizeAttemptAccess($request, $attempt);
+        abort_unless(in_array($request->user()->role, [UserRole::SuperAdmin, UserRole::Committee, UserRole::Proctor], true), 403);
         $validated = $request->validate([
             'action' => ['required', Rule::in(['resume', 'submit'])],
             'reason' => ['required', 'string', 'min:5', 'max:1000'],
@@ -197,6 +215,8 @@ class ExamOperationsController extends Controller
         ExamSessionService $sessions,
     ): RedirectResponse
     {
+        $this->authorizeSessionAccess($request, $examSession);
+        abort_unless(in_array($request->user()->role, [UserRole::SuperAdmin, UserRole::Committee, UserRole::Proctor], true), 403);
         $validated = $request->validate([
             'status' => ['required', Rule::enum(SessionStatus::class)],
         ]);
@@ -204,5 +224,19 @@ class ExamOperationsController extends Controller
         $sessions->update($examSession, $validated);
 
         return back()->with('status', 'Status pelaksanaan sesi berhasil diperbarui.');
+    }
+
+    private function authorizeSessionAccess(Request $request, ExamSession $session): void
+    {
+        if ($request->user()->role === UserRole::Teacher) {
+            $session->loadMissing('assessmentSubject');
+            abort_unless($session->assessmentSubject->teacher_user_id === $request->user()->id, 403);
+        }
+    }
+
+    private function authorizeAttemptAccess(Request $request, ExamAttempt $attempt): void
+    {
+        $attempt->loadMissing('assignment.examSession');
+        $this->authorizeSessionAccess($request, $attempt->assignment->examSession);
     }
 }
