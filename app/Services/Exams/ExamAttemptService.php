@@ -174,7 +174,9 @@ class ExamAttemptService
                 'is_correct' => $question->question_type === ExamQuestionType::MultipleChoice
                     ? $answer === $question->correct_answer
                     : null,
-                'points_awarded' => null,
+                'points_awarded' => $question->question_type === ExamQuestionType::MultipleChoice
+                    ? ($answer === $question->correct_answer ? ExamScoreCalculator::MULTIPLE_CHOICE_POINTS : 0)
+                    : null,
                 'graded_by_user_id' => null,
                 'graded_at' => null,
                 'answered_at' => now(),
