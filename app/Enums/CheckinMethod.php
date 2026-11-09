@@ -8,4 +8,5 @@ enum CheckinMethod: string
     case Card = 'card';
     case Face = 'face';
     case Manual = 'manual';
+    case Location = 'location';
 }
