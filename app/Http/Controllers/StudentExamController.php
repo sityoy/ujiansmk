@@ -9,6 +9,8 @@ use App\Models\ExamAssignment;
 use App\Models\ExamAttempt;
 use App\Models\ExamQuestion;
 use App\Models\Student;
+use App\Models\TrialAttempt;
+use App\Models\TrialExam;
 use App\Services\Exams\ExamAttemptService;
 use App\Services\Exams\ExamSecurityService;
 use Illuminate\Http\JsonResponse;
@@ -35,9 +37,27 @@ class StudentExamController extends Controller
             ->get()
             ->sortBy('examSession.starts_at');
 
+        $student->loadMissing('schoolClass');
+        $trialExams = TrialExam::query()
+            ->with('questionBank.subject')
+            ->where('is_active', true)
+            ->whereHas('questionBank', fn ($query) => $query
+                ->where('grade_level', $student->schoolClass->grade_level))
+            ->where(fn ($query) => $query->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
+            ->where(fn ($query) => $query->whereNull('ends_at')->orWhere('ends_at', '>=', now()))
+            ->orderBy('title')
+            ->get();
+        $trialAttempts = TrialAttempt::query()
+            ->where('student_id', $student->id)
+            ->whereIn('trial_exam_id', $trialExams->modelKeys())
+            ->get()
+            ->keyBy('trial_exam_id');
+
         return view('student.exams.index', [
             'student' => $student,
             'assignments' => $assignments,
+            'trialExams' => $trialExams,
+            'trialAttempts' => $trialAttempts,
             'checkin' => $student->dailyCheckins()
                 ->whereDate('attendance_date', now()->toDateString())
                 ->first(),
