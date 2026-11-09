@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['trial_question_bank_id', 'question_text', 'question_image_path', 'options', 'correct_answer', 'points', 'position'])]
+#[Fillable(['trial_question_bank_id', 'question_text', 'question_image_path', 'options', 'option_file_paths', 'correct_answer', 'points', 'position'])]
 #[Hidden(['correct_answer'])]
 class TrialQuestion extends Model
 {
@@ -16,6 +16,7 @@ class TrialQuestion extends Model
     {
         return [
             'options' => 'array',
+            'option_file_paths' => 'array',
             'points' => 'decimal:2',
         ];
     }
