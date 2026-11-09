@@ -3,7 +3,6 @@
 namespace App\Services\Exams;
 
 use App\Enums\AttemptStatus;
-use App\Enums\ExamQuestionType;
 use App\Enums\GradingStatus;
 use App\Models\ExamAnswer;
 use App\Models\ExamAttempt;
@@ -14,9 +13,9 @@ use Illuminate\Validation\ValidationException;
 
 class ExamGradingService
 {
-    public function grade(ExamAttempt $attempt, User $grader, array $scores): ExamAttempt
+    public function grade(ExamAttempt $attempt, User $grader, array $scores, ?float $manualScore = null): ExamAttempt
     {
-        return DB::transaction(function () use ($attempt, $grader, $scores): ExamAttempt {
+        return DB::transaction(function () use ($attempt, $grader, $scores, $manualScore): ExamAttempt {
             $attempt = ExamAttempt::query()->lockForUpdate()->findOrFail($attempt->id);
             if ($attempt->status !== AttemptStatus::Submitted) {
                 throw ValidationException::withMessages(['grading' => 'Jawaban hanya dapat dikoreksi setelah ujian dikumpulkan.']);
@@ -27,12 +26,24 @@ class ExamGradingService
             $manualQuestions = $questions->filter(
                 fn (ExamQuestion $question): bool => $question->question_type->requiresManualGrading(),
             );
-            if ($manualQuestions->isEmpty()) {
-                throw ValidationException::withMessages(['grading' => 'Ujian ini tidak memiliki isian singkat atau esai.']);
+
+            if ($manualQuestions->isEmpty() && $manualScore === null) {
+                throw ValidationException::withMessages([
+                    'manual_score' => 'Masukkan nilai Essay/Isian manual untuk mengubah nilai ujian ini.',
+                ]);
             }
 
             foreach ($manualQuestions as $question) {
-                $value = $scores[$question->id] ?? null;
+                if (! array_key_exists($question->id, $scores)) {
+                    if ($manualScore === null) {
+                        throw ValidationException::withMessages([
+                            'scores.'.$question->id => 'Nilai soal '.$question->position.' wajib diisi.',
+                        ]);
+                    }
+                    continue;
+                }
+
+                $value = $scores[$question->id];
                 if (! is_numeric($value) || (float) $value < 0 || (float) $value > (float) $question->points) {
                     throw ValidationException::withMessages([
                         'scores.'.$question->id => 'Nilai soal '.$question->position.' harus antara 0 dan '.$question->points.'.',
@@ -47,10 +58,15 @@ class ExamGradingService
 
             $attempt->load('answers');
             $answers = $attempt->answers->keyBy('exam_question_id');
-            $calculatedScore = app(ExamScoreCalculator::class)->score($questions, $answers);
+            $calculator = app(ExamScoreCalculator::class);
+            $manualComponent = $manualScore !== null
+                ? max(0, min(100, $manualScore))
+                : $calculator->manualComponentScore($questions, $answers);
+            $calculatedScore = $calculator->score($questions, $answers, $manualComponent);
 
             $attempt->update([
-                'score' => $calculatedScore,
+                'score' => min(100, $calculatedScore),
+                'manual_score' => $manualComponent,
                 'grading_status' => GradingStatus::Graded,
                 'graded_at' => now(),
             ]);
