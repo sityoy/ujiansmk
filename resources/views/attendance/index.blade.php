@@ -7,7 +7,7 @@
 @section('content')
     @php
         $statusLabels = ['verified' => 'Terverifikasi', 'review' => 'Perlu diperiksa', 'rejected' => 'Ditolak'];
-        $methodLabels = ['card_face' => 'Kartu + wajah', 'card' => 'Kartu', 'face' => 'Wajah', 'manual' => 'Manual'];
+        $methodLabels = ['card_face' => 'Kartu + wajah', 'card' => 'Kartu', 'face' => 'Wajah', 'manual' => 'Manual', 'location' => 'Lokasi GPS'];
         $incidentLabels = ['tab_hidden' => 'Berpindah tab/aplikasi', 'fullscreen_exit' => 'Keluar layar penuh', 'window_blur' => 'Fokus hilang', 'system_gesture' => 'Membuka bilah sistem', 'viewport_change' => 'Perubahan layar/split screen', 'restricted_action' => 'Tombol terlarang', 'navigation_attempt' => 'Mencoba keluar'];
     @endphp
 
