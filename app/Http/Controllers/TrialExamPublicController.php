@@ -32,7 +32,7 @@ class TrialExamPublicController extends Controller
     public function start(Request $request, TrialExam $trialExam): RedirectResponse
     {
         $validated = $request->validate([
-            'participant_identifier' => ['required', 'string', 'max:50'],
+            'participant_identifier' => ['nullable', 'string', 'max:50'],
             'access_code' => ['required', 'string', 'max:50'],
         ]);
 
@@ -43,28 +43,61 @@ class TrialExamPublicController extends Controller
             throw ValidationException::withMessages(['access_code' => 'Kode ujian uji coba tidak sesuai.']);
         }
 
-        $identifier = trim($validated['participant_identifier']);
-        $student = Student::query()
-            ->with('schoolClass')
-            ->where('is_active', true)
-            ->whereHas('schoolClass', fn ($query) => $query->where('grade_level', $trialExam->questionBank->grade_level))
-            ->where(function ($query) use ($identifier): void {
-                $query->where('student_number', $identifier)
-                    ->orWhere('nisn', $identifier);
-            })
-            ->first();
+        $student = $request->user()?->student;
+        if ($student) {
+            $student->loadMissing('schoolClass');
+            if (! $student->is_active || $student->schoolClass?->grade_level !== $trialExam->questionBank->grade_level) {
+                throw ValidationException::withMessages([
+                    'participant_identifier' => 'Tingkat kelas akun siswa tidak sesuai dengan Ujian Uji Coba ini.',
+                ]);
+            }
+        } else {
+            $identifier = trim((string) ($validated['participant_identifier'] ?? ''));
+            if ($identifier === '') {
+                throw ValidationException::withMessages([
+                    'participant_identifier' => 'NIS/NISN wajib diisi.',
+                ]);
+            }
+            $student = Student::query()
+                ->with('schoolClass')
+                ->where('is_active', true)
+                ->whereHas('schoolClass', fn ($query) => $query->where('grade_level', $trialExam->questionBank->grade_level))
+                ->where(function ($query) use ($identifier): void {
+                    $query->where('student_number', $identifier)
+                        ->orWhere('nisn', $identifier);
+                })
+                ->first();
 
-        if (! $student) {
-            throw ValidationException::withMessages([
-                'participant_identifier' => 'NIS/NISN tidak ditemukan sebagai siswa aktif pada tingkat kelas ujian ini.',
-            ]);
+            if (! $student) {
+                throw ValidationException::withMessages([
+                    'participant_identifier' => 'NIS/NISN tidak ditemukan sebagai siswa aktif pada tingkat kelas ujian ini.',
+                ]);
+            }
         }
 
         $participantIdentifier = $student->nisn ?: $student->student_number;
-        if (TrialAttempt::query()
+        $existingAttempt = TrialAttempt::query()
             ->where('trial_exam_id', $trialExam->id)
-            ->where('participant_identifier', $participantIdentifier)
-            ->exists()) {
+            ->where(function ($query) use ($student, $participantIdentifier): void {
+                $query->where('student_id', $student->id)
+                    ->orWhere('participant_identifier', $participantIdentifier);
+            })
+            ->first();
+
+        if ($existingAttempt) {
+            if ($request->user()?->student?->id === $student->id && $existingAttempt->status === 'in_progress') {
+                $token = Str::random(64);
+                $existingAttempt->update([
+                    'student_id' => $student->id,
+                    'session_token_hash' => hash('sha256', $token),
+                    'last_seen_at' => now(),
+                ]);
+                session()->put($this->tokenKey($existingAttempt), $token);
+                session()->put($this->orderKey($existingAttempt), $this->questions($trialExam)->pluck('id')->shuffle()->all());
+
+                return redirect()->route('tryout.show', [$trialExam, $existingAttempt]);
+            }
+
             throw ValidationException::withMessages([
                 'participant_identifier' => 'Siswa ini sudah pernah memulai Ujian Uji Coba tersebut.',
             ]);
@@ -78,6 +111,7 @@ class TrialExamPublicController extends Controller
         $token = Str::random(64);
         $attempt = TrialAttempt::create([
             'trial_exam_id' => $trialExam->id,
+            'student_id' => $student->id,
             'participant_name' => $student->full_name,
             'participant_identifier' => $participantIdentifier,
             'session_token_hash' => hash('sha256', $token),
@@ -213,6 +247,22 @@ class TrialExamPublicController extends Controller
     private function authorizeAttempt(TrialExam $trialExam, TrialAttempt $trialAttempt): void
     {
         abort_unless($trialAttempt->trial_exam_id === $trialExam->id, 404);
+
+        $authenticatedStudent = auth()->user()?->student;
+        if ($authenticatedStudent && (
+            $trialAttempt->student_id === $authenticatedStudent->id
+            || in_array($trialAttempt->participant_identifier, array_filter([
+                $authenticatedStudent->nisn,
+                $authenticatedStudent->student_number,
+            ]), true)
+        )) {
+            if (! $trialAttempt->student_id) {
+                $trialAttempt->update(['student_id' => $authenticatedStudent->id]);
+            }
+
+            return;
+        }
+
         $token = (string) session()->get($this->tokenKey($trialAttempt));
         abort_unless($token !== '' && hash_equals($trialAttempt->session_token_hash, hash('sha256', $token)), 403);
     }
