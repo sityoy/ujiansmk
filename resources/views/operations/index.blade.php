@@ -1,8 +1,8 @@
 @extends('layouts.app')
 
-@section('title', 'Pelaksanaan Ujian')
+@section('title', 'Pemantauan Peserta')
 @section('eyebrow', 'Ruang Kendali')
-@section('heading', 'Pelaksanaan Ujian')
+@section('heading', 'Pemantauan Peserta')
 
 @section('content')
     @php($statusLabels = ['draft' => 'Draf', 'published' => 'Terbit', 'active' => 'Aktif', 'closed' => 'Ditutup'])
@@ -61,6 +61,7 @@
                             <p class="mt-2 text-sm text-slate-300">{{ $session->starts_at->format('d/m/Y H:i') }}–{{ $session->ends_at->format('H:i') }}</p>
                             <p class="mt-1 text-xs text-slate-500">{{ $session->campus->name }}{{ $session->room_name ? ' · '.$session->room_name : '' }} · {{ $session->assignments_count }} peserta</p>
                         </div>
+                        @if (in_array(auth()->user()->role->value, ['super_admin', 'committee', 'proctor'], true))
                         <form method="POST" action="{{ route('operations.sessions.status', $session) }}" class="flex items-center gap-2" onsubmit="return this.elements.status.value !== 'closed' || confirm('Tutup sesi? Jawaban dikumpulkan dan peserta yang belum mulai ditandai tidak hadir ujian setelah waktu mulai. Sesi tidak dapat dibuka ulang.')">
                             @csrf @method('PATCH')
                             <select name="status" @disabled($session->status->value === 'closed') class="rounded-lg border border-white/10 bg-slate-950 px-2 py-2 text-xs">
@@ -68,6 +69,9 @@
                             </select>
                             <button @disabled($session->status->value === 'closed') class="text-xs font-medium text-cyan-300 disabled:opacity-40">Simpan</button>
                         </form>
+                        @else
+                            <span class="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-300">{{ $statusLabels[$session->status->value] }}</span>
+                        @endif
                     </div>
                     <a href="{{ route('operations.sessions.show', $session) }}" class="mt-4 inline-flex rounded-lg border border-cyan-400/30 px-3 py-2 text-xs font-semibold text-cyan-300">Lihat peserta & progres</a>
                 </div>
@@ -76,6 +80,26 @@
             @endforelse
         </div>
         @if ($sessions->hasPages())<div class="mt-5">{{ $sessions->links() }}</div>@endif
+    </section>
+
+    <section class="mt-6 rounded-3xl border border-violet-400/20 bg-violet-400/[0.035] p-6">
+        <div class="mb-5">
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-violet-300">Ujian Uji Coba</p>
+            <h2 class="mt-2 text-xl font-semibold text-white">Pemantauan peserta uji coba</h2>
+            <p class="mt-2 text-sm text-slate-500">Daftar peserta mencakup siswa yang belum login/belum memulai, sedang mengerjakan, terkunci, dan sudah selesai.</p>
+        </div>
+        <div class="grid gap-3 xl:grid-cols-2">
+            @forelse($trialExams as $trialExam)
+                <article class="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                    <p class="font-medium text-white">{{ $trialExam->title }}</p>
+                    <p class="mt-1 text-xs text-slate-500">{{ $trialExam->questionBank->subject->name }} · Kelas {{ $trialExam->questionBank->grade_level }} · {{ $trialExam->attempts_count }} sudah memulai</p>
+                    <a href="{{ route('tryouts.participants', $trialExam) }}" class="mt-4 inline-flex rounded-lg border border-violet-400/30 px-3 py-2 text-xs font-semibold text-violet-300">Lihat seluruh peserta & pelanggaran</a>
+                </article>
+            @empty
+                <p class="text-sm text-slate-500">Belum ada Ujian Uji Coba.</p>
+            @endforelse
+        </div>
+        @if($trialExams->hasPages())<div class="mt-5">{{ $trialExams->links() }}</div>@endif
     </section>
 
     <section class="mt-6 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035]">
