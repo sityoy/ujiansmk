@@ -41,7 +41,7 @@ class TrialExamFlowTest extends TestCase
 
         $this->get(route('tryout.entry', $trial))
             ->assertOk()
-            ->assertSee('Setiap jawaban PG benar bernilai 2 poin')
+            ->assertSee('Setiap jawaban PG benar bernilai tetap 2 poin')
             ->assertSee('Nama peserta diambil otomatis dari data siswa');
 
         $this->post(route('tryout.start', $trial), [
@@ -51,6 +51,8 @@ class TrialExamFlowTest extends TestCase
         ])->assertRedirect();
 
         $attempt = TrialAttempt::query()->firstOrFail();
+        $student = Student::query()->where('nisn', '1234567890')->firstOrFail();
+        $this->assertSame($student->id, $attempt->student_id);
         $this->assertSame('Peserta Uji Coba', $attempt->participant_name);
         $this->assertSame('1234567890', $attempt->participant_identifier);
         $this->get(route('tryout.show', [$trial, $attempt]))
@@ -84,6 +86,13 @@ class TrialExamFlowTest extends TestCase
             ->assertSee('Peserta Uji Coba')
             ->assertSee('Terkunci')
             ->assertDontSee('100,00');
+        $this->get(route('tryouts.progress', [
+            'trialExam' => $trial,
+            'student_ids' => [$student->id],
+        ]))->assertOk()
+            ->assertJsonPath('statistics.locked', 1)
+            ->assertJsonPath('participants.'.$student->id.'.status', 'locked')
+            ->assertJsonPath('participants.'.$student->id.'.violations', 2);
         $this->get(route('trial-question-banks.index'))
             ->assertOk()
             ->assertSee('Latihan Sejarah Kelas 10');

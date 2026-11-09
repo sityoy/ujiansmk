@@ -116,6 +116,8 @@
                             <label class="flex items-start gap-2 text-xs text-slate-300"><input type="checkbox" required class="mt-0.5">Saya sudah membaca dan menyetujui aturan ujian.</label>
                             <button class="rounded-xl bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950">Mulai ujian</button>
                         </form>
+                    @elseif (now()->lt($session->starts_at->copy()->subMinutes(60)))
+                        <span class="text-sm text-amber-300">Absensi dibuka pukul {{ $session->starts_at->copy()->subMinutes(60)->format('H:i') }} (60 menit sebelum ujian).</span>
                     @elseif (! $isOpen)
                         <span class="text-sm text-slate-500">Ujian dimulai pukul {{ $session->starts_at->format('H:i') }}. Absensi dapat diselesaikan terlebih dahulu.</span>
                     @else

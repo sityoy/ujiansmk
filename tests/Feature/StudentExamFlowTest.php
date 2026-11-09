@@ -515,6 +515,35 @@ class StudentExamFlowTest extends TestCase
         $this->actingAs($otherTeacher)->get(route('grading.show', $attempt))->assertForbidden();
     }
 
+
+    public function test_teacher_can_revise_external_manual_score_and_final_score_never_exceeds_one_hundred(): void
+    {
+        [, $assignment, $questions] = $this->makeExam();
+        $teacher = User::factory()->create(['role' => UserRole::Teacher]);
+        $assignment->assessmentSubject->update(['teacher_user_id' => $teacher->id]);
+        $attempt = $this->startAttempt($assignment->fresh());
+        $attempts = app(ExamAttemptService::class);
+        $attempts->saveAnswer($attempt, $questions[0], 'A');
+        $attempts->saveAnswer($attempt, $questions[1], 'B');
+        $attempts->submit($attempt);
+
+        $this->assertSame('4.00', $attempt->fresh()->score);
+
+        $this->actingAs($teacher)->put(route('grading.update', $attempt), [
+            'manual_score' => 80,
+        ])->assertRedirect(route('grading.index'))->assertSessionHasNoErrors();
+        $this->assertSame('42.00', $attempt->fresh()->score);
+
+        $this->put(route('grading.update', $attempt), [
+            'manual_score' => 100,
+        ])->assertRedirect(route('grading.index'))->assertSessionHasNoErrors();
+
+        $attempt->refresh();
+        $this->assertSame('100.00', $attempt->manual_score);
+        $this->assertSame('52.00', $attempt->score);
+        $this->assertLessThanOrEqual(100, (float) $attempt->score);
+    }
+
     public function test_admin_can_reset_entire_attempt_with_audit_and_student_can_start_again(): void
     {
         [$student, $assignment, $questions] = $this->makeExam();
