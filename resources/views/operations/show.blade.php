@@ -29,7 +29,7 @@
     </section>
 
     <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-        @foreach (['total' => 'Total peserta', 'scheduled' => 'Belum mulai', 'in_progress' => 'Berjalan (termasuk terkunci)', 'locked' => 'Perlu pemeriksaan', 'submitted' => 'Dikumpulkan', 'absent' => 'Tidak hadir ujian'] as $key => $label)
+        @foreach (['total' => 'Total peserta', 'scheduled' => 'Belum login / belum ujian', 'in_progress' => 'Berjalan (termasuk terkunci)', 'locked' => 'Perlu pemeriksaan', 'submitted' => 'Dikumpulkan', 'absent' => 'Tidak hadir ujian'] as $key => $label)
             <div class="rounded-2xl border border-white/10 bg-white/[0.035] p-4"><p class="text-xs text-slate-400">{{ $label }}</p><p class="mt-2 text-2xl font-semibold text-cyan-300" data-progress-stat="{{ $key }}">{{ $statistics[$key] }}</p></div>
         @endforeach
     </div>
@@ -70,7 +70,7 @@
                                 <p>{{ $attempt?->score ?? '—' }}</p>
                                 @if ($attempt && $attempt->grading_status->value !== 'automatic')
                                     <p class="mt-1 text-xs {{ $attempt->grading_status->value === 'graded' ? 'text-emerald-300' : 'text-amber-300' }}">{{ $attempt->grading_status->label() }}</p>
-                                    @if (in_array(auth()->user()->role->value, ['super_admin', 'committee'], true))
+                                    @if (in_array(auth()->user()->role->value, ['super_admin', 'committee', 'teacher'], true))
                                         <a href="{{ route('grading.show', $attempt) }}" class="mt-2 inline-flex text-xs text-violet-300">Buka koreksi →</a>
                                     @endif
                                 @endif
@@ -90,7 +90,7 @@
                                             <p class="mt-2 text-slate-500">Belum ada catatan.</p>
                                         @endforelse
                                     </details>
-                                    @if ($status === 'locked')
+                                    @if ($status === 'locked' && in_array(auth()->user()->role->value, ['super_admin', 'committee', 'proctor'], true))
                                         <form method="POST" action="{{ route('operations.attempts.security-review', $attempt) }}" class="mt-3 space-y-2" onsubmit="return confirm('Simpan keputusan pengawas? Waktu dan riwayat tidak direset.')">
                                             @csrf
                                             <input type="hidden" name="lock_version" value="{{ $attempt->security_lock_version }}">
