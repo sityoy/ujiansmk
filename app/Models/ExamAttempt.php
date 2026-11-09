@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'exam_assignment_id', 'daily_checkin_id', 'status', 'started_at', 'submitted_at',
-    'last_seen_at', 'score', 'correct_answers', 'incorrect_answers', 'violation_count',
+    'last_seen_at', 'score', 'manual_score', 'correct_answers', 'incorrect_answers', 'violation_count',
     'device_session_hash', 'ip_address', 'user_agent',
     'security_enabled', 'security_locked_at', 'security_lock_version', 'grading_status', 'graded_at',
 ])]
@@ -34,6 +34,7 @@ class ExamAttempt extends Model
             'submitted_at' => 'datetime',
             'last_seen_at' => 'datetime',
             'score' => 'decimal:2',
+            'manual_score' => 'decimal:2',
         ];
     }
 
