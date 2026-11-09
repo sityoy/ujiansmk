@@ -18,7 +18,40 @@
         </div>
     </section>
 
-    <section class="mt-6 space-y-4">
+    <section class="mt-6">
+        <div class="mb-4">
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-violet-300">Ujian Uji Coba</p>
+            <h2 class="mt-2 text-xl font-semibold text-white">Latihan yang tersedia untuk kelas Anda</h2>
+            <p class="mt-1 text-sm text-slate-500">Identitas peserta mengikuti akun siswa. Nilai uji coba tidak ditampilkan.</p>
+        </div>
+        <div class="grid gap-4 lg:grid-cols-2">
+            @forelse ($trialExams as $trialExam)
+                @php($trialAttempt = $trialAttempts->get($trialExam->id))
+                <article class="rounded-3xl border border-violet-400/20 bg-violet-400/[0.04] p-6">
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-violet-300">{{ $trialExam->questionBank->subject->name }} · Kelas {{ $trialExam->questionBank->grade_level }}</p>
+                    <h3 class="mt-2 text-xl font-semibold text-white">{{ $trialExam->title }}</h3>
+                    <p class="mt-2 text-sm text-slate-400">{{ $trialExam->duration_minutes }} menit · Setiap PG benar 2 poin · Sistem pengamanan aktif</p>
+                    <div class="mt-5">
+                        @if ($trialAttempt?->status === 'submitted')
+                            <span class="inline-flex rounded-xl bg-emerald-400/10 px-4 py-3 text-sm font-medium text-emerald-200">Uji coba sudah diselesaikan</span>
+                        @elseif ($trialAttempt?->status === 'in_progress')
+                            <a href="{{ route('tryout.show', [$trialExam, $trialAttempt]) }}" class="inline-flex rounded-xl bg-violet-400 px-4 py-3 text-sm font-semibold text-slate-950">{{ $trialAttempt->security_locked_at ? 'Ujian terkunci — buka status' : 'Lanjutkan uji coba' }}</a>
+                        @else
+                            <a href="{{ route('tryout.entry', $trialExam) }}" class="inline-flex rounded-xl bg-violet-400 px-4 py-3 text-sm font-semibold text-slate-950">Buka ujian uji coba</a>
+                        @endif
+                    </div>
+                </article>
+            @empty
+                <div class="rounded-3xl border border-dashed border-white/10 p-8 text-center text-sm text-slate-500 lg:col-span-2">Belum ada Ujian Uji Coba aktif untuk tingkat kelas Anda.</div>
+            @endforelse
+        </div>
+    </section>
+
+    <section class="mt-8 space-y-4">
+        <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Ujian Inti</p>
+            <h2 class="mt-2 text-xl font-semibold text-white">Jadwal dan pelaksanaan ujian</h2>
+        </div>
         @forelse ($assignments as $assignment)
             @php
                 $session = $assignment->examSession;
