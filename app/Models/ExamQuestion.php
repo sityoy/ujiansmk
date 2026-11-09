@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['assessment_subject_id', 'question_text', 'question_image_path', 'question_type', 'options', 'correct_answer', 'points', 'position'])]
+#[Fillable(['assessment_subject_id', 'question_text', 'question_image_path', 'question_type', 'options', 'option_file_paths', 'correct_answer', 'points', 'position'])]
 #[Hidden(['correct_answer'])]
 class ExamQuestion extends Model
 {
@@ -20,6 +20,7 @@ class ExamQuestion extends Model
         return [
             'question_type' => ExamQuestionType::class,
             'options' => 'array',
+            'option_file_paths' => 'array',
             'points' => 'decimal:2',
         ];
     }
