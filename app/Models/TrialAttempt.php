@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
-    'trial_exam_id', 'participant_name', 'participant_identifier', 'session_token_hash',
+    'trial_exam_id', 'student_id', 'participant_name', 'participant_identifier', 'session_token_hash',
     'status', 'started_at', 'submitted_at', 'score', 'correct_answers', 'total_questions',
     'violation_count', 'security_locked_at', 'security_lock_version', 'last_seen_at',
     'ip_address', 'user_agent',
@@ -28,6 +28,11 @@ class TrialAttempt extends Model
             'security_lock_version' => 'integer',
             'last_seen_at' => 'datetime',
         ];
+    }
+
+    public function student(): BelongsTo
+    {
+        return $this->belongsTo(Student::class);
     }
 
     public function trialExam(): BelongsTo
