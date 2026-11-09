@@ -41,7 +41,7 @@ class TrialExamFlowTest extends TestCase
 
         $this->get(route('tryout.entry', $trial))
             ->assertOk()
-            ->assertSee('Bobot maksimal PG adalah 70 poin')
+            ->assertSee('Setiap jawaban PG benar bernilai 2 poin')
             ->assertSee('Nama peserta diambil otomatis dari data siswa');
 
         $this->post(route('tryout.start', $trial), [
@@ -125,7 +125,7 @@ class TrialExamFlowTest extends TestCase
             ->assertSee('Jawaban berhasil dikumpulkan')
             ->assertDontSee('100,00')
             ->assertDontSee('1 jawaban benar');
-        $this->assertSame('70.00', $attempt->fresh()->score);
+        $this->assertSame('2.00', $attempt->fresh()->score);
     }
 
     public function test_trial_question_bank_cannot_create_more_than_one_trial_exam(): void

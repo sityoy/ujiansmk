@@ -20,11 +20,11 @@ class OperationsAccessTest extends TestCase
         $this->actingAs($proctor)->get(route('attendance.index'))->assertOk();
     }
 
-    public function test_teacher_cannot_open_restricted_operations_pages(): void
+    public function test_teacher_can_monitor_own_exams_but_cannot_open_attendance_management(): void
     {
         $teacher = User::factory()->create(['role' => UserRole::Teacher]);
 
-        $this->actingAs($teacher)->get(route('operations.index'))->assertForbidden();
+        $this->actingAs($teacher)->get(route('operations.index'))->assertOk();
         $this->actingAs($teacher)->get(route('attendance.index'))->assertForbidden();
     }
 }
