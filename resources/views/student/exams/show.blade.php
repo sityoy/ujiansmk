@@ -61,7 +61,7 @@
         @foreach ($questions as $question)
             <article class="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
                 <p class="text-xs font-semibold text-cyan-300">Soal {{ $loop->iteration }} dari {{ $questions->count() }}</p>
-                <p class="mt-3 whitespace-pre-line text-sm leading-7 text-white">{{ $question->question_text }}</p>
+                <p class="mt-3 whitespace-pre-wrap text-sm leading-7 text-white">{{ $question->question_text }}</p>
                 @if ($question->question_image_path)
                     @php($questionFileIsImage = in_array(strtolower(pathinfo($question->question_image_path, PATHINFO_EXTENSION)), ['jpg','jpeg','png','webp'], true))
                     @if($questionFileIsImage)
@@ -72,13 +72,13 @@
                 @endif
                 @if ($question->question_type->value === 'multiple_choice')
                     <div class="mt-4 grid gap-2">
-                        @foreach ($question->options as $key => $option)
+                        @foreach (collect($question->options)->sortKeys() as $key => $option)
                             <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 px-4 py-3 text-sm text-slate-300 transition hover:border-cyan-400/30 hover:bg-cyan-400/5">
                                 <input type="radio" name="question_{{ $question->id }}" value="{{ $key }}"
                                     data-save-url="{{ route('student.exams.answer', [$attempt, $question]) }}"
                                     @checked($answers->get($question->id)?->answer === $key)
                                     class="mt-1">
-                                <span class="min-w-0"><strong class="text-cyan-300">{{ $key }}.</strong> {{ $option }}
+                                <span class="min-w-0"><strong class="text-cyan-300">{{ $key }}.</strong> <span class="whitespace-pre-wrap">{{ $option }}</span>
                                     @if($question->option_file_paths[$key] ?? null)
                                         @php($optionIsImage = in_array(strtolower(pathinfo($question->option_file_paths[$key], PATHINFO_EXTENSION)), ['jpg','jpeg','png','webp'], true))
                                         @if($optionIsImage)<img src="{{ Storage::url($question->option_file_paths[$key]) }}" alt="Lampiran pilihan {{ $key }}" class="mt-3 max-h-64 max-w-full rounded-xl border border-white/10 bg-white object-contain p-2">@else<a href="{{ Storage::url($question->option_file_paths[$key]) }}" target="_blank" class="mt-2 block text-xs font-semibold text-cyan-300">Buka lampiran pilihan {{ $key }}</a>@endif

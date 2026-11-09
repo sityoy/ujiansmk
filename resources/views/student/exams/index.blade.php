@@ -26,7 +26,9 @@
         </div>
         <div class="grid gap-4 lg:grid-cols-2">
             @forelse ($trialExams as $trialExam)
-                @php($trialAttempt = $trialAttempts->get($trialExam->id))
+                @php
+                    $trialAttempt = $trialAttempts->get($trialExam->id);
+                @endphp
                 <article class="rounded-3xl border border-violet-400/20 bg-violet-400/[0.04] p-6">
                     <p class="text-xs font-semibold uppercase tracking-[0.16em] text-violet-300">{{ $trialExam->questionBank->subject->name }} · Kelas {{ $trialExam->questionBank->grade_level }}</p>
                     <h3 class="mt-2 text-xl font-semibold text-white">{{ $trialExam->title }}</h3>

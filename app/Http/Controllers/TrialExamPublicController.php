@@ -93,7 +93,6 @@ class TrialExamPublicController extends Controller
                     'last_seen_at' => now(),
                 ]);
                 session()->put($this->tokenKey($existingAttempt), $token);
-                session()->put($this->orderKey($existingAttempt), $this->questions($trialExam)->pluck('id')->shuffle()->all());
 
                 return redirect()->route('tryout.show', [$trialExam, $existingAttempt]);
             }
@@ -124,7 +123,6 @@ class TrialExamPublicController extends Controller
         ]);
 
         session()->put($this->tokenKey($attempt), $token);
-        session()->put($this->orderKey($attempt), $questions->pluck('id')->shuffle()->all());
 
         return redirect()->route('tryout.show', [$trialExam, $attempt]);
     }
@@ -145,10 +143,13 @@ class TrialExamPublicController extends Controller
         }
 
         $trialAttempt->load('answers');
+        $questions = $this->questions($trialExam);
+        // Attempts started before fixed ordering keep the numbering already shown to students.
         $order = session()->get($this->orderKey($trialAttempt), []);
-        $positions = array_flip($order);
-        $questions = $this->questions($trialExam)
-            ->sortBy(fn ($question) => $positions[$question->id] ?? PHP_INT_MAX)->values();
+        if ($order !== []) {
+            $positions = array_flip($order);
+            $questions = $questions->sortBy(fn ($question) => $positions[$question->id] ?? PHP_INT_MAX)->values();
+        }
 
         return view('tryouts.show', [
             'trialExam' => $trialExam,
@@ -241,7 +242,7 @@ class TrialExamPublicController extends Controller
 
     private function questions(TrialExam $trialExam)
     {
-        return $trialExam->questionBank->questions()->orderBy('position')->get();
+        return $trialExam->questionBank->questions()->get();
     }
 
     private function authorizeAttempt(TrialExam $trialExam, TrialAttempt $trialAttempt): void

@@ -25,6 +25,7 @@
                 <form method="POST" action="{{ route('trial-question-banks.questions.store', $bank) }}" enctype="multipart/form-data" class="mt-5 space-y-3">
                     @csrf
                     <textarea name="question_text" rows="5" required placeholder="Tuliskan pertanyaan..." class="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm">{{ old('question_text') }}</textarea>
+                    <p class="text-xs text-slate-400">Untuk daftar (1), (2), (3), ketik setiap butir pada baris terpisah.</p>
                     <label class="block text-xs text-slate-400">File soal (opsional: JPG/PNG/WebP/PDF, maks. 5 MB)
                         <input type="file" name="question_image" accept="image/jpeg,image/png,image/webp,application/pdf" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm">
                     </label>
@@ -32,7 +33,7 @@
                         <div class="grid grid-cols-[36px_1fr] items-start gap-2">
                             <span class="mt-1 grid size-9 place-items-center rounded-lg bg-slate-900 text-xs font-semibold text-cyan-300">{{ $option }}</span>
                             <div class="space-y-2">
-                                <input name="option_{{ strtolower($option) }}" value="{{ old('option_'.strtolower($option)) }}" required placeholder="Pilihan {{ $option }}" class="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm">
+                                <textarea name="option_{{ strtolower($option) }}" rows="2" required placeholder="Pilihan {{ $option }}" class="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm">{{ old('option_'.strtolower($option)) }}</textarea>
                                 <input type="file" name="option_file_{{ strtolower($option) }}" accept="image/jpeg,image/png,image/webp,application/pdf" class="w-full rounded-lg border border-dashed border-white/10 bg-slate-950/50 px-3 py-2 text-xs text-slate-500">
                             </div>
                         </div>
@@ -50,7 +51,7 @@
                     <div class="flex items-start justify-between gap-4">
                         <div>
                             <p class="text-xs font-semibold text-cyan-300">Soal {{ $question->position }} · 2 poin</p>
-                            <p class="mt-2 whitespace-pre-line text-sm leading-6 text-white">{{ $question->question_text }}</p>
+                            <p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-white">{{ $question->question_text }}</p>
                             @if($question->question_image_path)
                                 @php($questionFileIsImage = in_array(strtolower(pathinfo($question->question_image_path, PATHINFO_EXTENSION)), ['jpg','jpeg','png','webp'], true))
                                 @if($questionFileIsImage)<img src="{{ Storage::url($question->question_image_path) }}" alt="File soal" class="mt-4 max-h-80 rounded-xl border border-white/10 bg-white p-2">@else<a href="{{ Storage::url($question->question_image_path) }}" target="_blank" class="mt-4 inline-flex text-xs font-semibold text-cyan-300">Buka file soal</a>@endif
@@ -59,8 +60,8 @@
                         @unless ($isLocked)<div class="flex shrink-0 gap-3"><button type="button" data-edit-toggle="trial-edit-{{ $question->id }}" class="text-xs text-cyan-300">Edit</button><form method="POST" action="{{ route('trial-question-banks.questions.destroy', [$bank, $question]) }}" onsubmit="return confirm('Hapus soal ini?')">@csrf @method('DELETE')<button class="text-xs text-rose-300">Hapus</button></form></div>@endunless
                     </div>
                     <div class="mt-4 grid gap-2 sm:grid-cols-2">
-                        @foreach ($question->options as $key => $option)
-                            <div class="rounded-xl border px-3 py-2 text-xs {{ $key === $question->correct_answer ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200' : 'border-white/10 text-slate-400' }}"><strong>{{ $key }}.</strong> {{ $option }}
+                        @foreach (collect($question->options)->sortKeys() as $key => $option)
+                            <div class="rounded-xl border px-3 py-2 text-xs {{ $key === $question->correct_answer ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200' : 'border-white/10 text-slate-400' }}"><strong>{{ $key }}.</strong> <span class="whitespace-pre-wrap">{{ $option }}</span>
                                 @if($question->option_file_paths[$key] ?? null)<a href="{{ Storage::url($question->option_file_paths[$key]) }}" target="_blank" class="mt-2 block font-semibold text-cyan-300">Buka lampiran {{ $key }}</a>@endif
                             </div>
                         @endforeach
@@ -72,7 +73,7 @@
                             <input type="file" name="question_image" accept="image/jpeg,image/png,image/webp,application/pdf" class="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm">
                             @foreach (['A','B','C','D','E'] as $option)
                                 <div class="space-y-2 rounded-xl border border-white/10 p-3">
-                                    <input name="option_{{ strtolower($option) }}" value="{{ $question->options[$option] ?? '' }}" required placeholder="Pilihan {{ $option }}" class="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm">
+                                    <textarea name="option_{{ strtolower($option) }}" rows="2" required placeholder="Pilihan {{ $option }}" class="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm">{{ $question->options[$option] ?? '' }}</textarea>
                                     <input type="file" name="option_file_{{ strtolower($option) }}" accept="image/jpeg,image/png,image/webp,application/pdf" class="w-full text-xs text-slate-500">
                                     @if($question->option_file_paths[$option] ?? null)<a href="{{ Storage::url($question->option_file_paths[$option]) }}" target="_blank" class="text-xs text-cyan-300">Lihat lampiran {{ $option }}</a>@endif
                                 </div>

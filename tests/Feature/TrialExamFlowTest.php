@@ -137,6 +137,50 @@ class TrialExamFlowTest extends TestCase
         $this->assertSame('2.00', $attempt->fresh()->score);
     }
 
+    public function test_trial_displays_bank_order_when_started_and_resumed(): void
+    {
+        [$trial] = $this->makeTrial();
+        $bank = $trial->questionBank;
+        $secondQuestionText = "Perhatikan pernyataan berikut.\n(1) Pernyataan pertama\n(2) Pernyataan kedua\n(3) Pernyataan ketiga";
+        $optionA = "(1) Jawaban pertama\n(2) Jawaban kedua";
+        $bank->questions()->create([
+            'question_text' => 'Soal posisi ketiga',
+            'options' => ['A' => 'Jawaban ketiga'],
+            'correct_answer' => 'A',
+            'points' => 2,
+            'position' => 3,
+        ]);
+        $bank->questions()->create([
+            'question_text' => $secondQuestionText,
+            'options' => ['B' => 'Pilihan setelah A', 'A' => $optionA],
+            'correct_answer' => 'A',
+            'points' => 2,
+            'position' => 2,
+        ]);
+        $student = Student::query()->where('nisn', '1234567890')->firstOrFail();
+        $show = [
+            'Proklamasi Indonesia terjadi pada?',
+            $secondQuestionText,
+            $optionA,
+            'Pilihan setelah A',
+            'Soal posisi ketiga',
+        ];
+
+        $this->actingAs($student->user)
+            ->post(route('tryout.start', $trial), ['access_code' => 'SJR-SMKBHG'])
+            ->assertRedirect();
+
+        $attempt = TrialAttempt::query()->firstOrFail();
+        $showRoute = route('tryout.show', [$trial, $attempt]);
+        $this->get($showRoute)->assertOk()->assertSeeInOrder($show)
+            ->assertSessionMissing('trial_question_order_'.$attempt->id);
+
+        $this->post(route('tryout.start', $trial), ['access_code' => 'SJR-SMKBHG'])
+            ->assertRedirect($showRoute)
+            ->assertSessionMissing('trial_question_order_'.$attempt->id);
+        $this->get($showRoute)->assertOk()->assertSeeInOrder($show);
+    }
+
     public function test_trial_question_bank_cannot_create_more_than_one_trial_exam(): void
     {
         [$trial] = $this->makeTrial();

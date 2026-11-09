@@ -37,6 +37,7 @@
                     @endforeach
                 </select>
                 <textarea name="question_text" rows="5" required placeholder="Tuliskan pertanyaan..." class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-violet-400">{{ old('question_text') }}</textarea>
+                <p class="text-xs text-slate-400">Untuk daftar (1), (2), (3), ketik setiap butir pada baris terpisah.</p>
                 <div>
                     <label class="mb-2 block text-xs font-medium text-slate-400">File soal (opsional)</label>
                     <input type="file" name="question_image" accept="image/jpeg,image/png,image/webp,application/pdf" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-400 file:px-3 file:py-2 file:font-semibold file:text-slate-950">
@@ -47,7 +48,7 @@
                         <div class="grid grid-cols-[36px_1fr] items-start gap-2">
                             <span class="mt-1 grid size-9 place-items-center rounded-lg bg-slate-900 text-xs font-semibold text-violet-300">{{ $option }}</span>
                             <div class="space-y-2">
-                                <input name="option_{{ strtolower($option) }}" value="{{ old('option_'.strtolower($option)) }}" placeholder="Pilihan {{ $option }}" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-violet-400">
+                                <textarea name="option_{{ strtolower($option) }}" rows="2" placeholder="Pilihan {{ $option }}" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-violet-400">{{ old('option_'.strtolower($option)) }}</textarea>
                                 <input type="file" name="option_file_{{ strtolower($option) }}" accept="image/jpeg,image/png,image/webp,application/pdf" class="w-full rounded-lg border border-dashed border-white/10 bg-slate-950/50 px-3 py-2 text-xs text-slate-500 file:mr-2 file:rounded file:border-0 file:bg-violet-400/20 file:px-2 file:py-1 file:text-violet-200">
                                 <p class="text-[0.7rem] text-slate-500">Lampiran pilihan {{ $option }} (opsional: gambar/PDF, maks. 5 MB)</p>
                             </div>
@@ -74,7 +75,7 @@
                     <div class="flex items-start justify-between gap-4">
                         <div>
                             <p class="text-xs font-semibold text-violet-300">Soal {{ $question->position }} · {{ $question->question_type->label() }} · {{ number_format((float) $question->points, 2, ',', '.') }} poin</p>
-                            <p class="mt-2 whitespace-pre-line text-sm leading-6 text-white">{{ $question->question_text }}</p>
+                            <p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-white">{{ $question->question_text }}</p>
                             @if ($question->question_image_path)
                                 @php($questionFileIsImage = in_array(strtolower(pathinfo($question->question_image_path, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'webp'], true))
                                 @if ($questionFileIsImage)
@@ -96,9 +97,9 @@
                     </div>
                     @if ($question->question_type->value === 'multiple_choice')
                         <div class="mt-4 grid gap-2 sm:grid-cols-2">
-                            @foreach ($question->options as $key => $option)
+                            @foreach (collect($question->options)->sortKeys() as $key => $option)
                                 <div class="rounded-xl border px-3 py-2 text-xs {{ $key === $question->correct_answer ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200' : 'border-white/10 text-slate-400' }}">
-                                    <span class="font-semibold">{{ $key }}.</span> {{ $option }}
+                                    <span class="font-semibold">{{ $key }}.</span> <span class="whitespace-pre-wrap">{{ $option }}</span>
                                     @if ($question->option_file_paths[$key] ?? null)
                                         <a href="{{ Storage::url($question->option_file_paths[$key]) }}" target="_blank" class="mt-2 block font-semibold text-cyan-300">Buka lampiran pilihan {{ $key }}</a>
                                     @endif
@@ -129,7 +130,7 @@
                                     <div class="grid grid-cols-[36px_1fr] items-start gap-2">
                                         <span class="mt-1 grid size-9 place-items-center rounded-lg bg-slate-900 text-xs font-semibold text-violet-300">{{ $option }}</span>
                                         <div class="space-y-2">
-                                            <input name="option_{{ strtolower($option) }}" value="{{ $question->options[$option] ?? '' }}" placeholder="Pilihan {{ $option }}" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-cyan-400">
+                                            <textarea name="option_{{ strtolower($option) }}" rows="2" placeholder="Pilihan {{ $option }}" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-cyan-400">{{ $question->options[$option] ?? '' }}</textarea>
                                             <input type="file" name="option_file_{{ strtolower($option) }}" accept="image/jpeg,image/png,image/webp,application/pdf" class="w-full rounded-lg border border-dashed border-white/10 bg-slate-950/50 px-3 py-2 text-xs text-slate-500">
                                             @if ($question->option_file_paths[$option] ?? null)<a href="{{ Storage::url($question->option_file_paths[$option]) }}" target="_blank" class="text-xs text-cyan-300">Lihat lampiran {{ $option }}</a>@endif
                                         </div>
@@ -173,7 +174,10 @@
         const syncQuestionType = () => {
             const enabled = questionType.value === 'multiple_choice';
             choiceFields.hidden = !enabled;
-            choiceFields.querySelectorAll('input, select').forEach(field => { field.required = enabled; field.disabled = !enabled; });
+            choiceFields.querySelectorAll('input, select, textarea').forEach((field) => {
+                field.required = enabled && field.type !== 'file';
+                field.disabled = !enabled;
+            });
             if (!pointsEdited) {
                 questionPoints.value = questionType.value === 'essay' ? '7' : (questionType.value === 'short_answer' ? '3' : '2');
             }
@@ -193,8 +197,8 @@
             const syncEditType = () => {
                 const enabled = type.value === 'multiple_choice';
                 fields.hidden = !enabled;
-                fields.querySelectorAll('input, select').forEach((field) => {
-                    field.required = enabled;
+                fields.querySelectorAll('input, select, textarea').forEach((field) => {
+                    field.required = enabled && field.type !== 'file';
                     field.disabled = !enabled;
                 });
             };

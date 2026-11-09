@@ -52,18 +52,18 @@
                     <article class="rounded-3xl border border-white/10 bg-white/[0.035] p-6">
                         <div class="flex gap-4"><span class="grid size-9 shrink-0 place-items-center rounded-xl bg-cyan-400/10 font-semibold text-cyan-300">{{ $loop->iteration }}</span>
                             <div class="min-w-0 flex-1">
-                                <div class="whitespace-pre-line leading-7 text-white">{{ $question->question_text }}</div>
+                                <div class="whitespace-pre-wrap leading-7 text-white">{{ $question->question_text }}</div>
                                 @if ($question->question_image_path)
                                     @php($questionFileIsImage = in_array(strtolower(pathinfo($question->question_image_path, PATHINFO_EXTENSION)), ['jpg','jpeg','png','webp'], true))
                                     @if($questionFileIsImage)<img src="{{ Storage::url($question->question_image_path) }}" alt="File soal" class="mt-4 max-h-80 rounded-2xl border border-white/10 bg-white object-contain p-2">@else<a href="{{ Storage::url($question->question_image_path) }}" target="_blank" class="mt-4 inline-flex text-sm font-semibold text-cyan-300">Buka file soal</a>@endif
                                 @endif
                                 <div class="mt-5 grid gap-3">
-                                    @foreach (($question->options ?? []) as $key => $option)
+                                    @foreach (collect($question->options)->sortKeys() as $key => $option)
                                         <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-slate-950/50 px-4 py-3 hover:border-cyan-400/30">
                                             <input type="radio" name="answers[{{ $question->id }}]" value="{{ $key }}"
                                                 data-save-url="{{ route('tryout.answer', [$trialExam, $attempt, $question]) }}"
                                                 @checked($answers->get($question->id)?->answer === $key) class="mt-1">
-                                            <span class="min-w-0"><strong class="mr-2 text-cyan-300">{{ $key }}.</strong>{{ $option }}
+                                            <span class="min-w-0"><strong class="mr-2 text-cyan-300">{{ $key }}.</strong><span class="whitespace-pre-wrap">{{ $option }}</span>
                                                 @if($question->option_file_paths[$key] ?? null)
                                                     @php($optionIsImage = in_array(strtolower(pathinfo($question->option_file_paths[$key], PATHINFO_EXTENSION)), ['jpg','jpeg','png','webp'], true))
                                                     @if($optionIsImage)<img src="{{ Storage::url($question->option_file_paths[$key]) }}" alt="Lampiran pilihan {{ $key }}" class="mt-3 max-h-64 max-w-full rounded-xl border border-white/10 bg-white object-contain p-2">@else<a href="{{ Storage::url($question->option_file_paths[$key]) }}" target="_blank" class="mt-2 block text-xs font-semibold text-cyan-300">Buka lampiran pilihan {{ $key }}</a>@endif
