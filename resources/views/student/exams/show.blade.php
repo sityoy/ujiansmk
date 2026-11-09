@@ -17,7 +17,7 @@
                     <p id="security-message" aria-live="polite" class="mt-4 text-sm leading-7 text-slate-300">Mode Galak memantau layar penuh, perpindahan aplikasi/tab, kehilangan fokus, bilah notifikasi, split screen, tombol terlarang, dan navigasi keluar. Kejadian pertama mendapat peringatan; kejadian kedua mengunci ujian untuk diperiksa pengawas. Waktu tetap berjalan.</p>
                     <p class="mt-3 text-xs leading-6 text-slate-400">Tutup gelembung aplikasi, aktifkan Jangan Ganggu, dan jangan menarik bilah sistem. Gangguan teknis tetap dapat diperiksa serta direset oleh panitia.</p>
                     @php($pgCount = $questions->filter(fn ($question) => $question->question_type->value === 'multiple_choice')->count())
-                    @if ($pgCount > 0)<p class="mt-3 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.06] p-3 text-sm text-cyan-100">Bobot PG: maksimal 70 poin. Setiap jawaban benar bernilai sekitar <strong>{{ number_format(70 / $pgCount, 4, ',', '.') }}</strong> poin dari {{ $pgCount }} soal.</p>@endif
+                    @if ($pgCount > 0)<p class="mt-3 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.06] p-3 text-sm text-cyan-100">Setiap jawaban PG benar bernilai tetap <strong>2 poin</strong>. Nilai PG maksimal 100.</p>@endif
                     <button id="security-continue" type="button" class="mt-6 w-full rounded-xl bg-cyan-400 px-5 py-3 font-semibold text-slate-950">Saya paham, masuk mode ujian</button>
                     <p id="security-network" aria-live="polite" class="mt-3 text-sm text-amber-300"></p>
                 </section>
@@ -63,7 +63,12 @@
                 <p class="text-xs font-semibold text-cyan-300">Soal {{ $loop->iteration }} dari {{ $questions->count() }}</p>
                 <p class="mt-3 whitespace-pre-line text-sm leading-7 text-white">{{ $question->question_text }}</p>
                 @if ($question->question_image_path)
-                    <img src="{{ Storage::url($question->question_image_path) }}" alt="Gambar soal {{ $loop->iteration }}" class="mt-4 max-h-[32rem] w-auto max-w-full rounded-xl border border-white/10 bg-white object-contain p-2">
+                    @php($questionFileIsImage = in_array(strtolower(pathinfo($question->question_image_path, PATHINFO_EXTENSION)), ['jpg','jpeg','png','webp'], true))
+                    @if($questionFileIsImage)
+                        <img src="{{ Storage::url($question->question_image_path) }}" alt="File soal {{ $loop->iteration }}" class="mt-4 max-h-[32rem] w-auto max-w-full rounded-xl border border-white/10 bg-white object-contain p-2">
+                    @else
+                        <a href="{{ Storage::url($question->question_image_path) }}" target="_blank" class="mt-4 inline-flex rounded-xl border border-cyan-400/30 px-4 py-2 text-sm font-semibold text-cyan-300">Buka file soal</a>
+                    @endif
                 @endif
                 @if ($question->question_type->value === 'multiple_choice')
                     <div class="mt-4 grid gap-2">
@@ -73,7 +78,12 @@
                                     data-save-url="{{ route('student.exams.answer', [$attempt, $question]) }}"
                                     @checked($answers->get($question->id)?->answer === $key)
                                     class="mt-1">
-                                <span><strong class="text-cyan-300">{{ $key }}.</strong> {{ $option }}</span>
+                                <span class="min-w-0"><strong class="text-cyan-300">{{ $key }}.</strong> {{ $option }}
+                                    @if($question->option_file_paths[$key] ?? null)
+                                        @php($optionIsImage = in_array(strtolower(pathinfo($question->option_file_paths[$key], PATHINFO_EXTENSION)), ['jpg','jpeg','png','webp'], true))
+                                        @if($optionIsImage)<img src="{{ Storage::url($question->option_file_paths[$key]) }}" alt="Lampiran pilihan {{ $key }}" class="mt-3 max-h-64 max-w-full rounded-xl border border-white/10 bg-white object-contain p-2">@else<a href="{{ Storage::url($question->option_file_paths[$key]) }}" target="_blank" class="mt-2 block text-xs font-semibold text-cyan-300">Buka lampiran pilihan {{ $key }}</a>@endif
+                                    @endif
+                                </span>
                             </label>
                         @endforeach
                     </div>
