@@ -174,12 +174,15 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             Route::post('/', [TrialExamController::class, 'store'])->name('store');
             Route::get('/cards/all', [TrialExamController::class, 'allCards'])->name('cards.all');
             Route::get('/{trialExam}/cards', [TrialExamController::class, 'cards'])->name('cards');
-            Route::get('/{trialExam}', [TrialExamController::class, 'show'])->name('participants');
             Route::post('/{trialExam}/attempts/{trialAttempt}/reset-violations', [TrialExamController::class, 'resetViolations'])
                 ->name('attempts.reset-violations');
             Route::patch('/{trialExam}/toggle', [TrialExamController::class, 'toggle'])->name('toggle');
             Route::delete('/{trialExam}', [TrialExamController::class, 'destroy'])->name('destroy');
         });
+
+    Route::get('/tryouts/{trialExam}', [TrialExamController::class, 'show'])
+        ->middleware('role:super_admin,committee,teacher,proctor,principal')
+        ->name('tryouts.participants');
 
     Route::prefix('trial-question-banks')
         ->middleware('role:super_admin,committee')
@@ -251,7 +254,7 @@ Route::middleware(['auth', 'active'])->group(function (): void {
         });
 
     Route::prefix('operations')
-        ->middleware('role:super_admin,committee,proctor')
+        ->middleware('role:super_admin,committee,proctor,teacher,principal')
         ->name('operations.')
         ->group(function (): void {
             Route::get('/', [ExamOperationsController::class, 'index'])->name('index');
