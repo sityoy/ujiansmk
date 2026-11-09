@@ -175,5 +175,46 @@
             </div>
         </main>
     </div>
+    <script>
+        (() => {
+            const key = 'school-exam-scroll-position';
+            const currentPath = window.location.pathname;
+            const save = () => {
+                try {
+                    sessionStorage.setItem(key, JSON.stringify({
+                        path: currentPath,
+                        y: window.scrollY,
+                        savedAt: Date.now(),
+                    }));
+                } catch (_) {
+                    // Penyimpanan browser dapat dinonaktifkan; navigasi tetap berjalan normal.
+                }
+            };
+
+            try {
+                const stored = JSON.parse(sessionStorage.getItem(key) || 'null');
+                sessionStorage.removeItem(key);
+                if (stored && stored.path === currentPath && Date.now() - stored.savedAt < 120000) {
+                    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+                    const restore = () => window.scrollTo({top: Number(stored.y) || 0, left: 0, behavior: 'auto'});
+                    requestAnimationFrame(() => requestAnimationFrame(restore));
+                    window.addEventListener('load', restore, {once: true});
+                }
+            } catch (_) {
+                try { sessionStorage.removeItem(key); } catch (_) {}
+            }
+
+            document.addEventListener('submit', save, true);
+            document.addEventListener('click', (event) => {
+                if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                const link = event.target.closest('a[href]');
+                if (!link || link.target === '_blank' || link.hasAttribute('download')) return;
+                try {
+                    const target = new URL(link.href, window.location.href);
+                    if (target.origin === window.location.origin && target.pathname === currentPath && !target.hash) save();
+                } catch (_) {}
+            }, true);
+        })();
+    </script>
 </body>
 </html>
