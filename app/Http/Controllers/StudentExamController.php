@@ -40,11 +40,15 @@ class StudentExamController extends Controller
         $student->loadMissing('schoolClass');
         $trialExams = TrialExam::query()
             ->with('questionBank.subject')
-            ->where('is_active', true)
             ->whereHas('questionBank', fn ($query) => $query
                 ->where('grade_level', $student->schoolClass->grade_level))
-            ->where(fn ($query) => $query->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
-            ->where(fn ($query) => $query->whereNull('ends_at')->orWhere('ends_at', '>=', now()))
+            ->where(function ($query) use ($student): void {
+                $query->where(function ($available): void {
+                    $available->where('is_active', true)
+                        ->where(fn ($window) => $window->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
+                        ->where(fn ($window) => $window->whereNull('ends_at')->orWhere('ends_at', '>=', now()));
+                })->orWhereHas('attempts', fn ($attempts) => $attempts->where('student_id', $student->id));
+            })
             ->orderBy('title')
             ->get();
         $trialAttempts = TrialAttempt::query()

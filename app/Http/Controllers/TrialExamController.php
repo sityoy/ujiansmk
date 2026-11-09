@@ -10,6 +10,7 @@ use App\Models\TrialExam;
 use App\Models\TrialQuestionBank;
 use App\Enums\UserRole;
 use App\Services\Exams\TrialExamSecurityService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -43,9 +44,7 @@ class TrialExamController extends Controller
     public function show(Request $request, TrialExam $trialExam): View
     {
         $trialExam->load(['questionBank.subject', 'assessmentSubject.assessmentPeriod.academicYear']);
-        if ($request->user()->role === UserRole::Teacher) {
-            abort_unless($trialExam->assessmentSubject->teacher_user_id === $request->user()->id, 403);
-        }
+        $this->authorizeMonitor($request, $trialExam);
 
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:100'],
@@ -117,6 +116,70 @@ class TrialExamController extends Controller
         return view('tryouts.participants', compact(
             'trialExam', 'participants', 'statistics', 'filters'
         ));
+    }
+
+
+    public function progress(Request $request, TrialExam $trialExam): JsonResponse
+    {
+        $trialExam->load(['questionBank.subject', 'assessmentSubject']);
+        $this->authorizeMonitor($request, $trialExam);
+        $validated = $request->validate([
+            'student_ids' => ['required', 'array', 'max:20'],
+            'student_ids.*' => ['integer'],
+        ]);
+
+        $students = Student::query()
+            ->where('is_active', true)
+            ->whereHas('schoolClass', fn ($query) => $query
+                ->where('grade_level', $trialExam->questionBank->grade_level)
+                ->whereHas('academicYear', fn ($year) => $year->where('is_active', true)))
+            ->get(['id', 'student_number', 'nisn']);
+        $attempts = $trialExam->attempts()
+            ->withCount('securityIncidents')
+            ->get();
+        $byStudent = $attempts->whereNotNull('student_id')->keyBy('student_id');
+        $byIdentifier = $attempts->whereNotNull('participant_identifier')->keyBy('participant_identifier');
+
+        $rows = $students->map(function (Student $student) use ($byStudent, $byIdentifier): array {
+            return [
+                'student' => $student,
+                'attempt' => $byStudent->get($student->id)
+                    ?? $byIdentifier->get($student->nisn)
+                    ?? $byIdentifier->get($student->student_number),
+            ];
+        });
+        $statistics = [
+            'total' => $rows->count(),
+            'not_started' => $rows->where('attempt', null)->count(),
+            'in_progress' => $rows->filter(fn (array $row): bool => $row['attempt']?->status === 'in_progress'
+                && ! $row['attempt']?->security_locked_at)->count(),
+            'locked' => $rows->filter(fn (array $row): bool => $row['attempt']?->status === 'in_progress'
+                && (bool) $row['attempt']?->security_locked_at)->count(),
+            'submitted' => $rows->filter(fn (array $row): bool => $row['attempt']?->status === 'submitted')->count(),
+        ];
+        $requested = collect($validated['student_ids'])->map(fn ($id): int => (int) $id);
+
+        $participants = $rows
+            ->filter(fn (array $row): bool => $requested->contains((int) $row['student']->id))
+            ->mapWithKeys(function (array $row): array {
+                $attempt = $row['attempt'];
+                $locked = $attempt?->status === 'in_progress' && (bool) $attempt?->security_locked_at;
+                $status = ! $attempt ? 'not_started' : ($locked ? 'locked' : $attempt->status);
+
+                return [(string) $row['student']->id => [
+                    'status' => $status,
+                    'started_at' => $attempt?->started_at?->format('d/m/Y H:i:s'),
+                    'submitted_at' => $attempt?->submitted_at?->format('d/m/Y H:i:s'),
+                    'violations' => $attempt?->violation_count,
+                    'incidents' => $attempt?->security_incidents_count,
+                ]];
+            });
+
+        return response()->json([
+            'statistics' => $statistics,
+            'participants' => $participants,
+            'updated_at' => now()->format('H:i:s'),
+        ])->header('Cache-Control', 'no-store');
     }
 
     public function cards(TrialExam $trialExam): View
@@ -295,5 +358,11 @@ class TrialExamController extends Controller
         $trialExam->delete();
 
         return back()->with('status', 'Ujian uji coba dihapus.');
+    }
+    private function authorizeMonitor(Request $request, TrialExam $trialExam): void
+    {
+        if ($request->user()->role === UserRole::Teacher) {
+            abort_unless($trialExam->assessmentSubject->teacher_user_id === $request->user()->id, 403);
+        }
     }
 }

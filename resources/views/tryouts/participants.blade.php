@@ -24,15 +24,15 @@
     </section>
 
     <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        @foreach ([['Total siswa', $statistics['total']], ['Belum login / belum ujian', $statistics['not_started']], ['Mengerjakan', $statistics['in_progress']], ['Terkunci', $statistics['locked']], ['Selesai', $statistics['submitted']]] as [$label, $value])
-            <div class="rounded-2xl border border-white/10 bg-white/[0.035] p-4"><p class="text-xs text-slate-400">{{ $label }}</p><p class="mt-2 text-2xl font-semibold text-cyan-300">{{ $value }}</p></div>
+        @foreach (['total' => ['Total siswa', $statistics['total']], 'not_started' => ['Belum login / belum ujian', $statistics['not_started']], 'in_progress' => ['Mengerjakan', $statistics['in_progress']], 'locked' => ['Terkunci', $statistics['locked']], 'submitted' => ['Selesai', $statistics['submitted']]] as $key => [$label, $value])
+            <div class="rounded-2xl border border-white/10 bg-white/[0.035] p-4"><p class="text-xs text-slate-400">{{ $label }}</p><p data-trial-stat="{{ $key }}" class="mt-2 text-2xl font-semibold text-cyan-300">{{ $value }}</p></div>
         @endforeach
     </div>
 
     <section class="mt-6 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035]">
         <div class="border-b border-white/10 p-5">
             <h2 class="text-lg font-semibold">Seluruh peserta sesuai tingkat kelas</h2>
-            <p class="mt-1 text-xs text-slate-500">Menampilkan siswa aktif, termasuk yang belum pernah membuka Ujian Uji Coba.</p>
+            <p class="mt-1 text-xs text-slate-500">Menampilkan siswa aktif, termasuk yang belum pernah membuka Ujian Uji Coba. Data diperbarui setiap 15 detik · pembaruan terakhir <span data-trial-updated>—</span>.</p>
             <form method="GET" class="mt-4 flex flex-wrap gap-3">
                 <input name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Cari nama, NIS, atau NISN" class="min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-950 px-4 py-2.5 text-sm">
                 <select name="status" class="rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
@@ -54,12 +54,12 @@
                             $locked = $attempt?->status === 'in_progress' && $attempt?->security_locked_at;
                             $status = !$attempt ? 'Belum login / belum ujian' : ($locked ? 'Terkunci' : ($attempt->status === 'submitted' ? 'Selesai' : 'Mengerjakan'));
                         @endphp
-                        <tr>
+                        <tr data-trial-student="{{ $student->id }}">
                             <td class="px-5 py-4"><p class="font-medium text-white">{{ $student->full_name }}</p><p class="mt-1 text-xs text-slate-500">NIS {{ $student->student_number }} · NISN {{ $student->nisn ?: '—' }}</p></td>
-                            <td class="whitespace-nowrap px-5 py-4 text-slate-400">{{ $attempt?->started_at?->format('d/m/Y H:i:s') ?? '—' }}</td>
-                            <td class="whitespace-nowrap px-5 py-4 text-slate-400">{{ $attempt?->submitted_at?->format('d/m/Y H:i:s') ?? '—' }}</td>
-                            <td class="px-5 py-4"><span class="rounded-full px-2.5 py-1 text-xs {{ !$attempt ? 'bg-slate-400/10 text-slate-300' : ($locked ? 'bg-rose-400/10 text-rose-200' : ($attempt->status === 'submitted' ? 'bg-emerald-400/10 text-emerald-200' : 'bg-amber-400/10 text-amber-200')) }}">{{ $status }}</span></td>
-                            <td class="px-5 py-4 text-slate-300">{{ $attempt ? $attempt->violation_count.'/2' : '—' }} @if($attempt)<span class="text-xs text-slate-500">({{ $attempt->security_incidents_count }} catatan)</span>@endif</td>
+                            <td data-trial-started class="whitespace-nowrap px-5 py-4 text-slate-400">{{ $attempt?->started_at?->format('d/m/Y H:i:s') ?? '—' }}</td>
+                            <td data-trial-submitted class="whitespace-nowrap px-5 py-4 text-slate-400">{{ $attempt?->submitted_at?->format('d/m/Y H:i:s') ?? '—' }}</td>
+                            <td class="px-5 py-4"><span data-trial-status class="rounded-full px-2.5 py-1 text-xs {{ !$attempt ? 'bg-slate-400/10 text-slate-300' : ($locked ? 'bg-rose-400/10 text-rose-200' : ($attempt->status === 'submitted' ? 'bg-emerald-400/10 text-emerald-200' : 'bg-amber-400/10 text-amber-200')) }}">{{ $status }}</span></td>
+                            <td data-trial-violations class="px-5 py-4 text-slate-300">{{ $attempt ? $attempt->violation_count.'/2' : '—' }} @if($attempt)<span class="text-xs text-slate-500">({{ $attempt->security_incidents_count }} catatan)</span>@endif</td>
                             <td class="min-w-64 px-5 py-4">
                                 @if ($attempt && $attempt->status === 'in_progress' && $attempt->violation_count > 0 && in_array(auth()->user()->role->value, ['super_admin','committee'], true))
                                     <details><summary class="cursor-pointer text-xs font-semibold text-rose-300">Reset pelanggaran</summary>
@@ -82,4 +82,64 @@
         </div>
         <div class="p-5"><p class="mb-3 text-xs text-slate-500">{{ $participants->total() }} peserta sesuai filter · 20 peserta per halaman.</p>{{ $participants->links() }}</div>
     </section>
+    @if ($participants->isNotEmpty())
+        <script>
+            (() => {
+                const rows = [...document.querySelectorAll('[data-trial-student]')];
+                const url = new URL(@json(route('tryouts.progress', $trialExam)), window.location.origin);
+                rows.forEach((row) => url.searchParams.append('student_ids[]', row.dataset.trialStudent));
+                const labels = {not_started: 'Belum login / belum ujian', in_progress: 'Mengerjakan', locked: 'Terkunci', submitted: 'Selesai'};
+                const styles = {
+                    not_started: 'bg-slate-400/10 text-slate-300',
+                    in_progress: 'bg-amber-400/10 text-amber-200',
+                    locked: 'bg-rose-400/10 text-rose-200',
+                    submitted: 'bg-emerald-400/10 text-emerald-200',
+                };
+                let loading = false;
+
+                const refresh = async () => {
+                    if (loading || document.hidden) return;
+                    loading = true;
+                    try {
+                        const response = await fetch(url, {headers: {'Accept': 'application/json'}});
+                        if (!response.ok) return;
+                        const data = await response.json();
+                        Object.entries(data.statistics ?? {}).forEach(([key, value]) => {
+                            const element = document.querySelector('[data-trial-stat="' + key + '"]');
+                            if (element) element.textContent = value;
+                        });
+                        rows.forEach((row) => {
+                            const participant = data.participants?.[row.dataset.trialStudent];
+                            if (!participant) return;
+                            const status = row.querySelector('[data-trial-status]');
+                            const started = row.querySelector('[data-trial-started]');
+                            const submitted = row.querySelector('[data-trial-submitted]');
+                            const violations = row.querySelector('[data-trial-violations]');
+                            if (status) {
+                                status.textContent = labels[participant.status] ?? 'Perlu pemeriksaan';
+                                status.className = 'rounded-full px-2.5 py-1 text-xs ' + (styles[participant.status] ?? styles.not_started);
+                            }
+                            if (started) started.textContent = participant.started_at ?? '—';
+                            if (submitted) submitted.textContent = participant.submitted_at ?? '—';
+                            if (violations) violations.textContent = participant.violations === null
+                                ? '—'
+                                : participant.violations + '/2 (' + participant.incidents + ' catatan)';
+                        });
+                        const updated = document.querySelector('[data-trial-updated]');
+                        if (updated) updated.textContent = data.updated_at;
+                    } catch (_) {
+                        // Koneksi sementara terputus; data terakhir dipertahankan.
+                    } finally {
+                        loading = false;
+                    }
+                };
+
+                const timer = setInterval(refresh, 15000);
+                document.addEventListener('visibilitychange', () => {
+                    if (!document.hidden) refresh();
+                });
+                window.addEventListener('beforeunload', () => clearInterval(timer), {once: true});
+            })();
+        </script>
+    @endif
 @endsection

@@ -180,6 +180,9 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             Route::delete('/{trialExam}', [TrialExamController::class, 'destroy'])->name('destroy');
         });
 
+    Route::get('/tryouts/{trialExam}/progress', [TrialExamController::class, 'progress'])
+        ->middleware('role:super_admin,committee,teacher,proctor,principal')
+        ->name('tryouts.progress');
     Route::get('/tryouts/{trialExam}', [TrialExamController::class, 'show'])
         ->middleware('role:super_admin,committee,teacher,proctor,principal')
         ->name('tryouts.participants');
