@@ -151,9 +151,11 @@ class TrialQuestionBankController extends Controller
         DB::transaction(function () use ($request, $trialQuestionBank, $validated): void {
             $this->assertEditable($trialQuestionBank);
             $position = (int) $trialQuestionBank->questions()->lockForUpdate()->max('position') + 1;
+            $optionFilePaths = $this->storeOptionFiles($request, 'trial-options');
             $trialQuestionBank->questions()->create([
                 ...$this->attributes($validated),
                 'question_image_path' => $request->file('question_image')?->store('trial-questions', 'public'),
+                'option_file_paths' => $optionFilePaths ?: null,
                 'position' => $position,
             ]);
         });
@@ -173,6 +175,12 @@ class TrialQuestionBankController extends Controller
         DB::transaction(function () use ($request, $trialQuestionBank, $question, $validated): void {
             $this->assertEditable($trialQuestionBank);
             $attributes = $this->attributes($validated);
+            $oldOptionPaths = $question->option_file_paths ?? [];
+            $attributes['option_file_paths'] = $this->mergeOptionFiles(
+                $request,
+                $oldOptionPaths,
+                'trial-options',
+            ) ?: null;
             if ($request->hasFile('question_image')) {
                 $oldImage = $question->question_image_path;
                 $attributes['question_image_path'] = $request->file('question_image')->store('trial-questions', 'public');
@@ -180,10 +188,12 @@ class TrialQuestionBankController extends Controller
                 if ($oldImage) {
                     Storage::disk('public')->delete($oldImage);
                 }
+                $this->deleteUnusedOptionFiles($oldOptionPaths);
 
                 return;
             }
             $question->update($attributes);
+            $this->deleteUnusedOptionFiles($oldOptionPaths);
         });
 
         return back()->with('status', 'Soal uji coba berhasil diperbarui.');
@@ -206,10 +216,12 @@ class TrialQuestionBankController extends Controller
             DB::transaction(function () use ($trialQuestionBank, $question): void {
                 $this->assertEditable($trialQuestionBank);
                 $imagePath = $question->question_image_path;
+                $optionPaths = $question->option_file_paths ?? [];
                 $question->delete();
                 if ($imagePath) {
                     Storage::disk('public')->delete($imagePath);
                 }
+                $this->deleteUnusedOptionFiles($optionPaths);
                 $trialQuestionBank->questions()->lockForUpdate()->get()
                     ->each(function (TrialQuestion $remaining, int $index): void {
                         if ((int) $remaining->position !== $index + 1) {
@@ -231,11 +243,14 @@ class TrialQuestionBankController extends Controller
             return back()->withErrors(['bank' => 'Bank soal sudah dipakai ujian uji coba dan tidak dapat dihapus.']);
         }
 
-        $paths = $trialQuestionBank->questions()->pluck('question_image_path')->filter();
+        $questions = $trialQuestionBank->questions()->get();
+        $paths = $questions->pluck('question_image_path')->filter();
+        $optionPaths = $questions->flatMap(fn (TrialQuestion $question) => $question->option_file_paths ?? [])->filter();
         $trialQuestionBank->delete();
         foreach ($paths as $path) {
             Storage::disk('public')->delete($path);
         }
+        $this->deleteUnusedOptionFiles($optionPaths->all());
 
         return back()->with('status', 'Bank soal uji coba berhasil dihapus.');
     }
@@ -250,8 +265,12 @@ class TrialQuestionBankController extends Controller
             'option_d' => ['required', 'string', 'max:2000'],
             'option_e' => ['required', 'string', 'max:2000'],
             'correct_answer' => ['required', Rule::in(['A', 'B', 'C', 'D', 'E'])],
-            'question_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
-            'points' => ['required', 'numeric', 'between:0.01,1000'],
+            'question_image' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
+            'option_file_a' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
+            'option_file_b' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
+            'option_file_c' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
+            'option_file_d' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
+            'option_file_e' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
         ]);
     }
 
@@ -267,8 +286,37 @@ class TrialQuestionBankController extends Controller
                 'E' => trim($validated['option_e']),
             ],
             'correct_answer' => $validated['correct_answer'],
-            'points' => $validated['points'],
+            'points' => \App\Services\Exams\ExamScoreCalculator::MULTIPLE_CHOICE_POINTS,
         ];
+    }
+
+    private function storeOptionFiles(Request $request, string $directory): array
+    {
+        $paths = [];
+        foreach (['A', 'B', 'C', 'D', 'E'] as $option) {
+            $file = $request->file('option_file_'.strtolower($option));
+            if ($file) {
+                $paths[$option] = $file->store($directory, 'public');
+            }
+        }
+
+        return $paths;
+    }
+
+    private function mergeOptionFiles(Request $request, array $existing, string $directory): array
+    {
+        return array_replace($existing, $this->storeOptionFiles($request, $directory));
+    }
+
+    private function deleteUnusedOptionFiles(array $paths): void
+    {
+        foreach (array_unique(array_filter($paths)) as $path) {
+            $inUse = TrialQuestion::query()->whereNotNull('option_file_paths')->get(['option_file_paths'])
+                ->contains(fn (TrialQuestion $question): bool => in_array($path, $question->option_file_paths ?? [], true));
+            if (! $inUse) {
+                Storage::disk('public')->delete($path);
+            }
+        }
     }
 
     private function authorizeBank(Request $request, TrialQuestionBank $bank): void
