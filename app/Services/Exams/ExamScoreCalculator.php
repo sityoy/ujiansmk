@@ -7,13 +7,11 @@ use Illuminate\Support\Collection;
 
 class ExamScoreCalculator
 {
-    public const MULTIPLE_CHOICE_MAX = 70.0;
-
-    public const MANUAL_MAX_WITH_MULTIPLE_CHOICE = 30.0;
+    public const MULTIPLE_CHOICE_POINTS = 2.0;
 
     public function multipleChoiceWeight(int $questionCount): float
     {
-        return $questionCount > 0 ? self::MULTIPLE_CHOICE_MAX / $questionCount : 0.0;
+        return $questionCount > 0 ? self::MULTIPLE_CHOICE_POINTS : 0.0;
     }
 
     public function multipleChoiceScore(int $correctAnswers, int $questionCount): float
@@ -22,36 +20,54 @@ class ExamScoreCalculator
             return 0.0;
         }
 
-        return round((max(0, min($correctAnswers, $questionCount)) / $questionCount) * self::MULTIPLE_CHOICE_MAX, 2);
+        $correct = max(0, min($correctAnswers, $questionCount));
+
+        return round(min(100, $correct * self::MULTIPLE_CHOICE_POINTS), 2);
     }
 
-    public function score(Collection $questions, Collection $answers): float
+    public function manualComponentScore(Collection $questions, Collection $answers): float
     {
-        $multipleChoice = $questions->filter(
-            fn ($question): bool => $question->question_type === ExamQuestionType::MultipleChoice,
-        );
         $manual = $questions->filter(
             fn ($question): bool => $question->question_type->requiresManualGrading(),
         );
-        $correct = $multipleChoice->filter(
-            fn ($question): bool => (bool) $answers->get($question->id)?->is_correct,
-        )->count();
-        $score = $this->multipleChoiceScore($correct, $multipleChoice->count());
-
-        if ($manual->isEmpty()) {
-            return $score;
+        $maximum = (float) $manual->sum(fn ($question): float => (float) $question->points);
+        if ($maximum <= 0) {
+            return 0.0;
         }
 
-        $maximum = (float) $manual->sum(fn ($question): float => (float) $question->points);
         $earned = (float) $manual->sum(function ($question) use ($answers): float {
             $awarded = (float) ($answers->get($question->id)?->points_awarded ?? 0);
 
             return max(0, min($awarded, (float) $question->points));
         });
-        $manualMaximum = $multipleChoice->isNotEmpty()
-            ? self::MANUAL_MAX_WITH_MULTIPLE_CHOICE
-            : 100.0;
 
-        return round(min(100, $score + ($maximum > 0 ? ($earned / $maximum) * $manualMaximum : 0)), 2);
+        return round(min(100, ($earned / $maximum) * 100), 2);
+    }
+
+    public function score(Collection $questions, Collection $answers, ?float $manualScore = null): float
+    {
+        $multipleChoice = $questions->filter(
+            fn ($question): bool => $question->question_type === ExamQuestionType::MultipleChoice,
+        );
+        $manualQuestions = $questions->filter(
+            fn ($question): bool => $question->question_type->requiresManualGrading(),
+        );
+        $correct = $multipleChoice->filter(
+            fn ($question): bool => (bool) $answers->get($question->id)?->is_correct,
+        )->count();
+        $pgScore = $this->multipleChoiceScore($correct, $multipleChoice->count());
+        $hasManual = $manualQuestions->isNotEmpty() || $manualScore !== null;
+        $manualComponent = $manualScore !== null
+            ? max(0, min(100, $manualScore))
+            : $this->manualComponentScore($questions, $answers);
+
+        if ($multipleChoice->isNotEmpty() && $hasManual) {
+            return round(min(100, ($pgScore + $manualComponent) / 2), 2);
+        }
+        if ($hasManual) {
+            return round(min(100, $manualComponent), 2);
+        }
+
+        return round(min(100, $pgScore), 2);
     }
 }
