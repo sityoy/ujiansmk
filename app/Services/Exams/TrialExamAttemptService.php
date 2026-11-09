@@ -70,7 +70,7 @@ class TrialExamAttemptService
             $questions = $attempt->trialExam->questionBank->questions()->orderBy('position')->get();
             $saved = $attempt->answers()->get()->keyBy('trial_question_id');
             $questionCount = $questions->count();
-            $questionWeight = app(ExamScoreCalculator::class)->multipleChoiceWeight($questionCount);
+            $questionWeight = ExamScoreCalculator::MULTIPLE_CHOICE_POINTS;
             $correctAnswers = 0;
 
             foreach ($questions as $question) {
