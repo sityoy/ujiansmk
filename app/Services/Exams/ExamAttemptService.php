@@ -23,6 +23,8 @@ use Illuminate\Validation\ValidationException;
 
 class ExamAttemptService
 {
+    public function __construct(private readonly CoreQuestionBank $questionBanks) {}
+
     public function start(
         ExamAssignment $assignment,
         DailyCheckin $checkin,
@@ -90,6 +92,7 @@ class ExamAttemptService
             throw ValidationException::withMessages(['attendance' => 'Absensi terverifikasi di lokasi ujian wajib dilakukan terlebih dahulu.']);
         }
 
+        $this->questionBanks->copyToNewAttempt($assignment->assessmentSubject);
         if ($assignment->assessmentSubject->questions->isEmpty()) {
             throw ValidationException::withMessages(['exam' => 'Soal belum tersedia. Hubungi panitia ujian.']);
         }

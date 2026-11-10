@@ -218,7 +218,7 @@
                             </select>
                             <button class="rounded-xl bg-violet-400 px-4 py-2.5 text-sm font-semibold text-slate-950">Simpan guru</button>
                         </form>
-                        <p class="mt-2 text-xs text-slate-500">Guru terpilih hanya dapat mengoreksi jawaban mapel dan kelas ini.</p>
+                        <p class="mt-2 text-xs text-slate-500">Guru terpilih mengelola soal dan mengoreksi jawaban mapel ini. Rombel setingkat dengan guru yang sama berbagi bank soal.</p>
                     </details>
 
                     <details class="mt-5 rounded-2xl border border-white/10 bg-slate-950/35 p-4">

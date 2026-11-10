@@ -7,10 +7,10 @@
 @section('content')
     <section class="rounded-3xl border border-violet-400/20 bg-violet-400/[0.045] p-6">
         <p class="text-xs font-semibold uppercase tracking-[0.18em] text-violet-300">Ruang Kerja Guru</p>
-        <h2 class="mt-2 text-2xl font-semibold text-white">Satu bank soal untuk setiap tingkat</h2>
+        <h2 class="mt-2 text-2xl font-semibold text-white">Bank soal per guru dan tingkat</h2>
         <p class="mt-2 max-w-4xl text-sm leading-6 text-slate-400">
             Guru hanya dapat membuka komponen yang ditugaskan kepadanya oleh Panitia/Super Admin.
-            Bank soal inti dipisahkan dari bank soal uji coba. Kelas 10, 11, dan 12 masing-masing memakai satu bank per mapel dan periode, sehingga tidak lagi menumpuk berdasarkan rombel X.1, X.2, atau XI.3. ATS tetap khusus isian singkat dan esai.
+            Rombel setingkat berbagi bank soal jika guru, mapel, dan periodenya sama. Rombel dengan guru berbeda punya bank masing-masing. ATS tetap khusus isian singkat dan esai.
         </p>
     </section>
 
@@ -43,6 +43,7 @@
                 <h3 class="mt-4 text-lg font-semibold text-white">{{ $component->subject->name }}</h3>
                 <p class="mt-1 text-sm text-slate-400">Kelas {{ $component->grade_level }} · {{ $component->assessmentPeriod->name }}</p>
                 <p class="mt-1 text-xs text-slate-500">{{ $component->assessmentPeriod->academicYear->name }} · Total bobot {{ number_format((float) ($component->questions_sum_points ?? 0), 2, ',', '.') }}</p>
+                <p class="mt-2 text-xs text-slate-400">Rombel {{ $component->rombel_names }}</p>
                 @if (auth()->user()->role->value !== 'teacher')
                     <p class="mt-3 text-xs text-slate-500">Guru: {{ $component->teacher?->name ?? 'belum ditetapkan' }}</p>
                 @endif

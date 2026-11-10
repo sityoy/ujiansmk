@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -38,6 +39,21 @@ class AssessmentSubject extends Model
     public function assignments(): HasMany
     {
         return $this->hasMany(ExamAssignment::class);
+    }
+
+    public function questionBankGroup(): Builder
+    {
+        $query = self::query();
+        if ($this->teacher_user_id === null) {
+            return $query->whereKey($this->id);
+        }
+
+        $this->loadMissing('schoolClass');
+
+        return $query->where('assessment_period_id', $this->assessment_period_id)
+            ->where('subject_id', $this->subject_id)
+            ->where('teacher_user_id', $this->teacher_user_id)
+            ->whereHas('schoolClass', fn ($classes) => $classes->where('grade_level', $this->schoolClass->grade_level));
     }
 
     public function questions(): HasMany

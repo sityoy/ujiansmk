@@ -52,11 +52,7 @@
                     <article class="rounded-3xl border border-white/10 bg-white/[0.035] p-6">
                         <div class="flex gap-4"><span class="grid size-9 shrink-0 place-items-center rounded-xl bg-cyan-400/10 font-semibold text-cyan-300">{{ $loop->iteration }}</span>
                             <div class="min-w-0 flex-1">
-                                <div class="whitespace-pre-wrap leading-7 text-white">{{ $question->question_text }}</div>
-                                @if ($question->question_image_path)
-                                    @php($questionFileIsImage = in_array(strtolower(pathinfo($question->question_image_path, PATHINFO_EXTENSION)), ['jpg','jpeg','png','webp'], true))
-                                    @if($questionFileIsImage)<img src="{{ Storage::url($question->question_image_path) }}" alt="File soal" class="mt-4 max-h-80 rounded-2xl border border-white/10 bg-white object-contain p-2">@else<a href="{{ Storage::url($question->question_image_path) }}" target="_blank" class="mt-4 inline-flex text-sm font-semibold text-cyan-300">Buka file soal</a>@endif
-                                @endif
+                                <x-question-prompt :question="$question" />
                                 <div class="mt-5 grid gap-3">
                                     @foreach (collect($question->options)->sortKeys() as $key => $option)
                                         <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-slate-950/50 px-4 py-3 hover:border-cyan-400/30">

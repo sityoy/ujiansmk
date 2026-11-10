@@ -8,6 +8,7 @@ use App\Enums\UserRole;
 use App\Models\AssessmentPeriod;
 use App\Models\AssessmentSubject;
 use App\Models\ExamQuestion;
+use App\Services\Exams\CoreQuestionBank;
 use App\Services\Exams\ExamScoreCalculator;
 use App\Services\Students\StudentSpreadsheetService;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
@@ -25,6 +26,8 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class QuestionBankController extends Controller
 {
+    public function __construct(private readonly CoreQuestionBank $banks) {}
+
     public function catalog(Request $request): View
     {
         $teacherId = $request->user()->role === UserRole::Teacher ? $request->user()->id : null;
@@ -55,11 +58,12 @@ class QuestionBankController extends Controller
                 $component->assessment_period_id,
                 $component->subject_id,
                 $component->schoolClass->grade_level,
+                $component->teacher_user_id ?? 'rombel-'.$component->id,
             ]))
             ->map(function ($components): AssessmentSubject {
                 $representative = $components->sortByDesc('questions_count')->first();
                 $representative->setAttribute('grade_level', $representative->schoolClass->grade_level);
-                $representative->setAttribute('rombel_count', $components->count());
+                $representative->setAttribute('rombel_names', $components->pluck('schoolClass.name')->sort(SORT_NATURAL)->join(', '));
 
                 return $representative;
             })
@@ -92,19 +96,18 @@ class QuestionBankController extends Controller
 
     public function index(Request $request, AssessmentSubject $assessmentSubject): View
     {
-        $siblings = $this->authorizeAccess($request, $assessmentSubject);
-        $assessmentSubject->load([
-            'assessmentPeriod.academicYear',
-            'subject',
-            'schoolClass',
-        ]);
+        $this->authorizeAccess($request, $assessmentSubject);
+        $rombelNames = $assessmentSubject->questionBankGroup()->with('schoolClass')->get()
+            ->pluck('schoolClass.name')->sort(SORT_NATURAL)->join(', ');
+        $assessmentSubject = $this->banks->readableComponent($assessmentSubject);
+        $assessmentSubject->load(['assessmentPeriod.academicYear', 'subject', 'schoolClass', 'teacher']);
         $questions = $assessmentSubject->questions()
             ->orderBy('position')
             ->paginate(20)
             ->withQueryString();
         $questionCount = $assessmentSubject->questions()->count();
         $totalPoints = (float) $assessmentSubject->questions()->sum('points');
-        $isLocked = $this->isLocked($siblings);
+        $isLocked = $assessmentSubject->questionBankGroup()->whereHas('assignments.attempt')->exists();
         $questionTypes = $assessmentSubject->assessmentPeriod->type === AssessmentType::ATS
             ? [ExamQuestionType::ShortAnswer, ExamQuestionType::Essay]
             : ExamQuestionType::cases();
@@ -112,7 +115,7 @@ class QuestionBankController extends Controller
 
         return view('questions.index', compact(
             'assessmentSubject', 'questions', 'questionCount', 'totalPoints',
-            'isLocked', 'questionTypes', 'gradeLevel'
+            'isLocked', 'questionTypes', 'gradeLevel', 'rombelNames'
         ));
     }
 
@@ -123,6 +126,7 @@ class QuestionBankController extends Controller
         ExamScoreCalculator $scores,
     ): BinaryFileResponse {
         $this->authorizeAccess($request, $assessmentSubject);
+        $assessmentSubject = $this->banks->readableComponent($assessmentSubject);
         $assessmentSubject->load(['assessmentPeriod.academicYear', 'subject', 'schoolClass']);
         $questions = $assessmentSubject->questions()
             ->where('question_type', ExamQuestionType::MultipleChoice->value)
@@ -140,10 +144,11 @@ class QuestionBankController extends Controller
             $question->correct_answer,
             number_format($weight, 4, '.', ''),
             $question->question_image_path ? Storage::url($question->question_image_path) : '',
+            $question->statement ?? '',
         ])->all();
 
         $path = $spreadsheet->createWorkbook(
-            ['No', 'Pertanyaan', 'Pilihan A', 'Pilihan B', 'Pilihan C', 'Pilihan D', 'Pilihan E', 'Kunci', 'Bobot PG', 'Gambar'],
+            ['No', 'Pertanyaan', 'Pilihan A', 'Pilihan B', 'Pilihan C', 'Pilihan D', 'Pilihan E', 'Kunci', 'Bobot PG', 'Gambar', 'Pernyataan'],
             $rows,
             'PG Ujian Inti',
         );
@@ -158,11 +163,13 @@ class QuestionBankController extends Controller
 
     public function store(Request $request, AssessmentSubject $assessmentSubject): RedirectResponse
     {
-        $siblings = $this->authorizeAccess($request, $assessmentSubject);
+        $this->authorizeAccess($request, $assessmentSubject);
         $validated = $this->validateQuestion($request, $assessmentSubject);
 
-        DB::transaction(function () use ($request, $siblings, $validated): void {
+        DB::transaction(function () use ($request, $assessmentSubject, $validated): void {
+            $siblings = $this->lockedGroup($request, $assessmentSubject);
             $this->assertEditable($siblings);
+            $this->banks->synchronize($siblings);
             $imagePath = $request->file('question_image')?->store('exam-questions', 'public');
             $optionFilePaths = $this->storeOptionFiles($request, 'exam-options');
             $position = (int) ExamQuestion::query()
@@ -180,7 +187,7 @@ class QuestionBankController extends Controller
             }
         });
 
-        return back()->with('status', 'Soal berhasil ditambahkan untuk seluruh rombel pada tingkat ini.');
+        return back()->with('status', 'Soal berhasil ditambahkan ke bank soal ini.');
     }
 
     public function update(
@@ -188,14 +195,17 @@ class QuestionBankController extends Controller
         AssessmentSubject $assessmentSubject,
         ExamQuestion $question,
     ): RedirectResponse {
-        $siblings = $this->authorizeAccess($request, $assessmentSubject);
+        $this->authorizeAccess($request, $assessmentSubject);
         if ($question->assessment_subject_id !== $assessmentSubject->id) {
             abort(404);
         }
         $validated = $this->validateQuestion($request, $assessmentSubject);
 
-        DB::transaction(function () use ($request, $siblings, $question, $validated): void {
+        DB::transaction(function () use ($request, $assessmentSubject, $question, $validated): void {
+            $siblings = $this->lockedGroup($request, $assessmentSubject);
             $this->assertEditable($siblings);
+            $question = $assessmentSubject->questions()->findOrFail($question->id);
+            $this->banks->synchronize($siblings);
             $attributes = $this->questionAttributes($validated);
             $oldOptionPaths = collect($question->option_file_paths ?? [])->filter()->values()->all();
             $attributes['option_file_paths'] = $validated['question_type'] === ExamQuestionType::MultipleChoice->value
@@ -240,28 +250,31 @@ class QuestionBankController extends Controller
             $this->deleteUnusedOptionFiles($oldOptionPaths);
         });
 
-        return back()->with('status', 'Soal berhasil diperbarui untuk seluruh rombel pada tingkat ini.');
+        return back()->with('status', 'Soal berhasil diperbarui di bank soal ini.');
     }
 
     public function destroy(Request $request, AssessmentSubject $assessmentSubject, ExamQuestion $question): RedirectResponse
     {
-        $siblings = $this->authorizeAccess($request, $assessmentSubject);
+        $this->authorizeAccess($request, $assessmentSubject);
         if ($question->assessment_subject_id !== $assessmentSubject->id) {
             abort(404);
         }
 
-        $matching = ExamQuestion::query()
-            ->whereIn('assessment_subject_id', $siblings->modelKeys())
-            ->where('position', $question->position);
-        if ((clone $matching)->whereHas('answers')->exists()) {
-            throw ValidationException::withMessages([
-                'question' => 'Soal tidak dapat dihapus karena sudah memiliki jawaban siswa.',
-            ]);
-        }
-
         try {
-            DB::transaction(function () use ($siblings, $matching): void {
+            DB::transaction(function () use ($request, $assessmentSubject, $question): void {
+                $siblings = $this->lockedGroup($request, $assessmentSubject);
+                $question = $assessmentSubject->questions()->findOrFail($question->id);
+                $matching = ExamQuestion::query()
+                    ->whereIn('assessment_subject_id', $siblings->modelKeys())
+                    ->where('position', $question->position);
+                if ((clone $matching)->whereHas('answers')->exists()) {
+                    throw ValidationException::withMessages([
+                        'question' => 'Soal tidak dapat dihapus karena sudah memiliki jawaban siswa.',
+                    ]);
+                }
+
                 $this->assertEditable($siblings);
+                $this->banks->synchronize($siblings);
                 $matchedQuestions = (clone $matching)->get();
                 $imagePaths = $matchedQuestions->pluck('question_image_path')->filter()->unique();
                 $optionPaths = $matchedQuestions->flatMap(fn (ExamQuestion $item) => $item->option_file_paths ?? [])->filter()->unique();
@@ -302,16 +315,9 @@ class QuestionBankController extends Controller
             ->exists();
         if ($locked) {
             throw ValidationException::withMessages([
-                'question' => 'Bank soal terkunci karena sudah ada siswa pada tingkat ini yang mulai ujian.',
+                'question' => 'Bank soal terkunci karena sudah ada siswa pada rombel yang memakai bank ini yang mulai ujian.',
             ]);
         }
-    }
-
-    private function isLocked(EloquentCollection $siblings): bool
-    {
-        return AssessmentSubject::query()->whereKey($siblings->modelKeys())
-            ->whereHas('assignments.attempt')
-            ->exists();
     }
 
     private function validateQuestion(Request $request, AssessmentSubject $component): array
@@ -324,6 +330,7 @@ class QuestionBankController extends Controller
         return $request->validate([
             'question_type' => ['required', Rule::in($allowedTypes)],
             'question_text' => ['required', 'string', 'max:5000'],
+            'statement' => ['exclude_unless:question_type,multiple_choice', 'nullable', 'string', 'max:5000'],
             'option_a' => ['required_if:question_type,multiple_choice', 'nullable', 'string', 'max:2000'],
             'option_b' => ['required_if:question_type,multiple_choice', 'nullable', 'string', 'max:2000'],
             'option_c' => ['required_if:question_type,multiple_choice', 'nullable', 'string', 'max:2000'],
@@ -346,6 +353,7 @@ class QuestionBankController extends Controller
 
         return [
             'question_text' => trim($validated['question_text']),
+            'statement' => $validated['statement'] ?? null,
             'question_type' => $validated['question_type'],
             'options' => $isMultipleChoice ? [
                 'A' => trim($validated['option_a']),
@@ -393,26 +401,19 @@ class QuestionBankController extends Controller
         }
     }
 
-    private function authorizeAccess(Request $request, AssessmentSubject $component): EloquentCollection
+    private function authorizeAccess(Request $request, AssessmentSubject $component): void
     {
-        $siblings = $this->siblings($component);
         if ($request->user()->role === UserRole::Teacher) {
-            abort_unless($siblings->contains('teacher_user_id', $request->user()->id), 403);
+            abort_unless($component->teacher_user_id === $request->user()->id, 403);
         }
-
-        return $siblings;
     }
 
-    private function siblings(AssessmentSubject $component): EloquentCollection
+    private function lockedGroup(Request $request, AssessmentSubject $component): EloquentCollection
     {
-        $component->loadMissing('schoolClass');
+        AssessmentPeriod::query()->lockForUpdate()->findOrFail($component->assessment_period_id);
+        $current = AssessmentSubject::query()->lockForUpdate()->findOrFail($component->id);
+        $this->authorizeAccess($request, $current);
 
-        return AssessmentSubject::query()
-            ->where('assessment_period_id', $component->assessment_period_id)
-            ->where('subject_id', $component->subject_id)
-            ->whereHas('schoolClass', fn ($query) => $query
-                ->where('grade_level', $component->schoolClass->grade_level))
-            ->get();
+        return $current->questionBankGroup()->orderBy('id')->lockForUpdate()->get();
     }
 }
-

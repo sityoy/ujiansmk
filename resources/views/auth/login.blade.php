@@ -84,9 +84,9 @@
 
                     <div>
                         <label for="password" class="mb-2 block text-sm font-medium text-slate-200">Kata sandi</label>
-                        <input id="password" name="password" type="password" autocomplete="current-password" required
+                        <x-password-input id="password" name="password" autocomplete="current-password" required
                             placeholder="Masukkan kata sandi"
-                            class="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400/70 focus:ring-4 focus:ring-cyan-400/10">
+                            class="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400/70 focus:ring-4 focus:ring-cyan-400/10" />
                     </div>
 
                     <label class="flex items-center gap-3 text-sm text-slate-400">

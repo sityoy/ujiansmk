@@ -141,7 +141,9 @@ class TrialExamFlowTest extends TestCase
     {
         [$trial] = $this->makeTrial();
         $bank = $trial->questionBank;
-        $secondQuestionText = "Perhatikan pernyataan berikut.\n(1) Pernyataan pertama\n(2) Pernyataan kedua\n(3) Pernyataan ketiga";
+        $statement = "Perhatikan pernyataan berikut.\n(1) Pernyataan pertama\n(2) Pernyataan kedua\n(3) Pernyataan ketiga";
+        $questionText = 'Pilih kombinasi yang tepat.';
+        $attachment = 'trial-questions/diagram.png';
         $optionA = "(1) Jawaban pertama\n(2) Jawaban kedua";
         $bank->questions()->create([
             'question_text' => 'Soal posisi ketiga',
@@ -151,7 +153,9 @@ class TrialExamFlowTest extends TestCase
             'position' => 3,
         ]);
         $bank->questions()->create([
-            'question_text' => $secondQuestionText,
+            'statement' => $statement,
+            'question_image_path' => $attachment,
+            'question_text' => $questionText,
             'options' => ['B' => 'Pilihan setelah A', 'A' => $optionA],
             'correct_answer' => 'A',
             'points' => 2,
@@ -160,7 +164,9 @@ class TrialExamFlowTest extends TestCase
         $student = Student::query()->where('nisn', '1234567890')->firstOrFail();
         $show = [
             'Proklamasi Indonesia terjadi pada?',
-            $secondQuestionText,
+            $statement,
+            $attachment,
+            $questionText,
             $optionA,
             'Pilihan setelah A',
             'Soal posisi ketiga',

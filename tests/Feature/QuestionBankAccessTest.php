@@ -97,6 +97,7 @@ class QuestionBankAccessTest extends TestCase
         $this->actingAs($teacher)
             ->post(route('scheduling.questions.store', $assigned), [
                 'question_type' => ExamQuestionType::MultipleChoice->value,
+                'statement' => "(1) Contoh pernyataan pertama.\n(2) Contoh pernyataan kedua.",
                 'question_text' => 'Pilih jawaban yang benar.',
                 'option_a' => 'Pilihan A',
                 'option_b' => 'Pilihan B',
@@ -111,6 +112,7 @@ class QuestionBankAccessTest extends TestCase
             ->assertSessionHasNoErrors();
 
         $question = $assigned->questions()->firstOrFail();
+        $this->assertSame("(1) Contoh pernyataan pertama.\n(2) Contoh pernyataan kedua.", $question->statement);
         $this->assertSame('Pilihan E', $question->options['E']);
         $this->assertSame('E', $question->correct_answer);
         $this->assertNotNull($question->question_image_path);
@@ -122,8 +124,8 @@ class QuestionBankAccessTest extends TestCase
         $this->actingAs($teacher)
             ->get(route('scheduling.questions.index', $assigned))
             ->assertOk()
-            ->assertSee('Pilihan E')
-            ->assertSee('Soal Bahasa Arab');
+            ->assertSee('Soal Bahasa Arab')
+            ->assertSeeInOrder([$question->statement, Storage::url($question->question_image_path), $question->question_text, 'Pilihan E']);
     }
 
     public function test_committee_can_oversee_all_question_banks(): void
@@ -181,42 +183,82 @@ class QuestionBankAccessTest extends TestCase
         );
     }
 
-    public function test_core_question_bank_is_grouped_and_synchronized_by_grade_level(): void
+    public function test_core_question_bank_is_shared_only_with_classes_of_the_same_teacher(): void
     {
         $this->withoutVite();
-        [$teacher, , $assigned] = $this->makeComponents();
+        [$teacher, $otherTeacher, $assigned] = $this->makeComponents();
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $base = [
+            'assessment_period_id' => $assigned->assessment_period_id,
+            'subject_id' => $assigned->subject_id,
+        ];
+        $otherClass = SchoolClass::create([
+            'academic_year_id' => $assigned->schoolClass->academic_year_id,
+            'name' => 'X-3',
+            'grade_level' => 10,
+        ]);
+        $other = AssessmentSubject::create([
+            ...$base,
+            'school_class_id' => $otherClass->id,
+            'teacher_user_id' => $otherTeacher->id,
+        ]);
+
+        $this->actingAs($otherTeacher)->post(route('scheduling.questions.store', $other), [
+            'question_type' => ExamQuestionType::ShortAnswer->value,
+            'question_text' => 'Soal khusus X-3.',
+            'points' => 3,
+        ])->assertSessionHasNoErrors();
+
+        $this->actingAs($teacher)->post(route('scheduling.questions.store', $assigned), [
+            'question_type' => ExamQuestionType::ShortAnswer->value,
+            'question_text' => 'Soal bersama X-1 dan X-2.',
+            'points' => 3,
+        ])->assertSessionHasNoErrors();
+
         $secondClass = SchoolClass::create([
             'academic_year_id' => $assigned->schoolClass->academic_year_id,
             'name' => 'X-2',
             'grade_level' => 10,
         ]);
-        $sibling = AssessmentSubject::create([
-            'assessment_period_id' => $assigned->assessment_period_id,
-            'subject_id' => $assigned->subject_id,
+        $this->actingAs($committee)->post(route('scheduling.components.store'), [
+            ...$base,
             'school_class_id' => $secondClass->id,
             'teacher_user_id' => $teacher->id,
-        ]);
+        ])->assertSessionHasNoErrors();
+        $sibling = AssessmentSubject::query()->where('school_class_id', $secondClass->id)->firstOrFail();
+        $this->assertSame('Soal bersama X-1 dan X-2.', $sibling->questions()->firstOrFail()->question_text);
 
-        $this->actingAs($teacher)
-            ->post(route('scheduling.questions.store', $assigned), [
-                'question_type' => ExamQuestionType::ShortAnswer->value,
-                'question_text' => 'Soal bersama Kelas 10.',
-                'points' => 3,
-            ])->assertRedirect()->assertSessionHasNoErrors();
-
-        $this->assertDatabaseHas('exam_questions', [
-            'assessment_subject_id' => $assigned->id,
-            'question_text' => 'Soal bersama Kelas 10.',
-        ]);
-        $this->assertDatabaseHas('exam_questions', [
-            'assessment_subject_id' => $sibling->id,
-            'question_text' => 'Soal bersama Kelas 10.',
-        ]);
         $this->get(route('question-bank.index'))
             ->assertOk()
-            ->assertSee('Kelas 10')
-            ->assertDontSee('X-1')
-            ->assertDontSee('X-2');
+            ->assertSee('Rombel X-1, X-2')
+            ->assertSee('Rombel X-3');
+        $this->patch(route('scheduling.components.teacher', $other), [
+            'teacher_user_id' => $teacher->id,
+        ])->assertSessionHasErrors('component');
+        $this->assertSame($otherTeacher->id, $other->fresh()->teacher_user_id);
+
+        $otherQuestion = $other->questions()->firstOrFail();
+        $this->actingAs($teacher)->get(route('question-bank.index'))
+            ->assertOk()->assertSee('Rombel X-1, X-2')->assertDontSee('Rombel X-3');
+        $this->get(route('scheduling.questions.index', $other))->assertForbidden();
+        $this->get(route('scheduling.questions.export', $other))->assertForbidden();
+        $this->delete(route('scheduling.questions.destroy', [$other, $otherQuestion]))->assertForbidden();
+
+        $question = $sibling->questions()->firstOrFail();
+        $this->put(route('scheduling.questions.update', [$sibling, $question]), [
+            'question_type' => ExamQuestionType::ShortAnswer->value,
+            'question_text' => 'Soal revisi guru yang sama.',
+            'statement' => 'Khusus PG.',
+            'points' => 3,
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('Soal revisi guru yang sama.', $assigned->questions()->firstOrFail()->question_text);
+        $this->assertNull($question->fresh()->statement);
+        $this->assertSame('Soal khusus X-3.', $otherQuestion->fresh()->question_text);
+
+        $this->delete(route('scheduling.questions.destroy', [$sibling, $question]))->assertSessionHasNoErrors();
+        $this->assertFalse($assigned->questions()->exists());
+        $this->assertFalse($sibling->questions()->exists());
+        $this->assertTrue($other->questions()->exists());
     }
 
     /** @return array{User, User, AssessmentSubject, AssessmentSubject} */

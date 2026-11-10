@@ -29,10 +29,10 @@
                         <option value="{{ $role->value }}" @selected(old('role') === $role->value)>{{ $role->label() }}</option>
                     @endforeach
                 </select>
-                <input type="password" name="password" required placeholder="Password awal"
-                    class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-cyan-400">
-                <input type="password" name="password_confirmation" required placeholder="Ulangi password"
-                    class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-cyan-400">
+                <x-password-input name="password" required autocomplete="new-password" placeholder="Password awal" aria-label="Password awal"
+                    class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-cyan-400" />
+                <x-password-input name="password_confirmation" required autocomplete="new-password" placeholder="Ulangi password" aria-label="Ulangi password"
+                    class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-cyan-400" />
                 <p class="text-xs leading-5 text-slate-500">Minimal 10 karakter, berisi huruf besar, huruf kecil, dan angka. Pengguna wajib menggantinya saat login pertama.</p>
                 <button class="w-full rounded-xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950">Buat akun</button>
             </form>
@@ -112,10 +112,10 @@
                         <option value="{{ $role->value }}" @selected(old('role', $editingUser->role->value) === $role->value)>{{ $role->label() }}</option>
                     @endforeach
                 </select>
-                <input type="password" name="password" placeholder="Password baru (opsional)"
-                    class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-amber-400">
-                <input type="password" name="password_confirmation" placeholder="Ulangi password baru"
-                    class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-amber-400">
+                <x-password-input name="password" autocomplete="new-password" placeholder="Password baru (opsional)" aria-label="Password baru (opsional)"
+                    class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-amber-400" />
+                <x-password-input name="password_confirmation" autocomplete="new-password" placeholder="Ulangi password baru" aria-label="Ulangi password baru"
+                    class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-amber-400" />
                 <label class="flex items-center gap-3 rounded-xl border border-white/10 px-4 py-3 text-sm text-slate-300">
                     <input type="hidden" name="is_active" value="0">
                     <input type="checkbox" name="is_active" value="1" @checked(old('is_active', $editingUser->is_active))>

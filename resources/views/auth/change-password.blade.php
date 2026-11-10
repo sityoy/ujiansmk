@@ -28,21 +28,21 @@
             <form method="POST" action="{{ route('password.update') }}" class="mt-7 space-y-4">
                 @csrf
                 @method('PUT')
-                <label class="block">
-                    <span class="mb-2 block text-sm text-slate-300">Password awal/saat ini</span>
-                    <input type="password" name="current_password" required autocomplete="current-password"
-                        class="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 outline-none focus:border-cyan-400">
-                </label>
-                <label class="block">
-                    <span class="mb-2 block text-sm text-slate-300">Password baru</span>
-                    <input type="password" name="password" required autocomplete="new-password"
-                        class="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 outline-none focus:border-cyan-400">
-                </label>
-                <label class="block">
-                    <span class="mb-2 block text-sm text-slate-300">Ulangi password baru</span>
-                    <input type="password" name="password_confirmation" required autocomplete="new-password"
-                        class="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 outline-none focus:border-cyan-400">
-                </label>
+                <div>
+                    <label for="current_password" class="mb-2 block text-sm text-slate-300">Password awal/saat ini</label>
+                    <x-password-input id="current_password" name="current_password" required autocomplete="current-password"
+                        class="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 outline-none focus:border-cyan-400" />
+                </div>
+                <div>
+                    <label for="password" class="mb-2 block text-sm text-slate-300">Password baru</label>
+                    <x-password-input id="password" name="password" required autocomplete="new-password"
+                        class="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 outline-none focus:border-cyan-400" />
+                </div>
+                <div>
+                    <label for="password_confirmation" class="mb-2 block text-sm text-slate-300">Ulangi password baru</label>
+                    <x-password-input id="password_confirmation" name="password_confirmation" required autocomplete="new-password"
+                        class="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 outline-none focus:border-cyan-400" />
+                </div>
                 <p class="text-xs leading-5 text-slate-500">Minimal 8 karakter serta mengandung huruf dan angka.</p>
                 <button class="w-full rounded-xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950">Simpan password baru</button>
             </form>

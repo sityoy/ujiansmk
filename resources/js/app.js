@@ -119,3 +119,17 @@ if (document.readyState === 'loading') {
 } else {
     initializeSidebar();
 }
+
+document.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-password-toggle]');
+    if (!button) return;
+
+    const input = button.closest('[data-password-field]').querySelector('input');
+    const visible = input.type === 'password';
+    input.type = visible ? 'text' : 'password';
+    button.querySelector('[data-password-show]').toggleAttribute('hidden', visible);
+    button.querySelector('[data-password-hide]').toggleAttribute('hidden', !visible);
+    const label = visible ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi';
+    button.setAttribute('aria-label', label);
+    button.title = label;
+});

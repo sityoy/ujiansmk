@@ -127,10 +127,11 @@ class TrialQuestionBankController extends Controller
             $question->correct_answer,
             number_format($weight, 4, '.', ''),
             $question->question_image_path ? Storage::url($question->question_image_path) : '',
+            $question->statement ?? '',
         ])->all();
 
         $path = $spreadsheet->createWorkbook(
-            ['No', 'Pertanyaan', 'Pilihan A', 'Pilihan B', 'Pilihan C', 'Pilihan D', 'Pilihan E', 'Kunci', 'Bobot PG', 'Gambar'],
+            ['No', 'Pertanyaan', 'Pilihan A', 'Pilihan B', 'Pilihan C', 'Pilihan D', 'Pilihan E', 'Kunci', 'Bobot PG', 'Gambar', 'Pernyataan'],
             $rows,
             'PG Uji Coba',
         );
@@ -259,6 +260,7 @@ class TrialQuestionBankController extends Controller
     {
         return $request->validate([
             'question_text' => ['required', 'string', 'max:5000'],
+            'statement' => ['nullable', 'string', 'max:5000'],
             'option_a' => ['required', 'string', 'max:2000'],
             'option_b' => ['required', 'string', 'max:2000'],
             'option_c' => ['required', 'string', 'max:2000'],
@@ -278,6 +280,7 @@ class TrialQuestionBankController extends Controller
     {
         return [
             'question_text' => trim($validated['question_text']),
+            'statement' => $validated['statement'] ?? null,
             'options' => [
                 'A' => trim($validated['option_a']),
                 'B' => trim($validated['option_b']),

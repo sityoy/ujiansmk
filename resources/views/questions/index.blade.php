@@ -14,7 +14,7 @@
         <p class="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-violet-300">{{ $assessmentSubject->assessmentPeriod->name }}</p>
         <h2 class="mt-2 text-2xl font-semibold text-white">{{ $assessmentSubject->subject->name }} · Kelas {{ $gradeLevel }}</h2>
         <p class="mt-2 text-sm text-slate-400">{{ $assessmentSubject->assessmentPeriod->academicYear->name }} · {{ $questionCount }} soal · Total bobot {{ number_format($totalPoints, 2, ',', '.') }}</p>
-        <p class="mt-2 text-xs text-cyan-200">Perubahan di sini otomatis berlaku untuk seluruh rombel Kelas {{ $gradeLevel }} pada mapel dan periode yang sama.</p>
+        <p class="mt-2 text-xs text-cyan-200">Rombel {{ $rombelNames }} · Guru {{ $assessmentSubject->teacher?->name ?? "belum ditetapkan" }}</p>
         <div class="mt-4"><a href="{{ route('scheduling.questions.export', $assessmentSubject) }}" class="inline-flex rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-2.5 text-sm font-semibold text-emerald-200">Ekspor PG ke Excel</a></div>
     </section>
 
@@ -36,13 +36,7 @@
                         <option value="{{ $type->value }}" @selected(old('question_type') === $type->value)>{{ $type->label() }}</option>
                     @endforeach
                 </select>
-                <textarea name="question_text" rows="5" required placeholder="Tuliskan pertanyaan..." class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-violet-400">{{ old('question_text') }}</textarea>
-                <p class="text-xs text-slate-400">Untuk daftar (1), (2), (3), ketik setiap butir pada baris terpisah.</p>
-                <div>
-                    <label class="mb-2 block text-xs font-medium text-slate-400">File soal (opsional)</label>
-                    <input type="file" name="question_image" accept="image/jpeg,image/png,image/webp,application/pdf" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-400 file:px-3 file:py-2 file:font-semibold file:text-slate-950">
-                    <p class="mt-2 text-xs leading-5 text-amber-200">Untuk soal Bahasa Arab, disarankan menggunakan gambar agar bentuk huruf, harakat, dan tata letak tetap akurat. Format JPG, PNG, WebP, atau PDF; maksimal 5 MB.</p>
-                </div>
+                <x-question-prompt-fields :multiple-choice="old('question_type', $questionTypes[0]->value) === 'multiple_choice'" />
                 <div id="multiple-choice-fields" class="space-y-3">
                     @foreach (['A', 'B', 'C', 'D', 'E'] as $option)
                         <div class="grid grid-cols-[36px_1fr] items-start gap-2">
@@ -75,15 +69,7 @@
                     <div class="flex items-start justify-between gap-4">
                         <div>
                             <p class="text-xs font-semibold text-violet-300">Soal {{ $question->position }} · {{ $question->question_type->label() }} · {{ number_format((float) $question->points, 2, ',', '.') }} poin</p>
-                            <p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-white">{{ $question->question_text }}</p>
-                            @if ($question->question_image_path)
-                                @php($questionFileIsImage = in_array(strtolower(pathinfo($question->question_image_path, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'webp'], true))
-                                @if ($questionFileIsImage)
-                                    <img src="{{ Storage::url($question->question_image_path) }}" alt="File soal {{ $question->position }}" loading="lazy" class="mt-4 max-h-96 w-auto max-w-full rounded-xl border border-white/10 bg-white object-contain p-2">
-                                @else
-                                    <a href="{{ Storage::url($question->question_image_path) }}" target="_blank" class="mt-4 inline-flex rounded-xl border border-cyan-400/30 px-3 py-2 text-xs font-semibold text-cyan-300">Buka file soal</a>
-                                @endif
-                            @endif
+                            <x-question-prompt :question="$question" :multiple-choice="$question->question_type->value === 'multiple_choice'" class="mt-2" />
                         </div>
                         <div class="flex shrink-0 items-center gap-3">
                             @unless ($isLocked)
@@ -119,12 +105,7 @@
                                     <option value="{{ $type->value }}" @selected($question->question_type === $type)>{{ $type->label() }}</option>
                                 @endforeach
                             </select>
-                            <textarea name="question_text" rows="4" required class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-cyan-400">{{ $question->question_text }}</textarea>
-                            <div>
-                                <label class="mb-2 block text-xs font-medium text-slate-400">Ganti file soal (opsional)</label>
-                                <input type="file" name="question_image" accept="image/jpeg,image/png,image/webp,application/pdf" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-400 file:px-3 file:py-2 file:font-semibold file:text-slate-950">
-                                <p class="mt-2 text-xs text-slate-500">Kosongkan jika file lama tetap digunakan. Soal Bahasa Arab disarankan memakai gambar.</p>
-                            </div>
+                            <x-question-prompt-fields :question="$question" :multiple-choice="$question->question_type->value === 'multiple_choice'" />
                             <div class="edit-choice-fields space-y-3">
                                 @foreach (['A', 'B', 'C', 'D', 'E'] as $option)
                                     <div class="grid grid-cols-[36px_1fr] items-start gap-2">
@@ -171,8 +152,21 @@
         const questionPoints = document.getElementById('question-points');
         let pointsEdited = @json(old('points') !== null);
         questionPoints.addEventListener('input', () => { pointsEdited = true; });
+        const syncPromptFields = (form, multipleChoice) => {
+            const statement = form.querySelector('[data-question-statement]');
+            const attachment = form.querySelector('[data-question-attachment]');
+            const question = form.querySelector('[data-question-text]');
+            statement.hidden = !multipleChoice;
+            statement.querySelector('textarea').disabled = !multipleChoice;
+            if (multipleChoice) {
+                attachment.after(question);
+            } else {
+                attachment.before(question);
+            }
+        };
         const syncQuestionType = () => {
             const enabled = questionType.value === 'multiple_choice';
+            syncPromptFields(questionType.form, enabled);
             choiceFields.hidden = !enabled;
             choiceFields.querySelectorAll('input, select, textarea').forEach((field) => {
                 field.required = enabled && field.type !== 'file';
@@ -196,6 +190,7 @@
             const fields = form.querySelector('.edit-choice-fields');
             const syncEditType = () => {
                 const enabled = type.value === 'multiple_choice';
+                syncPromptFields(form, enabled);
                 fields.hidden = !enabled;
                 fields.querySelectorAll('input, select, textarea').forEach((field) => {
                     field.required = enabled && field.type !== 'file';

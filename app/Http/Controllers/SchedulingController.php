@@ -18,6 +18,7 @@ use App\Models\ExamSession;
 use App\Models\SchoolClass;
 use App\Models\Subject;
 use App\Models\User;
+use App\Services\Exams\CoreQuestionBank;
 use App\Services\Exams\ExamAssignmentService;
 use App\Services\Exams\ExamSessionService;
 use Illuminate\Database\QueryException;
@@ -32,6 +33,8 @@ use Illuminate\View\View;
 
 class SchedulingController extends Controller
 {
+    public function __construct(private readonly CoreQuestionBank $questionBanks) {}
+
     public function index(Request $request): View
     {
         $sessionPeriodId = $request->integer('session_period_id') ?: null;
@@ -171,7 +174,11 @@ class SchedulingController extends Controller
 
         $this->assertComponentAcademicYear($validated);
 
-        AssessmentSubject::create($validated);
+        DB::transaction(function () use ($validated): void {
+            AssessmentPeriod::query()->lockForUpdate()->findOrFail($validated['assessment_period_id']);
+            $component = AssessmentSubject::create($validated);
+            $this->synchronizeQuestionBank($component);
+        });
 
         return back()->with('status', 'Mapel dan kelas berhasil dimasukkan ke periode asesmen.');
     }
@@ -193,22 +200,27 @@ class SchedulingController extends Controller
             ],
         ]);
 
-        $identityChanged = $assessmentSubject->assessment_period_id !== (int) $validated['assessment_period_id']
-            || $assessmentSubject->subject_id !== (int) $validated['subject_id']
-            || $assessmentSubject->school_class_id !== (int) $validated['school_class_id'];
-
-        if ($identityChanged && (
-            $assessmentSubject->examSessions()->exists()
-            || $assessmentSubject->assignments()->exists()
-            || $assessmentSubject->questions()->exists()
-        )) {
-            throw ValidationException::withMessages([
-                'component' => 'Periode, mapel, atau kelas tidak dapat diubah setelah komponen memiliki sesi, peserta, atau soal.',
-            ]);
-        }
-
         $this->assertComponentAcademicYear($validated);
-        $assessmentSubject->update($validated);
+        DB::transaction(function () use ($assessmentSubject, $validated): void {
+            AssessmentPeriod::query()
+                ->whereKey([$assessmentSubject->assessment_period_id, (int) $validated['assessment_period_id']])
+                ->orderBy('id')->lockForUpdate()->get();
+            $component = AssessmentSubject::query()->lockForUpdate()->findOrFail($assessmentSubject->id);
+            $component->fill($validated);
+
+            if ($component->isDirty(['assessment_period_id', 'subject_id', 'school_class_id'])) {
+                if ($component->examSessions()->exists()
+                    || $component->assignments()->exists()
+                    || $component->questions()->exists()) {
+                    throw ValidationException::withMessages([
+                        'component' => 'Periode, mapel, atau kelas tidak dapat diubah setelah komponen memiliki sesi, peserta, atau soal.',
+                    ]);
+                }
+
+                $component->save();
+                $this->synchronizeQuestionBank($component);
+            }
+        });
 
         return back()->with('status', 'Komponen asesmen berhasil diperbarui.');
     }
@@ -223,11 +235,25 @@ class SchedulingController extends Controller
                     ->where('is_active', true)),
             ],
         ]);
-        $assessmentSubject->update([
-            'teacher_user_id' => $validated['teacher_user_id'] ?? null,
-        ]);
+        DB::transaction(function () use ($assessmentSubject, $validated): void {
+            AssessmentPeriod::query()->lockForUpdate()->findOrFail($assessmentSubject->assessment_period_id);
+            $component = AssessmentSubject::query()->lockForUpdate()->findOrFail($assessmentSubject->id);
+            $component->teacher_user_id = $validated['teacher_user_id'] ?? null;
+            if ($component->isDirty('teacher_user_id')) {
+                $component->save();
+                $this->synchronizeQuestionBank($component);
+            }
+        });
 
         return back()->with('status', 'Guru pengoreksi berhasil diperbarui.');
+    }
+
+    private function synchronizeQuestionBank(AssessmentSubject $component): void
+    {
+        if ($component->teacher_user_id !== null) {
+            $group = $component->questionBankGroup()->orderBy('id')->lockForUpdate()->get();
+            $this->questionBanks->synchronize($group, 'component');
+        }
     }
 
     public function destroyComponent(AssessmentSubject $assessmentSubject): RedirectResponse

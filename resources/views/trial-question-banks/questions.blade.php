@@ -24,11 +24,7 @@
             <fieldset @disabled($isLocked)>
                 <form method="POST" action="{{ route('trial-question-banks.questions.store', $bank) }}" enctype="multipart/form-data" class="mt-5 space-y-3">
                     @csrf
-                    <textarea name="question_text" rows="5" required placeholder="Tuliskan pertanyaan..." class="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm">{{ old('question_text') }}</textarea>
-                    <p class="text-xs text-slate-400">Untuk daftar (1), (2), (3), ketik setiap butir pada baris terpisah.</p>
-                    <label class="block text-xs text-slate-400">File soal (opsional: JPG/PNG/WebP/PDF, maks. 5 MB)
-                        <input type="file" name="question_image" accept="image/jpeg,image/png,image/webp,application/pdf" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm">
-                    </label>
+                    <x-question-prompt-fields />
                     @foreach (['A','B','C','D','E'] as $option)
                         <div class="grid grid-cols-[36px_1fr] items-start gap-2">
                             <span class="mt-1 grid size-9 place-items-center rounded-lg bg-slate-900 text-xs font-semibold text-cyan-300">{{ $option }}</span>
@@ -51,11 +47,7 @@
                     <div class="flex items-start justify-between gap-4">
                         <div>
                             <p class="text-xs font-semibold text-cyan-300">Soal {{ $question->position }} · 2 poin</p>
-                            <p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-white">{{ $question->question_text }}</p>
-                            @if($question->question_image_path)
-                                @php($questionFileIsImage = in_array(strtolower(pathinfo($question->question_image_path, PATHINFO_EXTENSION)), ['jpg','jpeg','png','webp'], true))
-                                @if($questionFileIsImage)<img src="{{ Storage::url($question->question_image_path) }}" alt="File soal" class="mt-4 max-h-80 rounded-xl border border-white/10 bg-white p-2">@else<a href="{{ Storage::url($question->question_image_path) }}" target="_blank" class="mt-4 inline-flex text-xs font-semibold text-cyan-300">Buka file soal</a>@endif
-                            @endif
+                            <x-question-prompt :question="$question" class="mt-2" />
                         </div>
                         @unless ($isLocked)<div class="flex shrink-0 gap-3"><button type="button" data-edit-toggle="trial-edit-{{ $question->id }}" class="text-xs text-cyan-300">Edit</button><form method="POST" action="{{ route('trial-question-banks.questions.destroy', [$bank, $question]) }}" onsubmit="return confirm('Hapus soal ini?')">@csrf @method('DELETE')<button class="text-xs text-rose-300">Hapus</button></form></div>@endunless
                     </div>
@@ -69,8 +61,7 @@
                     @unless ($isLocked)
                         <form id="trial-edit-{{ $question->id }}" method="POST" action="{{ route('trial-question-banks.questions.update', [$bank, $question]) }}" enctype="multipart/form-data" class="mt-5 hidden space-y-3 border-t border-white/10 pt-5">
                             @csrf @method('PUT')
-                            <textarea name="question_text" rows="4" required class="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm">{{ $question->question_text }}</textarea>
-                            <input type="file" name="question_image" accept="image/jpeg,image/png,image/webp,application/pdf" class="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm">
+                            <x-question-prompt-fields :question="$question" />
                             @foreach (['A','B','C','D','E'] as $option)
                                 <div class="space-y-2 rounded-xl border border-white/10 p-3">
                                     <textarea name="option_{{ strtolower($option) }}" rows="2" required placeholder="Pilihan {{ $option }}" class="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm">{{ $question->options[$option] ?? '' }}</textarea>

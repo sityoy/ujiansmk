@@ -374,3 +374,7 @@ html.sidebar-collapsed .app-sidebar {
         border-color: rgb(226 232 240);
     }
 }
+
+[data-password-field] input::-ms-reveal {
+    display: none;
+}
