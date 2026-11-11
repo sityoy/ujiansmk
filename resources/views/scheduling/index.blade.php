@@ -20,7 +20,7 @@
     <div class="mb-6 rounded-3xl border border-cyan-400/20 bg-cyan-400/[0.06] p-6">
         <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Alur aman</p>
         <p class="mt-2 max-w-4xl text-sm leading-6 text-slate-300">
-            Buat lokasi, periode, mapel-kelas, lalu sesi reguler. Tombol “Tempatkan siswa” memakai satu penugasan per siswa dan komponen asesmen.
+            Buat lokasi, periode, dan mapel-kelas. Atur satu jadwal untuk semua rombel setingkat pada mapel yang sama. Sesi reguler otomatis menempatkan siswa aktif yang belum memiliki penugasan.
             Saat susulan, data yang sama dipindahkan ke sesi susulan sehingga nilai dan riwayat tidak menjadi ganda.
         </p>
     </div>
@@ -132,7 +132,7 @@
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">05 · Sesi Ujian</p>
                 <h2 class="mt-2 text-xl font-semibold text-white">Jadwal reguler dan susulan</h2>
-                <p class="mt-1 text-xs text-slate-500">Ditampilkan ringkas dalam grid, maksimal 12 komponen per halaman.</p>
+                <p class="mt-1 text-xs text-slate-500">Jadwal dikelompokkan per mapel dan tingkat, maksimal 12 kelompok per halaman. Buka pengaturan untuk mengatur seluruh rombel sekaligus.</p>
             </div>
         </div>
 
@@ -144,7 +144,7 @@
                 @endforeach
             </select>
             <select name="session_class_id" class="rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2.5 text-sm">
-                <option value="">Semua kelas</option>
+                <option value="">Semua kelompok rombel</option>
                 @foreach ($classes as $class)
                     <option value="{{ $class->id }}" @selected($sessionClassId === $class->id)>{{ $class->name }} · {{ $class->academicYear->name }}</option>
                 @endforeach
@@ -155,164 +155,9 @@
             <a href="{{ route('scheduling.index') }}#sesi-ujian" class="rounded-xl border border-white/10 px-4 py-2.5 text-center text-sm text-slate-300">Reset</a>
         </form>
 
-        <div id="sesi-ujian" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div id="sesi-ujian" class="space-y-4">
             @forelse ($components as $component)
-                @php($componentLocked = $component->examSessions->isNotEmpty() || $component->assignments_count > 0 || $component->questions_count > 0)
-                <details class="group rounded-3xl border border-white/10 bg-white/[0.035] open:md:col-span-2 open:xl:col-span-3">
-                    <summary class="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 p-5">
-                        <div>
-                            <p class="font-semibold text-white">{{ $component->assessmentPeriod->name }} · {{ $component->subject->name }}</p>
-                            <p class="mt-1 text-xs text-slate-500">{{ $component->schoolClass->name }} · {{ $component->assessmentPeriod->academicYear->name }} · {{ $component->examSessions->count() }} sesi</p>
-                        </div>
-                        <span class="rounded-full bg-cyan-400/10 px-3 py-1 text-xs text-cyan-200">Buka pengaturan</span>
-                    </summary>
-                    <div class="border-t border-white/10 p-6">
-                    <div class="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                            <p class="font-semibold text-white">{{ $component->subject->name }} · {{ $component->schoolClass->name }}</p>
-                            <p class="mt-1 text-xs text-slate-500">{{ $component->assessmentPeriod->name }} · {{ $component->assessmentPeriod->academicYear->name }}</p>
-                            <a href="{{ route('scheduling.questions.index', $component) }}" class="mt-2 inline-flex text-xs font-medium text-violet-300 hover:text-violet-200">Kelola bank soal →</a>
-                        </div>
-                        <form method="POST" action="{{ route('scheduling.components.destroy', $component) }}" onsubmit="return confirm('Hapus mapel dan kelas dari periode ini?')">
-                            @csrf @method('DELETE')
-                            <button class="text-xs text-rose-300">Hapus komponen</button>
-                        </form>
-                    </div>
-
-                    <details class="mt-4 rounded-2xl border border-white/10 bg-slate-950/35 p-4">
-                        <summary class="cursor-pointer text-sm font-medium text-amber-300">Edit periode, mapel, atau kelas</summary>
-                        @if ($componentLocked)
-                            <p class="mt-3 text-xs leading-5 text-slate-500">Identitas komponen dikunci karena sudah memiliki sesi, peserta, atau soal. Jika salah mapel atau kelas, buat komponen baru yang sesuai dan pertahankan riwayat ujian lama.</p>
-                        @else
-                            <form method="POST" action="{{ route('scheduling.components.update', $component) }}" class="mt-4 grid gap-3 md:grid-cols-3">
-                                @csrf @method('PATCH')
-                                <select name="assessment_period_id" required class="rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
-                                    @foreach ($periods as $period)
-                                        <option value="{{ $period->id }}" @selected($component->assessment_period_id === $period->id)>{{ $period->name }} · {{ $period->academicYear->name }}</option>
-                                    @endforeach
-                                </select>
-                                <select name="subject_id" required class="rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
-                                    @foreach ($subjects as $subject)
-                                        <option value="{{ $subject->id }}" @selected($component->subject_id === $subject->id)>{{ $subject->code }} · {{ $subject->name }}</option>
-                                    @endforeach
-                                </select>
-                                <select name="school_class_id" required class="rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
-                                    @foreach ($classes as $class)
-                                        <option value="{{ $class->id }}" @selected($component->school_class_id === $class->id)>{{ $class->name }} · {{ $class->academicYear->name }}</option>
-                                    @endforeach
-                                </select>
-                                <button class="rounded-xl bg-amber-400 px-4 py-2.5 text-sm font-semibold text-slate-950 md:col-span-3">Simpan perubahan komponen</button>
-                            </form>
-                        @endif
-                    </details>
-
-                    <details class="mt-4 rounded-2xl border border-white/10 bg-slate-950/35 p-4">
-                        <summary class="cursor-pointer text-sm font-medium text-violet-300">Guru pengoreksi</summary>
-                        <form method="POST" action="{{ route('scheduling.components.teacher', $component) }}" class="mt-4 flex flex-wrap gap-3">
-                            @csrf @method('PATCH')
-                            <select name="teacher_user_id" class="min-w-64 flex-1 rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
-                                <option value="">Belum ditentukan</option>
-                                @foreach ($teachers as $teacher)
-                                    <option value="{{ $teacher->id }}" @selected($component->teacher_user_id === $teacher->id)>{{ $teacher->name }} · {{ $teacher->email }}</option>
-                                @endforeach
-                            </select>
-                            <button class="rounded-xl bg-violet-400 px-4 py-2.5 text-sm font-semibold text-slate-950">Simpan guru</button>
-                        </form>
-                        <p class="mt-2 text-xs text-slate-500">Guru terpilih mengelola soal dan mengoreksi jawaban mapel ini. Rombel setingkat dengan guru yang sama berbagi bank soal.</p>
-                    </details>
-
-                    <details class="mt-5 rounded-2xl border border-white/10 bg-slate-950/35 p-4">
-                        <summary class="cursor-pointer text-sm font-medium text-cyan-300">Tambah sesi untuk komponen ini</summary>
-                        <form method="POST" action="{{ route('scheduling.sessions.store') }}" class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                            @csrf
-                            <input type="hidden" name="assessment_subject_id" value="{{ $component->id }}">
-                            <select name="campus_id" required class="rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
-                                <option value="">Lokasi</option>
-                                @foreach ($campuses->where('is_active', true) as $campus)<option value="{{ $campus->id }}">{{ $campus->name }}</option>@endforeach
-                            </select>
-                            <select name="kind" required class="rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
-                                <option value="regular">Reguler</option>
-                                <option value="makeup">Susulan</option>
-                            </select>
-                            <select name="source_session_id" class="rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
-                                <option value="">Sumber reguler (wajib untuk susulan)</option>
-                                @foreach ($component->examSessions->where('kind.value', 'regular') as $source)
-                                    <option value="{{ $source->id }}">{{ $source->starts_at->format('d/m/Y H:i') }}</option>
-                                @endforeach
-                            </select>
-                            <select name="status" required class="rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
-                                @foreach ($sessionStatuses as $status)<option value="{{ $status->value }}">{{ $statusLabels[$status->value] }}</option>@endforeach
-                            </select>
-                            <input type="datetime-local" name="starts_at" required class="rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
-                            <input type="number" name="duration_minutes" value="90" min="10" max="600" required class="rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
-                            <input name="room_name" placeholder="Ruangan (opsional)" class="rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
-                            <button class="rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950">Simpan sesi</button>
-                            <p class="text-xs leading-5 text-slate-500 md:col-span-2 xl:col-span-4">Jam selesai dihitung otomatis dari jam mulai dan durasi. Sistem menolak bentrok kelas maupun ruangan.</p>
-                        </form>
-                    </details>
-
-                    <div class="mt-4 grid gap-3 lg:grid-cols-2">
-                        @forelse ($component->examSessions as $session)
-                            <div class="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-                                <div class="flex items-center justify-between gap-3">
-                                    <span class="rounded-full px-2.5 py-1 text-xs {{ $session->kind->value === 'makeup' ? 'bg-amber-400/10 text-amber-200' : 'bg-cyan-400/10 text-cyan-200' }}">
-                                        {{ $session->kind->value === 'makeup' ? 'Susulan' : 'Reguler' }}
-                                    </span>
-                                    <span class="text-xs text-slate-500">{{ $statusLabels[$session->status->value] }}</span>
-                                </div>
-                                <p class="mt-3 text-sm font-medium text-white">{{ $session->starts_at->format('d/m/Y H:i') }}–{{ $session->ends_at->format('H:i') }}</p>
-                                <p class="mt-1 text-xs text-slate-500">{{ $session->campus->name }}{{ $session->room_name ? ' · '.$session->room_name : '' }} · {{ $session->duration_minutes }} menit · {{ $session->assignments_count }} peserta</p>
-                                <details class="mt-3 rounded-xl border border-white/10 p-3">
-                                    <summary class="cursor-pointer text-xs font-medium text-cyan-300">Edit sesi ujian</summary>
-                                    <p class="mt-2 text-xs text-slate-400">Jadwal dan durasi hanya dapat diubah sebelum siswa mulai. Menutup sesi akan mengumpulkan jawaban; sesi tertutup tidak dapat dibuka ulang.</p>
-                                    <form method="POST" action="{{ route('scheduling.sessions.update', $session) }}" class="mt-3 grid gap-2 sm:grid-cols-2">
-                                        @csrf @method('PATCH')
-                                        <select name="campus_id" required class="rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-xs">
-                                            @foreach ($campuses->where('is_active', true) as $campus)
-                                                <option value="{{ $campus->id }}" @selected($session->campus_id === $campus->id)>{{ $campus->name }}</option>
-                                            @endforeach
-                                        </select>
-                                        <select name="kind" required class="rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-xs">
-                                            <option value="regular" @selected($session->kind->value === 'regular')>Reguler</option>
-                                            <option value="makeup" @selected($session->kind->value === 'makeup')>Susulan</option>
-                                        </select>
-                                        <select name="source_session_id" class="rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-xs">
-                                            <option value="">Sumber reguler</option>
-                                            @foreach ($component->examSessions->where('kind.value', 'regular')->where('id', '!=', $session->id) as $source)
-                                                <option value="{{ $source->id }}" @selected($session->source_session_id === $source->id)>{{ $source->starts_at->format('d/m/Y H:i') }}</option>
-                                            @endforeach
-                                        </select>
-                                        <select name="status" required class="rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-xs">
-                                            @foreach ($sessionStatuses as $status)
-                                                <option value="{{ $status->value }}" @selected($session->status === $status)>{{ $statusLabels[$status->value] }}</option>
-                                            @endforeach
-                                        </select>
-                                        <input type="datetime-local" name="starts_at" value="{{ $session->starts_at->format('Y-m-d\TH:i') }}" required class="rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-xs">
-                                        <input type="number" name="duration_minutes" value="{{ $session->duration_minutes }}" min="10" max="600" required class="rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-xs">
-                                        <input name="room_name" value="{{ $session->room_name }}" placeholder="Ruangan (opsional)" class="rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-xs sm:col-span-2">
-                                        <button class="rounded-lg bg-cyan-400 px-4 py-2.5 text-xs font-semibold text-slate-950 sm:col-span-2">Simpan perubahan sesi</button>
-                                    </form>
-                                </details>
-                                <div class="mt-3 flex items-center justify-between">
-                                    @if ($session->kind->value === 'regular')
-                                        <form method="POST" action="{{ route('scheduling.assign-class', [$component, $session]) }}">@csrf
-                                            <button class="text-xs text-emerald-300">Tempatkan siswa aktif</button>
-                                        </form>
-                                    @else
-                                        <span class="text-xs text-amber-300">Tujuan susulan</span>
-                                    @endif
-                                    <form method="POST" action="{{ route('scheduling.sessions.destroy', $session) }}" onsubmit="return confirm('Hapus sesi ini?')">
-                                        @csrf @method('DELETE')
-                                        <button class="text-xs text-rose-300">Hapus</button>
-                                    </form>
-                                </div>
-                            </div>
-                        @empty
-                            <p class="text-sm text-slate-500">Belum ada sesi untuk komponen ini.</p>
-                        @endforelse
-                    </div>
-                    </div>
-                </details>
+                @include('scheduling.partials.grade-schedule', ['group' => $component])
             @empty
                 <div class="rounded-3xl border border-dashed border-white/10 p-10 text-center text-sm text-slate-500">
                     Tambahkan periode beserta mapel dan kelas sebelum membuat sesi.

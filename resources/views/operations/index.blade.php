@@ -56,24 +56,28 @@
                 <div class="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                            <p class="font-medium text-white">{{ $session->assessmentSubject->subject->name }} · {{ $session->assessmentSubject->schoolClass->name }}</p>
+                            <p class="font-medium text-white">{{ $session->assessmentSubject->subject->name }} · Kelas {{ $session->assessmentSubject->schoolClass->grade_level }}</p>
                             <p class="mt-1 text-xs text-slate-500">{{ $session->assessmentSubject->assessmentPeriod->name }} · {{ $session->kind->value === 'makeup' ? 'Susulan' : 'Reguler' }}</p>
                             <p class="mt-2 text-sm text-slate-300">{{ $session->starts_at->format('d/m/Y H:i') }}–{{ $session->ends_at->format('H:i') }}</p>
-                            <p class="mt-1 text-xs text-slate-500">{{ $session->campus->name }}{{ $session->room_name ? ' · '.$session->room_name : '' }} · {{ $session->assignments_count }} peserta</p>
+                            <p class="mt-1 text-xs text-slate-500">{{ $session->campus->name }}{{ $session->room_name ? ' · '.$session->room_name : '' }} · {{ $session->scheduleMembers->sum('assignments_count') }} peserta</p>
                         </div>
                         @if (in_array(auth()->user()->role->value, ['super_admin', 'committee', 'proctor'], true))
-                        <form method="POST" action="{{ route('operations.sessions.status', $session) }}" class="flex items-center gap-2" onsubmit="return this.elements.status.value !== 'closed' || confirm('Tutup sesi? Jawaban dikumpulkan dan peserta yang belum mulai ditandai tidak hadir ujian setelah waktu mulai. Sesi tidak dapat dibuka ulang.')">
+                        <form method="POST" action="{{ route('operations.sessions.status', $session) }}" class="flex items-center gap-2" onsubmit="return this.elements.status.value !== 'closed' || confirm('Tutup jadwal semua rombel yang tercantum? Jawaban dikumpulkan dan sesi tidak dapat dibuka ulang.')">
                             @csrf @method('PATCH')
                             <select name="status" @disabled($session->status->value === 'closed') class="rounded-lg border border-white/10 bg-slate-950 px-2 py-2 text-xs">
                                 @foreach ($sessionStatuses as $status)<option value="{{ $status->value }}" @selected($session->status === $status)>{{ $statusLabels[$status->value] }}</option>@endforeach
                             </select>
-                            <button @disabled($session->status->value === 'closed') class="text-xs font-medium text-cyan-300 disabled:opacity-40">Simpan</button>
+                            <button @disabled($session->status->value === 'closed') class="text-xs font-medium text-cyan-300 disabled:opacity-40">Simpan semua rombel</button>
                         </form>
                         @else
                             <span class="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-300">{{ $statusLabels[$session->status->value] }}</span>
                         @endif
                     </div>
-                    <a href="{{ route('operations.sessions.show', $session) }}" class="mt-4 inline-flex rounded-lg border border-cyan-400/30 px-3 py-2 text-xs font-semibold text-cyan-300">Lihat peserta & progres</a>
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        @foreach ($session->scheduleMembers as $member)
+                            <a href="{{ route('operations.sessions.show', $member) }}" class="inline-flex rounded-lg border border-cyan-400/30 px-3 py-2 text-xs font-semibold text-cyan-300">Peserta {{ $member->assessmentSubject->schoolClass->name }} · {{ $member->assignments_count }}</a>
+                        @endforeach
+                    </div>
                 </div>
             @empty
                 <p class="text-sm text-slate-500">Belum ada sesi ujian. Buat jadwal terlebih dahulu.</p>

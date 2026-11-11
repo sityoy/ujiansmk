@@ -248,7 +248,7 @@ class SchedulingManagementTest extends TestCase
         $this->get(route('scheduling.index'))->assertOk()
             ->assertViewHas('components', fn ($components): bool => $components->perPage() === 12)
             ->assertSee('Buka pengaturan')
-            ->assertSee('maksimal 12 komponen per halaman')
+            ->assertSee('maksimal 12 kelompok per halaman')
             ->assertSee('Guru pengoreksi');
     }
 

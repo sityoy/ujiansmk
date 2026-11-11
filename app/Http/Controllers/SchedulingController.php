@@ -16,14 +16,17 @@ use App\Models\Campus;
 use App\Models\ExamAssignment;
 use App\Models\ExamSession;
 use App\Models\SchoolClass;
+use App\Models\Student;
 use App\Models\Subject;
 use App\Models\User;
 use App\Services\Exams\CoreQuestionBank;
 use App\Services\Exams\ExamAssignmentService;
 use App\Services\Exams\ExamSessionService;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -41,6 +44,47 @@ class SchedulingController extends Controller
         $sessionClassId = $request->integer('session_class_id') ?: null;
         $sessionSearch = trim((string) $request->query('session_search'));
 
+        $catalog = AssessmentSubject::query()
+            ->with([
+                'assessmentPeriod.academicYear',
+                'subject',
+                'schoolClass', 'teacher',
+                'examSessions' => fn ($query) => $query
+                    ->with(['campus', 'assessmentSubject.schoolClass'])
+                    ->withCount([
+                        'assignments',
+                        'assignments as finished_count' => fn ($assignments) => $assignments->whereHas('attempt', fn ($attempts) => $attempts->where('status', 'submitted')),
+                        'assignments as working_count' => fn ($assignments) => $assignments->whereHas('attempt', fn ($attempts) => $attempts->where('status', 'in_progress')),
+                        'assignments as pending_count' => fn ($assignments) => $assignments->whereDoesntHave('attempt')->where('status', '!=', 'cancelled'),
+                    ])
+                    ->orderBy('starts_at'),
+            ])
+            ->withCount(['assignments', 'questions'])
+            ->when($sessionPeriodId, fn ($query) => $query->where('assessment_period_id', $sessionPeriodId))
+            ->when($sessionSearch, fn ($query) => $query->whereHas(
+                'subject',
+                fn ($query) => $query->where('name', 'like', '%'.$sessionSearch.'%')
+                    ->orWhere('code', 'like', '%'.$sessionSearch.'%'),
+            ))
+            ->latest()
+            ->get()
+            ->groupBy(fn (AssessmentSubject $component): string => implode('|', [
+                $component->assessment_period_id, $component->subject_id, $component->schoolClass->grade_level,
+            ]))
+            ->filter(fn ($group): bool => ! $sessionClassId || $group->contains('school_class_id', $sessionClassId))
+            ->map(function ($group): AssessmentSubject {
+                $representative = clone $group->first();
+                $representative->setRelation('scheduledClasses', $group->sortBy('schoolClass.name', SORT_NATURAL)->values());
+                $representative->setAttribute('grade_level', $representative->schoolClass->grade_level);
+
+                return $representative;
+            })->values();
+        $page = LengthAwarePaginator::resolveCurrentPage('session_page');
+        $components = new LengthAwarePaginator(
+            $catalog->forPage($page, 12)->values(), $catalog->count(), 12, $page,
+            ['path' => $request->url(), 'query' => $request->query(), 'pageName' => 'session_page'],
+        );
+
         return view('scheduling.index', [
             'academicYears' => AcademicYear::query()->orderByDesc('starts_on')->get(),
             'campuses' => Campus::query()
@@ -55,27 +99,7 @@ class SchedulingController extends Controller
                 ->withCount('assessmentSubjects')
                 ->orderByDesc('starts_on')
                 ->get(),
-            'components' => AssessmentSubject::query()
-                ->with([
-                    'assessmentPeriod.academicYear',
-                    'subject',
-                    'schoolClass', 'teacher',
-                    'examSessions' => fn ($query) => $query
-                        ->with('campus')
-                        ->withCount('assignments')
-                        ->orderBy('starts_at'),
-                ])
-                ->withCount(['assignments', 'questions'])
-                ->when($sessionPeriodId, fn ($query) => $query->where('assessment_period_id', $sessionPeriodId))
-                ->when($sessionClassId, fn ($query) => $query->where('school_class_id', $sessionClassId))
-                ->when($sessionSearch, fn ($query) => $query->whereHas(
-                    'subject',
-                    fn ($query) => $query->where('name', 'like', '%'.$sessionSearch.'%')
-                        ->orWhere('code', 'like', '%'.$sessionSearch.'%'),
-                ))
-                ->latest()
-                ->paginate(12, ['*'], 'session_page')
-                ->withQueryString(),
+            'components' => $components,
             'movableAssignments' => ExamAssignment::query()
                 ->with(['student.schoolClass', 'assessmentSubject.subject'])
                 ->whereIn('status', [AssignmentStatus::Scheduled, AssignmentStatus::Absent])
@@ -273,67 +297,127 @@ class SchedulingController extends Controller
 
     public function storeSession(Request $request): RedirectResponse
     {
-        $componentId = $request->validate([
+        $identity = $request->validate([
             'assessment_subject_id' => ['required', 'exists:assessment_subjects,id'],
-        ])['assessment_subject_id'];
-
-        $component = AssessmentSubject::query()
-            ->with('assessmentPeriod')
-            ->findOrFail($componentId);
-        $validated = $this->validatedSessionData($request, $component);
-
-        ExamSession::create([
-            ...$validated,
-            'assessment_subject_id' => $component->id,
+            'scope' => ['nullable', Rule::in(['class', 'grade'])],
+            'campus_id' => ['required', Rule::exists('campuses', 'id')->where('is_active', true)],
+            'rooms' => ['nullable', 'array'],
+            'rooms.*' => ['nullable', 'string', 'max:100'],
         ]);
+        $component = AssessmentSubject::query()->with('assessmentPeriod', 'schoolClass')
+            ->findOrFail($identity['assessment_subject_id']);
+        $wholeGrade = ($identity['scope'] ?? 'class') === 'grade';
 
-        return back()->with('status', 'Sesi ujian berhasil dijadwalkan.');
+        DB::transaction(function () use ($request, $component, $wholeGrade): void {
+            Campus::query()->lockForUpdate()->findOrFail($request->integer('campus_id'));
+            AssessmentPeriod::query()->lockForUpdate()->findOrFail($component->assessment_period_id);
+            $components = $wholeGrade
+                ? AssessmentSubject::query()->where('assessment_period_id', $component->assessment_period_id)
+                    ->where('subject_id', $component->subject_id)
+                    ->whereHas('schoolClass', fn ($classes) => $classes->where('grade_level', $component->schoolClass->grade_level))
+                    ->orderBy('id')->lockForUpdate()->get()
+                : AssessmentSubject::query()->whereKey($component->id)->lockForUpdate()->get();
+            SchoolClass::query()->whereKey($components->pluck('school_class_id'))
+                ->orderBy('id')->lockForUpdate()->get();
+            $groupId = $wholeGrade ? (string) Str::uuid() : null;
+            $created = new Collection;
+            foreach ($components as $member) {
+                $data = $wholeGrade ? $this->sessionRequestForClass($request, $member) : $request;
+                $validated = $this->validatedSessionData($data, $member);
+                if ($wholeGrade && $validated['status'] === SessionStatus::Closed->value) {
+                    throw ValidationException::withMessages(['status' => 'Buat jadwal sebagai draf, terbit, atau aktif terlebih dahulu.']);
+                }
+                $created->push(ExamSession::create([
+                    ...$validated,
+                    'assessment_subject_id' => $member->id,
+                    'schedule_group_id' => $groupId,
+                ]));
+            }
+
+            if ($wholeGrade && $created->first()->kind === SessionKind::Regular) {
+                $this->assignStudents($created, app(ExamAssignmentService::class));
+            }
+        }, 3);
+
+        return back()->with('status', $wholeGrade
+            ? 'Jadwal bersama berhasil dibuat. Siswa aktif yang belum memiliki penugasan ditempatkan ke sesi reguler masing-masing rombel.'
+            : 'Sesi ujian berhasil dijadwalkan.');
     }
 
     public function updateSession(Request $request, ExamSession $examSession): RedirectResponse
     {
-        $examSession->loadMissing('assessmentSubject.assessmentPeriod');
-        $component = $examSession->assessmentSubject;
-        $validated = $this->validatedSessionData($request, $component, $examSession);
+        $request->validate([
+            'campus_id' => ['required', Rule::exists('campuses', 'id')->where('is_active', true)],
+            'rooms' => ['nullable', 'array'], 'rooms.*' => ['nullable', 'string', 'max:100'],
+        ]);
+        DB::transaction(function () use ($request, $examSession): void {
+            Campus::query()->whereKey([$examSession->campus_id, $request->integer('campus_id')])
+                ->orderBy('id')->lockForUpdate()->get();
+            $examSession->loadMissing('assessmentSubject');
+            AssessmentPeriod::query()->lockForUpdate()->findOrFail($examSession->assessmentSubject->assessment_period_id);
+            $group = $examSession->scheduleGroup()->with('assessmentSubject')->orderBy('id')->lockForUpdate()->get();
+            SchoolClass::query()->whereKey($group->pluck('assessmentSubject.school_class_id'))
+                ->orderBy('id')->lockForUpdate()->get();
+            $attributes = [];
+            $rooms = [];
+            foreach ($group as $session) {
+                $data = $this->sessionRequestForClass($request, $session->assessmentSubject, $session);
+                $validated = $this->validatedSessionData($data, $session->assessmentSubject, $session, $group->modelKeys());
+                $this->assertSessionUpdate($session, $validated);
+                $room = Str::lower($validated['room_name'] ?? '');
+                if ($room !== '' && in_array($room, $rooms, true)) {
+                    throw ValidationException::withMessages(['rooms' => 'Gunakan ruangan berbeda untuk rombel yang mengikuti jadwal bersamaan.']);
+                }
+                $rooms[] = $room;
+                $attributes[$session->id] = $validated;
+            }
 
-        if (
-            $examSession->kind->value !== $validated['kind']
-            && ($examSession->assignments()->exists() || ExamSession::query()
-                ->where('source_session_id', $examSession->id)
-                ->exists())
-        ) {
+            app(ExamSessionService::class)->update($examSession, [], $attributes);
+        }, 3);
+
+        return back()->with('status', 'Jadwal seluruh rombel dalam sesi berhasil diperbarui dan waktu selesai dihitung ulang.');
+    }
+
+    private function sessionRequestForClass(Request $request, AssessmentSubject $component, ?ExamSession $session = null): Request
+    {
+        $data = clone $request;
+        $source = $request->integer('source_session_id') ? ExamSession::findOrFail($request->integer('source_session_id')) : null;
+        $classSource = $source?->scheduleGroup()->where('assessment_subject_id', $component->id)->lockForUpdate()->first();
+        $data->merge([
+            'room_name' => $request->input('rooms.'.$component->id, $request->input('room_name', $session?->room_name)),
+            'source_session_id' => $classSource?->id,
+        ]);
+
+        return $data;
+    }
+
+    private function assertSessionUpdate(ExamSession $session, array $validated): void
+    {
+        if ($session->kind->value !== $validated['kind']
+            && ($session->assignments()->exists() || ExamSession::query()->where('source_session_id', $session->id)->exists())) {
             throw ValidationException::withMessages([
                 'kind' => 'Jenis sesi tidak dapat diubah setelah memiliki peserta atau menjadi sumber sesi susulan.',
             ]);
         }
 
-        $assignedStudentIds = $examSession->assignments()->pluck('student_id');
-        if ($assignedStudentIds->isNotEmpty()) {
-            $studentConflict = ExamAssignment::query()
-                ->whereIn('student_id', $assignedStudentIds)
-                ->where('exam_session_id', '!=', $examSession->id)
-                ->whereIn('status', [AssignmentStatus::Scheduled, AssignmentStatus::Started])
-                ->whereHas('examSession', fn ($query) => $query
-                    ->where('starts_at', '<', $validated['ends_at'])
-                    ->where('ends_at', '>', $validated['starts_at']))
-                ->exists();
-
-            if ($studentConflict) {
-                throw ValidationException::withMessages([
-                    'starts_at' => 'Perubahan ditolak karena ada peserta yang mempunyai ujian lain pada waktu tersebut.',
-                ]);
-            }
+        $assignedStudentIds = $session->assignments()->pluck('student_id');
+        if ($assignedStudentIds->isNotEmpty() && ExamAssignment::query()
+            ->whereIn('student_id', $assignedStudentIds)
+            ->where('exam_session_id', '!=', $session->id)
+            ->whereIn('status', [AssignmentStatus::Scheduled, AssignmentStatus::Started])
+            ->whereHas('examSession', fn ($query) => $query
+                ->where('starts_at', '<', $validated['ends_at'])->where('ends_at', '>', $validated['starts_at']))->exists()) {
+            throw ValidationException::withMessages([
+                'starts_at' => 'Perubahan ditolak karena ada peserta yang mempunyai ujian lain pada waktu tersebut.',
+            ]);
         }
-
-        app(ExamSessionService::class)->update($examSession, $validated);
-
-        return back()->with('status', 'Sesi ujian berhasil diperbarui dan waktu selesai dihitung ulang.');
     }
 
     private function validatedSessionData(
         Request $request,
         AssessmentSubject $component,
         ?ExamSession $currentSession = null,
+        array $excludedSessionIds = [],
     ): array {
         $validated = $request->validate([
             'campus_id' => ['required', Rule::exists('campuses', 'id')->where('is_active', true)],
@@ -375,7 +459,8 @@ class SchedulingController extends Controller
             ]);
         }
 
-        $classConflict = ExamSession::query()
+        $classConflict = ExamSession::query()->lockForUpdate()
+            ->whereNotIn('id', $excludedSessionIds)
             ->when($currentSession, fn ($query) => $query->where('id', '!=', $currentSession->id))
             ->where('starts_at', '<', $endsAt)
             ->where('ends_at', '>', $startsAt)
@@ -390,7 +475,8 @@ class SchedulingController extends Controller
         }
 
         if (! empty($validated['room_name'])) {
-            $roomConflict = ExamSession::query()
+            $roomConflict = ExamSession::query()->lockForUpdate()
+                ->whereNotIn('id', $excludedSessionIds)
                 ->when($currentSession, fn ($query) => $query->where('id', '!=', $currentSession->id))
                 ->where('campus_id', $validated['campus_id'])
                 ->whereRaw('LOWER(room_name) = ?', [Str::lower(trim($validated['room_name']))])
@@ -458,19 +544,32 @@ class SchedulingController extends Controller
             ]);
         }
 
-        $students = $assessmentSubject->schoolClass()
-            ->firstOrFail()
-            ->students()
-            ->where('is_active', true)
-            ->get();
-
-        DB::transaction(function () use ($students, $assessmentSubject, $examSession, $assignmentService): void {
-            foreach ($students as $student) {
-                $assignmentService->assign($student, $assessmentSubject, $examSession);
+        $count = DB::transaction(function () use ($examSession, $assignmentService): int {
+            $group = $examSession->scheduleGroup()->orderBy('id')->lockForUpdate()->get();
+            if ($group->contains(fn (ExamSession $session): bool => $session->kind !== SessionKind::Regular || $session->status === SessionStatus::Closed)) {
+                throw ValidationException::withMessages(['session' => 'Penempatan siswa hanya tersedia untuk sesi reguler yang belum ditutup.']);
             }
-        });
 
-        return back()->with('status', $students->count().' siswa aktif berhasil ditempatkan tanpa data ganda.');
+            return $this->assignStudents($group, $assignmentService);
+        }, 3);
+
+        return back()->with('status', $count.' siswa aktif baru berhasil ditempatkan tanpa data ganda.');
+    }
+
+    private function assignStudents(Collection $sessions, ExamAssignmentService $assignmentService): int
+    {
+        $sessions->loadMissing('assessmentSubject');
+        $byClass = $sessions->keyBy('assessmentSubject.school_class_id');
+        $students = Student::query()->whereIn('school_class_id', $byClass->keys())
+            ->where('is_active', true)->orderBy('id')->lockForUpdate()->get();
+        $count = 0;
+        foreach ($students as $student) {
+            $session = $byClass->get($student->school_class_id);
+            $assignment = $assignmentService->assign($student, $session->assessmentSubject, $session);
+            $count += (int) $assignment->wasRecentlyCreated;
+        }
+
+        return $count;
     }
 
     public function moveToMakeup(Request $request, ExamAssignmentService $assignmentService): RedirectResponse
@@ -491,7 +590,17 @@ class SchedulingController extends Controller
     public function destroySession(ExamSession $examSession): RedirectResponse
     {
         return $this->deleteSafely(
-            fn () => $examSession->delete(),
+            fn () => DB::transaction(function () use ($examSession): void {
+                $group = $examSession->scheduleGroup()->orderBy('id')->lockForUpdate()->get();
+                foreach ($group as $session) {
+                    if ($session->assignments()->exists() || ExamSession::query()->where('source_session_id', $session->id)->exists()) {
+                        throw ValidationException::withMessages(['session' => 'Jadwal tidak dapat dihapus karena salah satu rombel memiliki peserta atau sesi susulan.']);
+                    }
+                }
+                foreach ($group as $session) {
+                    $session->delete();
+                }
+            }),
             'Sesi ujian berhasil dihapus.',
             'Sesi tidak dapat dihapus karena sudah memiliki peserta atau aktivitas ujian.',
         );

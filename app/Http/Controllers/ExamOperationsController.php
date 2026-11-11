@@ -2,21 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\SessionStatus;
-use App\Enums\AttemptStatus;
 use App\Enums\AssignmentStatus;
+use App\Enums\AttemptStatus;
+use App\Enums\SessionStatus;
 use App\Enums\UserRole;
 use App\Models\AcademicYear;
 use App\Models\ExamAssignment;
 use App\Models\ExamAttempt;
 use App\Models\ExamSession;
 use App\Models\TrialExam;
-use App\Services\Exams\ExamSessionService;
-use App\Services\Exams\ExamSecurityService;
 use App\Services\Exams\ExamAttemptResetService;
+use App\Services\Exams\ExamSecurityService;
+use App\Services\Exams\ExamSessionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -40,14 +41,26 @@ class ExamOperationsController extends Controller
         $attempts = ExamAttempt::query()->whereHas('assignment', fn ($query) => $query
             ->whereIn('exam_session_id', (clone $sessions)->select('id')));
 
+        $groups = (clone $sessions)
+            ->with(['assessmentSubject.assessmentPeriod', 'assessmentSubject.subject', 'assessmentSubject.schoolClass', 'campus'])
+            ->withCount('assignments')->orderByDesc('starts_at')->get()
+            ->groupBy(fn (ExamSession $session): string => $session->schedule_group_id ?? 'class-'.$session->id)
+            ->map(function ($members): ExamSession {
+                $representative = clone $members->first();
+                $representative->setRelation('scheduleMembers', $members->sortBy('assessmentSubject.schoolClass.name', SORT_NATURAL)->values());
+
+                return $representative;
+            })->values();
+        $page = LengthAwarePaginator::resolveCurrentPage('sessions_page');
+        $groupedSessions = new LengthAwarePaginator(
+            $groups->forPage($page, 15)->values(), $groups->count(), 15, $page,
+            ['path' => $request->url(), 'query' => $request->query(), 'pageName' => 'sessions_page'],
+        );
+
         return view('operations.index', [
             'filters' => $filters,
             'academicYears' => AcademicYear::query()->orderByDesc('starts_on')->get(),
-            'sessions' => (clone $sessions)
-                ->with(['assessmentSubject.assessmentPeriod', 'assessmentSubject.subject', 'assessmentSubject.schoolClass', 'campus'])
-                ->withCount('assignments')
-                ->orderByDesc('starts_at')
-                ->paginate(15, ['*'], 'sessions_page')->withQueryString(),
+            'sessions' => $groupedSessions,
             'attempts' => (clone $attempts)
                 ->with(['assignment.student', 'assignment.assessmentSubject.subject', 'assignment.examSession'])
                 ->latest('started_at')
@@ -64,7 +77,7 @@ class ExamOperationsController extends Controller
                 ->withQueryString(),
             'sessionStatuses' => SessionStatus::cases(),
             'statistics' => [
-                'activeSessions' => (clone $sessions)->where('status', SessionStatus::Active)->count(),
+                'activeSessions' => $groups->where('status', SessionStatus::Active)->count(),
                 'startedAttempts' => (clone $attempts)->where('status', AttemptStatus::InProgress)->count(),
                 'submittedAttempts' => (clone $attempts)->where('status', AttemptStatus::Submitted)->count(),
                 'violations' => (clone $attempts)->sum('violation_count'),
@@ -122,6 +135,10 @@ class ExamOperationsController extends Controller
         ])->orderBy('id')->paginate(25)->withQueryString();
 
         return view('operations.show', [
+            'relatedSessions' => $examSession->scheduleGroup()->with('assessmentSubject.schoolClass')
+                ->when($request->user()->role === UserRole::Teacher, fn ($query) => $query->whereHas(
+                    'assessmentSubject', fn ($component) => $component->where('teacher_user_id', $request->user()->id),
+                ))->get(),
             'session' => $examSession, 'participants' => $participants,
             'statistics' => $statistics, 'filters' => $filters, 'statusLabels' => $statusLabels,
         ]);
@@ -213,8 +230,7 @@ class ExamOperationsController extends Controller
         Request $request,
         ExamSession $examSession,
         ExamSessionService $sessions,
-    ): RedirectResponse
-    {
+    ): RedirectResponse {
         $this->authorizeSessionAccess($request, $examSession);
         abort_unless(in_array($request->user()->role, [UserRole::SuperAdmin, UserRole::Committee, UserRole::Proctor], true), 403);
         $validated = $request->validate([

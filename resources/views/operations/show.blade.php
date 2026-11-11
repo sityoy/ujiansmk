@@ -17,6 +17,14 @@
         <a href="{{ route('operations.index') }}" class="text-sm text-cyan-300">← Pelaksanaan ujian</a>
         <a href="{{ request()->fullUrl() }}" class="rounded-xl border border-white/10 px-4 py-2 text-sm text-slate-300">Muat ulang data</a>
     </div>
+    @if ($relatedSessions->count() > 1)
+        <nav aria-label="Peserta per rombel pada jadwal bersama" class="mb-5 flex flex-wrap gap-2">
+            @foreach ($relatedSessions->sortBy('assessmentSubject.schoolClass.name', SORT_NATURAL) as $related)
+                <a href="{{ route('operations.sessions.show', $related) }}" @if ($related->id === $session->id) aria-current="page" @endif
+                    class="rounded-xl border px-4 py-2 text-sm {{ $related->id === $session->id ? 'border-cyan-400/40 bg-cyan-400/10 text-cyan-300' : 'border-white/10 text-slate-400' }}">{{ $related->assessmentSubject->schoolClass->name }}</a>
+            @endforeach
+        </nav>
+    @endif
     <section class="rounded-3xl border border-cyan-400/20 bg-cyan-400/[0.045] p-6">
         <p class="text-xs uppercase tracking-wider text-cyan-300">{{ $session->assessmentSubject->assessmentPeriod->name }} · {{ $session->assessmentSubject->assessmentPeriod->academicYear->name }}</p>
         <h2 class="mt-3 text-xl font-semibold">{{ $session->assessmentSubject->subject->name }} · {{ $session->assessmentSubject->schoolClass->name }}</h2>
