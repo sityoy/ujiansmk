@@ -94,14 +94,72 @@ class StudentLoginCardsTest extends TestCase
         $this->assertTrue(Hash::check('PasswordPribadi123', $user->fresh()->password));
     }
 
-    private function makeStudent(string $nis, string $nisn, string $password): Student
+    public function test_bulk_cards_include_all_active_accounts_and_label_each_class_and_year_correctly(): void
     {
-        $year = AcademicYear::create([
-            'name' => '2026/2027', 'starts_on' => '2026-07-01', 'ends_on' => '2027-06-30', 'is_active' => true,
+        $first = $this->makeStudent('001', '0123456701', '001');
+        $first->update(['full_name' => 'Zainab Kelas Satu']);
+        $class = $first->schoolClass;
+        $secondClass = SchoolClass::create([
+            'academic_year_id' => $class->academic_year_id, 'name' => 'X-2', 'grade_level' => 10,
         ]);
-        $class = SchoolClass::create([
-            'academic_year_id' => $year->id, 'name' => 'X-1', 'grade_level' => 10,
+        $second = $this->makeStudent('002', '0123456702', '002', $secondClass);
+        $second->update(['full_name' => 'Andi Kelas Dua']);
+        $inactiveStudent = $this->makeStudent('003', '0123456703', '003', $secondClass);
+        $inactiveStudent->update(['full_name' => 'Siswa Dinonaktifkan', 'is_active' => false]);
+        $inactiveUser = $this->makeStudent('004', '0123456704', '004', $secondClass);
+        $inactiveUser->update(['full_name' => 'Akun Dinonaktifkan']);
+        $inactiveUser->user->update(['is_active' => false]);
+        $oldYear = AcademicYear::create([
+            'name' => '2025/2026', 'starts_on' => '2025-07-01', 'ends_on' => '2026-06-30', 'is_active' => false,
         ]);
+        $oldClass = SchoolClass::create(['academic_year_id' => $oldYear->id, 'name' => 'X-1', 'grade_level' => 10]);
+        $old = $this->makeStudent('005', '0123456705', '005', $oldClass);
+        $old->update(['full_name' => 'Peserta Tahun Lama']);
+
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $this->actingAs($admin);
+        $hashes = User::query()->where('role', UserRole::Student)->pluck('password', 'id')->all();
+        $route = route('academic.students.participant-cards');
+        $this->post($route, ['school_class_id' => 'all', 'academic_year_id' => $class->academic_year_id])
+            ->assertOk()
+            ->assertViewHas('students', fn ($students): bool => $students->count() === 2)
+            ->assertSeeInOrder(['X-1 · 2026/2027', 'Zainab Kelas Satu', 'X-2 · 2026/2027', 'Andi Kelas Dua'])
+            ->assertDontSee('Peserta Tahun Lama')->assertDontSee('Siswa Dinonaktifkan')->assertDontSee('Akun Dinonaktifkan');
+        $this->post($route, ['school_class_id' => 'all'])
+            ->assertOk()->assertViewHas('classGroups', fn ($groups): bool => $groups->count() === 3)
+            ->assertSee('X-1 · 2025/2026')->assertSee('Peserta Tahun Lama');
+        $this->post($route, ['school_class_id' => $secondClass->id, 'academic_year_id' => $class->academic_year_id])
+            ->assertOk()->assertSee('Andi Kelas Dua')->assertDontSee('Zainab Kelas Satu');
+        $this->assertSame($hashes, User::query()->where('role', UserRole::Student)->pluck('password', 'id')->all());
+    }
+
+    public function test_bulk_print_validates_the_selection_and_remains_restricted_to_academic_managers(): void
+    {
+        $student = $this->makeStudent('001', '0123456701', '001');
+        $otherYear = AcademicYear::create([
+            'name' => '2025/2026', 'starts_on' => '2025-07-01', 'ends_on' => '2026-06-30', 'is_active' => false,
+        ]);
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $route = route('academic.students.participant-cards');
+        $this->actingAs($admin)->post($route, [
+            'school_class_id' => $student->school_class_id, 'academic_year_id' => $otherYear->id,
+        ])->assertSessionHasErrors('school_class_id');
+        $this->post($route, ['school_class_id' => 'invalid'])->assertSessionHasErrors('school_class_id');
+        $this->post($route, ['school_class_id' => 'all', 'academic_year_id' => $otherYear->id])
+            ->assertOk()->assertSee('Tidak ada siswa aktif')->assertDontSee('0123456701');
+        $this->actingAs($student->user)->post($route, ['school_class_id' => 'all'])->assertForbidden();
+    }
+
+    private function makeStudent(string $nis, string $nisn, string $password, ?SchoolClass $class = null): Student
+    {
+        if (! $class) {
+            $year = AcademicYear::create([
+                'name' => '2026/2027', 'starts_on' => '2026-07-01', 'ends_on' => '2027-06-30', 'is_active' => true,
+            ]);
+            $class = SchoolClass::create([
+                'academic_year_id' => $year->id, 'name' => 'X-1', 'grade_level' => 10,
+            ]);
+        }
         $user = User::factory()->create([
             'role' => UserRole::Student, 'email' => null, 'username' => $nisn,
             'password' => $password, 'is_active' => true,

@@ -216,17 +216,27 @@
                     Kolom Password boleh diisi untuk menentukan password awal lain.
                 </p>
                 <form method="POST" action="{{ route('academic.students.participant-cards') }}" target="_blank"
-                    class="mt-5 grid max-w-xl gap-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.04] p-4 sm:grid-cols-[1fr_auto]">
+                    class="mt-5 grid max-w-3xl gap-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.04] p-4 sm:grid-cols-[1fr_1fr_auto]">
                     @csrf
-                    <div>
-                        <label class="mb-2 block text-xs font-medium text-amber-200">Cetak kartu akun peserta per kelas</label>
-                        <select name="school_class_id" required class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
-                            <option value="">Pilih kelas</option>
-                            @foreach ($classOptions as $class)<option value="{{ $class->id }}">{{ $class->name }} · {{ $class->academicYear->name }}</option>@endforeach
+                    <label class="block text-xs font-medium text-amber-200">Tahun ajaran kartu
+                        <select name="academic_year_id" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
+                            <option value="">Semua tahun ajaran</option>
+                            @foreach ($academicYears as $year)
+                                <option value="{{ $year->id }}" @selected($year->id === $academicYears->firstWhere('is_active', true)?->id)>{{ $year->name }}</option>
+                            @endforeach
                         </select>
-                    </div>
+                    </label>
+                    <label class="block text-xs font-medium text-amber-200">Kelas yang dicetak
+                        <select name="school_class_id" required class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
+                            <option value="all">Seluruh kelas</option>
+                            @foreach ($classOptions as $class)
+                                <option value="{{ $class->id }}">{{ $class->name }} · {{ $class->academicYear->name }}</option>
+                            @endforeach
+                        </select>
+                    </label>
                     <button class="self-end rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-slate-950">Cetak kartu</button>
-                    <p class="sm:col-span-2 text-xs leading-5 text-amber-100/70">Kartu mengikuti username dan password akun siswa. Jika password khusus lama belum tersedia untuk cetak, kartu memberi keterangan untuk menghubungi panitia.</p>
+                    <p class="sm:col-span-3 text-xs leading-5 text-amber-100/70">Pilih seluruh kelas untuk mencetak sekaligus, atau satu kelas. Setiap kelas dimulai pada halaman baru. Kartu mengikuti username dan password akun siswa.</p>
+                    <p class="sm:col-span-3 text-xs leading-5 text-amber-100/70">Jika password khusus lama belum tersedia untuk cetak, kartu memberi keterangan untuk menghubungi panitia.</p>
                 </form>
 
                 <div class="mt-5 flex flex-wrap gap-3">
