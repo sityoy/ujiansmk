@@ -48,7 +48,7 @@ class LoginController extends Controller
 
         $request->session()->regenerate();
 
-        if ($user->must_change_password) {
+        if ($user->requiresPasswordChange()) {
             return redirect()->route('password.change')
                 ->with('status', 'Silakan ganti password awal sebelum menggunakan sistem.');
         }

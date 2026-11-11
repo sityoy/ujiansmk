@@ -35,7 +35,10 @@
     </div>
     <main class="sheet">
         @forelse ($students as $student)
-            @php($login = $student->nisn ?: $student->student_number)
+            @php
+                $login = $student->user->username ?: $student->user->email;
+                $password = $student->printablePassword();
+            @endphp
             <section class="card">
                 <header class="head">
                     <div class="school">{{ $school?->name ?? config('app.name') }}</div>
@@ -48,9 +51,9 @@
                     <div class="row"><span>NIS / NISN</span><span>:</span><span>{{ $student->student_number }} / {{ $student->nisn ?? '—' }}</span></div>
                     <div class="login">
                         <div class="row"><span>Username</span><span>:</span><strong>{{ $login }}</strong></div>
-                        <div class="row"><span>Password awal</span><span>:</span><strong>{{ $login }}</strong></div>
+                        <div class="row"><span>Password</span><span>:</span><strong>{{ $password ?? "Diatur khusus; konfirmasi ke panitia" }}</strong></div>
                     </div>
-                    <div class="note">Pencetakan tidak mereset password. Jika password pernah diganti, gunakan password terakhir. Simpan kartu ini dan jangan membagikan akun kepada orang lain.</div>
+                    <div class="note">Siswa langsung masuk ke halaman ujian setelah login tanpa wajib mengganti password. Simpan kartu ini dan rahasiakan akun.</div>
                 </div>
             </section>
         @empty

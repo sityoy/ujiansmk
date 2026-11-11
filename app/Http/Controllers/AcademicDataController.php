@@ -246,15 +246,15 @@ class AcademicDataController extends Controller
 
         DB::transaction(function () use ($validated): void {
             $username = $validated['nisn'] ?: trim($validated['student_number']);
-            $user = User::create([
+            $user = new User([
                 'name' => $validated['full_name'],
                 'email' => $validated['email'] ?: null,
                 'username' => $username,
-                'password' => $validated['password'] ?? $username,
                 'role' => UserRole::Student,
                 'is_active' => true,
-                'must_change_password' => true,
             ]);
+            $user->setStudentPassword($validated['password'] ?? trim($validated['student_number']));
+            $user->save();
 
             Student::create([
                 'user_id' => $user->id,

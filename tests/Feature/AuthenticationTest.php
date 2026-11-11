@@ -75,12 +75,12 @@ class AuthenticationTest extends TestCase
         $this->assertAuthenticatedAs($studentUser);
     }
 
-    public function test_user_with_initial_password_must_change_it_before_opening_dashboard(): void
+    public function test_staff_with_initial_password_must_change_it_before_opening_dashboard(): void
     {
-        $studentUser = User::factory()->create([
+        $teacherUser = User::factory()->create([
             'email' => null,
             'username' => '0123456789',
-            'role' => UserRole::Student,
+            'role' => UserRole::Teacher,
             'password' => '0123456789',
             'must_change_password' => true,
         ]);
@@ -98,8 +98,8 @@ class AuthenticationTest extends TestCase
             'password_confirmation' => 'PasswordBaru123',
         ])->assertRedirect(route('dashboard'));
 
-        $this->assertFalse($studentUser->refresh()->must_change_password);
-        $this->get(route('dashboard'))->assertRedirect(route('student.exams.index'));
+        $this->assertFalse($teacherUser->refresh()->must_change_password);
+        $this->get(route('dashboard'))->assertOk();
     }
 
     public function test_guest_is_redirected_to_the_login_page(): void

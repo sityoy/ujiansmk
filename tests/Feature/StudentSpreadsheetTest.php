@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\UserRole;
 use App\Models\AcademicYear;
 use App\Models\SchoolClass;
+use App\Models\Student;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -23,7 +24,7 @@ class StudentSpreadsheetTest extends TestCase
         $csv = implode("\n", [
             'NIS,NISN,Nama Lengkap,Email,Password,Status',
             '2026001,0123456789,Siswa Satu,,Siswa1234,aktif',
-            '2026002,,Siswa Dua,,,aktif',
+            '2026002,9876543210,Siswa Dua,,,aktif',
         ]);
 
         $this->actingAs($admin)
@@ -45,13 +46,15 @@ class StudentSpreadsheetTest extends TestCase
             'role' => UserRole::Student->value,
         ]);
         $this->assertDatabaseHas('users', [
-            'username' => '2026002',
-            'must_change_password' => true,
+            'username' => '9876543210',
+            'must_change_password' => false,
             'role' => UserRole::Student->value,
         ]);
 
-        $secondStudent = \App\Models\Student::query()->where('student_number', '2026002')->firstOrFail();
+        $secondStudent = Student::query()->where('student_number', '2026002')->firstOrFail();
         $this->assertTrue(Hash::check('2026002', $secondStudent->user->password));
+        $this->assertSame('2026002', $secondStudent->printablePassword());
+        $this->assertSame('Siswa1234', Student::query()->where('student_number', '2026001')->firstOrFail()->printablePassword());
     }
 
     public function test_reimport_with_blank_password_preserves_existing_password(): void
@@ -78,6 +81,8 @@ class StudentSpreadsheetTest extends TestCase
 
         $user = User::query()->where('username', '0123456789')->firstOrFail();
         $this->assertTrue(Hash::check('Siswa1234', $user->password));
+        $this->assertSame('Siswa1234', $user->student_card_credentials['password']);
+        $this->assertFalse($user->must_change_password);
         $this->assertDatabaseCount('students', 1);
         $this->assertDatabaseHas('students', ['full_name' => 'Siswa Satu Diperbarui']);
     }

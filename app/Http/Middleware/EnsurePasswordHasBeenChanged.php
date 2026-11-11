@@ -10,7 +10,7 @@ class EnsurePasswordHasBeenChanged
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->user()?->must_change_password) {
+        if ($request->user()?->requiresPasswordChange()) {
             return redirect()->route('password.change');
         }
 

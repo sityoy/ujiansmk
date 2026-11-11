@@ -117,6 +117,7 @@ class StudentSpreadsheetController extends Controller
 
             if ($validator->fails()) {
                 $errors[] = 'Baris '.$line.': '.$validator->errors()->first();
+
                 continue;
             }
 
@@ -124,6 +125,7 @@ class StudentSpreadsheetController extends Controller
             if (! $rowSchoolClass) {
                 if (! $data['kelas'] || ! $data['tahun_ajaran']) {
                     $errors[] = 'Baris '.$line.': pilih kelas tujuan atau isi kolom Kelas dan Tahun Ajaran.';
+
                     continue;
                 }
 
@@ -134,6 +136,7 @@ class StudentSpreadsheetController extends Controller
 
                 if (! $rowSchoolClass) {
                     $errors[] = 'Baris '.$line.': kelas '.$data['kelas'].' tahun ajaran '.$data['tahun_ajaran'].' tidak ditemukan.';
+
                     continue;
                 }
             }
@@ -216,7 +219,7 @@ class StudentSpreadsheetController extends Controller
 
         DB::transaction(function () use ($preparedRows): void {
             foreach ($preparedRows as [$data, $existing, $schoolClass]) {
-                $student = $existing ?? new Student();
+                $student = $existing ?? new Student;
                 $user = $student->user;
                 $username = $data['nisn'] ?: $data['nis'];
 
@@ -224,15 +227,14 @@ class StudentSpreadsheetController extends Controller
                     $user = new User([
                         'role' => UserRole::Student,
                         'is_active' => true,
-                        'password' => $data['password'] ?: $username,
-                        'must_change_password' => true,
                     ]);
-                } elseif ($data['password']) {
-                    $user->password = $data['password'];
-                    $user->must_change_password = true;
+                }
+                if (! $user->exists || $data['password']) {
+                    $user->setStudentPassword($data['password'] ?? $data['nis']);
                 }
 
                 $user->fill([
+                    'must_change_password' => false,
                     'name' => $data['nama_lengkap'],
                     'username' => $username,
                     'email' => $data['email'] ?: $user->email,

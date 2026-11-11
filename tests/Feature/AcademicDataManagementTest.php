@@ -6,7 +6,6 @@ use App\Enums\UserRole;
 use App\Models\AcademicYear;
 use App\Models\SchoolClass;
 use App\Models\Student;
-use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -90,7 +89,7 @@ class AcademicDataManagementTest extends TestCase
         $this->assertTrue($newYear->refresh()->is_active);
     }
 
-    public function test_manual_student_creation_uses_nisn_as_the_initial_password_when_blank(): void
+    public function test_manual_student_creation_uses_nis_as_the_initial_password_when_blank(): void
     {
         $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
         $year = AcademicYear::create([
@@ -113,8 +112,9 @@ class AcademicDataManagementTest extends TestCase
         ])->assertRedirect()->assertSessionHasNoErrors();
 
         $user = User::query()->where('username', '9876543210')->firstOrFail();
-        $this->assertTrue(Hash::check('9876543210', $user->password));
-        $this->assertTrue($user->must_change_password);
+        $this->assertTrue(Hash::check('S-002', $user->password));
+        $this->assertFalse($user->must_change_password);
+        $this->assertSame('S-002', $user->student_card_credentials['password']);
         $this->assertDatabaseHas('students', ['user_id' => $user->id, 'student_number' => 'S-002']);
     }
 

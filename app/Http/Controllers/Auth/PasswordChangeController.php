@@ -25,7 +25,9 @@ class PasswordChangeController extends Controller
             'password.confirmed' => 'Konfirmasi password baru tidak sesuai.',
         ]);
 
-        $request->user()->update([
+        $user = $request->user();
+        $user->student_card_credentials = null;
+        $user->update([
             'password' => $validated['password'],
             'must_change_password' => false,
         ]);

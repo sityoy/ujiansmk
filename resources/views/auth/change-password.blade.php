@@ -14,7 +14,11 @@
             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Keamanan akun</p>
             <h1 class="mt-3 text-3xl font-semibold text-white">Buat password pribadi</h1>
             <p class="mt-3 text-sm leading-6 text-slate-400">
-                Anda sedang memakai password awal dari sekolah. Ganti password terlebih dahulu agar akun tidak dapat digunakan oleh orang lain.
+                @if (auth()->user()->requiresPasswordChange())
+                    Anda sedang memakai password awal dari sekolah. Ganti password terlebih dahulu agar akun tidak dapat digunakan oleh orang lain.
+                @else
+                    Anda dapat mengganti password melalui form ini jika diperlukan.
+                @endif
             </p>
 
             @if (session('status'))

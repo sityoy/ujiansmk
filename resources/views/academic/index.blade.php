@@ -195,11 +195,11 @@
                     class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400">
                 <input name="card_uid" placeholder="UID kartu pelajar (opsional)"
                     class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400">
-                <x-password-input name="password" autocomplete="new-password" placeholder="Password awal (kosong = NISN/NIS)" aria-label="Password awal (kosong = NISN/NIS)"
+                <x-password-input name="password" autocomplete="new-password" placeholder="Password awal (kosong = NIS)" aria-label="Password awal (kosong = NIS)"
                     class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400" />
                 <x-password-input name="password_confirmation" autocomplete="new-password" placeholder="Ulangi password" aria-label="Ulangi password"
                     class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400" />
-                <p class="sm:col-span-2 text-xs leading-5 text-slate-500">Akun selalu dibuat. Username dan password awal memakai NISN jika tersedia, jika tidak memakai NIS. Email dan UID kartu tidak wajib.</p>
+                <p class="sm:col-span-2 text-xs leading-5 text-slate-500">Username memakai NISN jika tersedia, atau NIS. Password yang dikosongkan memakai NIS. Siswa dapat langsung login tanpa wajib mengganti password.</p>
                 <button class="sm:col-span-2 rounded-xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950">Tambah siswa</button>
             </form>
         </section>
@@ -212,7 +212,7 @@
                 <h2 class="mt-2 text-xl font-semibold text-white">Impor dan ekspor siswa</h2>
                 <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
                     Unduh template untuk impor per kelas, atau unggah kembali file “Ekspor seluruh siswa” agar kelas dan tahun ajaran dibaca otomatis. NIS wajib; NISN dan email opsional.
-                    Akun login otomatis dibuat. Username dan password awal memakai NISN; jika NISN kosong, memakai NIS.
+                    Akun login otomatis dibuat. Username memakai NISN jika tersedia, atau NIS. Pada siswa baru, Password kosong memakai NIS.
                     Kolom Password boleh diisi untuk menentukan password awal lain.
                 </p>
                 <form method="POST" action="{{ route('academic.students.participant-cards') }}" target="_blank"
@@ -226,7 +226,7 @@
                         </select>
                     </div>
                     <button class="self-end rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-slate-950">Cetak kartu</button>
-                    <p class="sm:col-span-2 text-xs leading-5 text-amber-100/70">Pencetakan tidak mengubah akun atau password. Kartu menampilkan username aktif dan password awal NISN/NIS sebagai pengingat.</p>
+                    <p class="sm:col-span-2 text-xs leading-5 text-amber-100/70">Kartu mengikuti username dan password akun siswa. Jika password khusus lama belum tersedia untuk cetak, kartu memberi keterangan untuk menghubungi panitia.</p>
                 </form>
 
                 <div class="mt-5 flex flex-wrap gap-3">
