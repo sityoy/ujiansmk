@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Kartu Peserta - {{ $printLabel }}</title>
+    <title>Kartu Peserta - {{ $period->name }} - {{ $printLabel }}</title>
     <style>
         @page { size: A4 portrait; margin: 10mm; }
         * { box-sizing: border-box; }
@@ -35,7 +35,7 @@
 </head>
 <body>
     <div class="toolbar">
-        <div>Kartu peserta {{ $printLabel }} · {{ $classGroups->count() }} kelas · {{ $students->count() }} siswa</div>
+        <div>{{ $period->name }} · Kartu peserta {{ $printLabel }} · {{ $classGroups->count() }} kelas · {{ $students->count() }} siswa</div>
         <button type="button" onclick="window.print()">Cetak / Simpan PDF</button>
     </div>
     <main>
@@ -56,7 +56,8 @@
                             <div class="body">
                                 <div class="name">{{ $student->full_name }}</div>
                                 <div class="row"><span>Kelas</span><span>:</span><strong>{{ $schoolClass->name }}</strong></div>
-                                <div class="row"><span>Ruangan</span><span>:</span><strong>{{ $student->room_name ?? 'Belum diatur' }}</strong></div>
+                                <div class="row"><span>Periode ujian</span><span>:</span><strong>{{ $period->name }}</strong></div>
+                                <div class="row"><span>Ruangan</span><span>:</span><strong>{{ $student->examRooms->first()?->room_name ?? 'Belum diatur' }}</strong></div>
                                 <div class="row"><span>Tahun ajaran</span><span>:</span><span>{{ $schoolClass->academicYear->name }}</span></div>
                                 <div class="row"><span>NIS / NISN</span><span>:</span><span>{{ $student->student_number }} / {{ $student->nisn ?? '—' }}</span></div>
                                 <div class="login">

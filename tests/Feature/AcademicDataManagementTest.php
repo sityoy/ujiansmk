@@ -53,7 +53,6 @@ class AcademicDataManagementTest extends TestCase
             'student_number' => 'S-001',
             'nisn' => '0123456789',
             'full_name' => 'Peserta Uji',
-            'room_name' => 'Ruang 02',
             'email' => 'siswa@example.test',
             'password' => 'Student123',
             'password_confirmation' => 'Student123',
@@ -62,7 +61,7 @@ class AcademicDataManagementTest extends TestCase
         $this->assertDatabaseHas('academic_years', ['name' => '2026/2027', 'is_active' => true]);
         $this->assertDatabaseHas('subjects', ['code' => 'INF']);
         $this->assertDatabaseHas('school_classes', ['name' => 'IX-2']);
-        $this->assertDatabaseHas('students', ['student_number' => 'S-001', 'nisn' => '0123456789', 'room_name' => 'Ruang 02']);
+        $this->assertDatabaseHas('students', ['student_number' => 'S-001', 'nisn' => '0123456789']);
         $this->assertDatabaseHas('users', ['email' => 'siswa@example.test', 'username' => '0123456789', 'role' => UserRole::Student->value]);
     }
 

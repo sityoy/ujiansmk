@@ -4,10 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
 use App\Models\AcademicYear;
+use App\Models\AssessmentPeriod;
 use App\Models\SchoolClass;
 use App\Models\Student;
+use App\Models\StudentExamRoom;
 use App\Models\Subject;
 use App\Models\User;
+use App\Services\Students\StudentExamRoomService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,6 +24,8 @@ class AcademicDataController extends Controller
 {
     public function index(Request $request): View
     {
+        $request->validate(['room_period_id' => ['nullable', 'integer', 'exists:assessment_periods,id']]);
+        $roomPeriod = $request->filled('room_period_id') ? AssessmentPeriod::with('academicYear')->findOrFail($request->integer('room_period_id')) : null;
         $classPerPage = $request->string('class_per_page')->toString();
         $classPerPage = in_array($classPerPage, ['5', 'all'], true) ? $classPerPage : '5';
         $classYearId = $request->filled('class_year') ? $request->integer('class_year') : null;
@@ -39,13 +44,15 @@ class AcademicDataController extends Controller
             : '20';
         $studentQuery = Student::query()
             ->with(['schoolClass.academicYear', 'user'])
-            ->when($studentSearch !== '', function ($query) use ($studentSearch): void {
-                $query->where(function ($searchQuery) use ($studentSearch): void {
+            ->with(['examRooms' => fn ($query) => $query->where('assessment_period_id', $roomPeriod?->id ?? 0)])
+            ->when($roomPeriod, fn ($query) => $query->whereHas('schoolClass', fn ($classes) => $classes->where('academic_year_id', $roomPeriod->academic_year_id)))
+            ->when($studentSearch !== '', function ($query) use ($studentSearch, $roomPeriod): void {
+                $query->where(function ($searchQuery) use ($studentSearch, $roomPeriod): void {
                     $searchQuery
                         ->where('full_name', 'like', '%'.$studentSearch.'%')
                         ->orWhere('student_number', 'like', '%'.$studentSearch.'%')
                         ->orWhere('nisn', 'like', '%'.$studentSearch.'%')
-                        ->orWhere('room_name', 'like', '%'.$studentSearch.'%')
+                        ->orWhereHas('examRooms', fn ($rooms) => $rooms->where('assessment_period_id', $roomPeriod?->id ?? 0)->where('room_name', 'like', '%'.$studentSearch.'%'))
                         ->orWhereHas('user', fn ($userQuery) => $userQuery
                             ->where('username', 'like', '%'.$studentSearch.'%')
                             ->orWhere('email', 'like', '%'.$studentSearch.'%'));
@@ -84,7 +91,9 @@ class AcademicDataController extends Controller
             'studentSearch' => $studentSearch,
             'studentClassId' => $studentClassId,
             'studentPerPage' => $studentPerPage,
-            'roomOptions' => Student::query()->whereNotNull('room_name')->distinct()->orderBy('room_name')->pluck('room_name'),
+            'assessmentPeriods' => AssessmentPeriod::with('academicYear')->orderByDesc('starts_on')->orderByDesc('id')->get(),
+            'roomPeriod' => $roomPeriod,
+            'roomOptions' => StudentExamRoom::query()->where('assessment_period_id', $roomPeriod?->id ?? 0)->distinct()->orderBy('room_name')->pluck('room_name'),
         ]);
     }
 
@@ -223,7 +232,6 @@ class AcademicDataController extends Controller
             'student_number' => ['required', 'string', 'max:50', 'unique:students,student_number'],
             'nisn' => ['nullable', 'digits:10', 'unique:students,nisn'],
             'full_name' => ['required', 'string', 'max:255'],
-            'room_name' => ['nullable', 'string', 'max:80'],
             'email' => ['nullable', 'email', 'max:255', 'unique:users,email'],
             'card_uid' => ['nullable', 'string', 'max:255'],
             'password' => [
@@ -265,7 +273,6 @@ class AcademicDataController extends Controller
                 'student_number' => trim($validated['student_number']),
                 'nisn' => $validated['nisn'],
                 'full_name' => trim($validated['full_name']),
-                'room_name' => filled($validated['room_name'] ?? null) ? trim($validated['room_name']) : null,
                 'card_uid_hash' => $validated['card_uid'] ? hash('sha256', $validated['card_uid']) : null,
                 'is_active' => true,
             ]);
@@ -274,32 +281,30 @@ class AcademicDataController extends Controller
         return back()->with('status', 'Data siswa berhasil ditambahkan.');
     }
 
-    public function updateStudentRoom(Request $request, Student $student): RedirectResponse
+    public function updateStudentRoom(Request $request, Student $student, StudentExamRoomService $rooms): RedirectResponse
     {
         $validated = $request->validate([
             'room_name' => ['present', 'nullable', 'string', 'max:80'],
+            'assessment_period_id' => ['required', 'integer', 'exists:assessment_periods,id'],
         ]);
 
-        $student->update([
-            'room_name' => filled($validated['room_name']) ? trim($validated['room_name']) : null,
-        ]);
+        $rooms->assign(AssessmentPeriod::findOrFail($validated['assessment_period_id']), [$student->id], $validated['room_name']);
 
         return back()->with('status', 'Ruangan '.$student->full_name.' berhasil diperbarui.');
     }
 
-    public function updateStudentRooms(Request $request): RedirectResponse
+    public function updateStudentRooms(Request $request, StudentExamRoomService $rooms): RedirectResponse
     {
         $validated = $request->validate([
             'student_ids' => ['required', 'array', 'min:1', 'max:500'],
             'student_ids.*' => ['required', 'integer', 'distinct', 'exists:students,id'],
             'bulk_room_name' => ['present', 'nullable', 'string', 'max:80'],
+            'assessment_period_id' => ['required', 'integer', 'exists:assessment_periods,id'],
         ], [
             'student_ids.required' => 'Pilih siswa yang akan diatur ruangannya.',
         ]);
 
-        Student::query()->whereKey($validated['student_ids'])->update([
-            'room_name' => filled($validated['bulk_room_name']) ? trim($validated['bulk_room_name']) : null,
-        ]);
+        $rooms->assign(AssessmentPeriod::findOrFail($validated['assessment_period_id']), $validated['student_ids'], $validated['bulk_room_name']);
 
         return back()->with('status', 'Ruangan untuk '.count($validated['student_ids']).' siswa terpilih berhasil diperbarui.');
     }

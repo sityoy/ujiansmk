@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
+use App\Models\AssessmentPeriod;
 use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\User;
+use App\Services\Students\StudentExamRoomService;
 use App\Services\Students\StudentSpreadsheetService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,23 +31,27 @@ class StudentSpreadsheetController extends Controller
             ->deleteFileAfterSend(true);
     }
 
-    public function export(StudentSpreadsheetService $spreadsheet): BinaryFileResponse
+    public function export(Request $request, StudentSpreadsheetService $spreadsheet): BinaryFileResponse
     {
+        $validated = $request->validate(['assessment_period_id' => ['nullable', 'integer', 'exists:assessment_periods,id']]);
+        $period = filled($validated['assessment_period_id'] ?? null) ? AssessmentPeriod::findOrFail($validated['assessment_period_id']) : null;
         $students = Student::query()
             ->with(['schoolClass.academicYear', 'user'])
+            ->with(['examRooms' => fn ($query) => $query->where('assessment_period_id', $period?->id ?? 0)])
+            ->when($period, fn ($query) => $query->whereHas('schoolClass', fn ($classes) => $classes->where('academic_year_id', $period->academic_year_id)))
             ->orderBy('full_name')
             ->get();
 
         return response()
             ->download(
-                $spreadsheet->createExport($students),
+                $spreadsheet->createExport($students, $period !== null),
                 'data-siswa-'.now()->format('Y-m-d-His').'.xlsx',
                 ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
             )
             ->deleteFileAfterSend(true);
     }
 
-    public function import(Request $request, StudentSpreadsheetService $spreadsheet): RedirectResponse
+    public function import(Request $request, StudentSpreadsheetService $spreadsheet, StudentExamRoomService $rooms): RedirectResponse
     {
         // Creating many student accounts requires one secure password hash per new user.
         // Keep the normal PHP limit for other pages, but allow this bulk operation to finish.
@@ -56,6 +62,7 @@ class StudentSpreadsheetController extends Controller
         $validated = $request->validate([
             'school_class_id' => ['nullable', 'exists:school_classes,id'],
             'spreadsheet' => ['required', 'file', 'max:10240'],
+            'assessment_period_id' => ['nullable', 'integer', 'exists:assessment_periods,id'],
         ]);
 
         $extension = strtolower($request->file('spreadsheet')->getClientOriginalExtension());
@@ -76,6 +83,11 @@ class StudentSpreadsheetController extends Controller
 
         if (count($rows) > 2000) {
             return back()->withErrors(['spreadsheet' => 'Maksimal 2.000 siswa dalam sekali impor.']);
+        }
+
+        $period = filled($validated['assessment_period_id'] ?? null) ? AssessmentPeriod::findOrFail($validated['assessment_period_id']) : null;
+        if (array_key_exists('ruangan', $rows[0]) && ! $period) {
+            return back()->withErrors(['assessment_period_id' => 'Pilih periode ujian untuk mengimpor kolom Ruangan.']);
         }
 
         $defaultSchoolClass = filled($validated['school_class_id'] ?? null)
@@ -144,10 +156,12 @@ class StudentSpreadsheetController extends Controller
             }
 
             $existing = Student::query()->where('student_number', $data['nis'])->first();
-            // Old templates have no room column and must preserve an existing assignment.
-            if (! array_key_exists('ruangan', $row)) {
-                $data['ruangan'] = $existing?->room_name;
+            if ($period && $rowSchoolClass->academic_year_id !== $period->academic_year_id) {
+                $errors[] = 'Baris '.$line.': tahun ajaran kelas harus sesuai dengan periode ujian.';
+
+                continue;
             }
+            $data['has_room_column'] = array_key_exists('ruangan', $row);
             $existingUserId = $existing?->user_id;
             $username = $data['nisn'] ?: $data['nis'];
             $cardHash = $data['card_uid'] ? hash('sha256', $data['card_uid']) : null;
@@ -223,7 +237,7 @@ class StudentSpreadsheetController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($preparedRows): void {
+        DB::transaction(function () use ($preparedRows, $period, $rooms): void {
             foreach ($preparedRows as [$data, $existing, $schoolClass]) {
                 $student = $existing ?? new Student;
                 $user = $student->user;
@@ -253,12 +267,14 @@ class StudentSpreadsheetController extends Controller
                     'student_number' => $data['nis'],
                     'nisn' => $data['nisn'],
                     'full_name' => $data['nama_lengkap'],
-                    'room_name' => $data['ruangan'],
                     'card_uid_hash' => $data['card_uid']
                         ? hash('sha256', $data['card_uid'])
                         : $student->card_uid_hash,
                     'is_active' => $this->isActive($data['status']),
                 ])->save();
+                if ($period && $data['has_room_column']) {
+                    $rooms->assign($period, [$student->id], $data['ruangan']);
+                }
             }
         });
 

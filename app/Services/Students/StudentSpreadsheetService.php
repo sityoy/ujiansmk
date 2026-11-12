@@ -88,9 +88,12 @@ class StudentSpreadsheetService
     }
 
     /** @param iterable<int, Student> $students */
-    public function createExport(iterable $students): string
+    public function createExport(iterable $students, bool $includeRooms = false): string
     {
-        $headers = ['NIS', 'NISN', 'Nama Lengkap', 'Kelas', 'Tahun Ajaran', 'Email', 'Username', 'Status', 'Ruangan'];
+        $headers = ['NIS', 'NISN', 'Nama Lengkap', 'Kelas', 'Tahun Ajaran', 'Email', 'Username', 'Status'];
+        if ($includeRooms) {
+            $headers[] = 'Ruangan';
+        }
         $rows = [];
 
         foreach ($students as $student) {
@@ -103,7 +106,7 @@ class StudentSpreadsheetService
                 $student->user?->email,
                 $student->user?->username,
                 $student->is_active ? 'aktif' : 'nonaktif',
-                $student->room_name,
+                ...($includeRooms ? [$student->examRooms->first()?->room_name] : []),
             ];
         }
 

@@ -195,10 +195,6 @@
                     class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400">
                 <input name="card_uid" placeholder="UID kartu pelajar (opsional)"
                     class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400">
-                <label class="sm:col-span-2 text-xs font-medium text-slate-400">Ruangan ujian (opsional)
-                    <input name="room_name" maxlength="80" list="student-room-options" placeholder="Contoh Ruang 01 atau Lab Komputer"
-                        class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400">
-                </label>
                 <x-password-input name="password" autocomplete="new-password" placeholder="Password awal (kosong = NIS)" aria-label="Password awal (kosong = NIS)"
                     class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400" />
                 <x-password-input name="password_confirmation" autocomplete="new-password" placeholder="Ulangi password" aria-label="Ulangi password"
@@ -218,19 +214,12 @@
                     Unduh template untuk impor per kelas, atau unggah kembali file “Ekspor seluruh siswa” agar kelas dan tahun ajaran dibaca otomatis. NIS wajib; NISN dan email opsional.
                     Akun login otomatis dibuat. Username memakai NISN jika tersedia, atau NIS. Pada siswa baru, Password kosong memakai NIS.
                     Kolom Password boleh diisi untuk menentukan password awal lain.
-                    Isi kolom Ruangan untuk menentukan ruangan ujian siswa. Saat impor ulang, kolom Ruangan yang kosong menghapus ruangan; file tanpa kolom Ruangan mempertahankan ruangan sebelumnya.
+                    Pilih periode ujian saat mengimpor kolom Ruangan. Ruangan hanya berlaku untuk periode tersebut. Kolom Ruangan kosong menghapus penempatan pada periode terpilih. File tanpa kolom Ruangan mempertahankan penempatan sebelumnya.
                 </p>
                 <form method="POST" action="{{ route('academic.students.participant-cards') }}" target="_blank"
                     class="mt-5 grid max-w-3xl gap-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.04] p-4 sm:grid-cols-[1fr_1fr_auto]">
                     @csrf
-                    <label class="block text-xs font-medium text-amber-200">Tahun ajaran kartu
-                        <select name="academic_year_id" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
-                            <option value="">Semua tahun ajaran</option>
-                            @foreach ($academicYears as $year)
-                                <option value="{{ $year->id }}" @selected($year->id === $academicYears->firstWhere('is_active', true)?->id)>{{ $year->name }}</option>
-                            @endforeach
-                        </select>
-                    </label>
+                    <x-assessment-period-select :periods="$assessmentPeriods" :selected="$roomPeriod?->id" :required="true" label="Periode kartu peserta" />
                     <label class="block text-xs font-medium text-amber-200">Kelas yang dicetak
                         <select name="school_class_id" required class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
                             <option value="all">Seluruh kelas</option>
@@ -240,7 +229,7 @@
                         </select>
                     </label>
                     <button class="self-end rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-slate-950">Cetak kartu</button>
-                    <p class="sm:col-span-3 text-xs leading-5 text-amber-100/70">Pilih seluruh kelas untuk mencetak sekaligus, atau satu kelas. Setiap kelas dimulai pada halaman baru. Kartu mengikuti username, password, dan ruangan siswa. Atur ruangan pada daftar siswa di bawah sebelum mencetak.</p>
+                    <p class="sm:col-span-3 text-xs leading-5 text-amber-100/70">Pilih periode, lalu seluruh kelas atau satu kelas pada tahun ajaran periode tersebut. Setiap kelas dimulai pada halaman baru. Kartu memuat periode, username, password, dan ruangan siswa pada periode terpilih.</p>
                     <p class="sm:col-span-3 text-xs leading-5 text-amber-100/70">Jika password khusus lama belum tersedia untuk cetak, kartu memberi keterangan untuk menghubungi panitia.</p>
                 </form>
 
@@ -248,10 +237,15 @@
                     <a href="{{ route('academic.students.template') }}" class="rounded-xl border border-cyan-400/30 px-4 py-2.5 text-sm font-medium text-cyan-200 hover:bg-cyan-400/10">Unduh template Excel</a>
                     <a href="{{ route('academic.students.export') }}" class="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-medium text-slate-200 hover:bg-white/5">Ekspor seluruh siswa</a>
                 </div>
+                <form method="GET" action="{{ route('academic.students.export') }}" class="mt-4 grid max-w-3xl gap-3 sm:grid-cols-[1fr_auto]">
+                    <x-assessment-period-select :periods="$assessmentPeriods" :selected="$roomPeriod?->id" :required="true" label="Ekspor ruangan per periode" />
+                    <button class="self-end rounded-xl border border-cyan-400/30 px-4 py-3 text-sm font-medium text-cyan-200 hover:bg-cyan-400/10">Ekspor siswa dan ruangan</button>
+                </form>
             </div>
 
             <form method="POST" action="{{ route('academic.students.import') }}" enctype="multipart/form-data" class="space-y-3">
                 @csrf
+                <x-assessment-period-select :periods="$assessmentPeriods" :selected="$roomPeriod?->id" label="Periode ruangan (wajib jika file berisi kolom Ruangan)" />
                 <select name="school_class_id" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
                     <option value="">Otomatis dari kolom Kelas & Tahun Ajaran</option>
                     @foreach ($classOptions as $class)<option value="{{ $class->id }}">{{ $class->name }} · {{ $class->academicYear->name }}</option>@endforeach
@@ -281,6 +275,7 @@
             <form method="GET" action="{{ route('academic.index') }}#student-list" class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(220px,1fr)_minmax(200px,280px)_150px_auto]">
                 <input type="hidden" name="class_year" value="{{ $classYearId }}">
                 <input type="hidden" name="class_per_page" value="{{ $classPerPage }}">
+                <x-assessment-period-select :periods="$assessmentPeriods" :selected="$roomPeriod?->id" name="room_period_id" label="Periode pengaturan ruangan" class="sm:col-span-2 xl:col-span-4" />
                 <label class="text-xs font-medium text-slate-400">
                     Pencarian siswa
                     <input name="student_search" value="{{ $studentSearch }}" placeholder="Nama, NIS, NISN, ruangan..."
@@ -305,14 +300,17 @@
                 </label>
                 <div class="flex items-end gap-2 sm:col-span-2 xl:col-span-1">
                     <button class="flex-1 rounded-xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950">Tampilkan</button>
-                    <a href="{{ route('academic.index', ['class_year' => $classYearId, 'class_per_page' => $classPerPage]) }}#student-list"
+                    <a href="{{ route('academic.index', ['class_year' => $classYearId, 'class_per_page' => $classPerPage, 'room_period_id' => $roomPeriod?->id]) }}#student-list"
                         class="rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-slate-300 hover:bg-white/5">Reset</a>
                 </div>
             </form>
 
+            @if ($roomPeriod)
+            <p class="mt-4 text-sm font-medium text-emerald-300">Ruangan untuk {{ $roomPeriod->name }} · {{ $roomPeriod->academicYear->name }}</p>
             <form id="student-room-bulk" method="POST" action="{{ route('academic.students.rooms') }}"
                 class="mt-5 grid gap-3 rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.04] p-4 sm:grid-cols-[1fr_auto]">
                 @csrf @method('PATCH')
+                <input type="hidden" name="assessment_period_id" value="{{ $roomPeriod->id }}">
                 <label class="text-xs font-medium text-slate-400">Atur ruangan siswa terpilih
                     <input name="bulk_room_name" maxlength="80" list="student-room-options" value="{{ old('bulk_room_name') }}" placeholder="Contoh Ruang 01 atau Lab Komputer"
                         class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400">
@@ -323,28 +321,36 @@
             <datalist id="student-room-options">
                 @foreach ($roomOptions as $room)<option value="{{ $room }}"></option>@endforeach
             </datalist>
+            @else
+                <p class="mt-4 text-sm text-amber-200">Pilih periode ujian lalu klik Tampilkan untuk melihat dan mengatur ruangan siswa pada periode tersebut.</p>
+            @endif
         </div>
 
         <div class="overflow-x-auto">
             <table class="responsive-data-table min-w-full text-left text-sm">
                 <thead class="bg-slate-950/60 text-xs uppercase tracking-wider text-slate-500">
-                    <tr><th class="px-5 py-4"><input type="checkbox" data-room-select-all aria-label="Pilih semua siswa pada halaman ini"></th><th class="px-5 py-4">NIS</th><th class="px-5 py-4">NISN</th><th class="px-5 py-4">Nama</th><th class="px-5 py-4">Kelas</th><th class="px-5 py-4">Ruangan</th><th class="px-5 py-4">Login</th><th class="px-5 py-4 text-right">Aksi</th></tr>
+                    <tr><th class="px-5 py-4"><input type="checkbox" data-room-select-all @disabled(! $roomPeriod) aria-label="Pilih semua siswa pada halaman ini"></th><th class="px-5 py-4">NIS</th><th class="px-5 py-4">NISN</th><th class="px-5 py-4">Nama</th><th class="px-5 py-4">Kelas</th><th class="px-5 py-4">Ruangan</th><th class="px-5 py-4">Login</th><th class="px-5 py-4 text-right">Aksi</th></tr>
                 </thead>
                 <tbody class="divide-y divide-white/5">
                     @forelse ($students as $student)
                         <tr>
-                            <td data-label="Pilih" class="px-5 py-4"><input type="checkbox" name="student_ids[]" value="{{ $student->id }}" form="student-room-bulk" data-room-student aria-label="Pilih {{ $student->full_name }}"></td>
+                            <td data-label="Pilih" class="px-5 py-4"><input type="checkbox" name="student_ids[]" value="{{ $student->id }}" form="student-room-bulk" data-room-student @disabled(! $roomPeriod) aria-label="Pilih {{ $student->full_name }}"></td>
                             <td data-label="NIS" class="px-5 py-4 text-slate-400">{{ $student->student_number }}</td>
                             <td data-label="NISN" class="px-5 py-4 text-slate-400">{{ $student->nisn ?? '—' }}</td>
                             <td data-label="Nama" class="px-5 py-4 font-medium text-white">{{ $student->full_name }}</td>
                             <td data-label="Kelas" class="px-5 py-4 text-slate-400">{{ $student->schoolClass->name }}</td>
                             <td data-label="Ruangan" class="px-5 py-4">
+                                @if ($roomPeriod)
                                 <form method="POST" action="{{ route('academic.students.room', $student) }}" class="flex items-center gap-2">
                                     @csrf @method('PATCH')
-                                    <input name="room_name" value="{{ $student->room_name }}" maxlength="80" list="student-room-options" placeholder="Belum diatur" aria-label="Ruangan {{ $student->full_name }}"
+                                    <input type="hidden" name="assessment_period_id" value="{{ $roomPeriod->id }}">
+                                    <input name="room_name" value="{{ $student->examRooms->first()?->room_name }}" maxlength="80" list="student-room-options" placeholder="Belum diatur" aria-label="Ruangan {{ $student->full_name }}"
                                         class="min-w-32 w-full rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-xs outline-none focus:border-emerald-400">
                                     <button class="text-xs font-semibold text-emerald-300">Simpan</button>
                                 </form>
+                                @else
+                                    <span class="text-xs text-slate-500">Pilih periode ujian</span>
+                                @endif
                             </td>
                             <td data-label="Login" class="px-5 py-4 text-slate-400">
                                 <span class="block">{{ $student->user?->username ?? 'Belum dibuat' }}</span>
