@@ -56,6 +56,7 @@
                             <div class="body">
                                 <div class="name">{{ $student->full_name }}</div>
                                 <div class="row"><span>Kelas</span><span>:</span><strong>{{ $schoolClass->name }}</strong></div>
+                                <div class="row"><span>Ruangan</span><span>:</span><strong>{{ $student->room_name ?? 'Belum diatur' }}</strong></div>
                                 <div class="row"><span>Tahun ajaran</span><span>:</span><span>{{ $schoolClass->academicYear->name }}</span></div>
                                 <div class="row"><span>NIS / NISN</span><span>:</span><span>{{ $student->student_number }} / {{ $student->nisn ?? '—' }}</span></div>
                                 <div class="login">

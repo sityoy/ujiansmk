@@ -9,7 +9,7 @@ use ZipArchive;
 
 class StudentSpreadsheetService
 {
-    private const IMPORT_HEADERS = ['NIS', 'NISN', 'Nama Lengkap', 'Email', 'Password', 'UID Kartu', 'Status'];
+    private const IMPORT_HEADERS = ['NIS', 'NISN', 'Nama Lengkap', 'Email', 'Password', 'UID Kartu', 'Status', 'Ruangan'];
 
     /** @return array<int, array<string, string|null>> */
     public function read(UploadedFile $file): array
@@ -77,6 +77,7 @@ class StudentSpreadsheetService
             '',
             '',
             'aktif',
+            'Ruang 01',
         ]], 'Template Siswa');
     }
 
@@ -89,7 +90,7 @@ class StudentSpreadsheetService
     /** @param iterable<int, Student> $students */
     public function createExport(iterable $students): string
     {
-        $headers = ['NIS', 'NISN', 'Nama Lengkap', 'Kelas', 'Tahun Ajaran', 'Email', 'Username', 'Status'];
+        $headers = ['NIS', 'NISN', 'Nama Lengkap', 'Kelas', 'Tahun Ajaran', 'Email', 'Username', 'Status', 'Ruangan'];
         $rows = [];
 
         foreach ($students as $student) {
@@ -102,6 +103,7 @@ class StudentSpreadsheetService
                 $student->user?->email,
                 $student->user?->username,
                 $student->is_active ? 'aktif' : 'nonaktif',
+                $student->room_name,
             ];
         }
 
@@ -137,7 +139,7 @@ class StudentSpreadsheetService
     {
         $this->ensureZipAvailable();
 
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
 
         if ($zip->open($path) !== true) {
             throw new RuntimeException('File Excel tidak dapat dibuka.');
@@ -258,7 +260,7 @@ class StudentSpreadsheetService
         $this->ensureZipAvailable();
 
         $path = tempnam(sys_get_temp_dir(), 'students_');
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
 
         if ($path === false || $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
             throw new RuntimeException('File Excel sementara tidak dapat dibuat.');

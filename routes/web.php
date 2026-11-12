@@ -118,6 +118,8 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             Route::get('/students/export', [StudentSpreadsheetController::class, 'export'])->name('students.export');
             Route::post('/students/import', [StudentSpreadsheetController::class, 'import'])->name('students.import');
             Route::post('/students/participant-cards', [ParticipantCardController::class, 'generate'])->name('students.participant-cards');
+            Route::patch('/students/rooms', [AcademicDataController::class, 'updateStudentRooms'])->name('students.rooms');
+            Route::patch('/students/{student}/room', [AcademicDataController::class, 'updateStudentRoom'])->name('students.room');
             Route::patch('/students/{student}/toggle', [AcademicDataController::class, 'toggleStudent'])->name('students.toggle');
             Route::delete('/students/{student}', [AcademicDataController::class, 'destroyStudent'])->name('students.destroy');
         });

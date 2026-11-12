@@ -195,6 +195,10 @@
                     class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400">
                 <input name="card_uid" placeholder="UID kartu pelajar (opsional)"
                     class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400">
+                <label class="sm:col-span-2 text-xs font-medium text-slate-400">Ruangan ujian (opsional)
+                    <input name="room_name" maxlength="80" list="student-room-options" placeholder="Contoh Ruang 01 atau Lab Komputer"
+                        class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400">
+                </label>
                 <x-password-input name="password" autocomplete="new-password" placeholder="Password awal (kosong = NIS)" aria-label="Password awal (kosong = NIS)"
                     class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400" />
                 <x-password-input name="password_confirmation" autocomplete="new-password" placeholder="Ulangi password" aria-label="Ulangi password"
@@ -214,6 +218,7 @@
                     Unduh template untuk impor per kelas, atau unggah kembali file “Ekspor seluruh siswa” agar kelas dan tahun ajaran dibaca otomatis. NIS wajib; NISN dan email opsional.
                     Akun login otomatis dibuat. Username memakai NISN jika tersedia, atau NIS. Pada siswa baru, Password kosong memakai NIS.
                     Kolom Password boleh diisi untuk menentukan password awal lain.
+                    Isi kolom Ruangan untuk menentukan ruangan ujian siswa. Saat impor ulang, kolom Ruangan yang kosong menghapus ruangan; file tanpa kolom Ruangan mempertahankan ruangan sebelumnya.
                 </p>
                 <form method="POST" action="{{ route('academic.students.participant-cards') }}" target="_blank"
                     class="mt-5 grid max-w-3xl gap-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.04] p-4 sm:grid-cols-[1fr_1fr_auto]">
@@ -235,7 +240,7 @@
                         </select>
                     </label>
                     <button class="self-end rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-slate-950">Cetak kartu</button>
-                    <p class="sm:col-span-3 text-xs leading-5 text-amber-100/70">Pilih seluruh kelas untuk mencetak sekaligus, atau satu kelas. Setiap kelas dimulai pada halaman baru. Kartu mengikuti username dan password akun siswa.</p>
+                    <p class="sm:col-span-3 text-xs leading-5 text-amber-100/70">Pilih seluruh kelas untuk mencetak sekaligus, atau satu kelas. Setiap kelas dimulai pada halaman baru. Kartu mengikuti username, password, dan ruangan siswa. Atur ruangan pada daftar siswa di bawah sebelum mencetak.</p>
                     <p class="sm:col-span-3 text-xs leading-5 text-amber-100/70">Jika password khusus lama belum tersedia untuk cetak, kartu memberi keterangan untuk menghubungi panitia.</p>
                 </form>
 
@@ -266,7 +271,7 @@
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <h2 class="text-xl font-semibold text-white">Daftar siswa</h2>
-                    <p class="mt-1 text-sm text-slate-500">Cari berdasarkan nama, NIS, NISN, username, atau email.</p>
+                    <p class="mt-1 text-sm text-slate-500">Cari berdasarkan nama, NIS, NISN, username, email, atau ruangan.</p>
                 </div>
                 <span class="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1.5 text-xs font-semibold text-cyan-200">
                     {{ $studentPerPage === 'all' ? $students->count() : $students->total() }} siswa
@@ -278,7 +283,7 @@
                 <input type="hidden" name="class_per_page" value="{{ $classPerPage }}">
                 <label class="text-xs font-medium text-slate-400">
                     Pencarian siswa
-                    <input name="student_search" value="{{ $studentSearch }}" placeholder="Nama, NIS, NISN, username..."
+                    <input name="student_search" value="{{ $studentSearch }}" placeholder="Nama, NIS, NISN, ruangan..."
                         class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-cyan-400">
                 </label>
                 <label class="text-xs font-medium text-slate-400">
@@ -304,20 +309,43 @@
                         class="rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-slate-300 hover:bg-white/5">Reset</a>
                 </div>
             </form>
+
+            <form id="student-room-bulk" method="POST" action="{{ route('academic.students.rooms') }}"
+                class="mt-5 grid gap-3 rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.04] p-4 sm:grid-cols-[1fr_auto]">
+                @csrf @method('PATCH')
+                <label class="text-xs font-medium text-slate-400">Atur ruangan siswa terpilih
+                    <input name="bulk_room_name" maxlength="80" list="student-room-options" value="{{ old('bulk_room_name') }}" placeholder="Contoh Ruang 01 atau Lab Komputer"
+                        class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-emerald-400">
+                </label>
+                <button class="self-end rounded-xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 disabled:opacity-50">Simpan ruangan siswa terpilih</button>
+                <p class="sm:col-span-2 text-xs leading-5 text-slate-400"><span data-room-selection-count>0 siswa terpilih.</span> Centang siswa pada tabel. Pilih semua hanya mencentang halaman ini. Gunakan filter kelas dan pilihan Semua data untuk mengatur satu kelas sekaligus. Maksimal 500 siswa sekali simpan. Kosongkan nama ruangan untuk menghapus penempatannya.</p>
+            </form>
+            <datalist id="student-room-options">
+                @foreach ($roomOptions as $room)<option value="{{ $room }}"></option>@endforeach
+            </datalist>
         </div>
 
         <div class="overflow-x-auto">
             <table class="responsive-data-table min-w-full text-left text-sm">
                 <thead class="bg-slate-950/60 text-xs uppercase tracking-wider text-slate-500">
-                    <tr><th class="px-5 py-4">NIS</th><th class="px-5 py-4">NISN</th><th class="px-5 py-4">Nama</th><th class="px-5 py-4">Kelas</th><th class="px-5 py-4">Login</th><th class="px-5 py-4 text-right">Aksi</th></tr>
+                    <tr><th class="px-5 py-4"><input type="checkbox" data-room-select-all aria-label="Pilih semua siswa pada halaman ini"></th><th class="px-5 py-4">NIS</th><th class="px-5 py-4">NISN</th><th class="px-5 py-4">Nama</th><th class="px-5 py-4">Kelas</th><th class="px-5 py-4">Ruangan</th><th class="px-5 py-4">Login</th><th class="px-5 py-4 text-right">Aksi</th></tr>
                 </thead>
                 <tbody class="divide-y divide-white/5">
                     @forelse ($students as $student)
                         <tr>
+                            <td data-label="Pilih" class="px-5 py-4"><input type="checkbox" name="student_ids[]" value="{{ $student->id }}" form="student-room-bulk" data-room-student aria-label="Pilih {{ $student->full_name }}"></td>
                             <td data-label="NIS" class="px-5 py-4 text-slate-400">{{ $student->student_number }}</td>
                             <td data-label="NISN" class="px-5 py-4 text-slate-400">{{ $student->nisn ?? '—' }}</td>
                             <td data-label="Nama" class="px-5 py-4 font-medium text-white">{{ $student->full_name }}</td>
                             <td data-label="Kelas" class="px-5 py-4 text-slate-400">{{ $student->schoolClass->name }}</td>
+                            <td data-label="Ruangan" class="px-5 py-4">
+                                <form method="POST" action="{{ route('academic.students.room', $student) }}" class="flex items-center gap-2">
+                                    @csrf @method('PATCH')
+                                    <input name="room_name" value="{{ $student->room_name }}" maxlength="80" list="student-room-options" placeholder="Belum diatur" aria-label="Ruangan {{ $student->full_name }}"
+                                        class="min-w-32 w-full rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-xs outline-none focus:border-emerald-400">
+                                    <button class="text-xs font-semibold text-emerald-300">Simpan</button>
+                                </form>
+                            </td>
                             <td data-label="Login" class="px-5 py-4 text-slate-400">
                                 <span class="block">{{ $student->user?->username ?? 'Belum dibuat' }}</span>
                                 @if ($student->user?->email)<span class="mt-1 block text-xs text-slate-600">{{ $student->user->email }}</span>@endif
@@ -334,7 +362,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6" class="px-6 py-12 text-center text-slate-500">Data siswa tidak ditemukan.</td></tr>
+                        <tr><td colspan="8" class="px-6 py-12 text-center text-slate-500">Data siswa tidak ditemukan.</td></tr>
                     @endforelse
                 </tbody>
             </table>

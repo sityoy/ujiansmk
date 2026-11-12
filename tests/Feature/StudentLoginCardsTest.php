@@ -50,6 +50,7 @@ class StudentLoginCardsTest extends TestCase
             'school_class_id' => $student->school_class_id,
         ])->assertOk()
             ->assertSee('login-siswa-khusus')
+            ->assertSee('<span>Ruangan</span><span>:</span><strong>Belum diatur</strong>', false)
             ->assertSee('<span>Password</span><span>:</span><strong>SiswaAwal123</strong>', false)
             ->assertHeader('Cache-Control', 'must-revalidate, no-cache, no-store, private');
         $this->assertSame($hash, $user->fresh()->password);
@@ -97,13 +98,13 @@ class StudentLoginCardsTest extends TestCase
     public function test_bulk_cards_include_all_active_accounts_and_label_each_class_and_year_correctly(): void
     {
         $first = $this->makeStudent('001', '0123456701', '001');
-        $first->update(['full_name' => 'Zainab Kelas Satu']);
+        $first->update(['full_name' => 'Zainab Kelas Satu', 'room_name' => 'Ruang 01']);
         $class = $first->schoolClass;
         $secondClass = SchoolClass::create([
             'academic_year_id' => $class->academic_year_id, 'name' => 'X-2', 'grade_level' => 10,
         ]);
         $second = $this->makeStudent('002', '0123456702', '002', $secondClass);
-        $second->update(['full_name' => 'Andi Kelas Dua']);
+        $second->update(['full_name' => 'Andi Kelas Dua', 'room_name' => 'Lab <Komputer> & Bahasa']);
         $inactiveStudent = $this->makeStudent('003', '0123456703', '003', $secondClass);
         $inactiveStudent->update(['full_name' => 'Siswa Dinonaktifkan', 'is_active' => false]);
         $inactiveUser = $this->makeStudent('004', '0123456704', '004', $secondClass);
@@ -123,13 +124,14 @@ class StudentLoginCardsTest extends TestCase
         $this->post($route, ['school_class_id' => 'all', 'academic_year_id' => $class->academic_year_id])
             ->assertOk()
             ->assertViewHas('students', fn ($students): bool => $students->count() === 2)
-            ->assertSeeInOrder(['X-1 · 2026/2027', 'Zainab Kelas Satu', 'X-2 · 2026/2027', 'Andi Kelas Dua'])
+            ->assertSeeInOrder(['X-1 · 2026/2027', 'Zainab Kelas Satu', 'Ruang 01', 'X-2 · 2026/2027', 'Andi Kelas Dua', 'Lab <Komputer> & Bahasa'])
+            ->assertDontSee('Lab <Komputer> & Bahasa', false)
             ->assertDontSee('Peserta Tahun Lama')->assertDontSee('Siswa Dinonaktifkan')->assertDontSee('Akun Dinonaktifkan');
         $this->post($route, ['school_class_id' => 'all'])
             ->assertOk()->assertViewHas('classGroups', fn ($groups): bool => $groups->count() === 3)
             ->assertSee('X-1 · 2025/2026')->assertSee('Peserta Tahun Lama');
         $this->post($route, ['school_class_id' => $secondClass->id, 'academic_year_id' => $class->academic_year_id])
-            ->assertOk()->assertSee('Andi Kelas Dua')->assertDontSee('Zainab Kelas Satu');
+            ->assertOk()->assertSee('Andi Kelas Dua')->assertSee('Lab <Komputer> & Bahasa')->assertDontSee('Zainab Kelas Satu');
         $this->assertSame($hashes, User::query()->where('role', UserRole::Student)->pluck('password', 'id')->all());
     }
 

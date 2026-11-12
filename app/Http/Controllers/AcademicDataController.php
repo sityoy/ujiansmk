@@ -45,6 +45,7 @@ class AcademicDataController extends Controller
                         ->where('full_name', 'like', '%'.$studentSearch.'%')
                         ->orWhere('student_number', 'like', '%'.$studentSearch.'%')
                         ->orWhere('nisn', 'like', '%'.$studentSearch.'%')
+                        ->orWhere('room_name', 'like', '%'.$studentSearch.'%')
                         ->orWhereHas('user', fn ($userQuery) => $userQuery
                             ->where('username', 'like', '%'.$studentSearch.'%')
                             ->orWhere('email', 'like', '%'.$studentSearch.'%'));
@@ -83,6 +84,7 @@ class AcademicDataController extends Controller
             'studentSearch' => $studentSearch,
             'studentClassId' => $studentClassId,
             'studentPerPage' => $studentPerPage,
+            'roomOptions' => Student::query()->whereNotNull('room_name')->distinct()->orderBy('room_name')->pluck('room_name'),
         ]);
     }
 
@@ -221,6 +223,7 @@ class AcademicDataController extends Controller
             'student_number' => ['required', 'string', 'max:50', 'unique:students,student_number'],
             'nisn' => ['nullable', 'digits:10', 'unique:students,nisn'],
             'full_name' => ['required', 'string', 'max:255'],
+            'room_name' => ['nullable', 'string', 'max:80'],
             'email' => ['nullable', 'email', 'max:255', 'unique:users,email'],
             'card_uid' => ['nullable', 'string', 'max:255'],
             'password' => [
@@ -262,12 +265,43 @@ class AcademicDataController extends Controller
                 'student_number' => trim($validated['student_number']),
                 'nisn' => $validated['nisn'],
                 'full_name' => trim($validated['full_name']),
+                'room_name' => filled($validated['room_name'] ?? null) ? trim($validated['room_name']) : null,
                 'card_uid_hash' => $validated['card_uid'] ? hash('sha256', $validated['card_uid']) : null,
                 'is_active' => true,
             ]);
         });
 
         return back()->with('status', 'Data siswa berhasil ditambahkan.');
+    }
+
+    public function updateStudentRoom(Request $request, Student $student): RedirectResponse
+    {
+        $validated = $request->validate([
+            'room_name' => ['present', 'nullable', 'string', 'max:80'],
+        ]);
+
+        $student->update([
+            'room_name' => filled($validated['room_name']) ? trim($validated['room_name']) : null,
+        ]);
+
+        return back()->with('status', 'Ruangan '.$student->full_name.' berhasil diperbarui.');
+    }
+
+    public function updateStudentRooms(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'student_ids' => ['required', 'array', 'min:1', 'max:500'],
+            'student_ids.*' => ['required', 'integer', 'distinct', 'exists:students,id'],
+            'bulk_room_name' => ['present', 'nullable', 'string', 'max:80'],
+        ], [
+            'student_ids.required' => 'Pilih siswa yang akan diatur ruangannya.',
+        ]);
+
+        Student::query()->whereKey($validated['student_ids'])->update([
+            'room_name' => filled($validated['bulk_room_name']) ? trim($validated['bulk_room_name']) : null,
+        ]);
+
+        return back()->with('status', 'Ruangan untuk '.count($validated['student_ids']).' siswa terpilih berhasil diperbarui.');
     }
 
     public function toggleStudent(Student $student): RedirectResponse

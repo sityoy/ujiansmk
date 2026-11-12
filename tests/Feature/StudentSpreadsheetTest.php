@@ -7,6 +7,7 @@ use App\Models\AcademicYear;
 use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\User;
+use App\Services\Students\StudentSpreadsheetService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
@@ -100,6 +101,75 @@ class StudentSpreadsheetTest extends TestCase
         $response->assertOk();
         $response->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         $this->assertStringContainsString('template-import-siswa.xlsx', (string) $response->headers->get('content-disposition'));
+    }
+
+    public function test_imported_rooms_can_be_updated_cleared_and_preserved_with_an_old_template(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $class = $this->makeClass();
+        $this->actingAs($admin);
+        foreach ([
+            ['NIS,Nama Lengkap,Ruangan', '2026001,Siswa Satu,Ruang 01', 'Ruang 01'],
+            ['NIS,Nama Lengkap', '2026001,Siswa Satu', 'Ruang 01'],
+            ['NIS,Nama Lengkap,Ruangan', '2026001,Siswa Satu,Lab Bahasa', 'Lab Bahasa'],
+            ['NIS,Nama Lengkap,Ruangan', '2026001,Siswa Satu,', null],
+        ] as [$header, $row, $expectedRoom]) {
+            $this->post(route('academic.students.import'), [
+                'school_class_id' => $class->id,
+                'spreadsheet' => UploadedFile::fake()->createWithContent('ruangan.csv', $header."\n".$row),
+            ])->assertRedirect()->assertSessionHasNoErrors();
+            $student = Student::query()->where('student_number', '2026001')->firstOrFail();
+            $this->assertSame($expectedRoom, $student->room_name);
+            $this->assertTrue(Hash::check('2026001', $student->user->password));
+        }
+        $this->assertDatabaseCount('students', 1);
+    }
+
+    public function test_invalid_room_in_import_rejects_the_entire_file(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $class = $this->makeClass();
+        $csv = "NIS,Nama Lengkap,Ruangan\n001,Siswa Satu,Ruang 01\n002,Siswa Dua,".str_repeat('R', 81);
+        $this->actingAs($admin)->post(route('academic.students.import'), [
+            'school_class_id' => $class->id,
+            'spreadsheet' => UploadedFile::fake()->createWithContent('ruangan.csv', $csv),
+        ])->assertSessionHasErrors('spreadsheet');
+        $this->assertDatabaseCount('students', 0);
+    }
+
+    public function test_excel_template_and_export_include_rooms_and_export_can_be_reimported(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $class = $this->makeClass();
+        $this->actingAs($admin)->post(route('academic.students.import'), [
+            'school_class_id' => $class->id,
+            'spreadsheet' => UploadedFile::fake()->createWithContent('ruangan.csv', "NIS,Nama Lengkap,Ruangan\n001,Siswa Satu,Lab Bahasa"),
+        ])->assertSessionHasNoErrors();
+        $service = app(StudentSpreadsheetService::class);
+        $template = $service->createTemplate();
+        try {
+            $rows = $service->read(new UploadedFile($template, 'template.xlsx', null, null, true));
+            $this->assertSame('Ruang 01', $rows[0]['ruangan']);
+        } finally {
+            unlink($template);
+        }
+        $response = $this->get(route('academic.students.export'))->assertOk();
+        $path = $response->baseResponse->getFile()->getPathname();
+        try {
+            $rows = $service->read(new UploadedFile($path, 'export.xlsx', null, null, true));
+            $this->assertSame('Lab Bahasa', $rows[0]['ruangan']);
+            $this->assertArrayNotHasKey('password', $rows[0]);
+            Student::query()->update(['room_name' => 'Ruangan Sementara']);
+            $this->post(route('academic.students.import'), [
+                'spreadsheet' => new UploadedFile($path, 'export.xlsx', null, null, true),
+            ])->assertSessionHasNoErrors();
+            $this->assertDatabaseHas('students', ['student_number' => '001', 'room_name' => 'Lab Bahasa', 'school_class_id' => $class->id]);
+            $this->assertDatabaseCount('students', 1);
+        } finally {
+            if (is_file($path)) {
+                unlink($path);
+            }
+        }
     }
 
     private function makeClass(): SchoolClass

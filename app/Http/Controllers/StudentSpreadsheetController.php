@@ -101,6 +101,7 @@ class StudentSpreadsheetController extends Controller
                 'status' => strtolower(trim((string) ($row['status'] ?? 'aktif'))),
                 'kelas' => filled($row['kelas'] ?? null) ? trim((string) $row['kelas']) : null,
                 'tahun_ajaran' => filled($row['tahun_ajaran'] ?? null) ? trim((string) $row['tahun_ajaran']) : null,
+                'ruangan' => filled($row['ruangan'] ?? null) ? trim((string) $row['ruangan']) : null,
             ];
 
             $validator = Validator::make($data, [
@@ -113,6 +114,7 @@ class StudentSpreadsheetController extends Controller
                 'status' => ['required', 'in:aktif,nonaktif,active,inactive,1,0'],
                 'kelas' => ['nullable', 'string', 'max:100'],
                 'tahun_ajaran' => ['nullable', 'string', 'max:30'],
+                'ruangan' => ['nullable', 'string', 'max:80'],
             ]);
 
             if ($validator->fails()) {
@@ -142,6 +144,10 @@ class StudentSpreadsheetController extends Controller
             }
 
             $existing = Student::query()->where('student_number', $data['nis'])->first();
+            // Old templates have no room column and must preserve an existing assignment.
+            if (! array_key_exists('ruangan', $row)) {
+                $data['ruangan'] = $existing?->room_name;
+            }
             $existingUserId = $existing?->user_id;
             $username = $data['nisn'] ?: $data['nis'];
             $cardHash = $data['card_uid'] ? hash('sha256', $data['card_uid']) : null;
@@ -247,6 +253,7 @@ class StudentSpreadsheetController extends Controller
                     'student_number' => $data['nis'],
                     'nisn' => $data['nisn'],
                     'full_name' => $data['nama_lengkap'],
+                    'room_name' => $data['ruangan'],
                     'card_uid_hash' => $data['card_uid']
                         ? hash('sha256', $data['card_uid'])
                         : $student->card_uid_hash,
