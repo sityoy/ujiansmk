@@ -18,6 +18,7 @@ use App\Models\TrialQuestion;
 use App\Models\TrialQuestionBank;
 use App\Models\User;
 use App\Services\Exams\ExamSecurityService;
+use App\Services\Exams\TrialExamAttemptService;
 use App\Services\Exams\TrialExamSecurityService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -287,6 +288,63 @@ class TrialExamFlowTest extends TestCase
         $this->assertSame(2, ExamSecurityService::LIMIT);
         $this->assertSame(ExamSecurityService::LIMIT, TrialExamSecurityService::LIMIT);
         $this->assertSame(ExamSecurityService::CLIENT_CATEGORIES, TrialExamSecurityService::CLIENT_CATEGORIES);
+    }
+
+    public function test_trial_resets_share_a_two_action_limit_across_roles_without_losing_answers_or_audit(): void
+    {
+        [$trial, $question] = $this->makeTrial();
+        $this->post(route('tryout.start', $trial), ['participant_identifier' => '1234567890', 'access_code' => 'SJR-SMKBHG'])->assertRedirect();
+        $attempt = TrialAttempt::firstOrFail();
+        $this->putJson(route('tryout.answer', [$trial, $attempt, $question]), ['answer' => 'A'])->assertOk();
+        $this->assertSame(1, $attempt->answers()->count());
+        $deadline = app(TrialExamAttemptService::class)->deadline($attempt)->toIso8601String();
+        foreach ([UserRole::Principal, UserRole::SuperAdmin] as $index => $role) {
+            $this->postJson(route('tryout.incident', [$trial, $attempt]), ['category' => 'tab_hidden', 'event_id' => (string) Str::uuid()])->assertJson(['violations' => 1]);
+            $actor = User::factory()->create(['role' => $role]);
+            $this->actingAs($actor)->post(route('tryouts.attempts.reset-violations', [$trial, $attempt]), ['reason' => 'Gangguan perangkat peserta telah diperiksa.'])->assertSessionHasNoErrors();
+            $this->assertSame($index + 1, $attempt->fresh()->security_reset_count);
+        }
+        $this->travel(4)->seconds();
+        $this->postJson(route('tryout.incident', [$trial, $attempt]), ['category' => 'tab_hidden', 'event_id' => (string) Str::uuid()])->assertOk();
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $this->actingAs($committee)->post(route('tryouts.attempts.reset-violations', [$trial, $attempt]), ['reason' => 'Mencoba reset ketiga oleh petugas lain.'])->assertSessionHasErrors('security');
+        $this->assertSame(2, $attempt->fresh()->security_reset_count);
+        $this->assertSame(1, $attempt->fresh()->violation_count);
+        $this->assertSame(2, $attempt->securityIncidents()->where('category', 'supervisor_reset')->count());
+        $this->assertSame($deadline, app(TrialExamAttemptService::class)->deadline($attempt->fresh())->toIso8601String());
+        $this->assertSame(1, $attempt->answers()->count());
+    }
+
+    public function test_trial_teacher_sees_incident_history_for_their_classes_and_cannot_reset(): void
+    {
+        [$trial] = $this->makeTrial();
+        $teacher = User::factory()->create(['role' => UserRole::Teacher]);
+        $trial->assessmentSubject->update(['teacher_user_id' => $teacher->id]);
+        $otherClass = SchoolClass::create(['academic_year_id' => $trial->assessmentSubject->assessmentPeriod->academic_year_id, 'name' => 'X-2', 'grade_level' => 10]);
+        $other = Student::create(['school_class_id' => $otherClass->id, 'student_number' => 'OTHER', 'full_name' => 'Siswa Di Luar Kelas Guru', 'is_active' => true]);
+        $this->post(route('tryout.start', $trial), ['participant_identifier' => '1234567890', 'access_code' => 'SJR-SMKBHG'])->assertRedirect();
+        $attempt = TrialAttempt::firstOrFail();
+        $this->postJson(route('tryout.incident', [$trial, $attempt]), ['category' => 'tab_hidden', 'event_id' => (string) Str::uuid()])->assertOk();
+        $this->actingAs($teacher)->get(route('tryouts.participants', $trial))->assertOk()->assertSee('Berpindah tab/aplikasi')->assertDontSee('Siswa Di Luar Kelas Guru')->assertDontSee('Reset ke 0/2');
+        $this->get(route('tryouts.progress', [$trial, 'student_ids' => [$attempt->student_id, $other->id]]))->assertOk()->assertJsonMissingPath('participants.'.$other->id);
+        $this->post(route('tryouts.attempts.reset-violations', [$trial, $attempt]), ['reason' => 'Guru mencoba mengubah pelanggaran.'])->assertForbidden();
+        $otherTeacher = User::factory()->create(['role' => UserRole::Teacher]);
+        $this->actingAs($otherTeacher)->get(route('tryouts.participants', $trial))->assertForbidden();
+        $this->assertSame(1, $attempt->fresh()->violation_count);
+    }
+
+    public function test_trial_legacy_reset_actions_are_counted_by_the_migration(): void
+    {
+        [$trial] = $this->makeTrial();
+        $this->post(route('tryout.start', $trial), ['participant_identifier' => '1234567890', 'access_code' => 'SJR-SMKBHG'])->assertRedirect();
+        $attempt = TrialAttempt::firstOrFail();
+        foreach ([1, 2] as $number) {
+            $attempt->securityIncidents()->create(['category' => 'supervisor_reset', 'severity' => 0, 'occurred_at' => now(), 'details' => []]);
+        }
+        $migration = require database_path('migrations/2026_11_13_000100_limit_exam_security_resets.php');
+        $migration->down();
+        $migration->up();
+        $this->assertSame(2, $attempt->fresh()->security_reset_count);
     }
 
     private function makeTrial(): array

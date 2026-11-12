@@ -84,21 +84,12 @@
                                 @endif
                             </td>
                             <td class="min-w-72 px-5 py-4 text-slate-300">
-                                <p>{{ $attempt?->violation_count ?? 0 }}{{ $attempt?->security_enabled ? '/2' : '' }}</p>
+                                <p data-reset-used class="mb-2 text-xs text-amber-200">Pemulihan terpakai {{ $assignment->security_reset_count }}/2 · jatah bersama seluruh petugas</p>
+                                @if ($assignment->security_reset_count >= 2)<p class="mb-2 text-xs text-rose-300">Batas reset atau izin lanjut tercapai.</p>@endif
+                                <p data-progress-violations>{{ $attempt?->violation_count ?? 0 }}{{ $attempt?->security_enabled ? '/2' : '' }}</p>
                                 @if ($attempt)
-                                    <details class="mt-2 text-xs">
-                                        <summary class="cursor-pointer text-cyan-300">Riwayat pengawasan</summary>
-                                        @forelse ($attempt->securityIncidents as $incident)
-                                            <p class="mt-3 leading-5">{{ $incident->occurred_at->format('d/m H:i:s') }} · {{ ['tab_hidden' => 'Berpindah tab/aplikasi', 'fullscreen_exit' => 'Keluar layar penuh', 'window_blur' => 'Fokus hilang (bubble/notifikasi)', 'system_gesture' => 'Membuka bilah sistem/notifikasi', 'viewport_change' => 'Perubahan layar mencurigakan/split screen', 'restricted_action' => 'Tombol atau gestur terlarang', 'navigation_attempt' => 'Mencoba keluar dengan tombol kembali', 'supervisor_resume' => 'Diizinkan lanjut', 'supervisor_submit' => 'Dikumpulkan pengawas', 'supervisor_reset' => 'Hitungan pelanggaran direset'][$incident->category] ?? $incident->category }}
-                                                @if (array_key_exists('counted', $incident->details ?? [])) · {{ $incident->details['counted'] ? 'Dihitung' : 'Sinyal bersamaan; tidak dihitung ulang' }} @endif
-                                                @if (isset($incident->details['context']['viewport_width'], $incident->details['context']['viewport_height']))<br><span class="text-slate-500">Layar {{ $incident->details['context']['viewport_width'] }}×{{ $incident->details['context']['viewport_height'] }} px</span>@endif
-                                                @if (isset($incident->details['reason']))<br>{{ $incident->details['reviewer_name'] ?? 'Pengawas' }}: {{ $incident->details['reason'] }}@endif
-                                            </p>
-                                        @empty
-                                            <p class="mt-2 text-slate-500">Belum ada catatan.</p>
-                                        @endforelse
-                                    </details>
-                                    @if ($status === 'locked' && in_array(auth()->user()->role->value, ['super_admin', 'committee', 'proctor'], true))
+                                    <x-exam-incident-history :incidents="$attempt->securityIncidents" />
+                                    @if ($status === 'locked' && in_array(auth()->user()->role->value, ['super_admin', 'committee', 'principal', 'proctor'], true))
                                         <form method="POST" action="{{ route('operations.attempts.security-review', $attempt) }}" class="mt-3 space-y-2" onsubmit="return confirm('Simpan keputusan pengawas? Waktu dan riwayat tidak direset.')">
                                             @csrf
                                             <input type="hidden" name="lock_version" value="{{ $attempt->security_lock_version }}">
@@ -107,14 +98,14 @@
                                             </label>
                                             <select name="action" required aria-label="Keputusan pengawas" class="w-full rounded-lg border border-white/20 bg-slate-950 p-2 text-xs">
                                                 <option value="">Pilih keputusan</option>
-                                                <option value="resume">Izinkan lanjut tanpa reset</option>
+                                                <option value="resume" @disabled($assignment->security_reset_count >= 2)>Izinkan lanjut tanpa reset</option>
                                                 <option value="submit">Akhiri dan kumpulkan jawaban</option>
                                             </select>
                                             <p class="text-xs leading-5 text-slate-400">Jika diizinkan lanjut, hitungan tetap 2/2 dan kejadian berikutnya langsung mengunci kembali.</p>
                                             <button class="rounded-lg bg-amber-400 px-3 py-2 text-xs font-semibold text-slate-950">Simpan keputusan</button>
                                         </form>
                                     @endif
-                                    @if ($attempt->security_enabled && $attempt->status->value === 'in_progress' && $attempt->violation_count > 0 && in_array(auth()->user()->role->value, ['super_admin', 'committee'], true))
+                                    @if ($assignment->security_reset_count < 2 && $attempt->security_enabled && $attempt->status->value === 'in_progress' && $attempt->violation_count > 0 && in_array(auth()->user()->role->value, ['super_admin', 'committee', 'principal'], true))
                                         <form method="POST" action="{{ route('operations.attempts.reset-violations', $attempt) }}" class="mt-3 space-y-2 border-t border-white/10 pt-3" onsubmit="return confirm('Reset hitungan pelanggaran peserta ke 0? Jawaban dan riwayat tetap disimpan.')">
                                             @csrf
                                             <label class="block text-xs text-rose-200">Alasan reset pelanggaran (wajib)
@@ -124,7 +115,7 @@
                                             <button class="rounded-lg border border-rose-300/40 px-3 py-2 text-xs font-semibold text-rose-200">Reset pelanggaran ke 0</button>
                                         </form>
                                     @endif
-                                    @if (in_array(auth()->user()->role->value, ['super_admin', 'committee'], true) && $session->status->value !== 'closed' && now()->lt($session->ends_at))
+                                    @if ($assignment->security_reset_count < 2 && in_array(auth()->user()->role->value, ['super_admin', 'committee', 'principal'], true) && $session->status->value !== 'closed' && now()->lt($session->ends_at))
                                         <details class="mt-3 border-t border-white/10 pt-3">
                                             <summary class="cursor-pointer text-xs font-semibold text-rose-300">Reset seluruh ujian peserta</summary>
                                             <form method="POST" action="{{ route('operations.assignments.reset-attempt', $assignment) }}" class="mt-3 space-y-2" onsubmit="return confirm('Reset SELURUH ujian peserta? Semua jawaban percobaan ini dihapus dan siswa harus mulai kembali dari awal.')">
@@ -141,6 +132,7 @@
                                         <summary class="cursor-pointer text-rose-200">Riwayat reset ujian ({{ $assignment->attemptResets->count() }})</summary>
                                         @foreach ($assignment->attemptResets as $reset)
                                             <p class="mt-2 leading-5">{{ $reset->created_at->format('d/m/Y H:i:s') }} · {{ $reset->performedBy?->name ?? 'Akun dihapus' }}<br>{{ $reset->reason }}</p>
+                                            <x-exam-incident-history :incidents="$reset->snapshot['security_incidents'] ?? []" />
                                         @endforeach
                                     </details>
                                 @endif
@@ -154,7 +146,7 @@
         </div>
         <div class="p-5"><p class="mb-3 text-xs text-slate-500">{{ $participants->total() }} peserta sesuai filter · 25 peserta per halaman.</p>{{ $participants->links() }}</div>
     </section>
-    @if (in_array(auth()->user()->role->value, ['super_admin', 'committee'], true))
+    @if (in_array(auth()->user()->role->value, ['super_admin', 'committee', 'principal'], true))
         <p class="mt-5 text-sm text-slate-400">Peserta tidak hadir dapat dipindahkan melalui <a href="{{ route('scheduling.index') }}#peserta-susulan" class="text-cyan-300">Penjadwalan → Peserta Susulan</a>. Penugasan lama dipindahkan, bukan dibuat ganda; siswa yang sudah mulai tidak dapat dipindahkan.</p>
     @endif
 
@@ -186,6 +178,10 @@
                             const answered = row.querySelector('[data-progress-answered]');
                             const bar = row.querySelector('[data-progress-bar]');
                             if (status) status.textContent = labels[participant.status] ?? 'Perlu pemeriksaan';
+                            const violations = row.querySelector('[data-progress-violations]');
+                            if (violations) violations.textContent = participant.violations + '/2';
+                            const resets = row.querySelector('[data-reset-used]');
+                            if (resets) resets.textContent = 'Pemulihan terpakai ' + participant.reset_used + '/2 · jatah bersama seluruh petugas';
                             if (answered) answered.textContent = participant.answered;
                             const progressLabel = row.querySelector('[data-progress-label]');
                             if (progressLabel) progressLabel.setAttribute('aria-label', participant.answered + ' / ' + progressLabel.dataset.progressTotal + ' jawaban');

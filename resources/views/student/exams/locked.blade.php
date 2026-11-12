@@ -18,5 +18,5 @@
         @csrf
         <button class="rounded-xl border border-white/20 px-4 py-3 text-sm">Akhiri dan kumpulkan jawaban tersimpan</button>
     </form>
-    <script src="{{ asset('js/exam-security.js') }}?v=20261108-2" defer></script>
+    <script src="{{ asset('js/exam-security.js') }}?v=20261113-1" defer></script>
 @endsection

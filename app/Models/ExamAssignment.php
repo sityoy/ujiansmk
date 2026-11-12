@@ -6,8 +6,8 @@ use App\Enums\AssignmentStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable(['assessment_subject_id', 'student_id', 'exam_session_id', 'status', 'assigned_at'])]
 class ExamAssignment extends Model
@@ -17,6 +17,7 @@ class ExamAssignment extends Model
         return [
             'status' => AssignmentStatus::class,
             'assigned_at' => 'datetime',
+            'security_reset_count' => 'integer',
         ];
     }
 

@@ -30,12 +30,14 @@ class ExamAttemptResetService
                 ]);
             }
 
+            $resetNumber = app(ExamResetAllowance::class)->consume($assignment, $actor);
             ExamAttemptReset::create([
                 'exam_assignment_id' => $assignment->id,
                 'original_attempt_id' => $attempt->id,
                 'performed_by_user_id' => $actor->id,
                 'reason' => $reason,
                 'snapshot' => [
+                    'reset_number' => $resetNumber,
                     'status' => $attempt->status->value,
                     'started_at' => $attempt->started_at?->toIso8601String(),
                     'submitted_at' => $attempt->submitted_at?->toIso8601String(),

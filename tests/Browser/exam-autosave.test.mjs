@@ -4,8 +4,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 // Exercise the actual inline exam script without requiring a browser or Laravel.
-const template = readFileSync(new URL('../../resources/views/student/exams/show.blade.php', import.meta.url), 'utf8');
-const script = template.match(/<script>([\s\S]*?)<\/script>/)[1]
+const coreTemplate = readFileSync(new URL('../../resources/views/student/exams/show.blade.php', import.meta.url), 'utf8');
+const trialTemplate = readFileSync(new URL('../../resources/views/tryouts/show.blade.php', import.meta.url), 'utf8');
+const examScript = template => template.match(/<script>([\s\S]*?)<\/script>/)[1]
     .replace(/\{\{[^\n]+\}\}/g, '60000')
     .replace(/@json\(route\([^\n]+\)\)/g, '"/incident"');
 
@@ -15,20 +16,20 @@ function element(extra = {}) {
         addEventListener(name, listener) { this.listeners[name] = listener; }, ...extra };
 }
 
-function setup() {
+function setup({trial = false, oldBrowser = false} = {}) {
     const button = element();
     const form = element({ submissions: 0, submit() { this.submissions++; }, querySelector: () => button });
     const inputs = ['A', 'B', 'C'].map(value => element({ value, dataset: { saveUrl: '/answer/1' } }));
-    const nodes = { 'submit-exam': form, 'save-status': element(), 'exam-timer': element(), 'retry-save': element() };
+    const nodes = { 'trial-form': form, 'timer': element(), 'submit-exam': form, 'save-status': element(), 'exam-timer': element(), 'retry-save': element() };
     const requests = [];
     const window = element();
     let elapsed = 0;
     let tick;
-    vm.runInNewContext(script, {
+    vm.runInNewContext(examScript(trial ? trialTemplate : coreTemplate), {
         document: { ...element(), querySelector: () => ({ content: 'csrf' }),
             querySelectorAll: () => inputs, getElementById: id => nodes[id] },
         window, performance: { now: () => elapsed }, confirm: () => true,
-        setInterval: callback => { tick = callback; }, setTimeout, clearTimeout, AbortController,
+        setInterval: callback => { tick = callback; }, setTimeout, clearTimeout, AbortController: oldBrowser ? undefined : AbortController,
         fetch: (url, options) => new Promise(resolve => requests.push({ url, options, resolve })),
     });
     return { inputs, nodes, form, requests, window, expire() { elapsed = 60001; tick(); } };
@@ -75,4 +76,43 @@ test('deadline triggers a single automatic submission using elapsed time', () =>
     page.expire();
     assert.equal(page.form.submissions, 1);
     assert.equal(page.nodes['exam-timer'].textContent, '00:00:00');
+});
+
+for (const trial of [false, true]) {
+    test(`${trial ? 'trial' : 'core'} saves answers when AbortController is unavailable`, async () => {
+        const page = setup({trial, oldBrowser: true});
+        page.inputs[0].listeners.change();
+        assert.equal(page.requests.length, 1);
+        page.requests[0].resolve(ok);
+        await settle();
+        assert.equal(page.nodes['retry-save'].hidden, true);
+        assert.ok(page.nodes['save-status'].textContent.includes('Tersimpan pukul'));
+    });
+
+    test(`${trial ? 'trial' : 'core'} does not submit twice if the deadline passes during manual saving`, async () => {
+        const page = setup({trial});
+        page.inputs[0].listeners.change();
+        const submission = page.form.listeners.submit({preventDefault(){}});
+        page.expire();
+        assert.equal(page.form.submissions, 1);
+        page.requests[0].resolve(ok);
+        await submission;
+        assert.equal(page.form.submissions, 1);
+    });
+}
+
+test('trial keeps pending answers after a failed save and permits retry before submission', async () => {
+    const page = setup({trial: true});
+    page.inputs[0].listeners.change();
+    const submission = page.form.listeners.submit({preventDefault(){}});
+    page.requests[0].resolve({ok:false, json: async () => ({message:'Jaringan terputus'})});
+    await submission;
+    assert.equal(page.form.submissions, 0);
+    assert.equal(page.nodes['retry-save'].hidden, false);
+    assert.equal(page.inputs[0].disabled, false);
+    const retry = page.nodes['retry-save'].listeners.click();
+    page.requests[1].resolve(ok);
+    await retry;
+    await page.form.listeners.submit({preventDefault(){}});
+    assert.equal(page.form.submissions, 1);
 });

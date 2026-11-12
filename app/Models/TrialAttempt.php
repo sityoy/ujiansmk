@@ -24,6 +24,7 @@ class TrialAttempt extends Model
             'correct_answers' => 'integer',
             'total_questions' => 'integer',
             'violation_count' => 'integer',
+            'security_reset_count' => 'integer',
             'security_locked_at' => 'datetime',
             'security_lock_version' => 'integer',
             'last_seen_at' => 'datetime',

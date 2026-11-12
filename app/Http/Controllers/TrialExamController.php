@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Models\AssessmentSubject;
 use App\Models\SchoolProfile;
 use App\Models\Student;
 use App\Models\TrialAttempt;
 use App\Models\TrialExam;
 use App\Models\TrialQuestionBank;
-use App\Enums\UserRole;
 use App\Services\Exams\TrialExamSecurityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -53,6 +53,9 @@ class TrialExamController extends Controller
         $students = Student::query()
             ->with('schoolClass')
             ->where('is_active', true)
+            ->when($request->user()->role === UserRole::Teacher, fn ($query) => $query->whereIn('school_class_id', AssessmentSubject::query()
+                ->where('assessment_period_id', $trialExam->assessmentSubject->assessment_period_id)->where('subject_id', $trialExam->assessmentSubject->subject_id)
+                ->where('teacher_user_id', $request->user()->id)->select('school_class_id')))
             ->whereHas('schoolClass', fn ($query) => $query
                 ->where('grade_level', $trialExam->questionBank->grade_level)
                 ->whereHas('academicYear', fn ($year) => $year->where('is_active', true)))
@@ -83,8 +86,7 @@ class TrialExamController extends Controller
 
         $search = trim((string) ($filters['q'] ?? ''));
         if ($search !== '') {
-            $rows = $rows->filter(fn (array $row): bool =>
-                str_contains(mb_strtolower($row['student']->full_name), mb_strtolower($search))
+            $rows = $rows->filter(fn (array $row): bool => str_contains(mb_strtolower($row['student']->full_name), mb_strtolower($search))
                 || str_contains((string) $row['student']->student_number, $search)
                 || str_contains((string) $row['student']->nisn, $search)
             );
@@ -113,11 +115,13 @@ class TrialExamController extends Controller
             ['path' => $request->url(), 'query' => $request->query()],
         );
 
+        $attempts->whereIn('id', collect($participants->items())->pluck('attempt.id')->filter()->all())
+            ->load(['securityIncidents' => fn ($query) => $query->orderBy('id')]);
+
         return view('tryouts.participants', compact(
             'trialExam', 'participants', 'statistics', 'filters'
         ));
     }
-
 
     public function progress(Request $request, TrialExam $trialExam): JsonResponse
     {
@@ -130,6 +134,9 @@ class TrialExamController extends Controller
 
         $students = Student::query()
             ->where('is_active', true)
+            ->when($request->user()->role === UserRole::Teacher, fn ($query) => $query->whereIn('school_class_id', AssessmentSubject::query()
+                ->where('assessment_period_id', $trialExam->assessmentSubject->assessment_period_id)->where('subject_id', $trialExam->assessmentSubject->subject_id)
+                ->where('teacher_user_id', $request->user()->id)->select('school_class_id')))
             ->whereHas('schoolClass', fn ($query) => $query
                 ->where('grade_level', $trialExam->questionBank->grade_level)
                 ->whereHas('academicYear', fn ($year) => $year->where('is_active', true)))
@@ -171,6 +178,7 @@ class TrialExamController extends Controller
                     'started_at' => $attempt?->started_at?->format('d/m/Y H:i:s'),
                     'submitted_at' => $attempt?->submitted_at?->format('d/m/Y H:i:s'),
                     'violations' => $attempt?->violation_count,
+                    'reset_used' => (int) ($attempt?->security_reset_count ?? 0),
                     'incidents' => $attempt?->security_incidents_count,
                 ]];
             });
@@ -359,10 +367,11 @@ class TrialExamController extends Controller
 
         return back()->with('status', 'Ujian uji coba dihapus.');
     }
+
     private function authorizeMonitor(Request $request, TrialExam $trialExam): void
     {
         if ($request->user()->role === UserRole::Teacher) {
-            abort_unless($trialExam->assessmentSubject->teacher_user_id === $request->user()->id, 403);
+            abort_unless($trialExam->assessmentSubject?->teacher_user_id === $request->user()->id, 403);
         }
     }
 }

@@ -51,7 +51,8 @@ class TrialExamSecurityService
                 return $this->state($attempt);
             }
 
-            $duplicateSignal = $attempt->securityIncidents()->where('severity', 1)
+            $lastReset = $attempt->securityIncidents()->where('category', 'supervisor_reset')->max('id') ?? 0;
+            $duplicateSignal = $attempt->securityIncidents()->where('severity', 1)->where('id', '>', $lastReset)
                 ->where('occurred_at', '>=', now()->subSeconds(3))->exists();
             $attempt->securityIncidents()->create([
                 'event_id' => $eventId,
@@ -89,6 +90,7 @@ class TrialExamSecurityService
                 throw ValidationException::withMessages(['security' => 'Peserta tidak memiliki pelanggaran yang perlu direset.']);
             }
 
+            $resetNumber = app(ExamResetAllowance::class)->consume($attempt, $reviewer);
             $previousCount = (int) $attempt->violation_count;
             $previousVersion = (int) $attempt->security_lock_version;
             $attempt->forceFill([
@@ -106,6 +108,7 @@ class TrialExamSecurityService
                     'reviewer_name' => $reviewer->name,
                     'reason' => $reason,
                     'previous_count' => $previousCount,
+                    'reset_number' => $resetNumber,
                 ],
             ]);
         });

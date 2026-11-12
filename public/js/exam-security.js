@@ -8,6 +8,15 @@
     const button = document.getElementById('security-continue');
     const content = document.getElementById('exam-content');
     const counter = document.getElementById('security-count');
+    const preparation = document.getElementById('exam-device-ready');
+    const liteMode = document.getElementById('exam-lite-mode');
+    const setLiteMode = enabled => {
+        document.documentElement.dataset.examLite = enabled ? '1' : '0';
+        if (liteMode) liteMode.checked = enabled;
+    };
+    setLiteMode((navigator.deviceMemory && navigator.deviceMemory <= 2)
+        || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) || !!navigator.connection?.saveData);
+    liteMode?.addEventListener('change', () => setLiteMode(liteMode.checked));
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
     const storageKey = `exam-security:${root.dataset.attemptId}`;
     const allowedCategories = [
@@ -16,7 +25,8 @@
     ];
     const fullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
     const fullscreenRequest = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen;
-    const fullscreenSupported = !!fullscreenRequest;
+    const fullscreenSupported = typeof fullscreenRequest === 'function'
+        && (document.fullscreenEnabled !== false || document.webkitFullscreenEnabled === true);
     const viewportSnapshot = () => ({
         viewport_width: Math.round(window.visualViewport?.width ?? window.innerWidth ?? 0),
         viewport_height: Math.round(window.visualViewport?.height ?? window.innerHeight ?? 0),
@@ -30,9 +40,19 @@
     let paused = false;
     let busy = null;
     let queue = [];
+    const eventId = () => {
+        if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+        const bytes = new Uint8Array(16);
+        if (window.crypto?.getRandomValues) window.crypto.getRandomValues(bytes);
+        else for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+        bytes[6] = (bytes[6] & 15) | 64;
+        bytes[8] = (bytes[8] & 63) | 128;
+        const hex = Array.from(bytes, value => value.toString(16).padStart(2, '0')).join('');
+        return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+    };
     try {
         const restored = JSON.parse(localStorage.getItem(storageKey) || '[]');
-        if (Array.isArray(restored)) queue = restored.filter(item => item && typeof item.event_id === 'string'
+        if (Array.isArray(restored)) queue = restored.filter(item => item && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(item.event_id)
             && allowedCategories.includes(item.category)).slice(0, 2);
     } catch (_) { /* Browser storage may be disabled. In-memory delivery remains available. */ }
     const persist = () => {
@@ -66,7 +86,7 @@
             button.textContent = 'Periksa izin pengawas';
         } else if (wasLocked) {
             if (!content) { window.location.reload(); return; }
-            gate('Pengawas mengizinkan lanjut', 'Hitungan tetap 2/2. Kejadian berikutnya langsung mengunci kembali. Waktu dan jawaban tidak direset.');
+            gate('Pengawas mengizinkan lanjut', `Hitungan saat ini ${state.violations}/2. Tetap ikuti aturan ujian. Waktu dan jawaban tidak direset.`);
             button.textContent = 'Kembali ke mode ujian';
         } else if (!accepted && state.violations > 0 && !queue.length) {
             gate(`Peringatan ${state.violations}/2`, 'Aktivitas di luar mode ujian terdeteksi. Tutup bubble/notifikasi dan kembali ke layar penuh. Jika terjadi lagi hingga batas dua, ujian dikunci untuk pengawas.');
@@ -74,14 +94,20 @@
         }
     };
     const request = async (url, options = {}) => {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 12000);
+        const controller = typeof AbortController === 'function' ? new AbortController() : null;
+        let timeout;
+        const expired = new Promise((_, reject) => {
+            timeout = setTimeout(() => { controller?.abort(); reject(new Error('Koneksi terlalu lambat.')); }, 15000);
+        });
         try {
-            const response = await fetch(url, { ...options, signal: controller.signal, cache: 'no-store',
-                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf } });
-            const result = await response.json().catch(() => ({}));
-            if (!response.ok) throw new Error(result.message || 'Sesi login atau koneksi perlu diperiksa.');
-            return result;
+            const responseTask = async () => {
+                const response = await fetch(url, { ...options, ...(controller ? {signal: controller.signal} : {}), cache: 'no-store',
+                    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf } });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(result.message || 'Sesi login atau koneksi perlu diperiksa.');
+                return result;
+            };
+            return await Promise.race([responseTask(), expired]);
         } finally { clearTimeout(timeout); }
     };
     const check = () => {
@@ -111,7 +137,7 @@
         if (!armed || paused || window.examAutoSubmit || locked) return;
         // Disarm immediately: visibilitychange + fullscreenchange are one departure.
         gate('Perubahan mode ujian terdeteksi', 'Menyinkronkan catatan ke pengawas. Tunggu sampai pemeriksaan server selesai.');
-        queue.push({ category, event_id: crypto.randomUUID(), context: viewportSnapshot() });
+        queue.push({ category, event_id: eventId(), context: viewportSnapshot() });
         persist();
         check();
     };
@@ -125,9 +151,14 @@
     let resizeTimer = null;
     let focusTimer = null;
     let orientationGraceUntil = 0;
+    let keyboardGraceUntil = 0;
     let edgeGesture = null;
     let historyGuarded = false;
-    const textEntryActive = () => ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
+    const textEntryActive = () => {
+        const active = document.activeElement;
+        return active?.tagName === 'TEXTAREA' || (active?.tagName === 'INPUT'
+            && ['text', 'search', 'email', 'number', 'tel', 'url', 'password'].includes(active.type));
+    };
     const guardNavigation = () => {
         if (historyGuarded || !window.history?.pushState) return;
         window.history.pushState({ examGuard: true }, '', window.location.href);
@@ -141,13 +172,14 @@
     const inspectViewport = () => {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(() => {
-            if (!armed || paused || locked || textEntryActive() || Date.now() < orientationGraceUntil) return;
+            if (!armed || paused || locked || Date.now() < orientationGraceUntil) return;
             const current = viewportSnapshot();
             const widthLoss = baselineViewport.viewport_width - current.viewport_width;
             const heightLoss = baselineViewport.viewport_height - current.viewport_height;
             const widthSuspicious = widthLoss >= Math.max(160, baselineViewport.viewport_width * 0.25);
             const heightSuspicious = heightLoss >= Math.max(220, baselineViewport.viewport_height * 0.35);
-            if (widthSuspicious || heightSuspicious) report('viewport_change');
+            // Keyboards normally reduce height, not width. Keep detecting split screen while typing.
+            if (widthSuspicious || (heightSuspicious && !textEntryActive() && Date.now() >= keyboardGraceUntil)) report('viewport_change');
         }, 650);
     };
     window.examSecurity = {
@@ -157,6 +189,11 @@
         returnToExam,
     };
     button.addEventListener('click', async () => {
+        if (!locked && preparation && !preparation.checked) {
+            network.textContent = 'Centang kesiapan perangkat setelah menyiapkan Jangan Ganggu dan menutup aplikasi mengambang.';
+            preparation.focus();
+            return;
+        }
         button.disabled = true;
         try {
             // Request fullscreen during the click's user activation, before network awaits.
@@ -197,7 +234,7 @@
         focusTimer = setTimeout(() => {
             const stillBlurred = typeof document.hasFocus !== 'function' || !document.hasFocus();
             if (stillBlurred && !document.hidden) report('window_blur');
-        }, 250);
+        }, 600);
     });
     window.addEventListener('focus', () => clearTimeout(focusTimer));
 
@@ -212,22 +249,25 @@
         }
         const touch = event.touches?.[0];
         edgeGesture = touch && touch.clientY <= 32
-            ? { startY: touch.clientY, startedAt: Date.now() }
+            ? { startY: touch.clientY, moved: 0, startedAt: Date.now() }
             : null;
     }, { passive: false });
     document.addEventListener('touchmove', event => {
         if (!edgeGesture || !armed) return;
         const touch = event.touches?.[0];
+        if (touch) edgeGesture.moved = Math.max(edgeGesture.moved, touch.clientY - edgeGesture.startY);
         if (touch && touch.clientY - edgeGesture.startY >= 90) {
             edgeGesture = null;
             report('system_gesture');
         }
     }, { passive: true });
     document.addEventListener('touchcancel', () => {
-        if (edgeGesture && Date.now() - edgeGesture.startedAt <= 1500) report('system_gesture');
+        if (edgeGesture && edgeGesture.moved >= 50 && Date.now() - edgeGesture.startedAt <= 1500) report('system_gesture');
         edgeGesture = null;
     });
     document.addEventListener('touchend', () => { edgeGesture = null; });
+    document.addEventListener('focusin', () => { if (textEntryActive()) keyboardGraceUntil = Date.now() + 1800; });
+    document.addEventListener('focusout', () => { keyboardGraceUntil = Date.now() + 1800; });
 
     window.addEventListener('resize', inspectViewport);
     window.visualViewport?.addEventListener('resize', inspectViewport);
@@ -255,6 +295,13 @@
         if (!accepted || paused || locked || window.examAutoSubmit) return;
         event.preventDefault();
         event.returnValue = '';
+    });
+    window.addEventListener('pagehide', () => report('navigation_attempt'));
+    window.addEventListener('pageshow', event => {
+        if (event.persisted && !window.examAutoSubmit) {
+            gate('Memeriksa sesi ujian', 'Sinkronisasi pengawasan sebelum melanjutkan ujian.');
+            check();
+        }
     });
 
     if (document.documentElement.style) document.documentElement.style.overscrollBehavior = 'none';

@@ -179,6 +179,7 @@ class ExamOperationsController extends Controller
                     'last_seen_at' => $attempt?->last_seen_at?->format('H:i:s'),
                     'score' => $attempt?->score,
                     'violations' => $attempt?->violation_count ?? 0,
+                    'reset_used' => (int) $assignment->security_reset_count,
                 ]];
             });
 
@@ -192,7 +193,7 @@ class ExamOperationsController extends Controller
     public function reviewSecurity(Request $request, ExamAttempt $attempt, ExamSecurityService $security): RedirectResponse
     {
         $this->authorizeAttemptAccess($request, $attempt);
-        abort_unless(in_array($request->user()->role, [UserRole::SuperAdmin, UserRole::Committee, UserRole::Proctor], true), 403);
+        abort_unless(in_array($request->user()->role, [UserRole::SuperAdmin, UserRole::Committee, UserRole::Principal, UserRole::Proctor], true), 403);
         $validated = $request->validate([
             'action' => ['required', Rule::in(['resume', 'submit'])],
             'reason' => ['required', 'string', 'min:5', 'max:1000'],

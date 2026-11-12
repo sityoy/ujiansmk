@@ -176,11 +176,12 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             Route::post('/', [TrialExamController::class, 'store'])->name('store');
             Route::get('/cards/all', [TrialExamController::class, 'allCards'])->name('cards.all');
             Route::get('/{trialExam}/cards', [TrialExamController::class, 'cards'])->name('cards');
-            Route::post('/{trialExam}/attempts/{trialAttempt}/reset-violations', [TrialExamController::class, 'resetViolations'])
-                ->name('attempts.reset-violations');
             Route::patch('/{trialExam}/toggle', [TrialExamController::class, 'toggle'])->name('toggle');
             Route::delete('/{trialExam}', [TrialExamController::class, 'destroy'])->name('destroy');
         });
+
+    Route::post('/tryouts/{trialExam}/attempts/{trialAttempt}/reset-violations', [TrialExamController::class, 'resetViolations'])
+        ->middleware('role:super_admin,committee,principal')->name('tryouts.attempts.reset-violations');
 
     Route::get('/tryouts/{trialExam}/progress', [TrialExamController::class, 'progress'])
         ->middleware('role:super_admin,committee,teacher,proctor,principal')
@@ -269,10 +270,10 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             Route::post('/attempts/{attempt}/security-review', [ExamOperationsController::class, 'reviewSecurity'])
                 ->name('attempts.security-review');
             Route::post('/attempts/{attempt}/reset-violations', [ExamOperationsController::class, 'resetViolations'])
-                ->middleware('role:super_admin,committee')
+                ->middleware('role:super_admin,committee,principal')
                 ->name('attempts.reset-violations');
             Route::post('/assignments/{assignment}/reset-attempt', [ExamOperationsController::class, 'resetAttempt'])
-                ->middleware('role:super_admin,committee')
+                ->middleware('role:super_admin,committee,principal')
                 ->name('assignments.reset-attempt');
             Route::patch('/sessions/{examSession}/status', [ExamOperationsController::class, 'updateSessionStatus'])
                 ->name('sessions.status');

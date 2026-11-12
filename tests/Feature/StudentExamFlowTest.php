@@ -688,6 +688,113 @@ class StudentExamFlowTest extends TestCase
             ->assertOk()->assertJson(['locked' => false, 'status' => 'submitted']);
     }
 
+    public function test_reset_limit_is_shared_by_admin_principal_and_committee_and_retains_incidents(): void
+    {
+        [$student, $assignment, $questions] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        app(ExamAttemptService::class)->saveAnswer($attempt, $questions[0], 'A');
+        $deadline = app(ExamAttemptService::class)->deadline($attempt)->toIso8601String();
+        foreach ([UserRole::SuperAdmin, UserRole::Principal] as $index => $role) {
+            $this->travel(4)->seconds();
+            $this->securityEvent($student, $attempt)->assertJson(['violations' => 1]);
+            $actor = User::factory()->create(['role' => $role]);
+            $this->actingAs($actor)->post(route('operations.attempts.reset-violations', $attempt), ['reason' => 'Gangguan perangkat telah diperiksa.'])
+                ->assertSessionHasNoErrors();
+            $this->assertSame($index + 1, $assignment->fresh()->security_reset_count);
+        }
+        $this->travel(4)->seconds();
+        $this->lockAttempt($student, $attempt);
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $this->actingAs($committee)->post(route('operations.attempts.reset-violations', $attempt), ['reason' => 'Mencoba reset ketiga oleh petugas lain.'])
+            ->assertSessionHasErrors('security');
+        $this->assertSame(2, $assignment->fresh()->security_reset_count);
+        $this->assertNotNull($attempt->fresh()->security_locked_at);
+        $this->assertSame(2, $attempt->securityIncidents()->where('category', 'supervisor_reset')->count());
+        $this->assertDatabaseCount('exam_answers', 1);
+        $this->assertSame($deadline, app(ExamAttemptService::class)->deadline($attempt->fresh())->toIso8601String());
+        $this->get(route('operations.sessions.show', $assignment->examSession))->assertOk()->assertSee('Batas reset atau izin lanjut tercapai.')->assertDontSee('Reset pelanggaran ke 0');
+    }
+
+    public function test_whole_attempt_reset_does_not_renew_the_shared_reset_allowance(): void
+    {
+        [$student, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $this->securityEvent($student, $attempt)->assertOk();
+        $principal = User::factory()->create(['role' => UserRole::Principal]);
+        $this->actingAs($principal)->post(route('operations.assignments.reset-attempt', $assignment), ['reason' => 'Perangkat diperiksa dan ujian perlu dimulai ulang.'])->assertSessionHasNoErrors();
+        $newAttempt = $this->startAttempt($assignment->fresh());
+        $this->assertSame(1, $assignment->fresh()->security_reset_count);
+        $this->securityEvent($student, $newAttempt)->assertOk();
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $this->actingAs($admin)->post(route('operations.attempts.reset-violations', $newAttempt), ['reason' => 'Pemeriksaan gangguan kedua selesai.'])->assertSessionHasNoErrors();
+        $this->post(route('operations.assignments.reset-attempt', $assignment), ['reason' => 'Mencoba mengulang setelah jatah habis.'])->assertSessionHasErrors('security');
+        $this->assertDatabaseHas('exam_attempts', ['id' => $newAttempt->id]);
+        $this->assertSame(2, $assignment->fresh()->security_reset_count);
+        $this->assertDatabaseCount('exam_attempt_resets', 1);
+    }
+
+    public function test_supervisor_resume_uses_the_same_limit_but_collection_remains_available(): void
+    {
+        [$student, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $proctor = User::factory()->create(['role' => UserRole::Proctor]);
+        $url = route('operations.attempts.security-review', $attempt);
+        foreach ([1, 2] as $number) {
+            $this->travel(4)->seconds();
+            $this->lockAttempt($student, $attempt);
+            $this->actingAs($proctor)->post($url, ['action' => 'resume', 'reason' => 'Gangguan perangkat telah diperiksa.', 'lock_version' => $attempt->fresh()->security_lock_version])->assertSessionHasNoErrors();
+        }
+        $this->travel(4)->seconds();
+        $this->securityEvent($student, $attempt)->assertJson(['locked' => true]);
+        $payload = ['action' => 'resume', 'reason' => 'Jatah pemulihan sudah habis.', 'lock_version' => $attempt->fresh()->security_lock_version];
+        $this->actingAs($proctor)->post($url, $payload)->assertSessionHasErrors('security');
+        $this->assertSame(2, $assignment->fresh()->security_reset_count);
+        $this->post($url, [...$payload, 'action' => 'submit'])->assertSessionHasNoErrors();
+        $this->assertSame(AttemptStatus::Submitted, $attempt->fresh()->status);
+    }
+
+    public function test_subject_teacher_can_read_current_and_archived_violations_but_cannot_reset_or_unlock(): void
+    {
+        [$student, $assignment] = $this->makeExam();
+        $teacher = User::factory()->create(['role' => UserRole::Teacher]);
+        $assignment->assessmentSubject->update(['teacher_user_id' => $teacher->id]);
+        $attempt = $this->startAttempt($assignment);
+        $this->securityEvent($student, $attempt)->assertOk();
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $this->actingAs($admin)->post(route('operations.assignments.reset-attempt', $assignment), ['reason' => 'Audit percobaan sebelumnya tetap disimpan.'])->assertSessionHasNoErrors();
+        $newAttempt = $this->startAttempt($assignment->fresh());
+        $this->actingAs($teacher)->get(route('operations.sessions.show', $assignment->examSession))
+            ->assertOk()->assertSee('Berpindah tab/aplikasi')->assertSee('Audit percobaan sebelumnya tetap disimpan.')
+            ->assertDontSee('Reset pelanggaran ke 0')->assertDontSee('Reset ujian dari awal')->assertDontSee('Simpan keputusan');
+        $this->post(route('operations.attempts.reset-violations', $newAttempt), ['reason' => 'Guru mencoba mengubah pelanggaran.'])->assertForbidden();
+        $this->post(route('operations.assignments.reset-attempt', $assignment), ['reason' => 'Guru mencoba mengulang ujian.'])->assertForbidden();
+        $this->post(route('operations.attempts.security-review', $newAttempt), ['action' => 'resume', 'reason' => 'Guru mencoba membuka ujian.', 'lock_version' => 1])->assertForbidden();
+        $otherTeacher = User::factory()->create(['role' => UserRole::Teacher]);
+        $this->actingAs($otherTeacher)->get(route('operations.sessions.show', $assignment->examSession))->assertForbidden();
+    }
+
+    public function test_reset_limit_migration_counts_active_and_archived_legacy_actions(): void
+    {
+        [$student, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $attempt->securityIncidents()->create(['category' => 'supervisor_reset', 'severity' => 0, 'occurred_at' => now(), 'details' => []]);
+        $assignment->attemptResets()->create(['original_attempt_id' => 999, 'reason' => 'Legacy reset', 'snapshot' => ['security_incidents' => [['category' => 'supervisor_resume']]]]);
+        $migration = require database_path('migrations/2026_11_13_000100_limit_exam_security_resets.php');
+        $migration->down();
+        $migration->up();
+        $this->assertSame(3, $assignment->fresh()->security_reset_count);
+    }
+
+    public function test_a_new_departure_immediately_after_reset_is_not_suppressed_as_an_old_signal(): void
+    {
+        [$student, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $this->securityEvent($student, $attempt)->assertJson(['violations' => 1]);
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $this->actingAs($admin)->post(route('operations.attempts.reset-violations', $attempt), ['reason' => 'Perangkat telah diperiksa oleh panitia.'])->assertSessionHasNoErrors();
+        $this->securityEvent($student, $attempt)->assertJson(['violations' => 1]);
+    }
+
     private function securityEvent(
         User $user,
         ExamAttempt $attempt,

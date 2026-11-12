@@ -3,6 +3,7 @@
 namespace App\Services\Exams;
 
 use App\Enums\AttemptStatus;
+use App\Models\ExamAssignment;
 use App\Models\ExamAttempt;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -39,6 +40,7 @@ class ExamSecurityService
     public function record(ExamAttempt $attempt, string $category, string $eventId, array $context = []): array
     {
         return DB::transaction(function () use ($attempt, $category, $eventId, $context): array {
+            ExamAssignment::query()->lockForUpdate()->findOrFail($attempt->exam_assignment_id);
             $attempt = ExamAttempt::query()->lockForUpdate()->findOrFail($attempt->id);
             $attempts = app(ExamAttemptService::class);
             if ($attempt->status !== AttemptStatus::InProgress) {
@@ -52,7 +54,9 @@ class ExamSecurityService
             }
 
             // A tab switch may also exit fullscreen. Group signals received within 3 seconds.
+            $lastReview = $attempt->securityIncidents()->whereIn('category', ['supervisor_reset', 'supervisor_resume'])->max('id') ?? 0;
             $duplicateSignal = $attempt->securityIncidents()->where('severity', 1)
+                ->where('id', '>', $lastReview)
                 ->where('occurred_at', '>=', now()->subSeconds(3))->exists();
             $attempt->securityIncidents()->create([
                 'event_id' => $eventId, 'category' => $category,
@@ -79,6 +83,7 @@ class ExamSecurityService
     public function review(ExamAttempt $attempt, User $reviewer, string $action, string $reason, int $version): void
     {
         DB::transaction(function () use ($attempt, $reviewer, $action, $reason, $version): void {
+            $assignment = ExamAssignment::query()->lockForUpdate()->findOrFail($attempt->exam_assignment_id);
             $attempt = ExamAttempt::query()->lockForUpdate()->findOrFail($attempt->id);
             if ($attempt->status !== AttemptStatus::InProgress || ! $attempt->security_locked_at
                 || $attempt->security_lock_version !== $version) {
@@ -88,11 +93,12 @@ class ExamSecurityService
             if ($action === 'resume' && $attempts->isExpired($attempt)) {
                 throw ValidationException::withMessages(['security' => 'Waktu ujian sudah habis. Pilih kumpulkan jawaban; ujian tidak dapat dibuka ulang.']);
             }
+            $resetNumber = $action === 'resume' ? app(ExamResetAllowance::class)->consume($assignment, $reviewer, true) : null;
 
             $attempt->securityIncidents()->create([
                 'category' => 'supervisor_'.$action, 'severity' => 0, 'occurred_at' => now(),
                 'details' => ['reviewer_id' => $reviewer->id, 'reviewer_name' => $reviewer->name,
-                    'reason' => $reason, 'lock_version' => $version],
+                    'reason' => $reason, 'lock_version' => $version, 'reset_number' => $resetNumber],
             ]);
             if ($action === 'submit') {
                 $attempts->submit($attempt);
@@ -106,6 +112,7 @@ class ExamSecurityService
     public function resetViolations(ExamAttempt $attempt, User $reviewer, string $reason): void
     {
         DB::transaction(function () use ($attempt, $reviewer, $reason): void {
+            $assignment = ExamAssignment::query()->lockForUpdate()->findOrFail($attempt->exam_assignment_id);
             $attempt = ExamAttempt::query()->lockForUpdate()->findOrFail($attempt->id);
             if ($attempt->status !== AttemptStatus::InProgress) {
                 throw ValidationException::withMessages([
@@ -128,6 +135,7 @@ class ExamSecurityService
                 ]);
             }
 
+            $resetNumber = app(ExamResetAllowance::class)->consume($assignment, $reviewer);
             $previousCount = (int) $attempt->violation_count;
             $previousVersion = (int) $attempt->security_lock_version;
             $attempt->forceFill([
@@ -145,6 +153,7 @@ class ExamSecurityService
                     'reviewer_name' => $reviewer->name,
                     'reason' => $reason,
                     'previous_count' => $previousCount,
+                    'reset_number' => $resetNumber,
                     'previous_lock_version' => $previousVersion,
                     'new_lock_version' => $previousVersion + 1,
                 ],

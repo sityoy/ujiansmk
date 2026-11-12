@@ -18,6 +18,7 @@
                     <p class="mt-3 text-xs leading-6 text-slate-400">Tutup gelembung aplikasi, aktifkan Jangan Ganggu, dan jangan menarik bilah sistem. Gangguan teknis tetap dapat diperiksa serta direset oleh panitia.</p>
                     @php($pgCount = $questions->filter(fn ($question) => $question->question_type->value === 'multiple_choice')->count())
                     @if ($pgCount > 0)<p class="mt-3 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.06] p-3 text-sm text-cyan-100">Setiap jawaban PG benar bernilai tetap <strong>2 poin</strong>. Nilai PG maksimal 100.</p>@endif
+                    <x-exam-device-preparation />
                     <button id="security-continue" type="button" class="mt-6 w-full rounded-xl bg-cyan-400 px-5 py-3 font-semibold text-slate-950">Saya paham, masuk mode ujian</button>
                     <p id="security-network" aria-live="polite" class="mt-3 text-sm text-amber-300"></p>
                 </section>
@@ -73,7 +74,7 @@
                                 <div class="min-w-0 flex-1"><div class="flex items-start gap-2"><strong class="text-cyan-300">{{ $key }}.</strong> <x-question-text :text="$option" :format="$question->text_format" /></div>
                                     @if($question->option_file_paths[$key] ?? null)
                                         @php($optionIsImage = in_array(strtolower(pathinfo($question->option_file_paths[$key], PATHINFO_EXTENSION)), ['jpg','jpeg','png','webp'], true))
-                                        @if($optionIsImage)<img src="{{ Storage::url($question->option_file_paths[$key]) }}" alt="Lampiran pilihan {{ $key }}" class="mt-3 max-h-64 max-w-full rounded-xl border border-white/10 bg-white object-contain p-2">@else<a href="{{ Storage::url($question->option_file_paths[$key]) }}" target="_blank" class="mt-2 block text-xs font-semibold text-cyan-300">Buka lampiran pilihan {{ $key }}</a>@endif
+                                        @if($optionIsImage)<img loading="lazy" decoding="async" src="{{ Storage::url($question->option_file_paths[$key]) }}" alt="Lampiran pilihan {{ $key }}" class="mt-3 max-h-64 max-w-full rounded-xl border border-white/10 bg-white object-contain p-2">@else<a href="{{ Storage::url($question->option_file_paths[$key]) }}" target="_blank" class="mt-2 block text-xs font-semibold text-cyan-300">Buka lampiran pilihan {{ $key }}</a>@endif
                                     @endif
                                 </div>
                             </label>
@@ -118,16 +119,19 @@
                 while (pending.size && !window.examAutoSubmit && !window.examSecurity?.isBlocked()) {
                     const [url, answer] = pending.entries().next().value;
                     status.textContent = `Menyimpan jawaban (${pending.size} tertunda)...`;
-                    const controller = new AbortController();
-                    const timeout = setTimeout(() => controller.abort(), 15000);
+                    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+                    let timeout;
+                    const expired = new Promise((_, reject) => {
+                        timeout = setTimeout(() => { controller?.abort(); reject(new Error('Koneksi terlalu lambat.')); }, 15000);
+                    });
                     try {
-                        const response = await fetch(url, {
+                        const request = fetch(url, {
                             method: 'PUT',
                             headers: {'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf},
                             body: JSON.stringify({answer}),
-                            signal: controller.signal,
-                        });
-                        const result = await response.json().catch(() => ({}));
+                            ...(controller ? {signal: controller.signal} : {}),
+                        }).then(async response => ({response, result: await response.json().catch(() => ({}))}));
+                        const {response, result} = await Promise.race([request, expired]);
                         if (result.errors?.security) window.examSecurity?.check();
                         if (!response.ok) throw new Error(result.message || 'Jawaban gagal disimpan. Periksa koneksi atau sesi login.');
                         if (pending.get(url) === answer) pending.delete(url);
@@ -219,7 +223,7 @@
 
     </script>
     @if ($attempt->security_enabled)
-        <script src="{{ asset('js/exam-security.js') }}?v=20261108-2" defer></script>
+        <script src="{{ asset('js/exam-security.js') }}?v=20261113-1" defer></script>
     @else
         <script>
             document.addEventListener('visibilitychange', () => {

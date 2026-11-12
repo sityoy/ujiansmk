@@ -9,6 +9,7 @@
 
     <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
         <a href="{{ route('operations.index') }}" class="text-sm text-cyan-300">← Pemantauan peserta</a>
+        <a href="{{ request()->fullUrl() }}" class="text-xs text-cyan-300">Muat ulang riwayat pelanggaran</a>
         @if(in_array(auth()->user()->role->value, ['super_admin','committee'], true))
             <div class="flex flex-wrap gap-2">
                 <a href="{{ route('tryouts.cards', $trialExam) }}" target="_blank" class="rounded-xl bg-cyan-400/10 px-4 py-2 text-sm font-semibold text-cyan-200">Cetak kartu peserta</a>
@@ -59,9 +60,10 @@
                             <td data-trial-started class="whitespace-nowrap px-5 py-4 text-slate-400">{{ $attempt?->started_at?->format('d/m/Y H:i:s') ?? '—' }}</td>
                             <td data-trial-submitted class="whitespace-nowrap px-5 py-4 text-slate-400">{{ $attempt?->submitted_at?->format('d/m/Y H:i:s') ?? '—' }}</td>
                             <td class="px-5 py-4"><span data-trial-status class="rounded-full px-2.5 py-1 text-xs {{ !$attempt ? 'bg-slate-400/10 text-slate-300' : ($locked ? 'bg-rose-400/10 text-rose-200' : ($attempt->status === 'submitted' ? 'bg-emerald-400/10 text-emerald-200' : 'bg-amber-400/10 text-amber-200')) }}">{{ $status }}</span></td>
-                            <td data-trial-violations class="px-5 py-4 text-slate-300">{{ $attempt ? $attempt->violation_count.'/2' : '—' }} @if($attempt)<span class="text-xs text-slate-500">({{ $attempt->security_incidents_count }} catatan)</span>@endif</td>
+                            <td class="px-5 py-4 text-slate-300"><p data-trial-violations>{{ $attempt ? $attempt->violation_count.'/2' : '—' }} @if($attempt)<span class="text-xs text-slate-500">({{ $attempt->security_incidents_count }} catatan)</span>@endif</p>@if($attempt)<x-exam-incident-history :incidents="$attempt->securityIncidents" />@endif</td>
                             <td class="min-w-64 px-5 py-4">
-                                @if ($attempt && $attempt->status === 'in_progress' && $attempt->violation_count > 0 && in_array(auth()->user()->role->value, ['super_admin','committee'], true))
+                                @if($attempt)<p data-reset-used class="mb-2 text-xs text-amber-200">Pemulihan terpakai {{ $attempt->security_reset_count }}/2 · jatah bersama seluruh petugas</p>@endif
+                                @if ($attempt && $attempt->security_reset_count < 2 && $attempt->status === 'in_progress' && $attempt->violation_count > 0 && in_array(auth()->user()->role->value, ['super_admin','committee','principal'], true))
                                     <details><summary class="cursor-pointer text-xs font-semibold text-rose-300">Reset pelanggaran</summary>
                                         <form method="POST" action="{{ route('tryouts.attempts.reset-violations', [$trialExam, $attempt]) }}" class="mt-3 space-y-2" onsubmit="return confirm('Reset pelanggaran peserta ini? Jawaban dan waktu tidak direset.')">
                                             @csrf
@@ -70,7 +72,7 @@
                                         </form>
                                     </details>
                                 @else
-                                    <span class="text-xs text-slate-500">{{ $attempt ? 'Pemantauan saja' : 'Belum ada aktivitas' }}</span>
+                                    <span class="text-xs text-slate-500">{{ $attempt?->security_reset_count >= 2 ? 'Batas reset atau izin lanjut tercapai.' : ($attempt ? 'Pemantauan saja' : 'Belum ada aktivitas') }}</span>
                                 @endif
                             </td>
                         </tr>
@@ -119,6 +121,8 @@
                                 status.textContent = labels[participant.status] ?? 'Perlu pemeriksaan';
                                 status.className = 'rounded-full px-2.5 py-1 text-xs ' + (styles[participant.status] ?? styles.not_started);
                             }
+                            const resets = row.querySelector('[data-reset-used]');
+                            if (resets) resets.textContent = 'Pemulihan terpakai ' + participant.reset_used + '/2 · jatah bersama seluruh petugas';
                             if (started) started.textContent = participant.started_at ?? '—';
                             if (submitted) submitted.textContent = participant.submitted_at ?? '—';
                             if (violations) violations.textContent = participant.violations === null

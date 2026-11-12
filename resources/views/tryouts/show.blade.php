@@ -17,7 +17,8 @@
                 <p id="security-message" class="mt-4 text-sm leading-7 text-slate-300">Pengamanan sama dengan Ujian Inti: layar penuh wajib dan sistem memantau perpindahan tab/aplikasi, bubble, bilah notifikasi, split screen, tombol terlarang, serta navigasi keluar. Pelanggaran kedua mengunci ujian.</p>
                 <p class="mt-3 text-xs leading-6 text-slate-400">Aktifkan Jangan Ganggu, tutup aplikasi lain, dan jangan menarik panel notifikasi. Waktu tetap berjalan ketika ujian terkunci.</p>
                 <p class="mt-3 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.06] p-3 text-sm text-cyan-100">Setiap jawaban PG benar bernilai tetap <strong>2 poin</strong>. Nilai PG maksimal 100.</p>
-                <button id="security-continue" type="button" class="mt-6 w-full rounded-xl bg-cyan-400 px-5 py-3 font-semibold text-slate-950">Saya paham, masuk mode ujian</button>
+                <x-exam-device-preparation />
+                    <button id="security-continue" type="button" class="mt-6 w-full rounded-xl bg-cyan-400 px-5 py-3 font-semibold text-slate-950">Saya paham, masuk mode ujian</button>
                 <p id="security-network" aria-live="polite" class="mt-3 text-sm text-amber-300"></p>
             </section>
         </div>
@@ -40,6 +41,7 @@
                 <p class="text-[0.65rem] font-semibold uppercase tracking-widest text-slate-500">Sisa waktu</p>
                 <span id="timer" class="mt-1 inline-flex rounded-xl bg-amber-400/10 px-3 py-2 font-mono text-amber-200">--:--</span>
                 <p id="save-status" class="mt-2 text-xs text-slate-500">Jawaban tersimpan otomatis</p>
+                <button id="retry-save" type="button" hidden class="mt-2 rounded-lg border border-rose-300/30 px-3 py-2 text-xs text-rose-200">Coba simpan lagi</button>
             </div>
             <div class="flex items-center justify-end">
                 <span id="security-count" class="rounded-xl bg-rose-400/10 px-3 py-2 text-xs text-rose-200">Pelanggaran {{ $attempt->violation_count }}/2</span>
@@ -62,7 +64,7 @@
                                             <div class="min-w-0 flex-1"><div class="flex items-start gap-2"><strong class="mr-2 text-cyan-300">{{ $key }}.</strong><x-question-text :text="$option" :format="$question->text_format" /></div>
                                                 @if($question->option_file_paths[$key] ?? null)
                                                     @php($optionIsImage = in_array(strtolower(pathinfo($question->option_file_paths[$key], PATHINFO_EXTENSION)), ['jpg','jpeg','png','webp'], true))
-                                                    @if($optionIsImage)<img src="{{ Storage::url($question->option_file_paths[$key]) }}" alt="Lampiran pilihan {{ $key }}" class="mt-3 max-h-64 max-w-full rounded-xl border border-white/10 bg-white object-contain p-2">@else<a href="{{ Storage::url($question->option_file_paths[$key]) }}" target="_blank" class="mt-2 block text-xs font-semibold text-cyan-300">Buka lampiran pilihan {{ $key }}</a>@endif
+                                                    @if($optionIsImage)<img loading="lazy" decoding="async" src="{{ Storage::url($question->option_file_paths[$key]) }}" alt="Lampiran pilihan {{ $key }}" class="mt-3 max-h-64 max-w-full rounded-xl border border-white/10 bg-white object-contain p-2">@else<a href="{{ Storage::url($question->option_file_paths[$key]) }}" target="_blank" class="mt-2 block text-xs font-semibold text-cyan-300">Buka lampiran pilihan {{ $key }}</a>@endif
                                                 @endif
                                             </div>
                                         </label>
@@ -73,7 +75,7 @@
                     </article>
                 @endforeach
             </div>
-            <button class="mt-6 w-full rounded-xl bg-cyan-400 px-4 py-4 font-semibold text-slate-950">Kumpulkan jawaban</button>
+            <button type="submit" class="mt-6 w-full rounded-xl bg-cyan-400 px-4 py-4 font-semibold text-slate-950">Kumpulkan jawaban</button>
         </fieldset>
     </form>
 
@@ -84,6 +86,7 @@
         const form = document.getElementById('trial-form');
         const timer = document.getElementById('timer');
         const saveStatus = document.getElementById('save-status');
+        const retryButton = document.getElementById('retry-save');
         const inputs = document.querySelectorAll('[data-save-url]');
         const pending = new Map();
         let saving = null;
@@ -96,22 +99,32 @@
                 while (pending.size && !window.examAutoSubmit && !window.examSecurity?.isBlocked()) {
                     const [url, answer] = pending.entries().next().value;
                     saveStatus.textContent = 'Menyimpan jawaban...';
+                    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+                    let timeout;
+                    const expired = new Promise((_, reject) => {
+                        timeout = setTimeout(() => { controller?.abort(); reject(new Error('Koneksi terlalu lambat.')); }, 15000);
+                    });
                     try {
-                        const response = await fetch(url, {
+                        const request = fetch(url, {
                             method: 'PUT',
                             headers: {'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf},
                             body: JSON.stringify({answer}),
-                        });
-                        const result = await response.json().catch(() => ({}));
+                            ...(controller ? {signal: controller.signal} : {}),
+                        }).then(async response => ({response, result: await response.json().catch(() => ({}))}));
+                        const {response, result} = await Promise.race([request, expired]);
                         if (result.errors?.security) window.examSecurity?.check();
                         if (!response.ok) throw new Error(result.message || 'Jawaban gagal disimpan.');
                         if (pending.get(url) === answer) pending.delete(url);
                         saveStatus.textContent = 'Tersimpan pukul ' + result.saved_at;
                         saveStatus.classList.remove('text-rose-300');
+                        retryButton.hidden = true;
                     } catch (error) {
                         saveStatus.textContent = error.message + ' Jawaban akan dicoba lagi.';
                         saveStatus.classList.add('text-rose-300');
+                        retryButton.hidden = false;
                         break;
+                    } finally {
+                        clearTimeout(timeout);
                     }
                 }
             })().finally(() => { saving = null; });
@@ -123,6 +136,7 @@
             pending.set(input.dataset.saveUrl, input.value);
             flushAnswers();
         }));
+        retryButton.addEventListener('click', flushAnswers);
         window.addEventListener('online', flushAnswers);
         window.addEventListener('examsecurity:ready', flushAnswers);
 
@@ -135,9 +149,14 @@
                 return;
             }
             submitting = true;
+            inputs.forEach(input => { input.disabled = true; });
+            form.querySelector('button[type=submit]').disabled = true;
             await flushAnswers();
+            if (window.examAutoSubmit) return;
             if (pending.size) {
                 submitting = false;
+                inputs.forEach(input => { input.disabled = false; });
+                form.querySelector('button[type=submit]').disabled = false;
                 window.examSecurity?.returnToExam();
                 return;
             }
@@ -159,5 +178,5 @@
         updateTimer();
         setInterval(updateTimer, 1000);
     </script>
-    <script src="{{ asset('js/exam-security.js') }}?v=20261108-2" defer></script>
+    <script src="{{ asset('js/exam-security.js') }}?v=20261113-1" defer></script>
 @endsection
