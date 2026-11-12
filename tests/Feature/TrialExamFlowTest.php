@@ -347,6 +347,24 @@ class TrialExamFlowTest extends TestCase
         $this->assertSame(2, $attempt->fresh()->security_reset_count);
     }
 
+    public function test_trial_reentry_reuses_the_attempt_and_preserves_used_reset_allowance(): void
+    {
+        [$trial] = $this->makeTrial();
+        $student = Student::where('nisn', '1234567890')->firstOrFail();
+        $this->post(route('tryout.start', $trial), ['participant_identifier' => $student->nisn, 'access_code' => 'SJR-SMKBHG'])->assertRedirect();
+        $attempt = TrialAttempt::firstOrFail();
+        $token = $attempt->session_token_hash;
+        $attempt->forceFill(['security_reset_count' => 2, 'violation_count' => 2, 'security_locked_at' => now()])->save();
+        $deadline = app(TrialExamAttemptService::class)->deadline($attempt)->toIso8601String();
+        $this->actingAs($student->user)->post(route('tryout.start', $trial), ['access_code' => 'SJR-SMKBHG'])->assertRedirect(route('tryout.show', [$trial, $attempt]));
+        $this->assertDatabaseCount('trial_attempts', 1);
+        $this->assertSame(2, $attempt->fresh()->security_reset_count);
+        $this->assertSame(2, $attempt->fresh()->violation_count);
+        $this->assertNotNull($attempt->fresh()->security_locked_at);
+        $this->assertNotSame($token, $attempt->fresh()->session_token_hash);
+        $this->assertSame($deadline, app(TrialExamAttemptService::class)->deadline($attempt->fresh())->toIso8601String());
+    }
+
     private function makeTrial(): array
     {
         $year = AcademicYear::create([

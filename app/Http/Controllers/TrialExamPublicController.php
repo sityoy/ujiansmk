@@ -11,6 +11,7 @@ use App\Services\Exams\TrialExamSecurityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -75,6 +76,16 @@ class TrialExamPublicController extends Controller
             }
         }
 
+        return DB::transaction(fn () => $this->startForStudent($request, $trialExam, $student));
+    }
+
+    private function startForStudent(Request $request, TrialExam $trialExam, Student $student): RedirectResponse
+    {
+        // Serialize starts for this student, including simultaneous requests on another device.
+        $student = Student::query()->lockForUpdate()->findOrFail($student->id);
+        if (! $student->is_active || $student->schoolClass?->grade_level !== $trialExam->questionBank->grade_level) {
+            throw ValidationException::withMessages(['participant_identifier' => 'Data siswa sudah berubah. Hubungi panitia ujian.']);
+        }
         $participantIdentifier = $student->nisn ?: $student->student_number;
         $existingAttempt = TrialAttempt::query()
             ->where('trial_exam_id', $trialExam->id)
@@ -82,7 +93,7 @@ class TrialExamPublicController extends Controller
                 $query->where('student_id', $student->id)
                     ->orWhere('participant_identifier', $participantIdentifier);
             })
-            ->first();
+            ->lockForUpdate()->first();
 
         if ($existingAttempt) {
             if ($request->user()?->student?->id === $student->id && $existingAttempt->status === 'in_progress') {
@@ -278,4 +289,3 @@ class TrialExamPublicController extends Controller
         return 'trial_question_order_'.$attempt->id;
     }
 }
-
