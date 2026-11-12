@@ -36,7 +36,7 @@
                     <p class="text-xs font-semibold text-violet-300">Soal {{ $question->position }} · {{ $question->question_type->label() }}</p>
                     <p class="text-xs text-slate-400">Bobot maksimal {{ number_format((float) $question->points, 2, ',', '.') }}</p>
                 </div>
-                <p class="mt-3 whitespace-pre-line text-sm leading-7 text-white">{{ $question->question_text }}</p>
+                <x-question-text :text="$question->question_text" :format="$question->text_format" class="mt-3 text-sm leading-7 text-white" />
                 <div class="mt-4 rounded-xl border border-white/10 bg-slate-950/60 p-4">
                     <p class="text-xs text-slate-500">Jawaban siswa</p>
                     <p class="mt-2 whitespace-pre-line text-sm leading-7 {{ $answer?->answer ? 'text-slate-200' : 'text-amber-300' }}">{{ $answer?->answer ?: 'Tidak dijawab / dikerjakan manual di luar sistem' }}</p>

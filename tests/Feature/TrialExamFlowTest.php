@@ -187,6 +187,35 @@ class TrialExamFlowTest extends TestCase
         $this->get($showRoute)->assertOk()->assertSeeInOrder($show);
     }
 
+    public function test_trial_formatting_is_saved_and_rendered_for_the_participant(): void
+    {
+        [$trial] = $this->makeTrial();
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $payload = [
+            'text_format' => 'html',
+            'question_text' => '<p>Choose the <em>correct tense</em>.</p>',
+            'statement' => '<p>Read the <strong>following passage</strong>.</p>',
+            'option_a' => '<p><u>She has arrived.</u></p>',
+            'option_b' => 'She have arrived.', 'option_c' => 'She arriving.',
+            'option_d' => 'She arrive yesterday.', 'option_e' => 'She are here.',
+            'correct_answer' => 'A',
+        ];
+        $this->actingAs($admin)->post(route('trial-question-banks.questions.store', $trial->questionBank), $payload)
+            ->assertSessionHasNoErrors();
+        $question = $trial->questionBank->questions()->reorder('id', 'desc')->firstOrFail();
+        $this->assertSame('html', $question->text_format);
+        $this->put(route('trial-question-banks.questions.update', [$trial->questionBank, $question]), $payload)
+            ->assertSessionHasNoErrors();
+        $student = Student::query()->where('nisn', '1234567890')->firstOrFail();
+        $this->actingAs($student->user)->post(route('tryout.start', $trial), ['access_code' => 'SJR-SMKBHG'])
+            ->assertRedirect();
+        $attempt = TrialAttempt::query()->firstOrFail();
+        $this->get(route('tryout.show', [$trial, $attempt]))->assertOk()
+            ->assertSee('<strong>following passage</strong>', false)
+            ->assertSee('<em>correct tense</em>', false)
+            ->assertSee('<u>She has arrived.</u>', false);
+    }
+
     public function test_trial_question_bank_cannot_create_more_than_one_trial_exam(): void
     {
         [$trial] = $this->makeTrial();
@@ -328,4 +357,3 @@ class TrialExamFlowTest extends TestCase
         return [$trial, $question];
     }
 }
-

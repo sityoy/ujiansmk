@@ -133,3 +133,7 @@ document.addEventListener('click', (event) => {
     button.setAttribute('aria-label', label);
     button.title = label;
 });
+
+if (document.querySelector('[data-question-editor]')) {
+    import('./question-editor').then(({initializeQuestionEditors}) => initializeQuestionEditors());
+}

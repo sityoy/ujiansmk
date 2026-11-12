@@ -59,12 +59,12 @@
                                             <input type="radio" name="answers[{{ $question->id }}]" value="{{ $key }}"
                                                 data-save-url="{{ route('tryout.answer', [$trialExam, $attempt, $question]) }}"
                                                 @checked($answers->get($question->id)?->answer === $key) class="mt-1">
-                                            <span class="min-w-0"><strong class="mr-2 text-cyan-300">{{ $key }}.</strong><span class="whitespace-pre-wrap">{{ $option }}</span>
+                                            <div class="min-w-0 flex-1"><div class="flex items-start gap-2"><strong class="mr-2 text-cyan-300">{{ $key }}.</strong><x-question-text :text="$option" :format="$question->text_format" /></div>
                                                 @if($question->option_file_paths[$key] ?? null)
                                                     @php($optionIsImage = in_array(strtolower(pathinfo($question->option_file_paths[$key], PATHINFO_EXTENSION)), ['jpg','jpeg','png','webp'], true))
                                                     @if($optionIsImage)<img src="{{ Storage::url($question->option_file_paths[$key]) }}" alt="Lampiran pilihan {{ $key }}" class="mt-3 max-h-64 max-w-full rounded-xl border border-white/10 bg-white object-contain p-2">@else<a href="{{ Storage::url($question->option_file_paths[$key]) }}" target="_blank" class="mt-2 block text-xs font-semibold text-cyan-300">Buka lampiran pilihan {{ $key }}</a>@endif
                                                 @endif
-                                            </span>
+                                            </div>
                                         </label>
                                     @endforeach
                                 </div>

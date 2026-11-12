@@ -2,10 +2,10 @@
 
 <div {{ $attributes->class('space-y-3 text-sm leading-7 text-white') }}>
     @if ($multipleChoice && $question->statement !== null)
-        <p class="whitespace-pre-wrap">{{ $question->statement }}</p>
+        <x-question-text :text="$question->statement" :format="$question->text_format" />
     @endif
     @if (! $multipleChoice)
-        <p class="whitespace-pre-wrap">{{ $question->question_text }}</p>
+        <x-question-text :text="$question->question_text" :format="$question->text_format" />
     @endif
     @if ($question->question_image_path)
         @php($isImage = in_array(strtolower(pathinfo($question->question_image_path, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'webp'], true))
@@ -18,6 +18,6 @@
         @endif
     @endif
     @if ($multipleChoice)
-        <p class="whitespace-pre-wrap">{{ $question->question_text }}</p>
+        <x-question-text :text="$question->question_text" :format="$question->text_format" />
     @endif
 </div>

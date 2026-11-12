@@ -26,16 +26,17 @@ use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\Subject;
 use App\Models\User;
+use App\Services\Attendance\AttendanceAvailability;
 use App\Services\Attendance\DailyCheckinService;
-use App\Services\Exams\ExamAttemptService;
-use App\Services\Exams\ExamSecurityService;
-use Illuminate\Support\Str;
-use App\Services\Exams\ExamSessionService;
 use App\Services\Exams\ExamAssignmentService;
-use Illuminate\Support\Carbon;
-use Illuminate\Validation\ValidationException;
+use App\Services\Exams\ExamAttemptService;
+use App\Services\Exams\ExamSessionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Testing\TestResponse;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class StudentExamFlowTest extends TestCase
@@ -90,6 +91,23 @@ class StudentExamFlowTest extends TestCase
         $this->assertSame(AssignmentStatus::Completed, $assignment->refresh()->status);
         $this->assertDatabaseCount('exam_answers', 2);
         $this->assertDatabaseCount('daily_checkins', 1);
+    }
+
+    public function test_core_exam_displays_formatted_text_and_keeps_legacy_angle_brackets_literal(): void
+    {
+        [$user, $assignment, $questions] = $this->makeExam();
+        $questions[0]->update([
+            'text_format' => 'html', 'question_text' => '<p>Choose the <em>correct answer</em>.</p>',
+            'statement' => '<p>Read <strong>carefully</strong>.</p>',
+            'options' => ['A' => '<p><u>Answer A</u></p>', 'B' => 'Answer B'],
+        ]);
+        $questions[1]->update(['question_text' => 'Literal <strong> and comparison 2 < 3.']);
+        $attempt = $this->startAttempt($assignment);
+        $this->actingAs($user)->withSession(['exam_device_token' => str_repeat('a', 64)])
+            ->get(route('student.exams.show', $attempt))->assertOk()
+            ->assertSee('<em>correct answer</em>', false)->assertSee('<strong>carefully</strong>', false)
+            ->assertSee('<u>Answer A</u>', false)
+            ->assertSee('Literal &lt;strong&gt; and comparison 2 &lt; 3.', false);
     }
 
     public function test_student_cannot_start_without_verified_attendance(): void
@@ -245,7 +263,7 @@ class StudentExamFlowTest extends TestCase
     {
         [$user, $assignment] = $this->makeExam();
         $assignment->examSession->update(['starts_at' => now()->addHours(2), 'ends_at' => now()->addHours(3)]);
-        $reason = app(\App\Services\Attendance\AttendanceAvailability::class)
+        $reason = app(AttendanceAvailability::class)
             ->reason($assignment->fresh(), null);
         $this->assertStringContainsString('Absensi dibuka pukul', $reason ?? '');
         $this->actingAs($user)->get(route('student.exams.index'))->assertOk();
@@ -517,7 +535,6 @@ class StudentExamFlowTest extends TestCase
         $this->actingAs($otherTeacher)->get(route('grading.show', $attempt))->assertForbidden();
     }
 
-
     public function test_teacher_can_revise_external_manual_score_and_final_score_never_exceeds_one_hundred(): void
     {
         [, $assignment, $questions] = $this->makeExam();
@@ -677,8 +694,7 @@ class StudentExamFlowTest extends TestCase
         ?string $eventId = null,
         string $category = 'tab_hidden',
         array $context = [],
-    ): \Illuminate\Testing\TestResponse
-    {
+    ): TestResponse {
         return $this->actingAs($user)->withSession(['exam_device_token' => str_repeat('a', 64)])
             ->postJson(route('student.exams.incident', $attempt), [
                 'event_id' => $eventId ?? (string) Str::uuid(),

@@ -10,6 +10,7 @@ use App\Models\AssessmentSubject;
 use App\Models\ExamQuestion;
 use App\Services\Exams\CoreQuestionBank;
 use App\Services\Exams\ExamScoreCalculator;
+use App\Services\Exams\QuestionText;
 use App\Services\Students\StudentSpreadsheetService;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\QueryException;
@@ -26,7 +27,7 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class QuestionBankController extends Controller
 {
-    public function __construct(private readonly CoreQuestionBank $banks) {}
+    public function __construct(private readonly CoreQuestionBank $banks, private readonly QuestionText $questionText) {}
 
     public function catalog(Request $request): View
     {
@@ -135,16 +136,16 @@ class QuestionBankController extends Controller
         $weight = $scores->multipleChoiceWeight($questions->count());
         $rows = $questions->values()->map(fn (ExamQuestion $question, int $index): array => [
             $index + 1,
-            $question->question_text,
-            $question->options['A'] ?? '',
-            $question->options['B'] ?? '',
-            $question->options['C'] ?? '',
-            $question->options['D'] ?? '',
-            $question->options['E'] ?? '',
+            $this->questionText->plainText($question->question_text, $question->text_format),
+            $this->questionText->plainText($question->options['A'] ?? '', $question->text_format),
+            $this->questionText->plainText($question->options['B'] ?? '', $question->text_format),
+            $this->questionText->plainText($question->options['C'] ?? '', $question->text_format),
+            $this->questionText->plainText($question->options['D'] ?? '', $question->text_format),
+            $this->questionText->plainText($question->options['E'] ?? '', $question->text_format),
             $question->correct_answer,
             number_format($weight, 4, '.', ''),
             $question->question_image_path ? Storage::url($question->question_image_path) : '',
-            $question->statement ?? '',
+            $this->questionText->plainText($question->statement, $question->text_format),
         ])->all();
 
         $path = $spreadsheet->createWorkbook(
@@ -327,15 +328,16 @@ class QuestionBankController extends Controller
             ? [ExamQuestionType::ShortAnswer->value, ExamQuestionType::Essay->value]
             : array_map(fn (ExamQuestionType $type): string => $type->value, ExamQuestionType::cases());
 
-        return $request->validate([
+        $validated = $request->validate([
             'question_type' => ['required', Rule::in($allowedTypes)],
-            'question_text' => ['required', 'string', 'max:5000'],
-            'statement' => ['exclude_unless:question_type,multiple_choice', 'nullable', 'string', 'max:5000'],
-            'option_a' => ['required_if:question_type,multiple_choice', 'nullable', 'string', 'max:2000'],
-            'option_b' => ['required_if:question_type,multiple_choice', 'nullable', 'string', 'max:2000'],
-            'option_c' => ['required_if:question_type,multiple_choice', 'nullable', 'string', 'max:2000'],
-            'option_d' => ['required_if:question_type,multiple_choice', 'nullable', 'string', 'max:2000'],
-            'option_e' => ['required_if:question_type,multiple_choice', 'nullable', 'string', 'max:2000'],
+            'text_format' => ['nullable', Rule::in(['plain', 'html'])],
+            'question_text' => ['required', 'string', 'max:20000'],
+            'statement' => ['exclude_unless:question_type,multiple_choice', 'nullable', 'string', 'max:20000'],
+            'option_a' => ['required_if:question_type,multiple_choice', 'nullable', 'string', 'max:20000'],
+            'option_b' => ['required_if:question_type,multiple_choice', 'nullable', 'string', 'max:20000'],
+            'option_c' => ['required_if:question_type,multiple_choice', 'nullable', 'string', 'max:20000'],
+            'option_d' => ['required_if:question_type,multiple_choice', 'nullable', 'string', 'max:20000'],
+            'option_e' => ['required_if:question_type,multiple_choice', 'nullable', 'string', 'max:20000'],
             'correct_answer' => ['required_if:question_type,multiple_choice', 'nullable', Rule::in(['A', 'B', 'C', 'D', 'E'])],
             'question_image' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
             'option_file_a' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
@@ -345,6 +347,8 @@ class QuestionBankController extends Controller
             'option_file_e' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
             'points' => ['required_unless:question_type,multiple_choice', 'nullable', 'numeric', 'between:0.01,1000'],
         ]);
+
+        return $this->questionText->normalize($validated);
     }
 
     private function questionAttributes(array $validated): array
@@ -353,6 +357,7 @@ class QuestionBankController extends Controller
 
         return [
             'question_text' => trim($validated['question_text']),
+            'text_format' => $validated['text_format'],
             'statement' => $validated['statement'] ?? null,
             'question_type' => $validated['question_type'],
             'options' => $isMultipleChoice ? [

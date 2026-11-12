@@ -71,7 +71,7 @@ class CoreQuestionBank
     private function signature(AssessmentSubject $component): array
     {
         return $component->questions->map(fn (ExamQuestion $question): array => $question->only([
-            'position', 'question_type', 'statement', 'question_text', 'question_image_path',
+            'position', 'question_type', 'text_format', 'statement', 'question_text', 'question_image_path',
             'options', 'option_file_paths', 'correct_answer', 'points',
         ]))->all();
     }

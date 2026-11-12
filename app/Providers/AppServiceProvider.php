@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\SchoolProfile;
+use App\Services\Exams\QuestionText;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -12,7 +13,7 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        $this->app->singleton(QuestionText::class);
     }
 
     public function boot(): void

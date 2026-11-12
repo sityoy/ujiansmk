@@ -8,10 +8,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['trial_question_bank_id', 'question_text', 'statement', 'question_image_path', 'options', 'option_file_paths', 'correct_answer', 'points', 'position'])]
+#[Fillable(['trial_question_bank_id', 'question_text', 'text_format', 'statement', 'question_image_path', 'options', 'option_file_paths', 'correct_answer', 'points', 'position'])]
 #[Hidden(['correct_answer'])]
 class TrialQuestion extends Model
 {
+    protected $attributes = ['text_format' => 'plain'];
+
     protected function casts(): array
     {
         return [

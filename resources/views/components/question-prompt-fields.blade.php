@@ -1,13 +1,13 @@
 @props(['question' => null, 'multipleChoice' => true])
 
 <div data-question-prompt-fields class="space-y-3">
-    <label data-question-statement class="block text-xs text-slate-400" @if (! $multipleChoice) hidden @endif>
-        Pernyataan (opsional)
-        <textarea name="statement" rows="4" maxlength="5000" @disabled(! $multipleChoice)
-            placeholder="Tuliskan bacaan, konteks, atau butir (1), (2), (3)..."
-            class="mt-2 block w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400">{{ $question ? $question->statement : old('statement') }}</textarea>
-        <span class="mt-2 block">Gunakan baris terpisah untuk setiap butir bernomor.</span>
-    </label>
+    <input type="hidden" name="text_format" value="{{ $question?->text_format ?? old('text_format', 'plain') }}">
+    <div data-question-statement @if (! $multipleChoice) hidden @endif>
+        <x-question-text-editor name="statement" :value="$question ? $question->statement : old('statement')"
+            :format="$question?->text_format ?? old('text_format', 'plain')" label="Pernyataan (opsional)"
+            :disabled="! $multipleChoice" placeholder="Tuliskan bacaan, konteks, atau butir (1), (2), (3)..." />
+        <p class="mt-2 text-xs text-slate-400">Gunakan baris terpisah untuk setiap butir bernomor.</p>
+    </div>
     <div data-question-attachment>
         <label class="block text-xs text-slate-400">
             Gambar atau PDF (opsional, maks. 5 MB)
@@ -19,9 +19,9 @@
             <a href="{{ Storage::url($question->question_image_path) }}" target="_blank" rel="noopener" class="mt-2 inline-block text-xs text-cyan-300">Lihat lampiran saat ini</a>
         @endif
     </div>
-    <label data-question-text class="block text-xs text-slate-400">
-        Pertanyaan
-        <textarea name="question_text" rows="4" required maxlength="5000" placeholder="Tuliskan pertanyaan..."
-            class="mt-2 block w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-white outline-none focus:border-cyan-400">{{ $question ? $question->question_text : old('question_text') }}</textarea>
-    </label>
+    <div data-question-text>
+        <x-question-text-editor name="question_text" :value="$question ? $question->question_text : old('question_text')"
+            :format="$question?->text_format ?? old('text_format', 'plain')" label="Pertanyaan"
+            required placeholder="Tuliskan pertanyaan..." />
+    </div>
 </div>

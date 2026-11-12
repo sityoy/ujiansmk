@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import 'quill/dist/quill.snow.css';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
@@ -377,4 +378,58 @@ html.sidebar-collapsed .app-sidebar {
 
 [data-password-field] input::-ms-reveal {
     display: none;
+}
+
+.question-editor-enhanced .ql-toolbar.ql-snow,
+.question-editor-enhanced .ql-container.ql-snow {
+    border-color: rgb(255 255 255 / 0.15);
+    background: rgb(2 6 23 / 0.7);
+    color: rgb(226 232 240);
+}
+.question-editor-enhanced .ql-toolbar.ql-snow {
+    display: flex;
+    flex-wrap: wrap;
+    border-radius: 0.75rem 0.75rem 0 0;
+    padding: 0.4rem;
+}
+.question-editor-enhanced .ql-container.ql-snow {
+    border-radius: 0 0 0.75rem 0.75rem;
+    font: inherit;
+    font-size: 0.875rem;
+}
+.question-editor-enhanced .ql-editor {
+    min-height: 8rem;
+    padding: 0.75rem 1rem;
+    line-height: 1.7;
+}
+[data-question-editor-field][data-compact] .ql-editor {
+    min-height: 4.5rem;
+}
+.question-editor-enhanced .ql-toolbar .ql-formats { margin-right: 0.35rem; }
+.question-editor-enhanced .ql-toolbar button { min-width: 1.8rem; height: 1.8rem; color: inherit; }
+.question-editor-enhanced .ql-snow .ql-stroke { stroke: currentColor; }
+.question-editor-enhanced .ql-snow .ql-fill { fill: currentColor; }
+.question-editor-enhanced .ql-editor.ql-blank::before { color: rgb(148 163 184); }
+.question-editor-enhanced .ql-toolbar button:focus-visible { outline: 2px solid #22d3ee; outline-offset: 2px; }
+.question-editor-enhanced .ql-toolbar button:disabled { opacity: 0.4; }
+html[data-theme='light'] .question-editor-enhanced .ql-toolbar.ql-snow,
+html[data-theme='light'] .question-editor-enhanced .ql-container.ql-snow {
+    border-color: rgb(203 213 225);
+    background: rgb(248 250 252);
+    color: rgb(15 23 42);
+}
+.question-rich-text { overflow-wrap: anywhere; }
+.question-rich-text p { margin: 0; }
+.question-rich-text p + p { margin-top: 0.5rem; }
+.question-rich-text strong, .question-rich-text b { font-weight: 700; }
+.question-rich-text em, .question-rich-text i { font-style: italic; }
+.question-rich-text u { text-decoration: underline; }
+.question-rich-text s { text-decoration: line-through; }
+.question-rich-text ol { list-style: decimal; padding-left: 1.5rem; }
+.question-rich-text ul { list-style: disc; padding-left: 1.5rem; }
+.question-rich-text li { padding-left: 0.2rem; }
+.question-rich-text blockquote { border-left: 3px solid currentColor; padding-left: 0.8rem; margin: 0.5rem 0; }
+.question-editor-enhanced .ql-toolbar button.ql-active {
+    border-radius: 0.25rem;
+    background: rgb(34 211 238 / 0.15);
 }

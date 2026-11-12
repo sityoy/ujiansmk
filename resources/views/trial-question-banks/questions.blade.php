@@ -29,7 +29,8 @@
                         <div class="grid grid-cols-[36px_1fr] items-start gap-2">
                             <span class="mt-1 grid size-9 place-items-center rounded-lg bg-slate-900 text-xs font-semibold text-cyan-300">{{ $option }}</span>
                             <div class="space-y-2">
-                                <textarea name="option_{{ strtolower($option) }}" rows="2" required placeholder="Pilihan {{ $option }}" class="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm">{{ old('option_'.strtolower($option)) }}</textarea>
+                                <x-question-text-editor name="option_{{ strtolower($option) }}" :value="old('option_'.strtolower($option))"
+                                    :format="old('text_format', 'plain')" label="Pilihan {{ $option }}" :show-label="false" :rows="2" :limit="2000" required placeholder="Pilihan {{ $option }}" />
                                 <input type="file" name="option_file_{{ strtolower($option) }}" accept="image/jpeg,image/png,image/webp,application/pdf" class="w-full rounded-lg border border-dashed border-white/10 bg-slate-950/50 px-3 py-2 text-xs text-slate-500">
                             </div>
                         </div>
@@ -53,7 +54,7 @@
                     </div>
                     <div class="mt-4 grid gap-2 sm:grid-cols-2">
                         @foreach (collect($question->options)->sortKeys() as $key => $option)
-                            <div class="rounded-xl border px-3 py-2 text-xs {{ $key === $question->correct_answer ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200' : 'border-white/10 text-slate-400' }}"><strong>{{ $key }}.</strong> <span class="whitespace-pre-wrap">{{ $option }}</span>
+                            <div class="rounded-xl border px-3 py-2 text-xs {{ $key === $question->correct_answer ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200' : 'border-white/10 text-slate-400' }}"><div class="flex items-start gap-2"><strong class="shrink-0">{{ $key }}.</strong><x-question-text :text="$option" :format="$question->text_format" /></div>
                                 @if($question->option_file_paths[$key] ?? null)<a href="{{ Storage::url($question->option_file_paths[$key]) }}" target="_blank" class="mt-2 block font-semibold text-cyan-300">Buka lampiran {{ $key }}</a>@endif
                             </div>
                         @endforeach
@@ -64,7 +65,8 @@
                             <x-question-prompt-fields :question="$question" />
                             @foreach (['A','B','C','D','E'] as $option)
                                 <div class="space-y-2 rounded-xl border border-white/10 p-3">
-                                    <textarea name="option_{{ strtolower($option) }}" rows="2" required placeholder="Pilihan {{ $option }}" class="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm">{{ $question->options[$option] ?? '' }}</textarea>
+                                    <x-question-text-editor name="option_{{ strtolower($option) }}" :value="$question->options[$option] ?? ''"
+                                        :format="$question->text_format" label="Pilihan {{ $option }}" :show-label="false" :rows="2" :limit="2000" required placeholder="Pilihan {{ $option }}" />
                                     <input type="file" name="option_file_{{ strtolower($option) }}" accept="image/jpeg,image/png,image/webp,application/pdf" class="w-full text-xs text-slate-500">
                                     @if($question->option_file_paths[$option] ?? null)<a href="{{ Storage::url($question->option_file_paths[$option]) }}" target="_blank" class="text-xs text-cyan-300">Lihat lampiran {{ $option }}</a>@endif
                                 </div>

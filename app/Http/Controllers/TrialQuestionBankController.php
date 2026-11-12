@@ -8,6 +8,7 @@ use App\Models\Subject;
 use App\Models\TrialQuestion;
 use App\Models\TrialQuestionBank;
 use App\Services\Exams\ExamScoreCalculator;
+use App\Services\Exams\QuestionText;
 use App\Services\Students\StudentSpreadsheetService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
@@ -22,6 +23,8 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class TrialQuestionBankController extends Controller
 {
+    public function __construct(private readonly QuestionText $questionText) {}
+
     public function index(Request $request): View
     {
         $gradeLevel = in_array($request->integer('grade_level'), [10, 11, 12], true)
@@ -118,16 +121,16 @@ class TrialQuestionBankController extends Controller
         $weight = $scores->multipleChoiceWeight($questions->count());
         $rows = $questions->values()->map(fn (TrialQuestion $question, int $index): array => [
             $index + 1,
-            $question->question_text,
-            $question->options['A'] ?? '',
-            $question->options['B'] ?? '',
-            $question->options['C'] ?? '',
-            $question->options['D'] ?? '',
-            $question->options['E'] ?? '',
+            $this->questionText->plainText($question->question_text, $question->text_format),
+            $this->questionText->plainText($question->options['A'] ?? '', $question->text_format),
+            $this->questionText->plainText($question->options['B'] ?? '', $question->text_format),
+            $this->questionText->plainText($question->options['C'] ?? '', $question->text_format),
+            $this->questionText->plainText($question->options['D'] ?? '', $question->text_format),
+            $this->questionText->plainText($question->options['E'] ?? '', $question->text_format),
             $question->correct_answer,
             number_format($weight, 4, '.', ''),
             $question->question_image_path ? Storage::url($question->question_image_path) : '',
-            $question->statement ?? '',
+            $this->questionText->plainText($question->statement, $question->text_format),
         ])->all();
 
         $path = $spreadsheet->createWorkbook(
@@ -258,14 +261,15 @@ class TrialQuestionBankController extends Controller
 
     private function validateQuestion(Request $request): array
     {
-        return $request->validate([
-            'question_text' => ['required', 'string', 'max:5000'],
-            'statement' => ['nullable', 'string', 'max:5000'],
-            'option_a' => ['required', 'string', 'max:2000'],
-            'option_b' => ['required', 'string', 'max:2000'],
-            'option_c' => ['required', 'string', 'max:2000'],
-            'option_d' => ['required', 'string', 'max:2000'],
-            'option_e' => ['required', 'string', 'max:2000'],
+        $validated = $request->validate([
+            'text_format' => ['nullable', Rule::in(['plain', 'html'])],
+            'question_text' => ['required', 'string', 'max:20000'],
+            'statement' => ['nullable', 'string', 'max:20000'],
+            'option_a' => ['required', 'string', 'max:20000'],
+            'option_b' => ['required', 'string', 'max:20000'],
+            'option_c' => ['required', 'string', 'max:20000'],
+            'option_d' => ['required', 'string', 'max:20000'],
+            'option_e' => ['required', 'string', 'max:20000'],
             'correct_answer' => ['required', Rule::in(['A', 'B', 'C', 'D', 'E'])],
             'question_image' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
             'option_file_a' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
@@ -274,12 +278,15 @@ class TrialQuestionBankController extends Controller
             'option_file_d' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
             'option_file_e' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
         ]);
+
+        return $this->questionText->normalize($validated);
     }
 
     private function attributes(array $validated): array
     {
         return [
             'question_text' => trim($validated['question_text']),
+            'text_format' => $validated['text_format'],
             'statement' => $validated['statement'] ?? null,
             'options' => [
                 'A' => trim($validated['option_a']),
@@ -289,7 +296,7 @@ class TrialQuestionBankController extends Controller
                 'E' => trim($validated['option_e']),
             ],
             'correct_answer' => $validated['correct_answer'],
-            'points' => \App\Services\Exams\ExamScoreCalculator::MULTIPLE_CHOICE_POINTS,
+            'points' => ExamScoreCalculator::MULTIPLE_CHOICE_POINTS,
         ];
     }
 
@@ -344,4 +351,3 @@ class TrialQuestionBankController extends Controller
         }
     }
 }
-

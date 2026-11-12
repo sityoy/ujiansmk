@@ -128,6 +128,46 @@ class QuestionBankAccessTest extends TestCase
             ->assertSeeInOrder([$question->statement, Storage::url($question->question_image_path), $question->question_text, 'Pilihan E']);
     }
 
+    public function test_teacher_can_save_edit_and_export_formatted_questions_without_executable_markup(): void
+    {
+        $this->withoutVite();
+        [$teacher, , $assigned] = $this->makeComponents();
+        $assigned->assessmentPeriod()->update(['type' => AssessmentType::AAS]);
+        $payload = [
+            'question_type' => 'multiple_choice', 'text_format' => 'html',
+            'question_text' => '<p>Pilih <strong>kata baku</strong> yang <em>tepat</em>.</p><script>alert(1)</script>',
+            'statement' => '<ol><li>Kalimat pertama</li><li>Kalimat kedua</li></ol>',
+            'option_a' => '<p><u>Aktivitas</u></p><img src=x onerror=alert(1)>',
+            'option_b' => '<p>Aktifitas</p>', 'option_c' => 'Apotik', 'option_d' => 'Ijin', 'option_e' => 'Antri',
+            'correct_answer' => 'A',
+        ];
+        $this->actingAs($teacher)->post(route('scheduling.questions.store', $assigned), $payload)
+            ->assertSessionHasNoErrors();
+        $question = $assigned->questions()->firstOrFail();
+        $this->assertSame('html', $question->text_format);
+        $this->assertStringNotContainsString('<script', $question->question_text);
+        $this->assertStringNotContainsString('onerror', $question->options['A']);
+        $this->get(route('scheduling.questions.index', $assigned))->assertOk()
+            ->assertSee('<strong>kata baku</strong>', false)->assertSee('<u>Aktivitas</u>', false)
+            ->assertSee('<ol><li>Kalimat pertama</li><li>Kalimat kedua</li></ol>', false);
+        $this->put(route('scheduling.questions.update', [$assigned, $question]), [
+            ...$payload, 'question_text' => '<p>Revisi <em>teks miring</em>.</p>',
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('<p>Revisi <em>teks miring</em>.</p>', $question->fresh()->question_text);
+
+        $download = $this->get(route('scheduling.questions.export', $assigned))->assertOk();
+        $archive = new \ZipArchive;
+        $this->assertTrue($archive->open($download->baseResponse->getFile()->getPathname()));
+        $xml = $archive->getFromName('xl/worksheets/sheet1.xml');
+        $archive->close();
+        $this->assertStringContainsString('Revisi teks miring.', $xml);
+        $this->assertStringNotContainsString('&lt;em&gt;', $xml);
+
+        $this->post(route('scheduling.questions.store', $assigned), [
+            ...$payload, 'question_text' => '<p><br></p>',
+        ])->assertSessionHasErrors('question_text');
+    }
+
     public function test_committee_can_oversee_all_question_banks(): void
     {
         $this->withoutVite();
@@ -305,4 +345,3 @@ class QuestionBankAccessTest extends TestCase
         return [$teacher, $otherTeacher, $assigned, $other];
     }
 }
-

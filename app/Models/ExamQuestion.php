@@ -9,11 +9,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['assessment_subject_id', 'question_text', 'statement', 'question_image_path', 'question_type', 'options', 'option_file_paths', 'correct_answer', 'points', 'position'])]
+#[Fillable(['assessment_subject_id', 'question_text', 'text_format', 'statement', 'question_image_path', 'question_type', 'options', 'option_file_paths', 'correct_answer', 'points', 'position'])]
 #[Hidden(['correct_answer'])]
 class ExamQuestion extends Model
 {
-    protected $attributes = ['question_type' => 'multiple_choice'];
+    protected $attributes = ['question_type' => 'multiple_choice', 'text_format' => 'plain'];
 
     protected function casts(): array
     {
