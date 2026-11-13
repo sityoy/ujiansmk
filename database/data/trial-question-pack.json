@@ -1,20 +1,2172 @@
 [
   {
+    "code": "BIN",
+    "subject": "Bahasa Indonesia",
+    "grade": 10,
+    "name": "Try Out Bahasa Indonesia 10",
+    "questions": [
+      {
+        "question": "Tujuan utama teks laporan hasil observasi adalah ...",
+        "options": {
+          "A": "membujuk pembaca membeli barang",
+          "B": "memberi perintah tanpa penjelasan",
+          "C": "mengisahkan pengalaman khayalan",
+          "D": "menyampaikan lelucon pribadi",
+          "E": "melaporkan objek berdasarkan pengamatan secara objektif"
+        },
+        "answer": "E",
+        "explanation": "Laporan hasil observasi menyajikan hasil pengamatan objektif.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Bacalah kalimat berikut: \"Mangrove adalah tumbuhan yang hidup di kawasan pesisir berlumpur.\" Kalimat tersebut termasuk ...",
+        "options": {
+          "A": "penutup surat",
+          "B": "kalimat definisi",
+          "C": "dialog anekdot",
+          "D": "kalimat perintah",
+          "E": "kalimat seru"
+        },
+        "answer": "B",
+        "explanation": "Kalimat itu menjelaskan pengertian umum mangrove.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Kalimat yang menggunakan kata baku adalah ...",
+        "options": {
+          "A": "Siswa melakukan praktik di bengkel sekolah.",
+          "B": "Ayah membeli obat di apotik.",
+          "C": "Petugas meminta ijin masuk.",
+          "D": "Ibu memberi nasehat kepada adik.",
+          "E": "Jadual rapat telah diumumkan."
+        },
+        "answer": "A",
+        "explanation": "Bentuk baku: praktik, apotek, izin, nasihat, dan jadwal.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Tujuan kritik dalam teks anekdot biasanya disampaikan melalui ...",
+        "options": {
+          "A": "daftar pustaka",
+          "B": "rumus hitungan",
+          "C": "laporan keuangan",
+          "D": "humor atau kejadian menggelitik",
+          "E": "petunjuk perakitan"
+        },
+        "answer": "D",
+        "explanation": "Anekdot dapat menyampaikan kritik sosial melalui kelucuan.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Kalimat \"Daun-daun menari tertiup angin\" menggunakan majas ...",
+        "options": {
+          "A": "antitesis",
+          "B": "litotes",
+          "C": "ironi",
+          "D": "metonimia",
+          "E": "personifikasi"
+        },
+        "answer": "E",
+        "explanation": "Benda bukan manusia diberi perilaku manusia, yaitu menari.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Kata penghubung yang menyatakan sebab terdapat pada kalimat ...",
+        "options": {
+          "A": "Rina membaca lalu mencatat.",
+          "B": "Pilih buku atau majalah.",
+          "C": "Doni rajin, tetapi sering terlambat.",
+          "D": "Pertandingan ditunda karena hujan deras.",
+          "E": "Ia tetap hadir meskipun sakit."
+        },
+        "answer": "D",
+        "explanation": "Karena menghubungkan peristiwa dengan penyebabnya.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Perhatikan paragraf: \"Perpustakaan sekolah menyediakan banyak sumber belajar. Di sana terdapat buku pelajaran, ensiklopedia, dan majalah pendidikan. Siswa juga dapat mengakses buku digital.\" Gagasan utamanya adalah ...",
+        "options": {
+          "A": "buku digital menggantikan semua buku",
+          "B": "perpustakaan menyediakan beragam sumber belajar",
+          "C": "siswa hanya membaca majalah",
+          "D": "ensiklopedia sulit ditemukan",
+          "E": "perpustakaan tidak memiliki buku pelajaran"
+        },
+        "answer": "B",
+        "explanation": "Kalimat pertama memuat gagasan umum yang dijelaskan kalimat berikutnya.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Kalimat yang paling efektif adalah ...",
+        "options": {
+          "A": "Para siswa-siswa berkumpul di aula.",
+          "B": "Siswa berkumpul di aula.",
+          "C": "Bagi siswa dimohon agar supaya berkumpul.",
+          "D": "Semua para siswa berkumpul bersama-sama.",
+          "E": "Siswa-siswa semuanya saling berkumpul bersama."
+        },
+        "answer": "B",
+        "explanation": "Kalimat tersebut jelas dan tidak memakai penanda jamak atau unsur lain secara berlebihan.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Dalam negosiasi, usulan yang baik seharusnya ...",
+        "options": {
+          "A": "menawarkan penyelesaian yang dapat dipertimbangkan kedua pihak",
+          "B": "mengabaikan kebutuhan pihak lain",
+          "C": "menggunakan ancaman sejak awal",
+          "D": "memaksa pihak lain menerima semua tuntutan",
+          "E": "menolak seluruh kemungkinan kompromi"
+        },
+        "answer": "A",
+        "explanation": "Negosiasi mencari kesepakatan yang dapat diterima pihak-pihak terkait.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Perhatikan kalimat: \"Menurut catatan petugas, 120 siswa mengunjungi perpustakaan pada Senin lalu.\" Kalimat ini tergolong fakta karena ...",
+        "options": {
+          "A": "mengandung ajakan",
+          "B": "mengungkap selera pribadi",
+          "C": "menggunakan kata paling",
+          "D": "memuat data yang dapat diperiksa kebenarannya",
+          "E": "menyatakan harapan"
+        },
+        "answer": "D",
+        "explanation": "Jumlah pengunjung dan waktunya dapat diverifikasi melalui catatan.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Kalimat yang paling objektif untuk laporan observasi adalah ...",
+        "options": {
+          "A": "Taman itu pasti paling indah sedunia.",
+          "B": "Semua orang tentu menyukai taman ini.",
+          "C": "Menurut saya, taman itu membosankan.",
+          "D": "Tidak ada taman yang menandinginya.",
+          "E": "Taman sekolah memiliki 12 pohon mangga."
+        },
+        "answer": "E",
+        "explanation": "Jumlah pohon merupakan hasil pengamatan yang dapat diperiksa.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Kalimat \"Tanaman itu memiliki daun berbentuk oval dengan tepi bergerigi\" merupakan ...",
+        "options": {
+          "A": "kalimat tanya",
+          "B": "kalimat perintah",
+          "C": "kalimat deskripsi",
+          "D": "kalimat larangan",
+          "E": "ungkapan sapaan"
+        },
+        "answer": "C",
+        "explanation": "Kalimat tersebut menggambarkan ciri fisik objek.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Dalam negosiasi harga, penjual menawarkan Rp100.000 dan pembeli mengajukan Rp90.000 disertai alasan. Tuturan pembeli merupakan ...",
+        "options": {
+          "A": "salam pembuka",
+          "B": "penutup pertemuan",
+          "C": "ucapan terima kasih",
+          "D": "pernyataan identitas",
+          "E": "penawaran"
+        },
+        "answer": "E",
+        "explanation": "Pembeli mengajukan harga alternatif dalam proses tawar-menawar.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Bacalah: \"Buku digital mudah dibawa. Ratusan judul dapat disimpan pada satu perangkat.\" Kalimat kedua berfungsi ...",
+        "options": {
+          "A": "menolak kalimat pertama",
+          "B": "mengganti topik menjadi olahraga",
+          "C": "menjelaskan alasan buku digital mudah dibawa",
+          "D": "menutup surat lamaran",
+          "E": "memperkenalkan tokoh cerita"
+        },
+        "answer": "C",
+        "explanation": "Kalimat kedua memberi penjelasan yang mendukung kalimat pertama.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Laporan menyatakan, \"Dari 30 tanaman yang diamati, 24 tumbuh baik pada tanah lembap.\" Simpulan yang paling sesuai adalah ...",
+        "options": {
+          "A": "semua tanaman di dunia membutuhkan tanah yang sama",
+          "B": "tanah kering selalu mematikan tanaman",
+          "C": "keenam tanaman lainnya pasti mati",
+          "D": "sebagian besar tanaman dalam pengamatan tumbuh baik pada tanah lembap",
+          "E": "kelembapan adalah satu-satunya faktor pertumbuhan"
+        },
+        "answer": "D",
+        "explanation": "Data hanya mendukung kesimpulan tentang mayoritas tanaman yang diamati.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Bacalah dialog: Petugas berkata, \"Kami melayani dengan cepat.\" Warga menjawab, \"Benar, saya hanya menunggu tiga jam untuk satu stempel.\" Kritik utama dalam dialog itu adalah ...",
+        "options": {
+          "A": "harga stempel terlalu murah",
+          "B": "warga tidak suka surat",
+          "C": "pelayanan lambat bertentangan dengan klaim petugas",
+          "D": "ruang tunggu terlalu luas",
+          "E": "petugas datang terlalu pagi"
+        },
+        "answer": "C",
+        "explanation": "Jawaban warga menyindir ketidaksesuaian antara klaim dan kenyataan.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Penjual menolak harga terlalu rendah karena biaya produksi tinggi. Respons pembeli yang paling mendukung tercapainya kesepakatan adalah ...",
+        "options": {
+          "A": "memaksa penjual menerima harga apa pun",
+          "B": "menghina barang penjual",
+          "C": "mengajukan harga yang lebih wajar dan menanyakan kemungkinan diskon jumlah pembelian",
+          "D": "menolak mendengar alasan",
+          "E": "mengancam membatalkan izin toko"
+        },
+        "answer": "C",
+        "explanation": "Penawaran beralasan membuka ruang kompromi yang saling mempertimbangkan kebutuhan.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Bacalah: \"Perpustakaan menambah jam layanan sore. Setelah kebijakan itu, jumlah kunjungan meningkat. Namun, laporan belum membandingkan faktor lain.\" Pernyataan yang paling hati-hati adalah ...",
+        "options": {
+          "A": "penambahan jam pasti satu-satunya penyebab peningkatan",
+          "B": "peningkatan kunjungan terjadi setelah penambahan jam, tetapi penyebabnya perlu diteliti lebih lanjut",
+          "C": "jam layanan tidak mungkin berpengaruh",
+          "D": "perpustakaan pasti menghapus layanan pagi",
+          "E": "kunjungan meningkat karena seluruh siswa diwajibkan hadir"
+        },
+        "answer": "B",
+        "explanation": "Urutan waktu saja belum membuktikan sebab tunggal.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Kalimat \"Para siswa-siswa semuanya wajib harus membawa kartu\" paling efektif diperbaiki menjadi ...",
+        "options": {
+          "A": "Siswa wajib membawa kartu.",
+          "B": "Para siswa-siswa wajib membawa semua kartu.",
+          "C": "Semua para siswa wajib harus membawa kartu.",
+          "D": "Siswa semuanya wajib harus membawa kartu.",
+          "E": "Para siswa-siswa semuanya membawa kartu."
+        },
+        "answer": "A",
+        "explanation": "Penanda jamak dan kewajiban yang berlebihan dihilangkan tanpa mengubah makna utama.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Sebuah teks observasi menyebut jumlah tempat sampah, jenisnya, dan lokasinya. Penulis ingin menambahkan \"Sekolah kami paling bersih di kota\" tanpa data pembanding. Tindakan penyuntingan yang tepat adalah ...",
+        "options": {
+          "A": "mengganti klaim dengan keterangan terukur atau melengkapinya dengan data pembanding",
+          "B": "menghapus seluruh hasil observasi",
+          "C": "menambahkan klaim itu sebagai fakta",
+          "D": "mengulang klaim dalam setiap paragraf",
+          "E": "mengubah angka agar mendukung klaim"
+        },
+        "answer": "A",
+        "explanation": "Klaim perbandingan memerlukan bukti; laporan sebaiknya memakai data terukur.",
+        "difficulty": "sulit"
+      }
+    ],
+    "id": "bin-10"
+  },
+  {
+    "code": "BIN",
+    "subject": "Bahasa Indonesia",
+    "grade": 11,
+    "name": "Try Out Bahasa Indonesia 11",
+    "questions": [
+      {
+        "question": "Teks prosedur terutama bertujuan untuk ...",
+        "options": {
+          "A": "mengisahkan konflik tokoh",
+          "B": "menggambarkan suasana pantai",
+          "C": "memandu pembaca melakukan suatu kegiatan secara berurutan",
+          "D": "menilai keindahan puisi",
+          "E": "mencatat silsilah keluarga"
+        },
+        "answer": "C",
+        "explanation": "Prosedur menjelaskan langkah untuk mencapai tujuan tertentu.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Kalimat yang menggunakan bentuk perintah adalah ...",
+        "options": {
+          "A": "Simpan berkas sebelum menutup aplikasi.",
+          "B": "Berkas itu tersimpan kemarin.",
+          "C": "Mereka sedang menyimpan berkas.",
+          "D": "Penyimpanan berkas memerlukan ruang.",
+          "E": "Apakah berkas sudah tersimpan?"
+        },
+        "answer": "A",
+        "explanation": "Simpan merupakan kata kerja perintah.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Teks eksplanasi menjelaskan ...",
+        "options": {
+          "A": "cara menawarkan barang",
+          "B": "daftar harga produk",
+          "C": "identitas pelamar kerja",
+          "D": "dialog tokoh drama saja",
+          "E": "proses terjadinya fenomena beserta hubungan sebab-akibatnya"
+        },
+        "answer": "E",
+        "explanation": "Eksplanasi menerangkan bagaimana atau mengapa suatu fenomena terjadi.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Kalimat yang menunjukkan hubungan akibat adalah ...",
+        "options": {
+          "A": "Meskipun hujan, ia berangkat.",
+          "B": "Dina memilih buku atau majalah.",
+          "C": "Saluran tersumbat sehingga air meluap.",
+          "D": "Rapat dimulai setelah bel berbunyi.",
+          "E": "Ia belajar sambil mendengarkan musik."
+        },
+        "answer": "C",
+        "explanation": "Sehingga memperkenalkan akibat dari saluran yang tersumbat.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Bagian proposal yang menjelaskan alasan perlunya kegiatan dilaksanakan adalah ...",
+        "options": {
+          "A": "daftar hadir",
+          "B": "indeks istilah",
+          "C": "lampiran foto",
+          "D": "lembar penilaian",
+          "E": "latar belakang"
+        },
+        "answer": "E",
+        "explanation": "Latar belakang memuat masalah atau alasan pengajuan kegiatan.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Kalimat persuasif yang sesuai untuk penutup ceramah tentang kebersihan adalah ...",
+        "options": {
+          "A": "Mari biasakan memilah sampah mulai dari kelas kita.",
+          "B": "Kelas kami berada di lantai dua.",
+          "C": "Kemarin hujan turun deras.",
+          "D": "Tempat sampah itu berwarna hijau.",
+          "E": "Petugas datang pukul tujuh."
+        },
+        "answer": "A",
+        "explanation": "Kata mari mengajak pendengar melakukan tindakan.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Urutan yang tepat untuk menyimpan dokumen baru di aplikasi pengolah kata adalah ...",
+        "options": {
+          "A": "beri nama – tutup aplikasi – pilih Simpan – tentukan folder",
+          "B": "tutup aplikasi – pilih Simpan – beri nama – tentukan folder",
+          "C": "tentukan folder – tutup aplikasi – beri nama – pilih Simpan",
+          "D": "pilih Simpan Sebagai – tentukan folder – beri nama – klik Simpan",
+          "E": "klik Simpan – tutup aplikasi – hapus berkas – beri nama"
+        },
+        "answer": "D",
+        "explanation": "Urutan itu menyelesaikan pemilihan lokasi, nama, dan penyimpanan dokumen.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Bacalah kutipan: \"Sampah yang menyumbat selokan menghambat aliran air. Saat hujan deras, air tidak tertampung dan menggenangi jalan.\" Penyebab langsung terhambatnya aliran air adalah ...",
+        "options": {
+          "A": "jalan yang lebar",
+          "B": "sampah yang menyumbat selokan",
+          "C": "kendaraan di jalan",
+          "D": "pepohonan di halaman",
+          "E": "panas matahari"
+        },
+        "answer": "B",
+        "explanation": "Penyebab disebutkan secara eksplisit pada kalimat pertama.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Dalam cerita, tokoh berkata, \"Aku akan mengembalikan dompet ini kepada pemiliknya,\" lalu menyerahkannya ke petugas. Watak yang paling jelas ditunjukkan adalah ...",
+        "options": {
+          "A": "pemarah",
+          "B": "pemalas",
+          "C": "sombong",
+          "D": "jujur",
+          "E": "ceroboh"
+        },
+        "answer": "D",
+        "explanation": "Tindakan mengembalikan barang orang lain menunjukkan kejujuran.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Ulasan buku yang baik seharusnya ...",
+        "options": {
+          "A": "hanya memuat pujian tanpa alasan",
+          "B": "menyerang kehidupan pribadi penulis",
+          "C": "menyalin seluruh isi buku",
+          "D": "menjelaskan kelebihan dan kekurangan dengan alasan serta contoh",
+          "E": "menilai buku tanpa membacanya"
+        },
+        "answer": "D",
+        "explanation": "Ulasan yang beralasan membantu pembaca menilai buku secara adil.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Kata penghubung yang menandai urutan langkah adalah ...",
+        "options": {
+          "A": "meskipun",
+          "B": "kemudian",
+          "C": "karena",
+          "D": "tetapi",
+          "E": "seandainya"
+        },
+        "answer": "B",
+        "explanation": "Kemudian menandai tahap berikutnya dalam urutan.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Dalam proposal kegiatan, rincian pemasukan dan pengeluaran dicantumkan pada bagian ...",
+        "options": {
+          "A": "anggaran biaya",
+          "B": "orientasi",
+          "C": "resolusi",
+          "D": "koda",
+          "E": "daftar tokoh"
+        },
+        "answer": "A",
+        "explanation": "Anggaran memuat kebutuhan biaya dan sumber pembiayaan.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Bacalah: \"Mira menahan kantuk demi menyelesaikan pesanan jahitan ibunya.\" Watak Mira yang paling didukung kutipan adalah ...",
+        "options": {
+          "A": "pemarah",
+          "B": "sombong",
+          "C": "tekun",
+          "D": "pendendam",
+          "E": "boros"
+        },
+        "answer": "C",
+        "explanation": "Usaha menyelesaikan pekerjaan meskipun mengantuk menunjukkan ketekunan.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Dalam resensi, kalimat yang menyatakan kelemahan buku disertai alasan adalah ...",
+        "options": {
+          "A": "Buku ini tidak berguna sama sekali.",
+          "B": "Penulisnya pasti tidak pernah belajar.",
+          "C": "Sampulnya ada dan halamannya banyak.",
+          "D": "Semua orang harus membenci buku ini.",
+          "E": "Beberapa istilah teknis tidak dijelaskan sehingga pembaca pemula sulit memahaminya."
+        },
+        "answer": "E",
+        "explanation": "Kalimat itu menyebut kekurangan konkret dan dampaknya pada pembaca.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Petunjuk berbunyi: \"Nyalakan komputer. Sambungkan kabel daya. Tekan tombol masuk.\" Perbaikan urutan paling mendasar adalah ...",
+        "options": {
+          "A": "memindahkan tombol masuk ke langkah pertama",
+          "B": "menghapus semua langkah",
+          "C": "menambahkan penutup ceramah",
+          "D": "menukar kata komputer dengan meja",
+          "E": "menyambungkan kabel daya sebelum menyalakan komputer"
+        },
+        "answer": "E",
+        "explanation": "Kabel daya perlu terpasang sebelum komputer dinyalakan.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Bacalah: \"Hutan menyerap air hujan. Ketika tutupan hutan berkurang, lebih banyak air mengalir di permukaan tanah sehingga risiko banjir meningkat.\" Hubungan gagasan yang dominan adalah ...",
+        "options": {
+          "A": "perbandingan harga",
+          "B": "sebab-akibat",
+          "C": "urutan daftar tokoh",
+          "D": "pertentangan tanpa hubungan",
+          "E": "dialog penawaran"
+        },
+        "answer": "B",
+        "explanation": "Perubahan tutupan hutan dijelaskan melalui dampaknya terhadap aliran air dan banjir.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Proposal menyebut tujuan \"meningkatkan minat baca\", tetapi seluruh kegiatan hanya berupa lomba lari. Perbaikan yang paling sesuai adalah ...",
+        "options": {
+          "A": "menghapus tujuan tanpa pertimbangan",
+          "B": "menambah lebih banyak lomba lari saja",
+          "C": "menambahkan kegiatan membaca, diskusi buku, atau kunjungan perpustakaan yang mendukung tujuan",
+          "D": "menghapus seluruh jadwal",
+          "E": "mengganti anggaran menjadi puisi"
+        },
+        "answer": "C",
+        "explanation": "Kegiatan harus berkaitan dengan tujuan proposal.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Bacalah: \"Fajar mengetahui temannya menyontek. Ia ingin menegur, tetapi khawatir persahabatan mereka rusak.\" Konflik utama yang dialami Fajar adalah ...",
+        "options": {
+          "A": "konflik dengan cuaca",
+          "B": "konflik ekonomi negara",
+          "C": "konflik antarkerajaan",
+          "D": "konflik batin antara menegakkan kejujuran dan menjaga persahabatan",
+          "E": "konflik dengan hewan liar"
+        },
+        "answer": "D",
+        "explanation": "Pertentangan terjadi dalam pikiran tokoh mengenai dua pilihan.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Sebuah ceramah menyatakan bahwa penggunaan gawai perlu diatur, lalu memberi contoh gangguan tidur akibat pemakaian larut malam. Penutup yang paling selaras adalah ...",
+        "options": {
+          "A": "Karena itu, semua teknologi harus dihancurkan.",
+          "B": "Mari atur waktu penggunaan gawai agar belajar dan istirahat tetap seimbang.",
+          "C": "Jadi, tidur tidak diperlukan lagi.",
+          "D": "Demikian daftar harga gawai terbaru.",
+          "E": "Mari memakai gawai sepanjang malam."
+        },
+        "answer": "B",
+        "explanation": "Ajakan mengatur penggunaan gawai sesuai dengan masalah yang dibahas.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Resensi menyebut alur novel menarik, tetapi perpindahan waktu kadang membingungkan. Simpulan yang paling seimbang adalah ...",
+        "options": {
+          "A": "novel memiliki daya tarik cerita, meskipun penanda waktu perlu dibuat lebih jelas",
+          "B": "semua pembaca pasti memahami alurnya",
+          "C": "penulis tidak memiliki kemampuan apa pun",
+          "D": "novel itu sama sekali tidak layak dibaca",
+          "E": "novel itu hanya berisi kesalahan"
+        },
+        "answer": "A",
+        "explanation": "Simpulan mempertimbangkan kelebihan dan kekurangan yang telah disebutkan.",
+        "difficulty": "sulit"
+      }
+    ],
+    "id": "bin-11"
+  },
+  {
+    "code": "BIN",
+    "subject": "Bahasa Indonesia",
+    "grade": 12,
+    "name": "Try Out Bahasa Indonesia 12",
+    "questions": [
+      {
+        "question": "Kalimat pembuka surat lamaran pekerjaan yang paling tepat adalah ...",
+        "options": {
+          "A": "Kalian sebaiknya cepat menerima saya.",
+          "B": "Aku mau kerja di tempat kamu.",
+          "C": "Pokoknya saya harus diterima di sini.",
+          "D": "Saya tidak tahu ada lowongan atau tidak, terserah saja.",
+          "E": "Berdasarkan informasi lowongan pada laman perusahaan, saya mengajukan lamaran sebagai staf administrasi."
+        },
+        "answer": "E",
+        "explanation": "Pembukaan menyebut sumber lowongan dan jabatan dengan bahasa resmi.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Dokumen yang berisi ringkasan pendidikan, pengalaman, dan keterampilan pelamar adalah ...",
+        "options": {
+          "A": "nota dinas",
+          "B": "surat kuasa",
+          "C": "surat jalan",
+          "D": "berita acara",
+          "E": "daftar riwayat hidup"
+        },
+        "answer": "E",
+        "explanation": "Daftar riwayat hidup merangkum profil dan kualifikasi pelamar.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Penulisan tempat dan tanggal surat yang tepat adalah ...",
+        "options": {
+          "A": "Bekasi; 13 November 2026",
+          "B": "Bekasi: 13 november 2026",
+          "C": "Bekasi, 13 November 2026",
+          "D": "bekasi, 13 November 2026",
+          "E": "Bekasi. 13 November, 2026"
+        },
+        "answer": "C",
+        "explanation": "Nama tempat diikuti koma; nama bulan diawali huruf kapital.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Teks editorial terutama berisi ...",
+        "options": {
+          "A": "petunjuk mengoperasikan mesin",
+          "B": "riwayat hidup pelamar",
+          "C": "pandangan redaksi terhadap isu aktual disertai alasan",
+          "D": "cerita rekaan tentang kerajaan",
+          "E": "jadwal kegiatan kelas"
+        },
+        "answer": "C",
+        "explanation": "Editorial menyampaikan sikap redaksi terhadap suatu isu.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Kalimat yang merupakan opini adalah ...",
+        "options": {
+          "A": "Perpustakaan dibuka pukul 07.00 menurut jadwal.",
+          "B": "Daftar hadir mencatat 32 peserta.",
+          "C": "Laporan mencatat 25 buku dipinjam pada Senin.",
+          "D": "Menurut saya, ruang baca itu paling nyaman di sekolah.",
+          "E": "Undangan mencantumkan tanggal 13 November 2026."
+        },
+        "answer": "D",
+        "explanation": "Menurut saya dan paling nyaman menunjukkan penilaian subjektif.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Dalam teks cerita sejarah, ungkapan \"tiga tahun kemudian\" berfungsi sebagai ...",
+        "options": {
+          "A": "penanda urutan waktu",
+          "B": "penanda perbandingan",
+          "C": "penanda tempat",
+          "D": "ungkapan larangan",
+          "E": "kata sapaan"
+        },
+        "answer": "A",
+        "explanation": "Ungkapan tersebut menghubungkan kejadian berdasarkan waktu.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Bacalah kutipan editorial: \"Sekolah perlu menambah tempat sampah terpilah. Saat ini, sampah organik dan plastik masih bercampur sehingga pengolahannya sulit.\" Usulan utama penulis adalah ...",
+        "options": {
+          "A": "menambah tempat sampah terpilah",
+          "B": "menutup sekolah sementara",
+          "C": "menghapus kegiatan kebersihan",
+          "D": "mencampur seluruh sampah",
+          "E": "mengurangi jumlah siswa"
+        },
+        "answer": "A",
+        "explanation": "Usulan utama dinyatakan pada kalimat pertama.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Kalimat yang menggunakan konjungsi pertentangan secara tepat adalah ...",
+        "options": {
+          "A": "Ia sakit karena tetap bekerja.",
+          "B": "Fasilitasnya terbatas, tetapi para siswa tetap bersemangat.",
+          "C": "Kami membaca buku sehingga ke perpustakaan.",
+          "D": "Ia belajar atau ujian telah selesai.",
+          "E": "Rapat dimulai meskipun setelah bel berbunyi."
+        },
+        "answer": "B",
+        "explanation": "Tetapi mempertentangkan keterbatasan fasilitas dengan semangat siswa.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Sebuah artikel menyatakan, \"Semua lulusan pasti memperoleh pekerjaan dalam sehari,\" tetapi tidak menyertakan data. Sikap pembaca yang paling tepat adalah ...",
+        "options": {
+          "A": "langsung menyebarkannya",
+          "B": "menganggapnya benar karena memakai kata pasti",
+          "C": "memeriksa bukti dan sumber sebelum mempercayai klaim itu",
+          "D": "mengubahnya menjadi iklan",
+          "E": "menolak semua informasi tentang pekerjaan"
+        },
+        "answer": "C",
+        "explanation": "Klaim umum perlu dinilai berdasarkan bukti dan sumber yang dapat dipercaya.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Kalimat penutup surat lamaran yang paling tepat adalah ...",
+        "options": {
+          "A": "Sekian, jangan lupa menerima saya.",
+          "B": "Atas perhatiannya saya ucapkan banyak-banyak terima kasih sekali.",
+          "C": "Atas perhatian Bapak/Ibu, saya mengucapkan terima kasih.",
+          "D": "Saya menunggu, cepat hubungi saya!",
+          "E": "Pokoknya saya ucapkan makasih."
+        },
+        "answer": "C",
+        "explanation": "Kalimat tersebut resmi, santun, dan efektif.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Bagian surat lamaran yang menyebut berkas seperti ijazah dan daftar riwayat hidup adalah ...",
+        "options": {
+          "A": "judul novel",
+          "B": "dialog",
+          "C": "daftar isi",
+          "D": "lampiran",
+          "E": "indeks"
+        },
+        "answer": "D",
+        "explanation": "Lampiran menunjukkan dokumen yang disertakan bersama surat.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Kalimat argumentasi yang didukung data adalah ...",
+        "options": {
+          "A": "Program itu pasti terbaik karena saya suka.",
+          "B": "Kegiatan membaca perlu diteruskan karena catatan perpustakaan menunjukkan kenaikan peminjaman selama program berlangsung.",
+          "C": "Semua orang tentu setuju tanpa bertanya.",
+          "D": "Data tidak diperlukan untuk menilai program.",
+          "E": "Menurut saya, angka selalu tidak berguna."
+        },
+        "answer": "B",
+        "explanation": "Kalimat menyertakan data yang relevan sebagai dukungan alasan.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Kata \"namun\" pada awal kalimat biasanya menunjukkan hubungan ...",
+        "options": {
+          "A": "penambahan waktu",
+          "B": "tujuan",
+          "C": "syarat",
+          "D": "pemilihan tempat",
+          "E": "pertentangan"
+        },
+        "answer": "E",
+        "explanation": "Namun menghubungkan gagasan yang berlawanan atau membatasi gagasan sebelumnya.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Kalimat paling tepat untuk menyebut kemampuan dalam lamaran adalah ...",
+        "options": {
+          "A": "Saya mampu mengolah data menggunakan aplikasi lembar kerja dan melampirkan contoh hasil pekerjaan.",
+          "B": "Saya pasti paling hebat di seluruh kota.",
+          "C": "Terima saya karena saya menyuruh.",
+          "D": "Saya tidak perlu menjelaskan kemampuan.",
+          "E": "Tidak ada orang lain yang bisa bekerja."
+        },
+        "answer": "A",
+        "explanation": "Kualifikasi dinyatakan konkret dan didukung bukti.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Lowongan mensyaratkan kemampuan mengolah data dan ketelitian. Informasi yang paling relevan ditonjolkan pelamar adalah ...",
+        "options": {
+          "A": "warna sepeda kesukaan",
+          "B": "jumlah saudara tanpa kaitan pekerjaan",
+          "C": "makanan favorit",
+          "D": "pengalaman menonton konser",
+          "E": "pengalaman memeriksa dan merekap data menggunakan lembar kerja"
+        },
+        "answer": "E",
+        "explanation": "Pengalaman tersebut langsung berkaitan dengan persyaratan jabatan.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Editorial menyatakan, \"Penggunaan transportasi umum perlu ditingkatkan. Namun, ketepatan waktu dan keamanan layanannya harus diperbaiki.\" Sikap redaksi adalah ...",
+        "options": {
+          "A": "menolak seluruh transportasi umum",
+          "B": "mendukung penggunaan transportasi umum disertai perbaikan layanan",
+          "C": "menganggap keamanan tidak penting",
+          "D": "meminta semua kendaraan pribadi dilarang seketika",
+          "E": "menilai waktu perjalanan tidak perlu diatur"
+        },
+        "answer": "B",
+        "explanation": "Dukungan diberikan bersama syarat perbaikan layanan.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Bacalah: \"Biaya program naik 10%, sedangkan jumlah penerima manfaat naik 30%.\" Simpulan yang paling dapat dipertanggungjawabkan adalah ...",
+        "options": {
+          "A": "program pasti gagal",
+          "B": "seluruh penerima pasti puas",
+          "C": "biaya per penerima pasti naik 30%",
+          "D": "pertumbuhan jumlah penerima lebih tinggi daripada persentase kenaikan biaya",
+          "E": "mutu layanan pasti turun"
+        },
+        "answer": "D",
+        "explanation": "Data cukup untuk membandingkan dua persentase, bukan menilai mutu atau kepuasan.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Kritik terhadap cerpen yang paling dapat dipertanggungjawabkan adalah ...",
+        "options": {
+          "A": "Perubahan sikap tokoh terasa mendadak karena tidak didahului peristiwa yang mendukung.",
+          "B": "Cerpen ini jelek karena saya tidak menyukai nama tokohnya.",
+          "C": "Semua cerita pendek selalu membosankan.",
+          "D": "Penulisnya pasti orang yang buruk.",
+          "E": "Pembaca yang suka cerpen ini pasti salah."
+        },
+        "answer": "A",
+        "explanation": "Kritik berfokus pada unsur karya dan menyebut alasan yang dapat ditinjau.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Sebuah teks cerita sejarah memuat dialog tokoh yang direkonstruksi penulis. Saat memakainya sebagai sumber penelitian, pembaca sebaiknya ...",
+        "options": {
+          "A": "menganggap setiap dialog pasti kutipan asli",
+          "B": "membedakan unsur rekaan dan fakta serta memeriksa sumber sejarah pendukung",
+          "C": "mengabaikan seluruh dokumen lain",
+          "D": "mengubah dialog menjadi arsip resmi",
+          "E": "menyimpulkan semua tokoh khayalan"
+        },
+        "answer": "B",
+        "explanation": "Teks sastra sejarah dapat memuat rekonstruksi yang harus dibedakan dari bukti sejarah.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Sebuah lamaran memakai sapaan resmi, tetapi ditutup dengan \"Makasih ya, cepat kabarin aku.\" Perbaikan yang paling tepat adalah ...",
+        "options": {
+          "A": "menghapus identitas pelamar",
+          "B": "menambah lebih banyak bahasa percakapan",
+          "C": "mengubah seluruh surat menjadi cerita",
+          "D": "menggunakan penutup resmi dan santun agar ragam bahasa surat konsisten",
+          "E": "mengganti tanggal dengan emotikon"
+        },
+        "answer": "D",
+        "explanation": "Surat lamaran memerlukan konsistensi ragam bahasa resmi.",
+        "difficulty": "sulit"
+      }
+    ],
+    "id": "bin-12"
+  },
+  {
+    "code": "BIG",
+    "subject": "Bahasa Inggris",
+    "grade": 10,
+    "name": "Try Out Bahasa Inggris 10",
+    "questions": [
+      {
+        "question": "Choose the correct response. Rina: \"Good morning, I am Rina.\" Siti: \"...\"",
+        "options": {
+          "A": "Good night.",
+          "B": "I am sorry to hear that.",
+          "C": "See you tomorrow.",
+          "D": "Good morning, I am Siti.",
+          "E": "You are welcome."
+        },
+        "answer": "D",
+        "explanation": "The response returns the greeting and introduces the speaker.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "My brother ... to school by bus every day.",
+        "options": {
+          "A": "go",
+          "B": "going",
+          "C": "gone",
+          "D": "goes",
+          "E": "went"
+        },
+        "answer": "D",
+        "explanation": "A singular third-person subject uses goes in the simple present.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Rina and I are classmates. ... study in the same classroom.",
+        "options": {
+          "A": "They",
+          "B": "He",
+          "C": "She",
+          "D": "It",
+          "E": "We"
+        },
+        "answer": "E",
+        "explanation": "Rina and I refers to we.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Read: \"Our school library is bright and quiet. It has tall bookshelves and a reading corner.\" What is being described?",
+        "options": {
+          "A": "A school library",
+          "B": "A sports field",
+          "C": "A bus station",
+          "D": "A science experiment",
+          "E": "A shopping centre"
+        },
+        "answer": "A",
+        "explanation": "The text describes the school library.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Read: \"The library opens at 7 a.m. and closes at 3 p.m. on school days.\" When does the library close?",
+        "options": {
+          "A": "At 7 a.m.",
+          "B": "At 7 p.m.",
+          "C": "At 3 p.m.",
+          "D": "At 5 p.m.",
+          "E": "At noon"
+        },
+        "answer": "C",
+        "explanation": "The closing time is explicitly stated as 3 p.m.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Yesterday, we ... the school museum.",
+        "options": {
+          "A": "visit",
+          "B": "visits",
+          "C": "visited",
+          "D": "visiting",
+          "E": "are visiting"
+        },
+        "answer": "C",
+        "explanation": "Yesterday requires the simple past form visited.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Read: \"Last Saturday, Deni visited his grandmother. He helped her water the plants and went home in the afternoon.\" What did Deni do at his grandmother’s house?",
+        "options": {
+          "A": "He repaired a car.",
+          "B": "He watered the plants.",
+          "C": "He played football.",
+          "D": "He bought a computer.",
+          "E": "He painted the classroom."
+        },
+        "answer": "B",
+        "explanation": "He helped water the plants.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "An announcement says: \"The English Club meeting is moved from Monday to Wednesday. The time remains 2 p.m.\" On which day will the meeting take place?",
+        "options": {
+          "A": "Monday",
+          "B": "Wednesday",
+          "C": "Tuesday",
+          "D": "Thursday",
+          "E": "Friday"
+        },
+        "answer": "B",
+        "explanation": "The new meeting day is Wednesday.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Read the notice: \"Please keep this room clean.\" What should visitors do?",
+        "options": {
+          "A": "Leave rubbish on the floor.",
+          "B": "Avoid littering in the room.",
+          "C": "Lock the room all day.",
+          "D": "Move all the furniture.",
+          "E": "Bring food to every desk."
+        },
+        "answer": "B",
+        "explanation": "Keeping the room clean includes avoiding littering.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Choose the correct sentence.",
+        "options": {
+          "A": "This book is cheap than that one.",
+          "B": "This book is cheapest than that one.",
+          "C": "This book is more cheaper than that one.",
+          "D": "This book is cheaper than that one.",
+          "E": "This book is most cheap than that one."
+        },
+        "answer": "D",
+        "explanation": "The correct comparative form of cheap is cheaper.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Choose the correct past-tense sentence.",
+        "options": {
+          "A": "She visit the museum yesterday.",
+          "B": "She has visit the museum yesterday.",
+          "C": "She visiting the museum yesterday.",
+          "D": "She visits yesterday the museum.",
+          "E": "She visited the museum yesterday."
+        },
+        "answer": "E",
+        "explanation": "Visited is the simple past form required by yesterday.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Announcement: \"Bring your student card to borrow a book.\" What must students bring?",
+        "options": {
+          "A": "A lunch box",
+          "B": "A train ticket",
+          "C": "A sports shirt",
+          "D": "A student card",
+          "E": "A shopping bag"
+        },
+        "answer": "D",
+        "explanation": "The announcement explicitly requires a student card.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Read: \"The workshop is next to the library, opposite the canteen.\" Where is the workshop?",
+        "options": {
+          "A": "Inside the canteen",
+          "B": "Behind the hospital",
+          "C": "Far from the school",
+          "D": "Above the bus station",
+          "E": "Beside the library"
+        },
+        "answer": "E",
+        "explanation": "Next to means beside.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Choose the correct description.",
+        "options": {
+          "A": "The classroom has twenty desks.",
+          "B": "The classroom have twenty desks.",
+          "C": "The classroom having twenty desks.",
+          "D": "The classroom are twenty desks.",
+          "E": "The classroom has twenty desk."
+        },
+        "answer": "A",
+        "explanation": "The singular subject takes has; twenty requires the plural desks.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Read: \"Nina arrived at the hall at 7.45 a.m. The ceremony began fifteen minutes later.\" When did the ceremony begin?",
+        "options": {
+          "A": "At 8.00 a.m.",
+          "B": "At 7.45 a.m.",
+          "C": "At 8.15 a.m.",
+          "D": "At 8.45 a.m.",
+          "E": "At 7.30 a.m."
+        },
+        "answer": "A",
+        "explanation": "Fifteen minutes after 7.45 is 8.00.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Read: \"Arif forgot his umbrella. When the rain started, Sinta offered to share hers.\" What can we infer about Sinta?",
+        "options": {
+          "A": "She wanted Arif to get wet.",
+          "B": "She had forgotten her umbrella too.",
+          "C": "She was willing to help Arif.",
+          "D": "She refused to leave the classroom.",
+          "E": "She disliked rainy weather more than anyone."
+        },
+        "answer": "C",
+        "explanation": "Offering to share an umbrella shows willingness to help.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Read: \"The garden used to be dry and empty. After students planted trees and watered them regularly, it became green.\" What mainly caused the change?",
+        "options": {
+          "A": "A new school uniform",
+          "B": "Planting and regular care",
+          "C": "A shorter lunch break",
+          "D": "Closing the garden permanently",
+          "E": "Removing all the plants"
+        },
+        "answer": "B",
+        "explanation": "The change follows planting and regular watering.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Notice: \"The science room is temporarily closed for repairs. Classes will use Room 4 until further notice.\" Which action follows the notice?",
+        "options": {
+          "A": "Attend the affected classes in Room 4.",
+          "B": "Cancel all classes forever.",
+          "C": "Wait outside the school gate.",
+          "D": "Continue using the science room.",
+          "E": "Move every lesson to the canteen."
+        },
+        "answer": "A",
+        "explanation": "Room 4 is the temporary replacement stated in the notice.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Read: \"I enjoyed the trip, although the bus broke down on the way home.\" Which statement matches the writer’s view?",
+        "options": {
+          "A": "The trip was cancelled before it began.",
+          "B": "The writer disliked every part of the trip.",
+          "C": "The bus had no problems.",
+          "D": "The writer stayed at home.",
+          "E": "The writer enjoyed the trip despite a problem."
+        },
+        "answer": "E",
+        "explanation": "Although introduces a difficulty that does not change the positive overall view.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Read: \"Dina lent her dictionary to Ayu because Ayu had left hers at home.\" What does \"hers\" refer to?",
+        "options": {
+          "A": "Dina’s classroom",
+          "B": "Dina’s home",
+          "C": "Ayu’s dictionary",
+          "D": "Ayu’s school",
+          "E": "Ayu’s notebook"
+        },
+        "answer": "C",
+        "explanation": "Hers replaces Ayu’s dictionary.",
+        "difficulty": "sulit"
+      }
+    ],
+    "id": "big-10"
+  },
+  {
+    "code": "BIG",
+    "subject": "Bahasa Inggris",
+    "grade": 11,
+    "name": "Try Out Bahasa Inggris 11",
+    "questions": [
+      {
+        "question": "A friend says, \"I have a headache.\" Which response gives a suggestion?",
+        "options": {
+          "A": "You took a rest yesterday.",
+          "B": "Thank you for the gift.",
+          "C": "I am a student.",
+          "D": "The room is blue.",
+          "E": "You should take a rest."
+        },
+        "answer": "E",
+        "explanation": "Should is used to give advice.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Which sentence offers help?",
+        "options": {
+          "A": "You must help me now.",
+          "B": "I helped him yesterday.",
+          "C": "He needs some paper.",
+          "D": "Would you like me to carry those books?",
+          "E": "I cannot find my bag."
+        },
+        "answer": "D",
+        "explanation": "The speaker offers to carry the books.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Choose the expression that asks for an opinion.",
+        "options": {
+          "A": "Open the window, please.",
+          "B": "Congratulations on your success.",
+          "C": "I agree with you.",
+          "D": "I am sorry for being late.",
+          "E": "What do you think about the new library?"
+        },
+        "answer": "E",
+        "explanation": "What do you think asks for the listener’s opinion.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Complete the sentence: \"The students stayed inside ... it was raining heavily.\"",
+        "options": {
+          "A": "although",
+          "B": "unless",
+          "C": "because",
+          "D": "or",
+          "E": "but"
+        },
+        "answer": "C",
+        "explanation": "Because introduces the reason for staying inside.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Choose the passive form of \"The students clean the classroom every day.\"",
+        "options": {
+          "A": "The classroom cleaned the students every day.",
+          "B": "The classroom has clean every day.",
+          "C": "The students are cleaned by the classroom every day.",
+          "D": "The classroom is cleaned by the students every day.",
+          "E": "The classroom was clean by the students every day."
+        },
+        "answer": "D",
+        "explanation": "Simple present passive uses is/are + past participle.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Choose the correct passive sentence about a finished event yesterday.",
+        "options": {
+          "A": "The report has checking by the teacher yesterday.",
+          "B": "The report was checked by the teacher yesterday.",
+          "C": "The report is check by the teacher yesterday.",
+          "D": "The report checks the teacher yesterday.",
+          "E": "The report were checked by the teacher yesterday."
+        },
+        "answer": "B",
+        "explanation": "Yesterday calls for the simple past passive was checked.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Read: \"Students should bring reusable bottles. This habit reduces plastic waste and saves money.\" What is the writer’s main purpose?",
+        "options": {
+          "A": "To describe a bottle factory",
+          "B": "To announce a sports result",
+          "C": "To persuade students to use reusable bottles",
+          "D": "To tell a story about a holiday",
+          "E": "To explain how to repair a tap"
+        },
+        "answer": "C",
+        "explanation": "The writer recommends reusable bottles and gives reasons.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Read: \"Students should bring reusable bottles. This habit reduces plastic waste and saves money.\" What does \"This habit\" refer to?",
+        "options": {
+          "A": "Buying bottled water every day",
+          "B": "Bringing reusable bottles",
+          "C": "Throwing bottles away",
+          "D": "Spending more money",
+          "E": "Cleaning the school bus"
+        },
+        "answer": "B",
+        "explanation": "This habit refers to the action in the preceding sentence.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Read: \"Water on the earth’s surface evaporates when heated by the sun. The vapour rises and cools, forming clouds.\" What causes the water to evaporate?",
+        "options": {
+          "A": "The moon’s light",
+          "B": "The weight of clouds",
+          "C": "Cold air alone",
+          "D": "Darkness at night",
+          "E": "Heat from the sun"
+        },
+        "answer": "E",
+        "explanation": "The text states that the sun heats the water.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Invitation: \"You are invited to our school art exhibition on Friday, 20 November, at 9 a.m. in the school hall. Please confirm attendance by Wednesday.\" What should invitees do by Wednesday?",
+        "options": {
+          "A": "Change the date of the event",
+          "B": "Bring paintings to the library",
+          "C": "Visit the exhibition at 9 p.m.",
+          "D": "Confirm whether they will attend",
+          "E": "Clean the sports field"
+        },
+        "answer": "D",
+        "explanation": "The invitation explicitly requests confirmation by Wednesday.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Choose the sentence expressing agreement.",
+        "options": {
+          "A": "I cannot hear you.",
+          "B": "Please close the door.",
+          "C": "Where is your classroom?",
+          "D": "I agree that we should reduce plastic waste.",
+          "E": "The lesson starts at eight."
+        },
+        "answer": "D",
+        "explanation": "I agree explicitly expresses agreement.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Complete: \"The road was flooded; ..., the bus arrived late.\"",
+        "options": {
+          "A": "therefore",
+          "B": "although",
+          "C": "unless",
+          "D": "because of",
+          "E": "despite"
+        },
+        "answer": "A",
+        "explanation": "Therefore introduces a result in an independent clause.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Choose the grammatically correct passive sentence about the posters.",
+        "options": {
+          "A": "The posters were designed by students.",
+          "B": "The posters is designed by students.",
+          "C": "The posters designing by students.",
+          "D": "The posters were design by students.",
+          "E": "The posters was designed by students."
+        },
+        "answer": "A",
+        "explanation": "The plural past passive uses were + past participle.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Read: \"Please RSVP by Friday so we can prepare enough seats.\" Why should guests reply?",
+        "options": {
+          "A": "To change the speaker’s name",
+          "B": "To replace the invitation",
+          "C": "To cancel the event automatically",
+          "D": "To buy a new building",
+          "E": "To help the organiser plan the seating"
+        },
+        "answer": "E",
+        "explanation": "Knowing attendance helps determine how many seats are needed.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Read: \"School gardens can support learning. Students can measure plant growth and record the results. However, gardens need regular care.\" Which statement best summarises the text?",
+        "options": {
+          "A": "Gardens never need maintenance.",
+          "B": "Gardens are useful only for decoration.",
+          "C": "Gardens support practical learning but require care.",
+          "D": "Students should stop recording observations.",
+          "E": "Plant growth cannot be measured."
+        },
+        "answer": "C",
+        "explanation": "The summary includes both the benefit and the limitation.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Dialogue: \"I think we should start at seven.\" \"I understand your reason, but some members cannot arrive before eight.\" The second speaker is ...",
+        "options": {
+          "A": "expressing a polite reservation about the plan",
+          "B": "changing the topic to food",
+          "C": "asking for directions",
+          "D": "accepting the plan without concern",
+          "E": "announcing that every member is late"
+        },
+        "answer": "A",
+        "explanation": "The speaker acknowledges the view and raises a practical concern.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Read: \"Heavy rain made the river rise. Because the bridge was unsafe, the school changed the bus route.\" What was the immediate reason for changing the route?",
+        "options": {
+          "A": "The school changed its uniform.",
+          "B": "The students bought new books.",
+          "C": "The bridge was unsafe.",
+          "D": "The river became shorter.",
+          "E": "The buses needed new colours."
+        },
+        "answer": "C",
+        "explanation": "The clause beginning because states the immediate reason.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Read: \"The proposal may save paper, provided that all students can access the digital files.\" Which condition is necessary for the proposed benefit?",
+        "options": {
+          "A": "All printed books must be destroyed.",
+          "B": "All students must be able to access the files.",
+          "C": "The school must stop teaching.",
+          "D": "Only teachers may open the files.",
+          "E": "Students must buy identical phones."
+        },
+        "answer": "B",
+        "explanation": "Provided that introduces the condition.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Read: \"Some students prefer recorded lessons because they can pause difficult sections. Others value live lessons because they can ask questions immediately.\" What does the text suggest?",
+        "options": {
+          "A": "Different lesson formats meet different learning needs.",
+          "B": "Recorded lessons have no benefits.",
+          "C": "Live lessons never allow questions.",
+          "D": "Every student has the same preference.",
+          "E": "All lessons must be cancelled."
+        },
+        "answer": "A",
+        "explanation": "The text presents distinct benefits for different preferences.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Read: \"A survey of one class found that most students walked to school.\" Which conclusion is most justified?",
+        "options": {
+          "A": "Most students in every country walk to school.",
+          "B": "Walking was common among the surveyed students, but wider claims need more data.",
+          "C": "No student uses public transport.",
+          "D": "Every student at the school walks.",
+          "E": "The survey proves buses are unnecessary."
+        },
+        "answer": "B",
+        "explanation": "A single-class survey supports a conclusion about that sample, not all students.",
+        "difficulty": "sulit"
+      }
+    ],
+    "id": "big-11"
+  },
+  {
+    "code": "BIG",
+    "subject": "Bahasa Inggris",
+    "grade": 12,
+    "name": "Try Out Bahasa Inggris 12",
+    "questions": [
+      {
+        "question": "Which sentence is suitable for opening a job application letter?",
+        "options": {
+          "A": "Hey, give me any job now.",
+          "B": "You must hire me today.",
+          "C": "I am writing to apply for the administrative assistant position advertised on your website.",
+          "D": "I do not care which company this is.",
+          "E": "Thanks for yesterday’s picnic."
+        },
+        "answer": "C",
+        "explanation": "It formally states the purpose and the advertised position.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Job advertisement: \"Administrative assistant needed. Applicants must be able to use spreadsheets and communicate clearly. Send your CV to recruitment@example.com by 20 November.\" Which skill is required?",
+        "options": {
+          "A": "Driving a bus",
+          "B": "Using spreadsheets",
+          "C": "Cooking international dishes",
+          "D": "Repairing engines",
+          "E": "Operating a crane"
+        },
+        "answer": "B",
+        "explanation": "The advertisement explicitly requires spreadsheet skills.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Read the same requirement: \"Send your CV by 20 November.\" What does CV contain?",
+        "options": {
+          "A": "Instructions for repairing a printer",
+          "B": "A list of grocery prices",
+          "C": "A summary of education, skills, and experience",
+          "D": "A weather forecast",
+          "E": "A school lunch menu"
+        },
+        "answer": "C",
+        "explanation": "A curriculum vitae summarises a candidate’s qualifications.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Choose the polite expression to offer assistance to a visitor.",
+        "options": {
+          "A": "May I help you find the office?",
+          "B": "Why are you here again?",
+          "C": "Carry my bag first.",
+          "D": "You have to leave now.",
+          "E": "Do not speak to anyone."
+        },
+        "answer": "A",
+        "explanation": "May I help you is a polite offer of assistance.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Complete the sentence: \"If you submit the form today, we ... it tomorrow.\"",
+        "options": {
+          "A": "processed",
+          "B": "processing",
+          "C": "will process",
+          "D": "have processed yesterday",
+          "E": "would processed"
+        },
+        "answer": "C",
+        "explanation": "The first conditional uses if + present, followed by will + base verb.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Complete the sentence: \"If I had more time, I ... an additional English course.\"",
+        "options": {
+          "A": "will took",
+          "B": "would take",
+          "C": "am taking yesterday",
+          "D": "had take",
+          "E": "takes"
+        },
+        "answer": "B",
+        "explanation": "The second conditional uses if + past simple and would + base verb.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "News report: \"Students at Bahagia School planted 200 trees on Friday. The activity was organised to make the school grounds greener.\" What happened?",
+        "options": {
+          "A": "A company sold 200 trees.",
+          "B": "A library was closed.",
+          "C": "Teachers cancelled all lessons.",
+          "D": "A new road was opened.",
+          "E": "Students planted 200 trees."
+        },
+        "answer": "E",
+        "explanation": "The first sentence states the main event.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Read: \"Students at Bahagia School planted 200 trees on Friday. The activity was organised to make the school grounds greener.\" Why was the activity organised?",
+        "options": {
+          "A": "To move the library",
+          "B": "To build a car park",
+          "C": "To sell school uniforms",
+          "D": "To make the school grounds greener",
+          "E": "To close the school"
+        },
+        "answer": "D",
+        "explanation": "The purpose is explicitly stated in the second sentence.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "A photograph shows students sorting plastic bottles into recycling bins. Which caption best matches it?",
+        "options": {
+          "A": "Students rehearse a drama on stage.",
+          "B": "Students sort plastic bottles for recycling.",
+          "C": "Workers repair a school bus.",
+          "D": "Visitors watch a football match.",
+          "E": "Teachers prepare food in the kitchen."
+        },
+        "answer": "B",
+        "explanation": "The caption accurately describes the visible activity.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Email: \"Dear Ms Rina, Thank you for inviting me to an interview on Monday at 10 a.m. I confirm that I will attend. Best regards, Dedi.\" What is the purpose of the email?",
+        "options": {
+          "A": "To reject a job offer",
+          "B": "To request a holiday",
+          "C": "To advertise a product",
+          "D": "To cancel an interview",
+          "E": "To confirm attendance at an interview"
+        },
+        "answer": "E",
+        "explanation": "The sender explicitly confirms attendance.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Complete: \"If the applicant ... the interview, the company will contact her.\"",
+        "options": {
+          "A": "had passed",
+          "B": "passed",
+          "C": "passing",
+          "D": "would pass",
+          "E": "passes"
+        },
+        "answer": "E",
+        "explanation": "The if-clause of the first conditional uses the present simple.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Which document is commonly attached to a job application to summarise qualifications?",
+        "options": {
+          "A": "A bus timetable",
+          "B": "A curriculum vitae",
+          "C": "A weather chart",
+          "D": "A shopping receipt",
+          "E": "A restaurant menu"
+        },
+        "answer": "B",
+        "explanation": "A CV summarises education, skills, and experience.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Email: \"Please find my CV attached for your consideration.\" What does \"attached\" mean here?",
+        "options": {
+          "A": "Sent to a different city",
+          "B": "Written on a wall",
+          "C": "Included as a file with the email",
+          "D": "Removed from the message",
+          "E": "Read aloud on the telephone"
+        },
+        "answer": "C",
+        "explanation": "An email attachment is a file included with the message.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "News item: \"A school opened a reading corner on Tuesday to improve access to books.\" Which question is answered by \"on Tuesday\"?",
+        "options": {
+          "A": "When was it opened?",
+          "B": "Why was it opened?",
+          "C": "Who opened it?",
+          "D": "How much did it cost?",
+          "E": "How many books were lost?"
+        },
+        "answer": "A",
+        "explanation": "On Tuesday gives the time of the event.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Job advertisement: \"Applicants should have basic bookkeeping skills and be available for weekend shifts.\" Which applicant best matches both requirements?",
+        "options": {
+          "A": "A person who cannot work on weekends and has no bookkeeping skills",
+          "B": "A person who can work weekends but has never studied bookkeeping",
+          "C": "A person with bookkeeping skills who refuses weekend work",
+          "D": "A person with basic bookkeeping skills who can work weekends",
+          "E": "A person interested only in remote weekday work with no bookkeeping skills"
+        },
+        "answer": "D",
+        "explanation": "The applicant meets both stated requirements.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Read: \"The company reduced packaging material by 20%, but the report did not measure changes in total waste.\" Which conclusion is supported?",
+        "options": {
+          "A": "Packaging material use decreased; the effect on total waste is not established by this report.",
+          "B": "Total waste fell by exactly 20%.",
+          "C": "All waste was eliminated.",
+          "D": "Sales increased by 20%.",
+          "E": "Packaging material use increased."
+        },
+        "answer": "A",
+        "explanation": "Only packaging reduction is measured; total waste was not measured.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Email: \"I appreciate the offer. However, I am unable to accept the position because I have committed to another employer.\" What is the sender doing?",
+        "options": {
+          "A": "Confirming a start date",
+          "B": "Requesting an interview time",
+          "C": "Asking for a recommendation",
+          "D": "Politely declining a job offer",
+          "E": "Accepting two jobs"
+        },
+        "answer": "D",
+        "explanation": "Unable to accept explicitly declines the offer while remaining polite.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Read: \"The internship requires data-entry accuracy. In my previous placement, I checked records against source documents before submission.\" Why is the second sentence useful in an application?",
+        "options": {
+          "A": "It describes an unrelated holiday.",
+          "B": "It replaces all contact details.",
+          "C": "It proves the applicant never needs training.",
+          "D": "It gives relevant evidence of careful work.",
+          "E": "It changes the subject to entertainment."
+        },
+        "answer": "D",
+        "explanation": "The example provides evidence related to the accuracy requirement.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Complete: \"If I had checked the address, I ... the wrong office yesterday.\"",
+        "options": {
+          "A": "would not have visited",
+          "B": "do not visit",
+          "C": "will not visit",
+          "D": "would not visit tomorrow",
+          "E": "have not visiting"
+        },
+        "answer": "A",
+        "explanation": "The third conditional uses would have + past participle for an unreal past result.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Read: \"The deadline is 4 p.m. on Friday. Applications received later will not be considered, even if they were sent before the deadline.\" Which advice is most appropriate?",
+        "options": {
+          "A": "Send the application after 4 p.m.",
+          "B": "Assume the sending time is the only requirement.",
+          "C": "Ignore the delivery time.",
+          "D": "Wait until Saturday to confirm the address.",
+          "E": "Ensure the application is received before the deadline."
+        },
+        "answer": "E",
+        "explanation": "The notice bases eligibility on receipt, not merely sending time.",
+        "difficulty": "sulit"
+      }
+    ],
+    "id": "big-12"
+  },
+  {
+    "code": "MTK",
+    "subject": "Matematika",
+    "grade": 10,
+    "name": "Try Out Matematika 10",
+    "questions": [
+      {
+        "question": "Nilai dari 2³ × 2² adalah ...",
+        "options": {
+          "A": "16",
+          "B": "24",
+          "C": "128",
+          "D": "64",
+          "E": "32"
+        },
+        "answer": "E",
+        "explanation": "Aturan pangkat: 2³×2² = 2⁵ = 32.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Jika 3x − 5 = 16, nilai x adalah ...",
+        "options": {
+          "A": "5",
+          "B": "6",
+          "C": "8",
+          "D": "9",
+          "E": "7"
+        },
+        "answer": "E",
+        "explanation": "3x = 21, sehingga x = 7.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Penyelesaian pertidaksamaan 2x + 3 < 11 adalah ...",
+        "options": {
+          "A": "x < 4",
+          "B": "x > 4",
+          "C": "x < 7",
+          "D": "x > 7",
+          "E": "x = 4"
+        },
+        "answer": "A",
+        "explanation": "2x < 8, sehingga x < 4.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Jika f(x) = 2x + 1, nilai f(3) adalah ...",
+        "options": {
+          "A": "3",
+          "B": "5",
+          "C": "7",
+          "D": "6",
+          "E": "9"
+        },
+        "answer": "C",
+        "explanation": "f(3) = 2×3+1 = 7.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Diketahui x + y = 7 dan x − y = 1. Pasangan (x, y) adalah ...",
+        "options": {
+          "A": "(4, 3)",
+          "B": "(3, 4)",
+          "C": "(5, 2)",
+          "D": "(2, 5)",
+          "E": "(6, 1)"
+        },
+        "answer": "A",
+        "explanation": "Menjumlahkan persamaan memberi 2x=8, sehingga x=4 dan y=3.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Akar-akar persamaan x² − 5x + 6 = 0 adalah ...",
+        "options": {
+          "A": "1 dan 6",
+          "B": "−2 dan −3",
+          "C": "0 dan 5",
+          "D": "−1 dan −6",
+          "E": "2 dan 3"
+        },
+        "answer": "E",
+        "explanation": "Faktorisasi (x−2)(x−3)=0.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Nilai log₂ 32 adalah ...",
+        "options": {
+          "A": "5",
+          "B": "3",
+          "C": "4",
+          "D": "6",
+          "E": "2"
+        },
+        "answer": "A",
+        "explanation": "Karena 2⁵ = 32, maka log₂32 = 5.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Jika 3^(x+1) = 81, nilai x adalah ...",
+        "options": {
+          "A": "1",
+          "B": "4",
+          "C": "2",
+          "D": "5",
+          "E": "3"
+        },
+        "answer": "E",
+        "explanation": "81=3⁴, sehingga x+1=4 dan x=3.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Persamaan garis yang melalui titik (0, 2) dan (3, 8) adalah ...",
+        "options": {
+          "A": "y = x + 2",
+          "B": "y = 3x + 2",
+          "C": "y = 2x + 2",
+          "D": "y = 2x − 2",
+          "E": "y = 2x + 3"
+        },
+        "answer": "C",
+        "explanation": "Gradien (8−2)/(3−0)=2 dan titik potong sumbu y adalah 2.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Titik puncak grafik y = x² − 4x + 3 adalah ...",
+        "options": {
+          "A": "(2, −1)",
+          "B": "(−2, −1)",
+          "C": "(2, 1)",
+          "D": "(4, 3)",
+          "E": "(−2, 3)"
+        },
+        "answer": "A",
+        "explanation": "x puncak = −b/(2a)=2, lalu y=4−8+3=−1.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Segitiga siku-siku mempunyai sisi di depan sudut θ sepanjang 3 cm dan sisi miring 5 cm. Nilai sin θ adalah ...",
+        "options": {
+          "A": "3/4",
+          "B": "3/5",
+          "C": "4/5",
+          "D": "5/3",
+          "E": "4/3"
+        },
+        "answer": "B",
+        "explanation": "Sinus adalah sisi depan dibagi sisi miring, yaitu 3/5.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Harga 2 buku dan 1 pena adalah Rp11.000. Harga 1 buku dan 2 pena adalah Rp10.000. Harga satu buku adalah ...",
+        "options": {
+          "A": "Rp2.000",
+          "B": "Rp4.000",
+          "C": "Rp5.000",
+          "D": "Rp6.000",
+          "E": "Rp3.000"
+        },
+        "answer": "B",
+        "explanation": "Dari 2b+p=11.000 dan b+2p=10.000 diperoleh b=4.000.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Penyelesaian persamaan x² − 9 = 0 adalah ...",
+        "options": {
+          "A": "x = 3 saja",
+          "B": "x = 0 atau x = 9",
+          "C": "x = −9 atau x = 9",
+          "D": "x = −3 atau x = 3",
+          "E": "x = −3 saja"
+        },
+        "answer": "D",
+        "explanation": "x²=9 memiliki akar positif dan negatif, yaitu ±3.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Segitiga siku-siku memiliki sisi depan sudut θ = 6 cm dan sisi samping sudut θ = 8 cm. Nilai tan θ adalah ...",
+        "options": {
+          "A": "4/3",
+          "B": "3/5",
+          "C": "3/4",
+          "D": "4/5",
+          "E": "5/3"
+        },
+        "answer": "C",
+        "explanation": "Tangen = sisi depan/sisi samping = 6/8 = 3/4.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Himpunan penyelesaian |2x − 3| = 5 adalah ...",
+        "options": {
+          "A": "{1, 4}",
+          "B": "{−4, 1}",
+          "C": "{−1, 4}",
+          "D": "{−1, −4}",
+          "E": "{1, 5}"
+        },
+        "answer": "C",
+        "explanation": "2x−3=5 atau 2x−3=−5, sehingga x=4 atau x=−1.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Dua bilangan berjumlah 12 dan hasil kalinya 35. Selisih bilangan terbesar dan terkecil adalah ...",
+        "options": {
+          "A": "1",
+          "B": "2",
+          "C": "3",
+          "D": "5",
+          "E": "7"
+        },
+        "answer": "B",
+        "explanation": "Kedua bilangan adalah 5 dan 7, sehingga selisihnya 2.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Sebuah persegi panjang memiliki keliling 28 cm. Luas maksimum yang dapat dimiliki adalah ...",
+        "options": {
+          "A": "28 cm²",
+          "B": "42 cm²",
+          "C": "48 cm²",
+          "D": "49 cm²",
+          "E": "56 cm²"
+        },
+        "answer": "D",
+        "explanation": "Jika panjang+lebar=14, luas maksimum terjadi saat keduanya 7, yaitu 49.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Jika x dan y bilangan positif, x + y = 10 dan x² + y² = 58, nilai xy adalah ...",
+        "options": {
+          "A": "16",
+          "B": "21",
+          "C": "24",
+          "D": "29",
+          "E": "42"
+        },
+        "answer": "B",
+        "explanation": "(x+y)²=x²+y²+2xy, sehingga 100=58+2xy dan xy=21.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Sebuah tangga 10 m bersandar pada tembok dan membentuk sudut 60° terhadap tanah. Ketinggian ujung tangga dari tanah adalah ...",
+        "options": {
+          "A": "5 m",
+          "B": "10√3 m",
+          "C": "5√2 m",
+          "D": "5√3 m",
+          "E": "10 m"
+        },
+        "answer": "D",
+        "explanation": "Tinggi=10 sin60°=10×√3/2=5√3.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Persamaan x² − (k + 2)x + 9 = 0 mempunyai dua akar real yang sama. Semua nilai k yang memenuhi adalah ...",
+        "options": {
+          "A": "−6 dan 6",
+          "B": "4 saja",
+          "C": "−4 dan 8",
+          "D": "−8 dan 4",
+          "E": "−8 saja"
+        },
+        "answer": "D",
+        "explanation": "Diskriminan nol: (k+2)²−36=0, sehingga k+2=±6 dan k=4 atau −8.",
+        "difficulty": "sulit"
+      }
+    ],
+    "id": "mtk-10"
+  },
+  {
+    "code": "MTK",
+    "subject": "Matematika",
+    "grade": 11,
+    "name": "Try Out Matematika 11",
+    "questions": [
+      {
+        "question": "Jika f(x) = 3x − 2, nilai f(4) adalah ...",
+        "options": {
+          "A": "8",
+          "B": "14",
+          "C": "12",
+          "D": "10",
+          "E": "16"
+        },
+        "answer": "D",
+        "explanation": "f(4)=12−2=10.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Jika f(x) = x + 2 dan g(x) = 2x, nilai (f ∘ g)(3) adalah ...",
+        "options": {
+          "A": "6",
+          "B": "7",
+          "C": "12",
+          "D": "10",
+          "E": "8"
+        },
+        "answer": "E",
+        "explanation": "f(g(3))=f(6)=8.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Invers dari fungsi f(x) = x + 5 adalah ...",
+        "options": {
+          "A": "x + 5",
+          "B": "5 − x",
+          "C": "x − 5",
+          "D": "5x",
+          "E": "x/5"
+        },
+        "answer": "C",
+        "explanation": "Dari y=x+5 diperoleh x=y−5.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Barisan aritmetika 4, 7, 10, 13, ... mempunyai beda ...",
+        "options": {
+          "A": "6",
+          "B": "4",
+          "C": "3",
+          "D": "7",
+          "E": "9"
+        },
+        "answer": "C",
+        "explanation": "Selisih dua suku berurutan adalah 3.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Suku kelima barisan aritmetika dengan suku pertama 2 dan beda 3 adalah ...",
+        "options": {
+          "A": "8",
+          "B": "10",
+          "C": "14",
+          "D": "12",
+          "E": "11"
+        },
+        "answer": "C",
+        "explanation": "U5=2+(5−1)×3=14.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Barisan geometri 3, 6, 12, 24, ... mempunyai rasio ...",
+        "options": {
+          "A": "2",
+          "B": "1/2",
+          "C": "3",
+          "D": "6",
+          "E": "12"
+        },
+        "answer": "A",
+        "explanation": "Rasio dua suku berurutan adalah 6/3=2.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Jika f(x) = 2x + 1 dan g(x) = x², bentuk (g ∘ f)(x) adalah ...",
+        "options": {
+          "A": "2x²+1",
+          "B": "4x²+4x+1",
+          "C": "4x²+1",
+          "D": "x²+2x+1",
+          "E": "2x²+2x+1"
+        },
+        "answer": "B",
+        "explanation": "g(f(x))=(2x+1)²=4x²+4x+1.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Invers dari f(x) = 2x − 6 adalah ...",
+        "options": {
+          "A": "2x+6",
+          "B": "(x−6)/2",
+          "C": "(x+6)/2",
+          "D": "x/2−6",
+          "E": "6−2x"
+        },
+        "answer": "C",
+        "explanation": "y=2x−6 memberi x=(y+6)/2.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Jumlah 10 suku pertama barisan aritmetika 3, 7, 11, ... adalah ...",
+        "options": {
+          "A": "230",
+          "B": "200",
+          "C": "220",
+          "D": "210",
+          "E": "240"
+        },
+        "answer": "D",
+        "explanation": "S10=10/2×(2×3+9×4)=5×42=210.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Suku keenam barisan geometri dengan suku pertama 2 dan rasio 3 adalah ...",
+        "options": {
+          "A": "486",
+          "B": "243",
+          "C": "324",
+          "D": "729",
+          "E": "162"
+        },
+        "answer": "A",
+        "explanation": "U6=2×3⁵=486.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Jumlah lima suku pertama deret geometri 2 + 4 + 8 + ... adalah ...",
+        "options": {
+          "A": "30",
+          "B": "62",
+          "C": "64",
+          "D": "126",
+          "E": "128"
+        },
+        "answer": "B",
+        "explanation": "2+4+8+16+32=62.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Modal Rp2.000.000 mendapat bunga tunggal 6% per tahun selama 2 tahun. Jumlah modal dan bunga akhirnya adalah ...",
+        "options": {
+          "A": "Rp2.240.000",
+          "B": "Rp2.200.000",
+          "C": "Rp2.120.000",
+          "D": "Rp2.247.200",
+          "E": "Rp2.400.000"
+        },
+        "answer": "A",
+        "explanation": "Bunga=2.000.000×0,06×2=240.000, sehingga total 2.240.000.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Sudut pusat sebuah lingkaran yang menghadap suatu busur adalah 100°. Sudut keliling yang menghadap busur yang sama adalah ...",
+        "options": {
+          "A": "25°",
+          "B": "40°",
+          "C": "100°",
+          "D": "200°",
+          "E": "50°"
+        },
+        "answer": "E",
+        "explanation": "Sudut keliling yang menghadap busur sama adalah setengah sudut pusat.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Jari-jari lingkaran 7 cm. Panjang busur dengan sudut pusat 90° adalah ... (gunakan π = 22/7)",
+        "options": {
+          "A": "11 cm",
+          "B": "7 cm",
+          "C": "14 cm",
+          "D": "22 cm",
+          "E": "44 cm"
+        },
+        "answer": "A",
+        "explanation": "Panjang busur=(90/360)×2×(22/7)×7=11.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Diketahui f(x) = 2x − 1 dan (f ∘ g)(x) = 6x + 7. Bentuk g(x) adalah ...",
+        "options": {
+          "A": "3x+3",
+          "B": "6x+8",
+          "C": "3x−4",
+          "D": "3x+4",
+          "E": "6x+6"
+        },
+        "answer": "D",
+        "explanation": "2g(x)−1=6x+7, sehingga g(x)=3x+4.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Jika f(x) = (2x + 1)/(x − 3), x ≠ 3, invers f adalah ...",
+        "options": {
+          "A": "(3x−1)/(x+2), x ≠ −2",
+          "B": "(3x−1)/(x−2), x ≠ 2",
+          "C": "(x+3)/(2x−1), x ≠ 1/2",
+          "D": "(3x+1)/(x−2), x ≠ 2",
+          "E": "(x−3)/(2x+1), x ≠ −1/2"
+        },
+        "answer": "D",
+        "explanation": "y(x−3)=2x+1 memberi x(y−2)=3y+1, sehingga invers (3x+1)/(x−2).",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Modal Rp1.000.000 berbunga majemuk 10% per tahun selama 2 tahun tanpa setoran tambahan. Jumlah akhirnya adalah ...",
+        "options": {
+          "A": "Rp1.100.000",
+          "B": "Rp1.200.000",
+          "C": "Rp1.250.000",
+          "D": "Rp1.220.000",
+          "E": "Rp1.210.000"
+        },
+        "answer": "E",
+        "explanation": "Jumlah akhir=1.000.000×1,1²=1.210.000.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Suatu barisan aritmetika memiliki U3 = 11 dan U8 = 31. Jumlah 10 suku pertamanya adalah ...",
+        "options": {
+          "A": "190",
+          "B": "200",
+          "C": "205",
+          "D": "220",
+          "E": "210"
+        },
+        "answer": "E",
+        "explanation": "5b=20 sehingga b=4; a=3. S10=5×(6+36)=210.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Dari titik P di luar lingkaran, panjang garis singgung PT adalah 12 cm. Jarak P ke pusat O adalah 13 cm. Jari-jari lingkaran adalah ...",
+        "options": {
+          "A": "6 cm",
+          "B": "5 cm",
+          "C": "7 cm",
+          "D": "10 cm",
+          "E": "25 cm"
+        },
+        "answer": "B",
+        "explanation": "OT tegak lurus PT, sehingga r²=13²−12²=25 dan r=5.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Suatu deret geometri tak hingga memiliki suku pertama 6 dan rasio 1/3. Jumlah deret tersebut adalah ...",
+        "options": {
+          "A": "2",
+          "B": "9",
+          "C": "8",
+          "D": "12",
+          "E": "6"
+        },
+        "answer": "B",
+        "explanation": "Karena |r|<1, jumlah=a/(1−r)=6/(2/3)=9.",
+        "difficulty": "sulit"
+      }
+    ],
+    "id": "mtk-11"
+  },
+  {
     "code": "MTK",
     "subject": "Matematika",
     "grade": 12,
-    "name": "Paket Latihan Matematika Kelas 12",
+    "name": "Try Out Matematika 12",
     "questions": [
       {
         "question": "Rata-rata dari data 6, 7, 8, 9, dan 10 adalah ...",
         "options": {
           "A": "6",
           "B": "7",
-          "C": "8",
+          "C": "10",
           "D": "9",
-          "E": "10"
+          "E": "8"
         },
-        "answer": "C",
+        "answer": "E",
         "explanation": "Jumlah data 40, sehingga rata-rata = 40/5 = 8.",
         "difficulty": "mudah"
       },
@@ -34,26 +2186,26 @@
       {
         "question": "Modus dari data 4, 5, 5, 6, 7, 5, 8 adalah ...",
         "options": {
-          "A": "5",
-          "B": "4",
+          "A": "4",
+          "B": "5",
           "C": "6",
           "D": "7",
           "E": "8"
         },
-        "answer": "A",
+        "answer": "B",
         "explanation": "Angka 5 muncul tiga kali, paling sering.",
         "difficulty": "mudah"
       },
       {
         "question": "Jangkauan data 12, 15, 18, 20, dan 25 adalah ...",
         "options": {
-          "A": "10",
+          "A": "13",
           "B": "12",
           "C": "15",
-          "D": "13",
+          "D": "10",
           "E": "25"
         },
-        "answer": "D",
+        "answer": "A",
         "explanation": "Jangkauan = nilai maksimum − minimum = 25 − 12 = 13.",
         "difficulty": "mudah"
       },
@@ -76,10 +2228,10 @@
           "A": "1/6",
           "B": "1/3",
           "C": "2/3",
-          "D": "1/2",
-          "E": "5/6"
+          "D": "5/6",
+          "E": "1/2"
         },
-        "answer": "D",
+        "answer": "E",
         "explanation": "Ada tiga hasil genap (2, 4, 6) dari enam hasil yang sama mungkin.",
         "difficulty": "mudah"
       },
@@ -87,38 +2239,38 @@
         "question": "Peluang seorang siswa hadir tepat waktu adalah 0,85. Peluang siswa tersebut tidak hadir tepat waktu adalah ...",
         "options": {
           "A": "0,05",
-          "B": "0,10",
-          "C": "0,15",
+          "B": "0,15",
+          "C": "0,10",
           "D": "0,20",
           "E": "0,85"
         },
-        "answer": "C",
+        "answer": "B",
         "explanation": "Peluang komplemen = 1 − 0,85 = 0,15.",
         "difficulty": "sedang"
       },
       {
         "question": "Rani mempunyai 4 kemeja dan 3 celana. Banyak pasangan satu kemeja dan satu celana yang dapat dipilih adalah ...",
         "options": {
-          "A": "7",
+          "A": "12",
           "B": "9",
           "C": "10",
           "D": "16",
-          "E": "12"
+          "E": "7"
         },
-        "answer": "E",
+        "answer": "A",
         "explanation": "Aturan perkalian: 4×3 = 12 pasangan.",
         "difficulty": "sedang"
       },
       {
         "question": "Lima buku berbeda disusun berjajar pada satu rak. Banyak susunan yang mungkin adalah ...",
         "options": {
-          "A": "120",
+          "A": "60",
           "B": "25",
-          "C": "60",
+          "C": "120",
           "D": "100",
           "E": "240"
         },
-        "answer": "A",
+        "answer": "C",
         "explanation": "Permutasi lima benda berbeda adalah 5! = 120.",
         "difficulty": "sedang"
       },
@@ -128,10 +2280,10 @@
           "A": "12",
           "B": "30",
           "C": "36",
-          "D": "15",
-          "E": "20"
+          "D": "20",
+          "E": "15"
         },
-        "answer": "D",
+        "answer": "E",
         "explanation": "Kombinasi C(6,2) = 6×5/2 = 15.",
         "difficulty": "sedang"
       },
@@ -139,12 +2291,12 @@
         "question": "Dua dadu adil dilempar bersamaan. Peluang jumlah kedua mata dadu sama dengan 8 adalah ...",
         "options": {
           "A": "1/6",
-          "B": "5/36",
+          "B": "7/36",
           "C": "1/9",
-          "D": "7/36",
+          "D": "5/36",
           "E": "1/36"
         },
-        "answer": "B",
+        "answer": "D",
         "explanation": "Pasangan yang sesuai: (2,6), (3,5), (4,4), (5,3), (6,2), yaitu 5 dari 36.",
         "difficulty": "sedang"
       },
@@ -153,24 +2305,24 @@
         "options": {
           "A": "1/4",
           "B": "1/2",
-          "C": "3/5",
+          "C": "3/4",
           "D": "4/5",
-          "E": "3/4"
+          "E": "3/5"
         },
-        "answer": "E",
+        "answer": "C",
         "explanation": "Banyak anggota gabungan = 22 + 18 − 10 = 30, sehingga peluang = 30/40.",
         "difficulty": "sedang"
       },
       {
         "question": "Kotak berisi 5 bola merah dan 3 bola biru. Dua bola diambil berurutan tanpa pengembalian. Peluang kedua bola berwarna merah adalah ...",
         "options": {
-          "A": "5/14",
+          "A": "5/8",
           "B": "25/64",
-          "C": "5/8",
+          "C": "5/14",
           "D": "1/4",
           "E": "3/14"
         },
-        "answer": "A",
+        "answer": "C",
         "explanation": "Peluang = (5/8)×(4/7) = 5/14.",
         "difficulty": "sedang"
       },
@@ -191,12 +2343,12 @@
         "question": "Tiga uang logam adil dilempar bersamaan. Peluang muncul tepat dua sisi gambar adalah ...",
         "options": {
           "A": "1/8",
-          "B": "1/4",
+          "B": "3/8",
           "C": "1/2",
-          "D": "3/8",
+          "D": "1/4",
           "E": "3/4"
         },
-        "answer": "D",
+        "answer": "B",
         "explanation": "Terdapat C(3,2) = 3 hasil yang sesuai dari 2³ = 8 hasil.",
         "difficulty": "sulit"
       },
@@ -205,11 +2357,11 @@
         "options": {
           "A": "20",
           "B": "30",
-          "C": "40",
-          "D": "60",
+          "C": "60",
+          "D": "40",
           "E": "90"
         },
-        "answer": "C",
+        "answer": "D",
         "explanation": "C(5,2)×C(4,1) = 10×4 = 40.",
         "difficulty": "sulit"
       },
@@ -219,10 +2371,10 @@
           "A": "1",
           "B": "2",
           "C": "4",
-          "D": "√3",
-          "E": "√2"
+          "D": "√2",
+          "E": "√3"
         },
-        "answer": "E",
+        "answer": "D",
         "explanation": "Rata-rata 4, varians populasi = (4+0+0+4)/4 = 2, sehingga simpangan baku √2.",
         "difficulty": "sulit"
       },
@@ -243,48 +2395,49 @@
         "question": "Sebuah permainan memberi hadiah Rp12.000 jika satu lemparan dadu adil menghasilkan angka 6, dan Rp0 untuk hasil lainnya. Biaya bermain Rp3.000. Nilai harapan keuntungan bersih pemain setiap permainan adalah ...",
         "options": {
           "A": "Rp1.000",
-          "B": "−Rp1.000",
+          "B": "−Rp2.000",
           "C": "Rp2.000",
-          "D": "−Rp2.000",
+          "D": "−Rp1.000",
           "E": "Rp9.000"
         },
-        "answer": "B",
+        "answer": "D",
         "explanation": "Harapan hadiah = 12.000/6 = 2.000; keuntungan bersih harapan = 2.000 − 3.000.",
         "difficulty": "sulit"
       },
       {
         "question": "Kotak I berisi 3 bola merah dan 2 biru; kotak II berisi 1 merah dan 4 biru. Sebuah kotak dipilih secara acak dengan peluang sama, lalu satu bola diambil. Jika bola yang terambil merah, peluang bola tersebut berasal dari kotak I adalah ...",
         "options": {
-          "A": "1/4",
+          "A": "3/4",
           "B": "1/2",
           "C": "3/5",
-          "D": "3/4",
+          "D": "1/4",
           "E": "4/5"
         },
-        "answer": "D",
+        "answer": "A",
         "explanation": "P(I|merah) = [(1/2)(3/5)] / [(1/2)(3/5)+(1/2)(1/5)] = 3/4.",
         "difficulty": "sulit"
       }
-    ]
+    ],
+    "id": "mtk-12"
   },
   {
     "code": "SJR",
     "subject": "Sejarah",
     "grade": 10,
-    "name": "Paket Latihan Sejarah Kelas 10",
+    "name": "Try Out Sejarah 10",
     "questions": [
       {
         "question": "Penyusunan peristiwa dari waktu paling awal ke waktu paling akhir disebut ...",
         "options": {
-          "A": "kronologi",
+          "A": "mitologi",
           "B": "periodisasi",
           "C": "generalisasi",
-          "D": "mitologi",
+          "D": "kronologi",
           "E": "arkeologi"
         },
-        "answer": "A",
+        "answer": "D",
         "explanation": "Kronologi menyusun peristiwa menurut urutan waktu.",
-        "difficulty": "latihan"
+        "difficulty": "mudah"
       },
       {
         "question": "Dalam kajian sejarah, pembagian masa menjadi zaman praaksara dan zaman aksara merupakan contoh ...",
@@ -297,85 +2450,33 @@
         },
         "answer": "D",
         "explanation": "Periodisasi membagi rentang sejarah ke dalam babak atau periode.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Seorang peneliti menelusuri perubahan transportasi di sebuah kota dari tahun 1950 sampai 2000. Cara berpikir yang paling menonjol adalah ...",
-        "options": {
-          "A": "anakronistis",
-          "B": "sinkronik",
-          "C": "spekulatif",
-          "D": "mitologis",
-          "E": "diakronik"
-        },
-        "answer": "E",
-        "explanation": "Diakronik menelaah perkembangan suatu peristiwa dalam rentang waktu.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Penelitian tentang struktur sosial sebuah kerajaan hanya pada abad ke-14 menonjolkan cara berpikir ...",
-        "options": {
-          "A": "diakronik",
-          "B": "kronologis",
-          "C": "anakronistis",
-          "D": "sinkronik",
-          "E": "futuristis"
-        },
-        "answer": "D",
-        "explanation": "Sinkronik mendalami keadaan pada kurun tertentu dengan cakupan aspek yang luas.",
-        "difficulty": "latihan"
+        "difficulty": "mudah"
       },
       {
         "question": "Kegiatan mencari arsip, prasasti, dan sumber lain untuk penelitian sejarah disebut ...",
         "options": {
           "A": "interpretasi",
-          "B": "heuristik",
-          "C": "historiografi",
+          "B": "historiografi",
+          "C": "heuristik",
           "D": "eksplanasi",
           "E": "periodisasi"
         },
-        "answer": "B",
-        "explanation": "Heuristik merupakan tahap pengumpulan atau penelusuran sumber.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Peneliti memeriksa bahan kertas dan bentuk tulisan untuk menilai keaslian sebuah surat lama. Langkah ini merupakan ...",
-        "options": {
-          "A": "kritik internal",
-          "B": "historiografi",
-          "C": "kritik eksternal",
-          "D": "interpretasi",
-          "E": "periodisasi"
-        },
         "answer": "C",
-        "explanation": "Kritik eksternal menguji keaslian fisik atau asal-usul sumber.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Catatan harian asli yang ditulis seorang pelaku ketika peristiwa berlangsung termasuk ...",
-        "options": {
-          "A": "sumber primer",
-          "B": "cerita rekaan",
-          "C": "ringkasan buku",
-          "D": "sumber tersier",
-          "E": "ramalan sejarah"
-        },
-        "answer": "A",
-        "explanation": "Catatan yang dibuat pelaku pada masa peristiwa merupakan sumber primer.",
-        "difficulty": "latihan"
+        "explanation": "Heuristik merupakan tahap pengumpulan atau penelusuran sumber.",
+        "difficulty": "mudah"
       },
       {
         "question": "Zaman praaksara suatu masyarakat berakhir ketika masyarakat tersebut mulai ...",
         "options": {
           "A": "menggunakan api",
-          "B": "bercocok tanam",
-          "C": "mengenal tulisan",
+          "B": "mengenal tulisan",
+          "C": "bercocok tanam",
           "D": "membuat alat batu",
           "E": "hidup berkelompok"
         },
-        "answer": "C",
+        "answer": "B",
         "explanation": "Batas praaksara dan aksara adalah dikenalnya tulisan; waktunya berbeda antarmasyarakat.",
-        "difficulty": "latihan"
+        "difficulty": "mudah"
       },
       {
         "question": "Prasasti Yupa di wilayah Kutai merupakan bukti penggunaan tulisan pada masa pengaruh ...",
@@ -388,54 +2489,237 @@
         },
         "answer": "B",
         "explanation": "Yupa berkaitan dengan Kerajaan Kutai bercorak Hindu.",
-        "difficulty": "latihan"
+        "difficulty": "mudah"
       },
       {
         "question": "Kerajaan Sriwijaya berkembang sebagai kerajaan maritim. Faktor geografis yang paling mendukungnya adalah ...",
         "options": {
-          "A": "terletak jauh dari laut",
+          "A": "dekat jalur pelayaran dan perdagangan Selat Malaka",
           "B": "tidak mempunyai sungai",
           "C": "berada di wilayah gurun",
           "D": "tertutup dari pedagang luar",
-          "E": "dekat jalur pelayaran dan perdagangan Selat Malaka"
+          "E": "terletak jauh dari laut"
+        },
+        "answer": "A",
+        "explanation": "Letaknya mendukung penguasaan jalur perdagangan dan pelayaran.",
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Seorang peneliti menelusuri perubahan transportasi di sebuah kota dari tahun 1950 sampai 2000. Cara berpikir yang paling menonjol adalah ...",
+        "options": {
+          "A": "anakronistis",
+          "B": "diakronik",
+          "C": "spekulatif",
+          "D": "mitologis",
+          "E": "sinkronik"
+        },
+        "answer": "B",
+        "explanation": "Diakronik menelaah perkembangan suatu peristiwa dalam rentang waktu.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Penelitian tentang struktur sosial sebuah kerajaan hanya pada abad ke-14 menonjolkan cara berpikir ...",
+        "options": {
+          "A": "diakronik",
+          "B": "kronologis",
+          "C": "anakronistis",
+          "D": "futuristis",
+          "E": "sinkronik"
         },
         "answer": "E",
-        "explanation": "Letaknya mendukung penguasaan jalur perdagangan dan pelayaran.",
-        "difficulty": "latihan"
+        "explanation": "Sinkronik mendalami keadaan pada kurun tertentu dengan cakupan aspek yang luas.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Peneliti memeriksa bahan kertas dan bentuk tulisan untuk menilai keaslian sebuah surat lama. Langkah ini merupakan ...",
+        "options": {
+          "A": "kritik internal",
+          "B": "historiografi",
+          "C": "periodisasi",
+          "D": "interpretasi",
+          "E": "kritik eksternal"
+        },
+        "answer": "E",
+        "explanation": "Kritik eksternal menguji keaslian fisik atau asal-usul sumber.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Catatan harian asli yang ditulis seorang pelaku ketika peristiwa berlangsung termasuk ...",
+        "options": {
+          "A": "ringkasan buku",
+          "B": "cerita rekaan",
+          "C": "sumber primer",
+          "D": "sumber tersier",
+          "E": "ramalan sejarah"
+        },
+        "answer": "C",
+        "explanation": "Catatan yang dibuat pelaku pada masa peristiwa merupakan sumber primer.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Seorang peneliti ingin mengetahui suasana rapat pada 1945. Sumber yang paling dekat dengan peristiwa tersebut adalah ...",
+        "options": {
+          "A": "novel berlatar tahun 1945",
+          "B": "iklan wisata masa kini",
+          "C": "rekaman kesaksian peserta rapat yang dapat diverifikasi",
+          "D": "ramalan tentang masa depan",
+          "E": "film fiksi tanpa sumber"
+        },
+        "answer": "C",
+        "explanation": "Kesaksian pelaku merupakan sumber primer, tetapi tetap harus diuji.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Dua surat kabar sezaman memberikan angka korban yang berbeda. Langkah peneliti yang paling tepat adalah ...",
+        "options": {
+          "A": "memilih angka yang paling besar",
+          "B": "menghapus kedua sumber",
+          "C": "mengubah angka agar sama",
+          "D": "menganggap kedua angka pasti benar",
+          "E": "membandingkan asal informasi dan mencari sumber pendukung lain"
+        },
+        "answer": "E",
+        "explanation": "Perbandingan sumber membantu menilai keandalan informasi.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Setelah mengumpulkan dan menguji sumber, peneliti menafsirkan hubungan antarfakta. Tahap ini disebut ...",
+        "options": {
+          "A": "interpretasi",
+          "B": "kritik eksternal",
+          "C": "periodisasi",
+          "D": "heuristik",
+          "E": "pengarsipan"
+        },
+        "answer": "A",
+        "explanation": "Interpretasi memberi makna dan menghubungkan fakta yang telah diuji.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Tahap menuliskan hasil penelitian sejarah menjadi uraian yang dapat dibaca disebut ...",
+        "options": {
+          "A": "kritik eksternal",
+          "B": "heuristik",
+          "C": "historiografi",
+          "D": "penggalian",
+          "E": "penanggalan"
+        },
+        "answer": "C",
+        "explanation": "Historiografi adalah penulisan sejarah.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Sebuah foto lama tidak memiliki keterangan tempat dan tahun. Sebelum memakainya untuk menyimpulkan peristiwa, peneliti sebaiknya ...",
+        "options": {
+          "A": "menentukan tahun berdasarkan tebakan",
+          "B": "menganggap foto pasti palsu",
+          "C": "mengganti latar fotonya",
+          "D": "menelusuri asal foto dan membandingkan petunjuknya dengan sumber lain",
+          "E": "mengabaikan semua sumber tertulis"
+        },
+        "answer": "D",
+        "explanation": "Konteks dan asal sumber perlu diperiksa sebelum membuat kesimpulan.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Dua saksi mengalami peristiwa yang sama dari lokasi berbeda. Kesaksian mereka tidak sepenuhnya sama. Kesimpulan metodologis yang tepat adalah ...",
+        "options": {
+          "A": "salah satu saksi pasti berbohong",
+          "B": "kesaksian yang lebih panjang selalu benar",
+          "C": "semua kesaksian lisan tidak berguna",
+          "D": "peneliti boleh mengarang versi baru",
+          "E": "perbedaan sudut pandang perlu ditelaah melalui perbandingan sumber"
+        },
+        "answer": "E",
+        "explanation": "Sudut pandang dan keterbatasan pengamatan dapat menyebabkan perbedaan kesaksian.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Catatan pelabuhan menunjukkan peningkatan kunjungan kapal. Catatan pasar menunjukkan peningkatan penjualan barang impor pada masa yang sama. Kesimpulan yang paling didukung kedua sumber adalah ...",
+        "options": {
+          "A": "seluruh penduduk menjadi pedagang",
+          "B": "tidak ada barang lokal yang dijual",
+          "C": "setiap kapal membawa jumlah barang yang sama",
+          "D": "kegiatan perdagangan antardaerah kemungkinan meningkat",
+          "E": "kerajaan tidak memiliki pertanian"
+        },
+        "answer": "D",
+        "explanation": "Kedua sumber mendukung peningkatan kegiatan perdagangan, bukan klaim menyeluruh tentang penduduk.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Seorang penulis menyatakan bahwa pedagang abad ke-15 berkomunikasi melalui telepon seluler. Kekeliruan penempatan unsur yang belum ada pada zamannya ini disebut ...",
+        "options": {
+          "A": "kronologi",
+          "B": "anakronisme",
+          "C": "periodisasi",
+          "D": "heuristik",
+          "E": "historiografi"
+        },
+        "answer": "B",
+        "explanation": "Anakronisme menempatkan unsur pada waktu yang tidak sesuai.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Surat keputusan resmi menyebut rencana pembangunan sekolah, tetapi tidak membuktikan sekolah itu selesai dibangun. Untuk menilai pelaksanaannya, peneliti perlu ...",
+        "options": {
+          "A": "mencari bukti pembangunan dan penggunaan sekolah",
+          "B": "menyamakan rencana dengan hasil",
+          "C": "mengabaikan semua dokumen",
+          "D": "mengubah tanggal keputusan",
+          "E": "memilih sumber berdasarkan ukuran kertas"
+        },
+        "answer": "A",
+        "explanation": "Dokumen rencana perlu dipadukan dengan bukti realisasi.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Sebuah prasasti memuji kemenangan raja, sedangkan arsip perdagangan mencatat kerugian besar akibat perang yang sama. Sikap ilmiah yang tepat adalah ...",
+        "options": {
+          "A": "mengkaji tujuan masing-masing sumber dan menyusun gambaran dari keduanya",
+          "B": "menganggap prasasti tidak pernah bernilai",
+          "C": "menyamakan pujian dengan seluruh keadaan masyarakat",
+          "D": "menyimpulkan semua penduduk mengalami hal identik",
+          "E": "mengabaikan arsip perdagangan"
+        },
+        "answer": "A",
+        "explanation": "Tujuan sumber dapat memengaruhi informasi yang ditonjolkan; keduanya perlu ditelaah kritis.",
+        "difficulty": "sulit"
       }
-    ]
+    ],
+    "id": "sjr-10"
   },
   {
     "code": "SJR",
     "subject": "Sejarah",
     "grade": 11,
-    "name": "Paket Latihan Sejarah Kelas 11",
+    "name": "Try Out Sejarah 11",
     "questions": [
       {
         "question": "Salah satu pendorong kedatangan bangsa Eropa ke Nusantara pada awal penjelajahan samudra adalah ...",
         "options": {
           "A": "melaksanakan Sumpah Pemuda",
           "B": "membangun parlemen Indonesia",
-          "C": "mencari rempah-rempah langsung dari daerah penghasil",
+          "C": "menjalankan program transmigrasi nasional",
           "D": "mendirikan ASEAN",
-          "E": "menjalankan program transmigrasi nasional"
+          "E": "mencari rempah-rempah langsung dari daerah penghasil"
         },
-        "answer": "C",
+        "answer": "E",
         "explanation": "Rempah-rempah memiliki nilai perdagangan tinggi dan mendorong pencarian jalur laut.",
-        "difficulty": "latihan"
+        "difficulty": "mudah"
       },
       {
         "question": "VOC dibentuk pada tahun 1602 terutama untuk ...",
         "options": {
           "A": "menghapus perdagangan laut",
           "B": "menyatukan seluruh kerajaan Nusantara",
-          "C": "memberikan kemerdekaan Indonesia",
+          "C": "mengurangi persaingan sesama pedagang Belanda dan memperkuat perdagangan mereka",
           "D": "menyelenggarakan pemilu",
-          "E": "mengurangi persaingan sesama pedagang Belanda dan memperkuat perdagangan mereka"
+          "E": "memberikan kemerdekaan Indonesia"
         },
-        "answer": "E",
+        "answer": "C",
         "explanation": "Penggabungan perusahaan dagang memperkuat posisi dagang Belanda.",
-        "difficulty": "latihan"
+        "difficulty": "mudah"
       },
       {
         "question": "Hak istimewa VOC untuk memiliki tentara dan mengadakan perjanjian dengan penguasa setempat disebut ...",
@@ -443,38 +2727,51 @@
           "A": "hak pilih",
           "B": "hak veto PBB",
           "C": "hak angket",
-          "D": "hak oktroi",
-          "E": "hak interpelasi"
+          "D": "hak interpelasi",
+          "E": "hak oktroi"
         },
-        "answer": "D",
+        "answer": "E",
         "explanation": "Oktroi adalah hak-hak istimewa yang diberikan pemerintah Belanda kepada VOC.",
-        "difficulty": "latihan"
+        "difficulty": "mudah"
       },
       {
         "question": "Sistem tanam paksa yang mulai diterapkan pada 1830 pada masa pemerintahan kolonial Belanda berkaitan dengan tokoh ...",
         "options": {
-          "A": "Johannes van den Bosch",
+          "A": "Thomas Stamford Raffles",
           "B": "Herman Willem Daendels",
           "C": "Eduard Douwes Dekker",
           "D": "Jan Pieterszoon Coen",
-          "E": "Thomas Stamford Raffles"
+          "E": "Johannes van den Bosch"
         },
-        "answer": "A",
+        "answer": "E",
         "explanation": "Van den Bosch menerapkan cultuurstelsel pada 1830.",
-        "difficulty": "latihan"
+        "difficulty": "mudah"
       },
       {
         "question": "Perang Diponegoro berlangsung pada tahun ...",
         "options": {
-          "A": "1808–1811",
-          "B": "1825–1830",
+          "A": "1825–1830",
+          "B": "1808–1811",
           "C": "1908–1912",
           "D": "1811–1816",
           "E": "1945–1949"
         },
-        "answer": "B",
+        "answer": "A",
         "explanation": "Perang Jawa atau Perang Diponegoro berlangsung 1825–1830.",
-        "difficulty": "latihan"
+        "difficulty": "mudah"
+      },
+      {
+        "question": "Organisasi yang berdiri pada 20 Mei 1908 adalah ...",
+        "options": {
+          "A": "Partai Nasional Indonesia",
+          "B": "Indische Partij",
+          "C": "Perhimpunan Indonesia",
+          "D": "Budi Utomo",
+          "E": "Jong Java"
+        },
+        "answer": "D",
+        "explanation": "Budi Utomo didirikan 20 Mei 1908.",
+        "difficulty": "mudah"
       },
       {
         "question": "Salah satu dampak berkembangnya pendidikan bagi penduduk pribumi pada awal abad ke-20 adalah ...",
@@ -482,893 +2779,183 @@
           "A": "hilangnya seluruh kesenjangan sosial",
           "B": "berakhirnya kolonialisme seketika",
           "C": "berhentinya semua surat kabar",
-          "D": "munculnya golongan terpelajar yang berperan dalam pergerakan nasional",
-          "E": "dihapuskannya semua organisasi"
+          "D": "dihapuskannya semua organisasi",
+          "E": "munculnya golongan terpelajar yang berperan dalam pergerakan nasional"
         },
-        "answer": "D",
+        "answer": "E",
         "explanation": "Golongan terpelajar ikut mengembangkan organisasi dan gagasan kebangsaan.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Organisasi yang berdiri pada 20 Mei 1908 adalah ...",
-        "options": {
-          "A": "Partai Nasional Indonesia",
-          "B": "Indische Partij",
-          "C": "Budi Utomo",
-          "D": "Perhimpunan Indonesia",
-          "E": "Jong Java"
-        },
-        "answer": "C",
-        "explanation": "Budi Utomo didirikan 20 Mei 1908.",
-        "difficulty": "latihan"
+        "difficulty": "sedang"
       },
       {
         "question": "Tokoh Tiga Serangkai yang mendirikan Indische Partij adalah ...",
         "options": {
-          "A": "Soekarno, Hatta, Sjahrir",
+          "A": "Douwes Dekker, Cipto Mangunkusumo, Suwardi Suryaningrat",
           "B": "Diponegoro, Pattimura, Imam Bonjol",
           "C": "Sudirman, Gatot Subroto, Ahmad Yani",
           "D": "Sutomo, Wahidin Sudirohusodo, H.O.S. Cokroaminoto",
-          "E": "Douwes Dekker, Cipto Mangunkusumo, Suwardi Suryaningrat"
+          "E": "Soekarno, Hatta, Sjahrir"
         },
-        "answer": "E",
+        "answer": "A",
         "explanation": "Indische Partij didirikan oleh Douwes Dekker, Cipto, dan Suwardi.",
-        "difficulty": "latihan"
+        "difficulty": "sedang"
       },
       {
         "question": "Arti penting Sumpah Pemuda 28 Oktober 1928 bagi pergerakan nasional adalah ...",
         "options": {
-          "A": "meneguhkan persatuan tanah air, bangsa, dan bahasa Indonesia",
-          "B": "membentuk VOC baru",
+          "A": "membentuk VOC baru",
+          "B": "meneguhkan persatuan tanah air, bangsa, dan bahasa Indonesia",
           "C": "mengesahkan UUD 1945",
           "D": "mengangkat presiden pertama",
           "E": "membubarkan seluruh perkumpulan pemuda"
         },
-        "answer": "A",
+        "answer": "B",
         "explanation": "Ikrar tersebut meneguhkan identitas dan persatuan kebangsaan.",
-        "difficulty": "latihan"
+        "difficulty": "sedang"
       },
       {
         "question": "Dibandingkan banyak perlawanan sebelum abad ke-20 yang bersifat kedaerahan, ciri penting pergerakan nasional adalah ...",
         "options": {
           "A": "selalu menolak pendidikan",
-          "B": "menggunakan organisasi modern dan memperjuangkan kepentingan kebangsaan",
+          "B": "selalu dipimpin pemerintah kolonial",
           "C": "hanya berlangsung di satu desa",
-          "D": "selalu dipimpin pemerintah kolonial",
+          "D": "menggunakan organisasi modern dan memperjuangkan kepentingan kebangsaan",
           "E": "tidak menggunakan organisasi"
         },
-        "answer": "B",
+        "answer": "D",
         "explanation": "Organisasi modern dan kesadaran kebangsaan menjadi ciri pergerakan nasional.",
-        "difficulty": "latihan"
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Perlawanan terhadap kolonialisme yang terpisah-pisah menurut wilayah sering sulit mencapai tujuan bersama karena ...",
+        "options": {
+          "A": "semua wilayah mempunyai kepentingan yang selalu sama",
+          "B": "tidak ada tokoh perlawanan",
+          "C": "koordinasi antardaerah masih terbatas",
+          "D": "semua perlawanan berlangsung di laut",
+          "E": "penduduk tidak mengenal bahasa apa pun"
+        },
+        "answer": "C",
+        "explanation": "Keterbatasan koordinasi menghambat perjuangan bersama.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Surat kabar pada masa pergerakan nasional membantu perjuangan terutama dengan ...",
+        "options": {
+          "A": "menghentikan seluruh perdagangan",
+          "B": "menyebarkan gagasan dan berita antardaerah",
+          "C": "menghapus perbedaan pendapat secara otomatis",
+          "D": "menggantikan semua sekolah",
+          "E": "memberikan kemerdekaan secara langsung"
+        },
+        "answer": "B",
+        "explanation": "Pers memperluas jangkauan gagasan dan informasi kebangsaan.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Perubahan dari perlawanan lokal menuju organisasi nasional menunjukkan berkembangnya ...",
+        "options": {
+          "A": "keinginan menghapus semua perkumpulan",
+          "B": "ketergantungan pada kerajaan asing",
+          "C": "kesadaran kebangsaan",
+          "D": "penolakan terhadap komunikasi",
+          "E": "kewajiban menjadi serdadu kolonial"
+        },
+        "answer": "C",
+        "explanation": "Organisasi nasional mencerminkan identitas dan tujuan kebangsaan yang lebih luas.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Seorang pelajar meneliti dampak tanam paksa terhadap kehidupan petani. Sumber yang paling relevan adalah ...",
+        "options": {
+          "A": "laporan hasil panen, aturan tanam, dan kesaksian terkait kehidupan petani",
+          "B": "iklan ponsel",
+          "C": "peta jalur kereta luar angkasa",
+          "D": "novel fantasi tanpa latar sejarah",
+          "E": "jadwal penerbangan masa kini"
+        },
+        "answer": "A",
+        "explanation": "Sumber yang dipilih harus sesuai pertanyaan penelitian.",
+        "difficulty": "sedang"
+      },
+      {
+        "question": "Bacalah informasi: \"Organisasi A menerima anggota dari berbagai daerah dan menerbitkan gagasan persatuan.\" Kesimpulan yang paling didukung informasi tersebut adalah ...",
+        "options": {
+          "A": "organisasi itu hanya mengurus satu desa",
+          "B": "organisasi itu menolak seluruh pendidikan",
+          "C": "organisasi itu berusaha membangun kesadaran bersama lintas daerah",
+          "D": "organisasi itu pasti memiliki tentara terbesar",
+          "E": "organisasi itu sudah membentuk pemerintahan merdeka"
+        },
+        "answer": "C",
+        "explanation": "Keanggotaan lintas daerah dan gagasan persatuan mendukung kesadaran kebangsaan.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Sebuah kebijakan kolonial meningkatkan penerimaan pemerintah, tetapi laporan desa mencatat beban kerja petani meningkat. Penilaian sejarah yang paling tepat adalah ...",
+        "options": {
+          "A": "kebijakan itu pasti menguntungkan semua pihak",
+          "B": "dampak kebijakan perlu dilihat dari kelompok yang berbeda",
+          "C": "laporan desa harus diabaikan",
+          "D": "penerimaan pemerintah selalu sama dengan kesejahteraan petani",
+          "E": "satu angka penerimaan menjelaskan seluruh keadaan"
+        },
+        "answer": "B",
+        "explanation": "Dampak ekonomi dapat berbeda antara pemerintah dan masyarakat.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Mengapa bahasa persatuan penting bagi organisasi pemuda dari latar bahasa daerah yang beragam?",
+        "options": {
+          "A": "Agar seluruh tradisi daerah langsung dihapus",
+          "B": "Untuk memudahkan komunikasi dan memperkuat identitas bersama",
+          "C": "Agar hanya satu wilayah boleh berpendapat",
+          "D": "Agar organisasi tidak perlu berkomunikasi",
+          "E": "Untuk menutup semua sekolah daerah"
+        },
+        "answer": "B",
+        "explanation": "Bahasa persatuan menjadi sarana komunikasi dan pengikat identitas kebangsaan.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Sebuah buku menyimpulkan pergerakan nasional lahir hanya karena satu tokoh. Catatan lain menunjukkan peran pendidikan, pers, dan organisasi. Perbaikan penjelasan yang paling tepat adalah ...",
+        "options": {
+          "A": "menganggap semua faktor tidak berkaitan",
+          "B": "menghapus semua peran tokoh",
+          "C": "memilih cerita yang paling pendek",
+          "D": "menghubungkan peran tokoh dengan faktor sosial dan organisasi yang lebih luas",
+          "E": "mengganti bukti dengan dugaan"
+        },
+        "answer": "D",
+        "explanation": "Penjelasan sejarah perlu mempertimbangkan hubungan berbagai faktor yang didukung bukti.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Dua organisasi berbeda cara perjuangan, tetapi sama-sama menginginkan kemajuan masyarakat dan pembebasan dari kolonialisme. Kesimpulan yang tepat adalah ...",
+        "options": {
+          "A": "tujuan yang searah dapat ditempuh melalui strategi yang berbeda",
+          "B": "perbedaan cara berarti tidak ada tujuan bersama",
+          "C": "semua organisasi pasti bekerja sama dalam setiap kegiatan",
+          "D": "salah satu organisasi pasti tidak penting",
+          "E": "tujuan bersama selalu menghasilkan cara identik"
+        },
+        "answer": "A",
+        "explanation": "Kesamaan tujuan tidak meniadakan perbedaan strategi perjuangan.",
+        "difficulty": "sulit"
+      },
+      {
+        "question": "Peneliti menilai keberhasilan organisasi hanya dari jumlah anggotanya. Data tambahan yang paling membantu penilaian yang lebih menyeluruh adalah ...",
+        "options": {
+          "A": "warna pakaian semua anggota",
+          "B": "ukuran gedung tanpa informasi kegiatan",
+          "C": "tinggi badan pemimpinnya",
+          "D": "kegiatan, jangkauan gagasan, dan pengaruh organisasi terhadap masyarakat",
+          "E": "jumlah kursi yang tidak digunakan"
+        },
+        "answer": "D",
+        "explanation": "Keberhasilan juga perlu dinilai dari aktivitas dan pengaruhnya.",
+        "difficulty": "sulit"
       }
-    ]
-  },
-  {
-    "code": "BIN",
-    "subject": "Bahasa Indonesia",
-    "grade": 10,
-    "name": "Paket Latihan Bahasa Indonesia Kelas 10",
-    "questions": [
-      {
-        "question": "Tujuan utama teks laporan hasil observasi adalah ...",
-        "options": {
-          "A": "membujuk pembaca membeli barang",
-          "B": "memberi perintah tanpa penjelasan",
-          "C": "mengisahkan pengalaman khayalan",
-          "D": "menyampaikan lelucon pribadi",
-          "E": "melaporkan objek berdasarkan pengamatan secara objektif"
-        },
-        "answer": "E",
-        "explanation": "Laporan hasil observasi menyajikan hasil pengamatan objektif.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Bacalah kalimat berikut: \"Mangrove adalah tumbuhan yang hidup di kawasan pesisir berlumpur.\" Kalimat tersebut termasuk ...",
-        "options": {
-          "A": "penutup surat",
-          "B": "dialog anekdot",
-          "C": "kalimat definisi",
-          "D": "kalimat perintah",
-          "E": "kalimat seru"
-        },
-        "answer": "C",
-        "explanation": "Kalimat itu menjelaskan pengertian umum mangrove.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Kalimat yang menggunakan kata baku adalah ...",
-        "options": {
-          "A": "Petugas meminta ijin masuk.",
-          "B": "Ayah membeli obat di apotik.",
-          "C": "Siswa melakukan praktik di bengkel sekolah.",
-          "D": "Ibu memberi nasehat kepada adik.",
-          "E": "Jadual rapat telah diumumkan."
-        },
-        "answer": "C",
-        "explanation": "Bentuk baku: praktik, apotek, izin, nasihat, dan jadwal.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Perhatikan paragraf: \"Perpustakaan sekolah menyediakan banyak sumber belajar. Di sana terdapat buku pelajaran, ensiklopedia, dan majalah pendidikan. Siswa juga dapat mengakses buku digital.\" Gagasan utamanya adalah ...",
-        "options": {
-          "A": "perpustakaan menyediakan beragam sumber belajar",
-          "B": "buku digital menggantikan semua buku",
-          "C": "siswa hanya membaca majalah",
-          "D": "ensiklopedia sulit ditemukan",
-          "E": "perpustakaan tidak memiliki buku pelajaran"
-        },
-        "answer": "A",
-        "explanation": "Kalimat pertama memuat gagasan umum yang dijelaskan kalimat berikutnya.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Tujuan kritik dalam teks anekdot biasanya disampaikan melalui ...",
-        "options": {
-          "A": "daftar pustaka",
-          "B": "rumus hitungan",
-          "C": "laporan keuangan",
-          "D": "petunjuk perakitan",
-          "E": "humor atau kejadian menggelitik"
-        },
-        "answer": "E",
-        "explanation": "Anekdot dapat menyampaikan kritik sosial melalui kelucuan.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Kalimat yang paling efektif adalah ...",
-        "options": {
-          "A": "Para siswa-siswa berkumpul di aula.",
-          "B": "Semua para siswa berkumpul bersama-sama.",
-          "C": "Bagi siswa dimohon agar supaya berkumpul.",
-          "D": "Siswa berkumpul di aula.",
-          "E": "Siswa-siswa semuanya saling berkumpul bersama."
-        },
-        "answer": "D",
-        "explanation": "Kalimat tersebut jelas dan tidak memakai penanda jamak atau unsur lain secara berlebihan.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Kalimat \"Daun-daun menari tertiup angin\" menggunakan majas ...",
-        "options": {
-          "A": "personifikasi",
-          "B": "litotes",
-          "C": "ironi",
-          "D": "metonimia",
-          "E": "antitesis"
-        },
-        "answer": "A",
-        "explanation": "Benda bukan manusia diberi perilaku manusia, yaitu menari.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Kata penghubung yang menyatakan sebab terdapat pada kalimat ...",
-        "options": {
-          "A": "Rina membaca lalu mencatat.",
-          "B": "Pertandingan ditunda karena hujan deras.",
-          "C": "Doni rajin, tetapi sering terlambat.",
-          "D": "Pilih buku atau majalah.",
-          "E": "Ia tetap hadir meskipun sakit."
-        },
-        "answer": "B",
-        "explanation": "Karena menghubungkan peristiwa dengan penyebabnya.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Dalam negosiasi, usulan yang baik seharusnya ...",
-        "options": {
-          "A": "memaksa pihak lain menerima semua tuntutan",
-          "B": "mengabaikan kebutuhan pihak lain",
-          "C": "menggunakan ancaman sejak awal",
-          "D": "menawarkan penyelesaian yang dapat dipertimbangkan kedua pihak",
-          "E": "menolak seluruh kemungkinan kompromi"
-        },
-        "answer": "D",
-        "explanation": "Negosiasi mencari kesepakatan yang dapat diterima pihak-pihak terkait.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Perhatikan kalimat: \"Menurut catatan petugas, 120 siswa mengunjungi perpustakaan pada Senin lalu.\" Kalimat ini tergolong fakta karena ...",
-        "options": {
-          "A": "mengandung ajakan",
-          "B": "memuat data yang dapat diperiksa kebenarannya",
-          "C": "menggunakan kata paling",
-          "D": "mengungkap selera pribadi",
-          "E": "menyatakan harapan"
-        },
-        "answer": "B",
-        "explanation": "Jumlah pengunjung dan waktunya dapat diverifikasi melalui catatan.",
-        "difficulty": "latihan"
-      }
-    ]
-  },
-  {
-    "code": "BIN",
-    "subject": "Bahasa Indonesia",
-    "grade": 11,
-    "name": "Paket Latihan Bahasa Indonesia Kelas 11",
-    "questions": [
-      {
-        "question": "Teks prosedur terutama bertujuan untuk ...",
-        "options": {
-          "A": "mengisahkan konflik tokoh",
-          "B": "menggambarkan suasana pantai",
-          "C": "mencatat silsilah keluarga",
-          "D": "menilai keindahan puisi",
-          "E": "memandu pembaca melakukan suatu kegiatan secara berurutan"
-        },
-        "answer": "E",
-        "explanation": "Prosedur menjelaskan langkah untuk mencapai tujuan tertentu.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Kalimat yang menggunakan bentuk perintah adalah ...",
-        "options": {
-          "A": "Penyimpanan berkas memerlukan ruang.",
-          "B": "Berkas itu tersimpan kemarin.",
-          "C": "Mereka sedang menyimpan berkas.",
-          "D": "Simpan berkas sebelum menutup aplikasi.",
-          "E": "Apakah berkas sudah tersimpan?"
-        },
-        "answer": "D",
-        "explanation": "Simpan merupakan kata kerja perintah.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Urutan yang tepat untuk menyimpan dokumen baru di aplikasi pengolah kata adalah ...",
-        "options": {
-          "A": "pilih Simpan Sebagai – tentukan folder – beri nama – klik Simpan",
-          "B": "tutup aplikasi – pilih Simpan – beri nama – tentukan folder",
-          "C": "tentukan folder – tutup aplikasi – beri nama – pilih Simpan",
-          "D": "beri nama – tutup aplikasi – pilih Simpan – tentukan folder",
-          "E": "klik Simpan – tutup aplikasi – hapus berkas – beri nama"
-        },
-        "answer": "A",
-        "explanation": "Urutan itu menyelesaikan pemilihan lokasi, nama, dan penyimpanan dokumen.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Teks eksplanasi menjelaskan ...",
-        "options": {
-          "A": "cara menawarkan barang",
-          "B": "daftar harga produk",
-          "C": "identitas pelamar kerja",
-          "D": "proses terjadinya fenomena beserta hubungan sebab-akibatnya",
-          "E": "dialog tokoh drama saja"
-        },
-        "answer": "D",
-        "explanation": "Eksplanasi menerangkan bagaimana atau mengapa suatu fenomena terjadi.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Kalimat yang menunjukkan hubungan akibat adalah ...",
-        "options": {
-          "A": "Meskipun hujan, ia berangkat.",
-          "B": "Dina memilih buku atau majalah.",
-          "C": "Saluran tersumbat sehingga air meluap.",
-          "D": "Rapat dimulai setelah bel berbunyi.",
-          "E": "Ia belajar sambil mendengarkan musik."
-        },
-        "answer": "C",
-        "explanation": "Sehingga memperkenalkan akibat dari saluran yang tersumbat.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Bacalah kutipan: \"Sampah yang menyumbat selokan menghambat aliran air. Saat hujan deras, air tidak tertampung dan menggenangi jalan.\" Penyebab langsung terhambatnya aliran air adalah ...",
-        "options": {
-          "A": "jalan yang lebar",
-          "B": "sampah yang menyumbat selokan",
-          "C": "kendaraan di jalan",
-          "D": "pepohonan di halaman",
-          "E": "panas matahari"
-        },
-        "answer": "B",
-        "explanation": "Penyebab disebutkan secara eksplisit pada kalimat pertama.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Bagian proposal yang menjelaskan alasan perlunya kegiatan dilaksanakan adalah ...",
-        "options": {
-          "A": "daftar hadir",
-          "B": "latar belakang",
-          "C": "lampiran foto",
-          "D": "lembar penilaian",
-          "E": "indeks istilah"
-        },
-        "answer": "B",
-        "explanation": "Latar belakang memuat masalah atau alasan pengajuan kegiatan.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Kalimat persuasif yang sesuai untuk penutup ceramah tentang kebersihan adalah ...",
-        "options": {
-          "A": "Mari biasakan memilah sampah mulai dari kelas kita.",
-          "B": "Kelas kami berada di lantai dua.",
-          "C": "Kemarin hujan turun deras.",
-          "D": "Tempat sampah itu berwarna hijau.",
-          "E": "Petugas datang pukul tujuh."
-        },
-        "answer": "A",
-        "explanation": "Kata mari mengajak pendengar melakukan tindakan.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Dalam cerita, tokoh berkata, \"Aku akan mengembalikan dompet ini kepada pemiliknya,\" lalu menyerahkannya ke petugas. Watak yang paling jelas ditunjukkan adalah ...",
-        "options": {
-          "A": "pemarah",
-          "B": "pemalas",
-          "C": "jujur",
-          "D": "sombong",
-          "E": "ceroboh"
-        },
-        "answer": "C",
-        "explanation": "Tindakan mengembalikan barang orang lain menunjukkan kejujuran.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Ulasan buku yang baik seharusnya ...",
-        "options": {
-          "A": "hanya memuat pujian tanpa alasan",
-          "B": "menyerang kehidupan pribadi penulis",
-          "C": "menyalin seluruh isi buku",
-          "D": "menilai buku tanpa membacanya",
-          "E": "menjelaskan kelebihan dan kekurangan dengan alasan serta contoh"
-        },
-        "answer": "E",
-        "explanation": "Ulasan yang beralasan membantu pembaca menilai buku secara adil.",
-        "difficulty": "latihan"
-      }
-    ]
-  },
-  {
-    "code": "BIN",
-    "subject": "Bahasa Indonesia",
-    "grade": 12,
-    "name": "Paket Latihan Bahasa Indonesia Kelas 12",
-    "questions": [
-      {
-        "question": "Kalimat pembuka surat lamaran pekerjaan yang paling tepat adalah ...",
-        "options": {
-          "A": "Berdasarkan informasi lowongan pada laman perusahaan, saya mengajukan lamaran sebagai staf administrasi.",
-          "B": "Aku mau kerja di tempat kamu.",
-          "C": "Pokoknya saya harus diterima di sini.",
-          "D": "Saya tidak tahu ada lowongan atau tidak, terserah saja.",
-          "E": "Kalian sebaiknya cepat menerima saya."
-        },
-        "answer": "A",
-        "explanation": "Pembukaan menyebut sumber lowongan dan jabatan dengan bahasa resmi.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Dokumen yang berisi ringkasan pendidikan, pengalaman, dan keterampilan pelamar adalah ...",
-        "options": {
-          "A": "nota dinas",
-          "B": "surat kuasa",
-          "C": "daftar riwayat hidup",
-          "D": "berita acara",
-          "E": "surat jalan"
-        },
-        "answer": "C",
-        "explanation": "Daftar riwayat hidup merangkum profil dan kualifikasi pelamar.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Penulisan tempat dan tanggal surat yang tepat adalah ...",
-        "options": {
-          "A": "Bekasi; 13 November 2026",
-          "B": "Bekasi: 13 november 2026",
-          "C": "Bekasi, 13 November 2026",
-          "D": "bekasi, 13 November 2026",
-          "E": "Bekasi. 13 November, 2026"
-        },
-        "answer": "C",
-        "explanation": "Nama tempat diikuti koma; nama bulan diawali huruf kapital.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Teks editorial terutama berisi ...",
-        "options": {
-          "A": "petunjuk mengoperasikan mesin",
-          "B": "riwayat hidup pelamar",
-          "C": "jadwal kegiatan kelas",
-          "D": "cerita rekaan tentang kerajaan",
-          "E": "pandangan redaksi terhadap isu aktual disertai alasan"
-        },
-        "answer": "E",
-        "explanation": "Editorial menyampaikan sikap redaksi terhadap suatu isu.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Kalimat yang merupakan opini adalah ...",
-        "options": {
-          "A": "Perpustakaan dibuka pukul 07.00 menurut jadwal.",
-          "B": "Daftar hadir mencatat 32 peserta.",
-          "C": "Laporan mencatat 25 buku dipinjam pada Senin.",
-          "D": "Menurut saya, ruang baca itu paling nyaman di sekolah.",
-          "E": "Undangan mencantumkan tanggal 13 November 2026."
-        },
-        "answer": "D",
-        "explanation": "Menurut saya dan paling nyaman menunjukkan penilaian subjektif.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Bacalah kutipan editorial: \"Sekolah perlu menambah tempat sampah terpilah. Saat ini, sampah organik dan plastik masih bercampur sehingga pengolahannya sulit.\" Usulan utama penulis adalah ...",
-        "options": {
-          "A": "menambah tempat sampah terpilah",
-          "B": "menutup sekolah sementara",
-          "C": "menghapus kegiatan kebersihan",
-          "D": "mencampur seluruh sampah",
-          "E": "mengurangi jumlah siswa"
-        },
-        "answer": "A",
-        "explanation": "Usulan utama dinyatakan pada kalimat pertama.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Dalam teks cerita sejarah, ungkapan \"tiga tahun kemudian\" berfungsi sebagai ...",
-        "options": {
-          "A": "penanda perbandingan",
-          "B": "penanda urutan waktu",
-          "C": "penanda tempat",
-          "D": "ungkapan larangan",
-          "E": "kata sapaan"
-        },
-        "answer": "B",
-        "explanation": "Ungkapan tersebut menghubungkan kejadian berdasarkan waktu.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Kalimat yang menggunakan konjungsi pertentangan secara tepat adalah ...",
-        "options": {
-          "A": "Ia sakit karena tetap bekerja.",
-          "B": "Fasilitasnya terbatas, tetapi para siswa tetap bersemangat.",
-          "C": "Kami membaca buku sehingga ke perpustakaan.",
-          "D": "Ia belajar atau ujian telah selesai.",
-          "E": "Rapat dimulai meskipun setelah bel berbunyi."
-        },
-        "answer": "B",
-        "explanation": "Tetapi mempertentangkan keterbatasan fasilitas dengan semangat siswa.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Sebuah artikel menyatakan, \"Semua lulusan pasti memperoleh pekerjaan dalam sehari,\" tetapi tidak menyertakan data. Sikap pembaca yang paling tepat adalah ...",
-        "options": {
-          "A": "langsung menyebarkannya",
-          "B": "menganggapnya benar karena memakai kata pasti",
-          "C": "menolak semua informasi tentang pekerjaan",
-          "D": "mengubahnya menjadi iklan",
-          "E": "memeriksa bukti dan sumber sebelum mempercayai klaim itu"
-        },
-        "answer": "E",
-        "explanation": "Klaim umum perlu dinilai berdasarkan bukti dan sumber yang dapat dipercaya.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Kalimat penutup surat lamaran yang paling tepat adalah ...",
-        "options": {
-          "A": "Sekian, jangan lupa menerima saya.",
-          "B": "Atas perhatiannya saya ucapkan banyak-banyak terima kasih sekali.",
-          "C": "Saya menunggu, cepat hubungi saya!",
-          "D": "Atas perhatian Bapak/Ibu, saya mengucapkan terima kasih.",
-          "E": "Pokoknya saya ucapkan makasih."
-        },
-        "answer": "D",
-        "explanation": "Kalimat tersebut resmi, santun, dan efektif.",
-        "difficulty": "latihan"
-      }
-    ]
-  },
-  {
-    "code": "BIG",
-    "subject": "Bahasa Inggris",
-    "grade": 10,
-    "name": "Paket Latihan Bahasa Inggris Kelas 10",
-    "questions": [
-      {
-        "question": "Choose the correct response. Rina: \"Good morning, I am Rina.\" Siti: \"...\"",
-        "options": {
-          "A": "Good night.",
-          "B": "Good morning, I am Siti.",
-          "C": "See you tomorrow.",
-          "D": "I am sorry to hear that.",
-          "E": "You are welcome."
-        },
-        "answer": "B",
-        "explanation": "The response returns the greeting and introduces the speaker.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "My brother ... to school by bus every day.",
-        "options": {
-          "A": "goes",
-          "B": "going",
-          "C": "gone",
-          "D": "go",
-          "E": "went"
-        },
-        "answer": "A",
-        "explanation": "A singular third-person subject uses goes in the simple present.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Rina and I are classmates. ... study in the same classroom.",
-        "options": {
-          "A": "They",
-          "B": "He",
-          "C": "She",
-          "D": "It",
-          "E": "We"
-        },
-        "answer": "E",
-        "explanation": "Rina and I refers to we.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Read: \"Our school library is bright and quiet. It has tall bookshelves and a reading corner.\" What is being described?",
-        "options": {
-          "A": "A bus station",
-          "B": "A sports field",
-          "C": "A school library",
-          "D": "A science experiment",
-          "E": "A shopping centre"
-        },
-        "answer": "C",
-        "explanation": "The text describes the school library.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Read: \"The library opens at 7 a.m. and closes at 3 p.m. on school days.\" When does the library close?",
-        "options": {
-          "A": "At 7 a.m.",
-          "B": "At 3 p.m.",
-          "C": "At 7 p.m.",
-          "D": "At 5 p.m.",
-          "E": "At noon"
-        },
-        "answer": "B",
-        "explanation": "The closing time is explicitly stated as 3 p.m.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Yesterday, we ... the school museum.",
-        "options": {
-          "A": "visit",
-          "B": "visits",
-          "C": "visited",
-          "D": "visiting",
-          "E": "are visiting"
-        },
-        "answer": "C",
-        "explanation": "Yesterday requires the simple past form visited.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Read: \"Last Saturday, Deni visited his grandmother. He helped her water the plants and went home in the afternoon.\" What did Deni do at his grandmother’s house?",
-        "options": {
-          "A": "He repaired a car.",
-          "B": "He bought a computer.",
-          "C": "He played football.",
-          "D": "He watered the plants.",
-          "E": "He painted the classroom."
-        },
-        "answer": "D",
-        "explanation": "He helped water the plants.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "An announcement says: \"The English Club meeting is moved from Monday to Wednesday. The time remains 2 p.m.\" On which day will the meeting take place?",
-        "options": {
-          "A": "Wednesday",
-          "B": "Monday",
-          "C": "Tuesday",
-          "D": "Thursday",
-          "E": "Friday"
-        },
-        "answer": "A",
-        "explanation": "The new meeting day is Wednesday.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Read the notice: \"Please keep this room clean.\" What should visitors do?",
-        "options": {
-          "A": "Leave rubbish on the floor.",
-          "B": "Move all the furniture.",
-          "C": "Lock the room all day.",
-          "D": "Avoid littering in the room.",
-          "E": "Bring food to every desk."
-        },
-        "answer": "D",
-        "explanation": "Keeping the room clean includes avoiding littering.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Choose the correct sentence.",
-        "options": {
-          "A": "This book is cheap than that one.",
-          "B": "This book is cheapest than that one.",
-          "C": "This book is more cheaper than that one.",
-          "D": "This book is most cheap than that one.",
-          "E": "This book is cheaper than that one."
-        },
-        "answer": "E",
-        "explanation": "The correct comparative form of cheap is cheaper.",
-        "difficulty": "latihan"
-      }
-    ]
-  },
-  {
-    "code": "BIG",
-    "subject": "Bahasa Inggris",
-    "grade": 11,
-    "name": "Paket Latihan Bahasa Inggris Kelas 11",
-    "questions": [
-      {
-        "question": "A friend says, \"I have a headache.\" Which response gives a suggestion?",
-        "options": {
-          "A": "You took a rest yesterday.",
-          "B": "You should take a rest.",
-          "C": "I am a student.",
-          "D": "The room is blue.",
-          "E": "Thank you for the gift."
-        },
-        "answer": "B",
-        "explanation": "Should is used to give advice.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Which sentence offers help?",
-        "options": {
-          "A": "Would you like me to carry those books?",
-          "B": "I helped him yesterday.",
-          "C": "He needs some paper.",
-          "D": "You must help me now.",
-          "E": "I cannot find my bag."
-        },
-        "answer": "A",
-        "explanation": "The speaker offers to carry the books.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Choose the expression that asks for an opinion.",
-        "options": {
-          "A": "Open the window, please.",
-          "B": "Congratulations on your success.",
-          "C": "I agree with you.",
-          "D": "What do you think about the new library?",
-          "E": "I am sorry for being late."
-        },
-        "answer": "D",
-        "explanation": "What do you think asks for the listener’s opinion.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Complete the sentence: \"The students stayed inside ... it was raining heavily.\"",
-        "options": {
-          "A": "although",
-          "B": "unless",
-          "C": "but",
-          "D": "or",
-          "E": "because"
-        },
-        "answer": "E",
-        "explanation": "Because introduces the reason for staying inside.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Choose the passive form of \"The students clean the classroom every day.\"",
-        "options": {
-          "A": "The classroom cleaned the students every day.",
-          "B": "The classroom has clean every day.",
-          "C": "The students are cleaned by the classroom every day.",
-          "D": "The classroom was clean by the students every day.",
-          "E": "The classroom is cleaned by the students every day."
-        },
-        "answer": "E",
-        "explanation": "Simple present passive uses is/are + past participle.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Choose the correct passive sentence about a finished event yesterday.",
-        "options": {
-          "A": "The report has checking by the teacher yesterday.",
-          "B": "The report is check by the teacher yesterday.",
-          "C": "The report was checked by the teacher yesterday.",
-          "D": "The report checks the teacher yesterday.",
-          "E": "The report were checked by the teacher yesterday."
-        },
-        "answer": "C",
-        "explanation": "Yesterday calls for the simple past passive was checked.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Read: \"Students should bring reusable bottles. This habit reduces plastic waste and saves money.\" What is the writer’s main purpose?",
-        "options": {
-          "A": "To describe a bottle factory",
-          "B": "To persuade students to use reusable bottles",
-          "C": "To announce a sports result",
-          "D": "To tell a story about a holiday",
-          "E": "To explain how to repair a tap"
-        },
-        "answer": "B",
-        "explanation": "The writer recommends reusable bottles and gives reasons.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Read: \"Students should bring reusable bottles. This habit reduces plastic waste and saves money.\" What does \"This habit\" refer to?",
-        "options": {
-          "A": "Buying bottled water every day",
-          "B": "Spending more money",
-          "C": "Throwing bottles away",
-          "D": "Bringing reusable bottles",
-          "E": "Cleaning the school bus"
-        },
-        "answer": "D",
-        "explanation": "This habit refers to the action in the preceding sentence.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Read: \"Water on the earth’s surface evaporates when heated by the sun. The vapour rises and cools, forming clouds.\" What causes the water to evaporate?",
-        "options": {
-          "A": "The moon’s light",
-          "B": "The weight of clouds",
-          "C": "Heat from the sun",
-          "D": "Darkness at night",
-          "E": "Cold air alone"
-        },
-        "answer": "C",
-        "explanation": "The text states that the sun heats the water.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Invitation: \"You are invited to our school art exhibition on Friday, 20 November, at 9 a.m. in the school hall. Please confirm attendance by Wednesday.\" What should invitees do by Wednesday?",
-        "options": {
-          "A": "Confirm whether they will attend",
-          "B": "Bring paintings to the library",
-          "C": "Visit the exhibition at 9 p.m.",
-          "D": "Change the date of the event",
-          "E": "Clean the sports field"
-        },
-        "answer": "A",
-        "explanation": "The invitation explicitly requests confirmation by Wednesday.",
-        "difficulty": "latihan"
-      }
-    ]
-  },
-  {
-    "code": "BIG",
-    "subject": "Bahasa Inggris",
-    "grade": 12,
-    "name": "Paket Latihan Bahasa Inggris Kelas 12",
-    "questions": [
-      {
-        "question": "Which sentence is suitable for opening a job application letter?",
-        "options": {
-          "A": "Hey, give me any job now.",
-          "B": "I am writing to apply for the administrative assistant position advertised on your website.",
-          "C": "You must hire me today.",
-          "D": "I do not care which company this is.",
-          "E": "Thanks for yesterday’s picnic."
-        },
-        "answer": "B",
-        "explanation": "It formally states the purpose and the advertised position.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Job advertisement: \"Administrative assistant needed. Applicants must be able to use spreadsheets and communicate clearly. Send your CV to recruitment@example.com by 20 November.\" Which skill is required?",
-        "options": {
-          "A": "Driving a bus",
-          "B": "Using spreadsheets",
-          "C": "Cooking international dishes",
-          "D": "Repairing engines",
-          "E": "Operating a crane"
-        },
-        "answer": "B",
-        "explanation": "The advertisement explicitly requires spreadsheet skills.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Read the same requirement: \"Send your CV by 20 November.\" What does CV contain?",
-        "options": {
-          "A": "A summary of education, skills, and experience",
-          "B": "A list of grocery prices",
-          "C": "Instructions for repairing a printer",
-          "D": "A weather forecast",
-          "E": "A school lunch menu"
-        },
-        "answer": "A",
-        "explanation": "A curriculum vitae summarises a candidate’s qualifications.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Choose the polite expression to offer assistance to a visitor.",
-        "options": {
-          "A": "You have to leave now.",
-          "B": "Why are you here again?",
-          "C": "Carry my bag first.",
-          "D": "May I help you find the office?",
-          "E": "Do not speak to anyone."
-        },
-        "answer": "D",
-        "explanation": "May I help you is a polite offer of assistance.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Complete the sentence: \"If you submit the form today, we ... it tomorrow.\"",
-        "options": {
-          "A": "processed",
-          "B": "processing",
-          "C": "have processed yesterday",
-          "D": "will process",
-          "E": "would processed"
-        },
-        "answer": "D",
-        "explanation": "The first conditional uses if + present, followed by will + base verb.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Complete the sentence: \"If I had more time, I ... an additional English course.\"",
-        "options": {
-          "A": "will took",
-          "B": "takes",
-          "C": "am taking yesterday",
-          "D": "had take",
-          "E": "would take"
-        },
-        "answer": "E",
-        "explanation": "The second conditional uses if + past simple and would + base verb.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "News report: \"Students at Bahagia School planted 200 trees on Friday. The activity was organised to make the school grounds greener.\" What happened?",
-        "options": {
-          "A": "Students planted 200 trees.",
-          "B": "A library was closed.",
-          "C": "Teachers cancelled all lessons.",
-          "D": "A new road was opened.",
-          "E": "A company sold 200 trees."
-        },
-        "answer": "A",
-        "explanation": "The first sentence states the main event.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Read: \"Students at Bahagia School planted 200 trees on Friday. The activity was organised to make the school grounds greener.\" Why was the activity organised?",
-        "options": {
-          "A": "To move the library",
-          "B": "To build a car park",
-          "C": "To sell school uniforms",
-          "D": "To close the school",
-          "E": "To make the school grounds greener"
-        },
-        "answer": "E",
-        "explanation": "The purpose is explicitly stated in the second sentence.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "A photograph shows students sorting plastic bottles into recycling bins. Which caption best matches it?",
-        "options": {
-          "A": "Students rehearse a drama on stage.",
-          "B": "Workers repair a school bus.",
-          "C": "Students sort plastic bottles for recycling.",
-          "D": "Visitors watch a football match.",
-          "E": "Teachers prepare food in the kitchen."
-        },
-        "answer": "C",
-        "explanation": "The caption accurately describes the visible activity.",
-        "difficulty": "latihan"
-      },
-      {
-        "question": "Email: \"Dear Ms Rina, Thank you for inviting me to an interview on Monday at 10 a.m. I confirm that I will attend. Best regards, Dedi.\" What is the purpose of the email?",
-        "options": {
-          "A": "To reject a job offer",
-          "B": "To request a holiday",
-          "C": "To confirm attendance at an interview",
-          "D": "To cancel an interview",
-          "E": "To advertise a product"
-        },
-        "answer": "C",
-        "explanation": "The sender explicitly confirms attendance.",
-        "difficulty": "latihan"
-      }
-    ]
+    ],
+    "id": "sjr-11"
   }
 ]

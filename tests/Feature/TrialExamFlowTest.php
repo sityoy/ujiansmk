@@ -409,21 +409,47 @@ class TrialExamFlowTest extends TestCase
         $this->assertDatabaseCount('trial_questions', 1);
     }
 
-    public function test_pack_import_is_admin_only_and_can_archive_history_12(): void
+    public function test_pack_picker_imports_only_the_selection_and_does_not_delete_other_banks(): void
     {
         [$trial] = $this->makeTrial();
         $trial->questionBank->update(['grade_level' => 12]);
         $teacher = User::factory()->create(['role' => UserRole::Teacher, 'must_change_password' => false, 'is_active' => true]);
-        $this->actingAs($teacher)->post(route('trial-question-banks.import-pack'))->assertForbidden();
+        $this->actingAs($teacher)->post(route('trial-question-banks.import-pack'), ['pack_key' => 'bin-10'])->assertForbidden();
         $this->delete(route('trial-question-banks.destroy', $trial->questionBank))->assertForbidden();
         $this->patch(route('trial-question-banks.restore', $trial->questionBank))->assertForbidden();
         $admin = User::factory()->create(['role' => UserRole::SuperAdmin, 'must_change_password' => false, 'is_active' => true]);
-        $this->actingAs($admin)->post(route('trial-question-banks.import-pack'), ['archive_history_12' => 1])->assertRedirect(route('trial-question-banks.index'))->assertSessionHasNoErrors();
-        $this->assertDatabaseCount('trial_questions', 101);
-        $this->assertNotNull($trial->questionBank->fresh()->archived_at);
-        $this->assertFalse($trial->fresh()->is_active);
-        $this->post(route('trial-question-banks.import-pack'))->assertSessionHasNoErrors();
-        $this->assertDatabaseCount('trial_questions', 101);
+        $this->actingAs($admin)->post(route('trial-question-banks.import-pack'))->assertSessionHasErrors('pack_key');
+        $this->assertDatabaseCount('trial_questions', 1);
+        $this->post(route('trial-question-banks.import-pack'), ['pack_key' => 'unknown-12'])->assertSessionHasErrors('pack_key');
+        $this->post(route('trial-question-banks.import-pack'), ['pack_key' => 'bin-10', 'archive_history_12' => 1])->assertSessionHasNoErrors();
+        $bank = TrialQuestionBank::query()->where('source_pack_key', 'bin-10')->sole();
+        $this->assertSame('Try Out Bahasa Indonesia 10', $bank->name);
+        $this->assertDatabaseCount('trial_questions', 21);
+        $this->assertDatabaseCount('trial_question_banks', 2);
+        $this->assertNull($trial->questionBank->fresh()->archived_at);
+        $this->assertTrue($trial->fresh()->is_active);
+        $this->post(route('trial-question-banks.import-pack'), ['pack_key' => 'bin-10'])->assertRedirect(route('trial-question-banks.questions.index', $bank));
+        $this->assertDatabaseCount('trial_questions', 21);
+        $this->get(route('trial-question-banks.index', ['pack_grade_level' => 10]))->assertOk()->assertSee('Buka soal')->assertDontSee('Paket latihan 100 soal');
+        $this->delete(route('trial-question-banks.destroy', $bank))->assertSessionHasNoErrors();
+        $this->post(route('trial-question-banks.import-pack'), ['pack_key' => 'bin-10'])->assertRedirect(route('trial-question-banks.index', ['archived' => 1]));
+        $this->assertNotNull($bank->fresh()->archived_at);
+        $this->assertDatabaseCount('trial_questions', 21);
+    }
+
+    public function test_picker_lists_actual_school_subjects_and_filters_by_grade_and_subject(): void
+    {
+        Subject::create(['code' => 'PAJAK', 'name' => 'Administrasi Pajak', 'is_active' => true]);
+        $admin = User::factory()->create(['role' => UserRole::Committee, 'must_change_password' => false, 'is_active' => true]);
+        $this->actingAs($admin)->get(route('trial-question-banks.index', ['pack_grade_level' => 11]))
+            ->assertOk()->assertSee('Try Out Administrasi Pajak 11')->assertSee('Soal belum tersedia')
+            ->assertSee('Try Out Bahasa Inggris 11')->assertDontSee('Try Out Bahasa Inggris 12')
+            ->assertDontSee('Menampilkan seluruh paket sekaligus');
+        $this->get(route('trial-question-banks.index', ['pack_grade_level' => 12, 'pack_search' => 'Matematika']))
+            ->assertOk()->assertSee('Try Out Matematika 12')->assertDontSee('Try Out Bahasa Indonesia 12');
+        $this->get(route('trial-question-banks.index', ['pack_grade_level' => '', 'pack_search' => 'Bahasa Indonesia']))
+            ->assertOk()->assertSee('Try Out Bahasa Indonesia 10')->assertSee('Try Out Bahasa Indonesia 11')->assertSee('Try Out Bahasa Indonesia 12');
+        $this->assertDatabaseCount('trial_questions', 0);
     }
 
     private function makeTrial(): array

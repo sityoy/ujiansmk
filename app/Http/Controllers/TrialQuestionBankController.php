@@ -27,13 +27,16 @@ class TrialQuestionBankController extends Controller
 {
     public function __construct(private readonly QuestionText $questionText) {}
 
-    public function index(Request $request): View
+    public function index(Request $request, TrialQuestionPack $pack): View
     {
         $gradeLevel = in_array($request->integer('grade_level'), [10, 11, 12], true)
             ? $request->integer('grade_level')
             : null;
         $search = trim((string) $request->query('q'));
         $archived = $request->boolean('archived');
+        $packGrade = in_array($request->integer('pack_grade_level', 10), [10, 11, 12], true)
+            ? $request->integer('pack_grade_level', 10) : null;
+        $packSearch = trim((string) $request->query('pack_search'));
         $teacherId = $request->user()->role === UserRole::Teacher ? $request->user()->id : null;
 
         return view('trial-question-banks.catalog', [
@@ -61,6 +64,9 @@ class TrialQuestionBankController extends Controller
             'gradeLevel' => $gradeLevel,
             'search' => $search,
             'archived' => $archived,
+            'packs' => $pack->menu($packGrade, $packSearch),
+            'packGrade' => $packGrade,
+            'packSearch' => $packSearch,
         ]);
     }
 
@@ -247,20 +253,19 @@ class TrialQuestionBankController extends Controller
 
     public function importPack(Request $request, TrialQuestionPack $pack): RedirectResponse
     {
-        $validated = $request->validate(['archive_history_12' => ['nullable', 'boolean']]);
-        $result = $pack->import();
-        $message = "{$result['created']} bank / {$result['questions']} soal ditambahkan. {$result['skipped']} bank yang sudah terisi atau dihapus dilewati.";
-        if ($validated['archive_history_12'] ?? false) {
-            $history = $pack->archiveHistoryGrade12();
-            $message .= " {$history['archived']} bank Sejarah XII dihapus dari daftar aktif.";
-            if ($history['blocked']) {
-                return back()->with('status', $message)->withErrors([
-                    'bank' => "{$history['blocked']} bank Sejarah XII belum dihapus karena peserta masih mengerjakan ujian.",
-                ]);
-            }
+        $validated = $request->validate([
+            'pack_key' => ['required', 'string', Rule::in(array_column($pack->sets(), 'id'))],
+        ]);
+        $result = $pack->importSelected($validated['pack_key']);
+        $bank = $result['bank'];
+        if ($bank->archived_at) {
+            return redirect()->route('trial-question-banks.index', ['archived' => 1])
+                ->with('status', 'Paket ini pernah ditambahkan lalu dihapus. Gunakan Pulihkan untuk mengembalikannya.');
         }
 
-        return redirect()->route('trial-question-banks.index')->with('status', $message);
+        return redirect()->route('trial-question-banks.questions.index', $bank)->with('status', $result['created']
+            ? $bank->name.' ditambahkan: 20 soal dari mudah ke sulit beserta kunci jawaban.'
+            : 'Paket sudah tersedia. Soal yang ada tetap tersimpan tanpa ditimpa atau digandakan.');
     }
 
     public function destroy(Request $request, TrialQuestionBank $trialQuestionBank, TrialQuestionBankArchive $archive): RedirectResponse

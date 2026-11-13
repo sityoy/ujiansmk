@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['subject_id', 'teacher_user_id', 'grade_level', 'name'])]
+#[Fillable(['subject_id', 'teacher_user_id', 'grade_level', 'name', 'source_pack_key'])]
 class TrialQuestionBank extends Model
 {
     protected function casts(): array

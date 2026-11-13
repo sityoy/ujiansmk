@@ -126,27 +126,24 @@ Fondasi domain, autentikasi berbasis peran, data akademik, penjadwalan, sesi sus
 
 Endpoint pemeriksaan aplikasi tersedia di `GET /health`.
 
-## Paket latihan uji coba per tingkat
+## Pilihan Try Out per mapel dan kelas
 
-Di **Bank Soal Uji Coba**, tombol **Tambahkan paket latihan** mengimpor sembilan bank dengan total 100 soal PG A–E dan kunci:
+Di **Bank Soal Uji Coba**, pilih kelas dan cari mapel, lalu klik satu pilihan, misalnya **Try Out Bahasa Indonesia 10**, **Try Out Bahasa Inggris 11**, atau **Try Out Matematika 12**. Satu klik hanya menambahkan pilihan tersebut: **20 soal PG A–E beserta kunci**, berurutan 6 mudah, 8 sedang, dan 6 sulit. Tidak ada impor massal atau penghapusan Sejarah XII otomatis melalui tombol pilihan ini.
 
-| Mapel | Tingkat | Jumlah per tingkat |
-| --- | --- | --- |
-| Matematika | XII | 20 (6 mudah, 8 sedang, 6 sulit) |
-| Sejarah | X, XI | 10 |
-| Bahasa Indonesia | X, XI, XII | 10 |
-| Bahasa Inggris | X, XI, XII | 10 |
+Katalog siap pakai saat ini mencakup Bahasa Indonesia, Bahasa Inggris, dan Matematika kelas X–XII, serta Sejarah kelas X–XI (11 pilihan / 220 soal). Nama mapel lain yang terdaftar aktif di sekolah ikut ditampilkan sesuai tingkat penugasannya; bila belum ada kontennya, status **Soal belum tersedia** ditampilkan dan tombol tambah dinonaktifkan. Jangan mengisi paket mapel lain dengan soal generik atau mengaku sudah tersedia sebelum 20 soal beserta kuncinya disiapkan.
 
-Konten asli, kunci, dan pembahasan disimpan dalam `database/data/trial-question-pack.json`. Bank lama tidak ditimpa. Impor ulang melewati bank yang terisi, dihapus, atau sudah mempunyai peserta; tidak membuat duplikat paket. Pembahasan dalam berkas sumber merupakan bahan tinjauan guru dan tidak dikirim ke halaman peserta. Kunci dan soal dapat diekspor melalui tombol ekspor bank yang sudah tersedia.
+Konten asli, tingkat kesulitan, kunci, dan pembahasan ada di `database/data/trial-question-pack.json`. Pembahasan tidak dikirim ke pemilih paket atau halaman peserta. Guru/pengelola dapat menggunakan ekspor bank yang tersedia untuk memeriksa soal dan kunci sebelum ujian.
 
-Sesudah deployment/migrasi, paket juga dapat dimasukkan dari terminal:
+Klik ulang tidak menggandakan soal, termasuk setelah nama bank diubah. Bank yang sudah terisi atau dipakai tidak ditimpa. Bank paket lama dari impor sebelumnya tetap tersimpan; memilih Try Out baru membuat bank terpisah dengan 20 soal. Bank yang dihapus harus dipulihkan dari **Dihapus / pulihkan**, bukan dibuat ulang lewat tombol paket.
+
+Sesudah deployment/migrasi, satu pilihan juga dapat ditambahkan melalui terminal:
 
 ```bash
-php artisan trial-questions:sample --all --archive-history-12
+php artisan trial-questions:sample --pack=bin-10
 ```
 
-Opsi `--archive-history-12` hanya memindahkan bank tingkat XII dengan mapel bernama Sejarah atau Sejarah Indonesia ke **Dihapus / pulihkan**, lalu menonaktifkan tautan uji cobanya. Soal, jawaban, nilai, dan riwayat pelanggaran tetap tersimpan. Bank dengan peserta berstatus sedang mengerjakan tidak dihapus; perintah memberi peringatan dan keluar dengan status gagal agar panitia dapat menyelesaikan ujian sebelum mengulang. Tanpa opsi ini, bank Sejarah XII tetap tersedia. Untuk impor per tingkat gunakan `--grade=10`, `--grade=11`, atau `--grade=12`; paket XII tidak memuat Sejarah.
+Impor massal hanya tersedia melalui perintah eksplisit `--all`, atau per tingkat melalui `--grade=10`, `--grade=11`, dan `--grade=12`. Opsi `--archive-history-12` pada mode massal/per tingkat masih tersedia untuk memindahkan bank Sejarah/Sejarah Indonesia XII ke Dihapus dan menonaktifkan tautan uji cobanya. Riwayat tetap disimpan dan penghapusan ditolak selama ada peserta berstatus sedang mengerjakan. `--pack` tidak dapat digabung dengan `--all` atau `--archive-history-12`.
 
-Tombol **Hapus** pada setiap bank memakai mekanisme yang sama, termasuk bank yang terhubung ke ujian. **Pulihkan** mengembalikan bank, sementara tautan ujian tetap nonaktif sampai diaktifkan lagi oleh pengelola. Paket ini hanya masuk ke bank uji coba dan tidak otomatis membuka sesi ujian.
+Server sekolah saat ini: **https://ujiansmkbhg.sityoyitsolutions.com**. Atur `APP_URL` pada `.env` VPS sesuai domain tersebut agar tautan dan kartu mengarah ke server yang benar. Jangan memasukkan kata sandi atau konfigurasi rahasia ke repositori.
 
-Acuan cakupan materi untuk tinjauan guru (soal ditulis ulang, bukan salinan): [Sejarah X: penelitian sejarah](https://repositori.kemendikdasmen.go.id/21720/), [Sejarah XI: Sumpah Pemuda](https://repositori.kemendikdasmen.go.id/21997/), [Matematika XII: statistika](https://repositori.kemendikdasmen.go.id/20973/), dan [Matematika XII: peluang](https://repositori.kemendikdasmen.go.id/21935/). Guru tetap dapat menyesuaikan cakupan dengan materi yang sudah diajarkan sebelum ujian dimulai.
+Acuan cakupan materi untuk tinjauan guru (soal ditulis ulang, bukan salinan): [Sejarah X: penelitian sejarah](https://repositori.kemendikdasmen.go.id/21720/), [Sejarah XI: Sumpah Pemuda](https://repositori.kemendikdasmen.go.id/21997/), [Matematika XII: statistika](https://repositori.kemendikdasmen.go.id/20973/), dan [Matematika XII: peluang](https://repositori.kemendikdasmen.go.id/21935/). Guru dapat menyesuaikan cakupan dengan materi yang sudah diajarkan sebelum ujian dimulai.
