@@ -1,0 +1,148 @@
+@extends('layouts.app')
+
+@section('title', 'Pemantauan Peserta')
+@section('eyebrow', 'Ruang Kendali')
+@section('heading', 'Pemantauan Peserta')
+
+@section('content')
+    @php($statusLabels = ['draft' => 'Draf', 'published' => 'Terbit', 'active' => 'Aktif', 'closed' => 'Ditutup'])
+
+    @if ($errors->any())
+        <div class="mb-6 rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">{{ $errors->first() }}</div>
+    @endif
+
+    <form method="GET" class="mb-6 grid gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-4 md:grid-cols-4">
+        <label class="text-xs text-slate-400">Tahun ajaran
+            <select name="academic_year_id" class="mt-2 w-full rounded-lg border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
+                <option value="">Semua tahun ajaran</option>
+                @foreach ($academicYears as $year)<option value="{{ $year->id }}" @selected(($filters['academic_year_id'] ?? '') == $year->id)>{{ $year->name }}</option>@endforeach
+            </select>
+        </label>
+        <label class="text-xs text-slate-400">Tanggal sesi
+            <input type="date" name="date" value="{{ $filters['date'] ?? '' }}" class="mt-2 w-full rounded-lg border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
+        </label>
+        <label class="text-xs text-slate-400">Status sesi
+            <select name="status" class="mt-2 w-full rounded-lg border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
+                <option value="">Semua status</option>
+                @foreach ($sessionStatuses as $status)<option value="{{ $status->value }}" @selected(($filters['status'] ?? '') === $status->value)>{{ $statusLabels[$status->value] }}</option>@endforeach
+            </select>
+        </label>
+        <div class="flex items-end gap-3"><button class="rounded-lg bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950">Terapkan</button><a href="{{ route('operations.index') }}" class="py-2.5 text-sm text-slate-400">Reset</a></div>
+        <p class="text-xs text-slate-500 md:col-span-4">Ringkasan dan aktivitas mengikuti filter. Data dimuat {{ now()->format('d/m/Y H:i:s') }}; muat ulang untuk melihat pembaruan.</p>
+    </form>
+
+    @if (in_array(auth()->user()->role->value, ['super_admin', 'committee', 'principal'], true))
+        <form method="GET" action="{{ route('exam-flyers.core') }}" target="_blank" class="mb-6 grid gap-3 rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.04] p-4 sm:grid-cols-[1fr_auto]">
+            <x-assessment-period-select :periods="$flyerPeriods" :required="true" label="Flyer asesmen · pilih periode dan tahun ajaran" />
+            <div class="flex flex-wrap items-end gap-2">
+                <button class="rounded-xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950">Cetak flyer asesmen</button>
+                <button formaction="{{ route('exam-flyers.warnings') }}" class="rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-slate-950">Cetak flyer peringatan</button>
+            </div>
+        </form>
+    @endif
+
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        @foreach ([
+            ['Sesi aktif', $statistics['activeSessions'], 'text-cyan-300'],
+            ['Sedang mengerjakan', $statistics['startedAttempts'], 'text-amber-300'],
+            ['Sudah dikumpulkan', $statistics['submittedAttempts'], 'text-emerald-300'],
+            ['Insiden tercatat', $statistics['violations'], 'text-rose-300'],
+        ] as [$label, $value, $color])
+            <div class="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+                <p class="text-sm text-slate-400">{{ $label }}</p>
+                <p class="mt-2 text-3xl font-semibold {{ $color }}">{{ $value }}</p>
+            </div>
+        @endforeach
+    </div>
+
+    <section class="mt-6 rounded-3xl border border-white/10 bg-white/[0.035] p-6">
+        <div class="mb-5">
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Sesi</p>
+            <h2 class="mt-2 text-xl font-semibold text-white">Kontrol status sesi ujian</h2>
+            <p class="mt-2 text-sm text-slate-500">Penutupan mengumpulkan jawaban dan menandai peserta yang belum mulai sebagai tidak hadir ujian jika waktu mulai sudah tercapai. Sesi tidak dapat dibuka ulang.</p>
+        </div>
+        <div class="grid gap-3 xl:grid-cols-2">
+            @forelse ($sessions as $session)
+                <div class="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <p class="font-medium text-white">{{ $session->assessmentSubject->subject->name }} · Kelas {{ $session->assessmentSubject->schoolClass->grade_level }}</p>
+                            <p class="mt-1 text-xs text-slate-500">{{ $session->assessmentSubject->assessmentPeriod->name }} · {{ $session->kind->value === 'makeup' ? 'Susulan' : 'Reguler' }}</p>
+                            <p class="mt-2 text-sm text-slate-300">{{ $session->starts_at->format('d/m/Y H:i') }}–{{ $session->ends_at->format('H:i') }}</p>
+                            <p class="mt-1 text-xs text-slate-500">{{ $session->campus->name }}{{ $session->room_name ? ' · '.$session->room_name : '' }} · {{ $session->scheduleMembers->sum('assignments_count') }} peserta</p>
+                        </div>
+                        @if (in_array(auth()->user()->role->value, ['super_admin', 'committee', 'proctor'], true))
+                        <form method="POST" action="{{ route('operations.sessions.status', $session) }}" class="flex items-center gap-2" onsubmit="return this.elements.status.value !== 'closed' || confirm('Tutup jadwal semua rombel yang tercantum? Jawaban dikumpulkan dan sesi tidak dapat dibuka ulang.')">
+                            @csrf @method('PATCH')
+                            <select name="status" @disabled($session->status->value === 'closed') class="rounded-lg border border-white/10 bg-slate-950 px-2 py-2 text-xs">
+                                @foreach ($sessionStatuses as $status)<option value="{{ $status->value }}" @selected($session->status === $status)>{{ $statusLabels[$status->value] }}</option>@endforeach
+                            </select>
+                            <button @disabled($session->status->value === 'closed') class="text-xs font-medium text-cyan-300 disabled:opacity-40">Simpan semua rombel</button>
+                        </form>
+                        @else
+                            <span class="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-300">{{ $statusLabels[$session->status->value] }}</span>
+                        @endif
+                    </div>
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        @foreach ($session->scheduleMembers as $member)
+                            <a href="{{ route('operations.sessions.show', $member) }}" class="inline-flex rounded-lg border border-cyan-400/30 px-3 py-2 text-xs font-semibold text-cyan-300">Peserta {{ $member->assessmentSubject->schoolClass->name }} · {{ $member->assignments_count }}</a>
+                        @endforeach
+                    </div>
+                </div>
+            @empty
+                <p class="text-sm text-slate-500">Belum ada sesi ujian. Buat jadwal terlebih dahulu.</p>
+            @endforelse
+        </div>
+        @if ($sessions->hasPages())<div class="mt-5">{{ $sessions->links() }}</div>@endif
+    </section>
+
+    <section class="mt-6 rounded-3xl border border-violet-400/20 bg-violet-400/[0.035] p-6">
+        <div class="mb-5">
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-violet-300">Ujian Uji Coba</p>
+            <h2 class="mt-2 text-xl font-semibold text-white">Pemantauan peserta uji coba</h2>
+            <p class="mt-2 text-sm text-slate-500">Daftar peserta mencakup siswa yang belum login/belum memulai, sedang mengerjakan, terkunci, dan sudah selesai.</p>
+        </div>
+        <div class="grid gap-3 xl:grid-cols-2">
+            @forelse($trialExams as $trialExam)
+                <article class="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                    <p class="font-medium text-white">{{ $trialExam->title }}</p>
+                    <p class="mt-1 text-xs text-slate-500">{{ $trialExam->questionBank->subject->name }} · Kelas {{ $trialExam->questionBank->grade_level }} · {{ $trialExam->attempts_count }} sudah memulai</p>
+                    <a href="{{ route('tryouts.participants', $trialExam) }}" class="mt-4 inline-flex rounded-lg border border-violet-400/30 px-3 py-2 text-xs font-semibold text-violet-300">Lihat seluruh peserta & pelanggaran</a>
+                    @if (in_array(auth()->user()->role->value, ['super_admin', 'committee', 'principal'], true))
+                        <a href="{{ route('exam-flyers.trial', $trialExam) }}" target="_blank" rel="noopener" class="mt-4 inline-flex rounded-lg border border-emerald-400/30 px-3 py-2 text-xs font-semibold text-emerald-300">Cetak flyer simulasi</a>
+                    @endif
+                </article>
+            @empty
+                <p class="text-sm text-slate-500">Belum ada Ujian Uji Coba.</p>
+            @endforelse
+        </div>
+        @if($trialExams->hasPages())<div class="mt-5">{{ $trialExams->links() }}</div>@endif
+    </section>
+
+    <section class="mt-6 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035]">
+        <div class="border-b border-white/10 p-6">
+            <h2 class="text-xl font-semibold text-white">Aktivitas pengerjaan terbaru</h2>
+            <p class="mt-1 text-sm text-slate-500">Waktu simpan terakhir bukan penanda siswa sedang online. Insiden browser perlu diperiksa pengawas, bukan otomatis bukti kecurangan.</p>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-left text-sm">
+                <thead class="bg-slate-950/60 text-xs uppercase tracking-wider text-slate-500"><tr><th class="px-5 py-4">Siswa</th><th class="px-5 py-4">Mapel</th><th class="px-5 py-4">Status</th><th class="px-5 py-4">Simpan terakhir</th><th class="px-5 py-4">Nilai</th><th class="px-5 py-4">Insiden</th></tr></thead>
+                <tbody class="divide-y divide-white/5">
+                    @forelse ($attempts as $attempt)
+                        <tr>
+                            <td class="px-5 py-4 font-medium text-white">{{ $attempt->assignment->student->full_name }}</td>
+                            <td class="px-5 py-4 text-slate-400">{{ $attempt->assignment->assessmentSubject->subject->name }}</td>
+                            <td class="px-5 py-4 text-slate-300">{{ str($attempt->status->value)->replace('_', ' ')->title() }}</td>
+                            <td class="px-5 py-4 text-slate-400">{{ $attempt->last_seen_at?->format('d/m/Y H:i:s') ?? '—' }}</td>
+                            <td class="px-5 py-4 text-slate-300">{{ $attempt->score ?? '—' }}@if ($attempt->grading_status->value === 'pending')<br><span class="text-xs text-amber-300">Menunggu koreksi</span>@endif</td>
+                            <td class="px-5 py-4 {{ $attempt->violation_count ? 'text-rose-300' : 'text-slate-500' }}">{{ $attempt->violation_count }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="6" class="px-6 py-12 text-center text-slate-500">Belum ada aktivitas pengerjaan.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+        @if ($attempts->hasPages())<div class="p-5">{{ $attempts->links() }}</div>@endif
+    </section>
+@endsection

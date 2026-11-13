@@ -1,0 +1,209 @@
+@extends('layouts.app')
+
+@section('title', 'Bank Soal Ujian Inti')
+@section('eyebrow', 'Penjadwalan')
+@section('heading', 'Bank Soal Ujian Inti')
+
+@section('content')
+    @if ($errors->any())
+        <div class="mb-6 rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">{{ $errors->first() }}</div>
+    @endif
+
+    <section class="rounded-3xl border border-violet-400/20 bg-violet-400/[0.045] p-6">
+        <a href="{{ route('question-bank.index') }}" class="text-xs font-medium text-violet-300">← Kembali ke daftar bank soal</a>
+        <p class="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-violet-300">{{ $assessmentSubject->assessmentPeriod->name }}</p>
+        <h2 class="mt-2 text-2xl font-semibold text-white">{{ $assessmentSubject->subject->name }} · Kelas {{ $gradeLevel }}</h2>
+        <p class="mt-2 text-sm text-slate-400">{{ $assessmentSubject->assessmentPeriod->academicYear->name }} · {{ $questionCount }} soal · Total bobot {{ number_format($totalPoints, 2, ',', '.') }}</p>
+        <p class="mt-2 text-xs text-cyan-200">Rombel {{ $rombelNames }} · Guru {{ $assessmentSubject->teacher?->name ?? "belum ditetapkan" }}</p>
+        <div class="mt-4"><a href="{{ route('scheduling.questions.export', $assessmentSubject) }}" class="inline-flex rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-2.5 text-sm font-semibold text-emerald-200">Ekspor PG ke Excel</a></div>
+    </section>
+
+    <div class="mt-6 grid gap-6 xl:grid-cols-[420px_1fr]">
+        <section class="rounded-3xl border border-white/10 bg-white/[0.035] p-6">
+            <h2 class="text-xl font-semibold text-white">Tambah soal</h2>
+            @if ($assessmentSubject->assessmentPeriod->type->value === 'ats')
+                <p class="mt-2 text-sm text-cyan-200">Khusus ATS: tersedia isian singkat dan esai. Seluruh jawaban dikoreksi manual.</p>
+                <p class="mt-2 rounded-xl border border-cyan-400/15 bg-cyan-400/[0.04] p-3 text-xs leading-5 text-slate-400">Saran 20 soal: 10 isian × 3 poin + 10 esai × 7 poin = total 100. Bobot wajib diisi dan merupakan nilai maksimal setiap soal.</p>
+            @endif
+            @if ($isLocked)
+                <p class="mt-3 text-sm text-amber-300">Bank soal terkunci karena sudah ada siswa yang mulai ujian. Isi dan bobot soal dipertahankan untuk menjaga konsistensi nilai reguler dan susulan.</p>
+            @endif
+            <fieldset @disabled($isLocked)>
+            <form method="POST" action="{{ route('scheduling.questions.store', $assessmentSubject) }}" enctype="multipart/form-data" class="mt-5 space-y-3">
+                @csrf
+                <select id="question-type" name="question_type" required class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
+                    @foreach ($questionTypes as $type)
+                        <option value="{{ $type->value }}" @selected(old('question_type') === $type->value)>{{ $type->label() }}</option>
+                    @endforeach
+                </select>
+                <x-question-prompt-fields :multiple-choice="old('question_type', $questionTypes[0]->value) === 'multiple_choice'" />
+                <div id="multiple-choice-fields" class="space-y-3">
+                    @foreach (['A', 'B', 'C', 'D', 'E'] as $option)
+                        <div class="grid grid-cols-[36px_1fr] items-start gap-2">
+                            <span class="mt-1 grid size-9 place-items-center rounded-lg bg-slate-900 text-xs font-semibold text-violet-300">{{ $option }}</span>
+                            <div class="space-y-2">
+                                <x-question-text-editor name="option_{{ strtolower($option) }}" :value="old('option_'.strtolower($option))"
+                                    :format="old('text_format', 'plain')" label="Pilihan {{ $option }}" :show-label="false" :rows="2" :limit="2000" required placeholder="Pilihan {{ $option }}" />
+                                <input type="file" name="option_file_{{ strtolower($option) }}" accept="image/jpeg,image/png,image/webp,application/pdf" class="w-full rounded-lg border border-dashed border-white/10 bg-slate-950/50 px-3 py-2 text-xs text-slate-500 file:mr-2 file:rounded file:border-0 file:bg-violet-400/20 file:px-2 file:py-1 file:text-violet-200">
+                                <p class="text-[0.7rem] text-slate-500">Lampiran pilihan {{ $option }} (opsional: gambar/PDF, maks. 5 MB)</p>
+                            </div>
+                        </div>
+                    @endforeach
+                    <select name="correct_answer" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
+                        <option value="">Jawaban benar</option>
+                        @foreach (['A', 'B', 'C', 'D', 'E'] as $option)<option value="{{ $option }}">Pilihan {{ $option }}</option>@endforeach
+                    </select>
+                </div>
+                <div>
+                    <label for="question-points" class="mb-2 block text-xs font-medium text-slate-400">Bobot maksimal soal</label>
+                    <input id="question-points" type="number" name="points" value="{{ old('points', $assessmentSubject->assessmentPeriod->type->value === 'ats' ? 3 : 2) }}" min="0.01" max="1000" step="0.01" required placeholder="Bobot" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
+                </div>
+                <p class="text-xs leading-5 text-slate-500">Untuk PG, sistem menghitung otomatis maksimal 70 poin dengan rumus 70 ÷ jumlah soal PG. Isian/esai pada ujian campuran mengisi maksimal 30 poin; ATS tanpa PG tetap dinilai maksimal 100 melalui koreksi manual.</p>
+                <button class="w-full rounded-xl bg-violet-400 px-4 py-3 text-sm font-semibold text-slate-950">Simpan soal</button>
+            </form>
+            </fieldset>
+        </section>
+
+        <section class="space-y-3">
+            @forelse ($questions as $question)
+                <article class="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <p class="text-xs font-semibold text-violet-300">Soal {{ $question->position }} · {{ $question->question_type->label() }} · {{ number_format((float) $question->points, 2, ',', '.') }} poin</p>
+                            <x-question-prompt :question="$question" :multiple-choice="$question->question_type->value === 'multiple_choice'" class="mt-2" />
+                        </div>
+                        <div class="flex shrink-0 items-center gap-3">
+                            @unless ($isLocked)
+                                <button type="button" data-edit-toggle="question-edit-{{ $question->id }}" class="text-xs font-medium text-cyan-300">Edit</button>
+                            @endunless
+                            <form method="POST" action="{{ route('scheduling.questions.destroy', [$assessmentSubject, $question]) }}" onsubmit="return confirm('Hapus soal ini?')">
+                                @csrf @method('DELETE')
+                                <button @disabled($isLocked) class="text-xs text-rose-300 disabled:opacity-40">Hapus</button>
+                            </form>
+                        </div>
+                    </div>
+                    @if ($question->question_type->value === 'multiple_choice')
+                        <div class="mt-4 grid gap-2 sm:grid-cols-2">
+                            @foreach (collect($question->options)->sortKeys() as $key => $option)
+                                <div class="rounded-xl border px-3 py-2 text-xs {{ $key === $question->correct_answer ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200' : 'border-white/10 text-slate-400' }}">
+                                    <div class="flex items-start gap-2"><span class="shrink-0 font-semibold">{{ $key }}.</span><x-question-text :text="$option" :format="$question->text_format" /></div>
+                                    @if ($question->option_file_paths[$key] ?? null)
+                                        <a href="{{ Storage::url($question->option_file_paths[$key]) }}" target="_blank" class="mt-2 block font-semibold text-cyan-300">Buka lampiran pilihan {{ $key }}</a>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <p class="mt-4 text-xs text-amber-200">Tidak memakai kunci otomatis; guru memberi nilai setelah ujian dikumpulkan.</p>
+                    @endif
+
+                    @unless ($isLocked)
+                        <form id="question-edit-{{ $question->id }}" method="POST" action="{{ route('scheduling.questions.update', [$assessmentSubject, $question]) }}" enctype="multipart/form-data" class="question-edit-form mt-5 hidden space-y-3 border-t border-white/10 pt-5">
+                            @csrf @method('PUT')
+                            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-300">Edit soal {{ $question->position }}</p>
+                            <select name="question_type" required class="edit-question-type w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
+                                @foreach ($questionTypes as $type)
+                                    <option value="{{ $type->value }}" @selected($question->question_type === $type)>{{ $type->label() }}</option>
+                                @endforeach
+                            </select>
+                            <x-question-prompt-fields :question="$question" :multiple-choice="$question->question_type->value === 'multiple_choice'" />
+                            <div class="edit-choice-fields space-y-3">
+                                @foreach (['A', 'B', 'C', 'D', 'E'] as $option)
+                                    <div class="grid grid-cols-[36px_1fr] items-start gap-2">
+                                        <span class="mt-1 grid size-9 place-items-center rounded-lg bg-slate-900 text-xs font-semibold text-violet-300">{{ $option }}</span>
+                                        <div class="space-y-2">
+                                            <x-question-text-editor name="option_{{ strtolower($option) }}" :value="$question->options[$option] ?? ''"
+                                                :format="$question->text_format" label="Pilihan {{ $option }}" :show-label="false" :rows="2" :limit="2000" required placeholder="Pilihan {{ $option }}" />
+                                            <input type="file" name="option_file_{{ strtolower($option) }}" accept="image/jpeg,image/png,image/webp,application/pdf" class="w-full rounded-lg border border-dashed border-white/10 bg-slate-950/50 px-3 py-2 text-xs text-slate-500">
+                                            @if ($question->option_file_paths[$option] ?? null)<a href="{{ Storage::url($question->option_file_paths[$option]) }}" target="_blank" class="text-xs text-cyan-300">Lihat lampiran {{ $option }}</a>@endif
+                                        </div>
+                                    </div>
+                                @endforeach
+                                <select name="correct_answer" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
+                                    <option value="">Jawaban benar</option>
+                                    @foreach (['A', 'B', 'C', 'D', 'E'] as $option)
+                                        <option value="{{ $option }}" @selected($question->correct_answer === $option)>Pilihan {{ $option }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label class="mb-2 block text-xs font-medium text-slate-400">Bobot maksimal soal</label>
+                                <input type="number" name="points" value="{{ $question->points }}" min="0.01" max="1000" step="0.01" required class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <button class="rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950">Simpan perubahan</button>
+                                <button type="button" data-edit-toggle="question-edit-{{ $question->id }}" class="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-300">Batal</button>
+                            </div>
+                        </form>
+                    @endunless
+                </article>
+            @empty
+                <div class="rounded-3xl border border-dashed border-white/10 p-12 text-center text-sm text-slate-500">Belum ada soal untuk mapel dan tingkat ini.</div>
+            @endforelse
+        </section>
+    </div>
+    @if ($questions->hasPages())
+        <div class="mt-6 rounded-2xl border border-white/10 bg-white/[0.025] p-4">
+            <p class="mb-3 text-xs text-slate-500">Menampilkan soal {{ $questions->firstItem() }}–{{ $questions->lastItem() }} dari {{ $questions->total() }} soal · 20 soal per halaman.</p>
+            {{ $questions->links() }}
+        </div>
+    @endif
+    <script>
+        const questionType = document.getElementById('question-type');
+        const choiceFields = document.getElementById('multiple-choice-fields');
+        const questionPoints = document.getElementById('question-points');
+        let pointsEdited = @json(old('points') !== null);
+        questionPoints.addEventListener('input', () => { pointsEdited = true; });
+        const syncPromptFields = (form, multipleChoice) => {
+            const statement = form.querySelector('[data-question-statement]');
+            const attachment = form.querySelector('[data-question-attachment]');
+            const question = form.querySelector('[data-question-text]');
+            statement.hidden = !multipleChoice;
+            statement.querySelector('textarea').disabled = !multipleChoice;
+            if (multipleChoice) {
+                attachment.after(question);
+            } else {
+                attachment.before(question);
+            }
+        };
+        const syncQuestionType = () => {
+            const enabled = questionType.value === 'multiple_choice';
+            syncPromptFields(questionType.form, enabled);
+            choiceFields.hidden = !enabled;
+            choiceFields.querySelectorAll('input[name], select[name], textarea[name]').forEach((field) => {
+                field.required = enabled && field.type !== 'file' && !field.dataset.editorInitialized;
+                if (field.matches('[data-question-editor]')) field.dataset.editorRequired = String(enabled);
+                field.disabled = !enabled;
+            });
+            if (!pointsEdited) {
+                questionPoints.value = questionType.value === 'essay' ? '7' : (questionType.value === 'short_answer' ? '3' : '2');
+            }
+        };
+        questionType.addEventListener('change', syncQuestionType);
+        syncQuestionType();
+
+        document.querySelectorAll('[data-edit-toggle]').forEach((button) => {
+            button.addEventListener('click', () => {
+                document.getElementById(button.dataset.editToggle)?.classList.toggle('hidden');
+            });
+        });
+
+        document.querySelectorAll('.question-edit-form').forEach((form) => {
+            const type = form.querySelector('.edit-question-type');
+            const fields = form.querySelector('.edit-choice-fields');
+            const syncEditType = () => {
+                const enabled = type.value === 'multiple_choice';
+                syncPromptFields(form, enabled);
+                fields.hidden = !enabled;
+                fields.querySelectorAll('input[name], select[name], textarea[name]').forEach((field) => {
+                    field.required = enabled && field.type !== 'file' && !field.dataset.editorInitialized;
+                    if (field.matches('[data-question-editor]')) field.dataset.editorRequired = String(enabled);
+                    field.disabled = !enabled;
+                });
+            };
+            type.addEventListener('change', syncEditType);
+            syncEditType();
+        });
+    </script>
+@endsection
+

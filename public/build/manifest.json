@@ -1,0 +1,26 @@
+{
+  "resources/css/app.css": {
+    "file": "assets/app-B9cTiv8l.css",
+    "name": "app",
+    "names": [
+      "app.css"
+    ],
+    "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-ChsWAzg8.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true,
+    "dynamicImports": [
+      "resources/js/question-editor.js"
+    ]
+  },
+  "resources/js/question-editor.js": {
+    "file": "assets/question-editor-Dc9c8fsJ.js",
+    "name": "question-editor",
+    "src": "resources/js/question-editor.js",
+    "isDynamicEntry": true
+  }
+}
