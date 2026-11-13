@@ -13,6 +13,9 @@
         .sheet { width: 190mm; margin: 12px auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7mm; }
         .card { min-height: 80mm; overflow: hidden; border: 1.2px solid #0f172a; border-radius: 10px; background: #fff; break-inside: avoid; page-break-inside: avoid; }
         .head { padding: 10px 12px; color: #fff; background: #0f172a; }
+        .head { display: flex; align-items: center; gap: 10px; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+        .brand-logo { width: 46px; height: 46px; flex-shrink: 0; object-fit: contain; border-radius: 6px; background: #fff; padding: 3px; }
+        .brand-copy { min-width: 0; overflow-wrap: anywhere; }
         .school { font-size: 13px; font-weight: 700; text-transform: uppercase; }
         .title { margin-top: 3px; font-size: 9px; font-weight: 700; letter-spacing: 1.4px; color: #67e8f9; }
         .body { padding: 11px 12px; font-size: 10.5px; }
@@ -40,12 +43,12 @@
         @forelse ($students as $student)
             <section class="card">
                 <header class="head">
-                    <div class="school">{{ $school?->name ?? config('app.name') }}</div>
-                    <div class="title">KARTU PESERTA UJIAN UJI COBA</div>
+                    <x-school-print-heading :school="$school" title="KARTU PESERTA UJIAN UJI COBA" />
                 </header>
                 <div class="body">
                     <div class="name">{{ $student->full_name }}</div>
                     <div class="row"><span>Kelas</span><span>:</span><strong>{{ $student->schoolClass->name }}</strong></div>
+                    <div class="row"><span>Tahun ajaran</span><span>:</span><span>{{ $student->schoolClass->academicYear->name }}</span></div>
                     <div class="row"><span>NIS</span><span>:</span><span>{{ $student->student_number }}</span></div>
                     <div class="row"><span>NISN</span><span>:</span><span>{{ $student->nisn ?? '—' }}</span></div>
                     <div class="exam">

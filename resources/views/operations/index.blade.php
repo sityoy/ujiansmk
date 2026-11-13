@@ -31,6 +31,13 @@
         <p class="text-xs text-slate-500 md:col-span-4">Ringkasan dan aktivitas mengikuti filter. Data dimuat {{ now()->format('d/m/Y H:i:s') }}; muat ulang untuk melihat pembaruan.</p>
     </form>
 
+    @if (in_array(auth()->user()->role->value, ['super_admin', 'committee', 'principal'], true))
+        <form method="GET" action="{{ route('exam-flyers.core') }}" target="_blank" class="mb-6 grid gap-3 rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.04] p-4 sm:grid-cols-[1fr_auto]">
+            <x-assessment-period-select :periods="$flyerPeriods" :required="true" label="Flyer ujian inti · pilih periode dan tahun ajaran" />
+            <button class="self-end rounded-xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950">Cetak flyer ujian inti</button>
+        </form>
+    @endif
+
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         @foreach ([
             ['Sesi aktif', $statistics['activeSessions'], 'text-cyan-300'],
@@ -98,6 +105,9 @@
                     <p class="font-medium text-white">{{ $trialExam->title }}</p>
                     <p class="mt-1 text-xs text-slate-500">{{ $trialExam->questionBank->subject->name }} · Kelas {{ $trialExam->questionBank->grade_level }} · {{ $trialExam->attempts_count }} sudah memulai</p>
                     <a href="{{ route('tryouts.participants', $trialExam) }}" class="mt-4 inline-flex rounded-lg border border-violet-400/30 px-3 py-2 text-xs font-semibold text-violet-300">Lihat seluruh peserta & pelanggaran</a>
+                    @if (in_array(auth()->user()->role->value, ['super_admin', 'committee', 'principal'], true))
+                        <a href="{{ route('exam-flyers.trial', $trialExam) }}" target="_blank" rel="noopener" class="mt-4 inline-flex rounded-lg border border-emerald-400/30 px-3 py-2 text-xs font-semibold text-emerald-300">Cetak flyer uji coba</a>
+                    @endif
                 </article>
             @empty
                 <p class="text-sm text-slate-500">Belum ada Ujian Uji Coba.</p>

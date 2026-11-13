@@ -80,6 +80,7 @@
                         <div class="flex flex-wrap gap-2">
                             <a href="{{ route('tryouts.participants', $trial) }}" class="rounded-xl bg-violet-400/10 px-3 py-2 text-xs font-semibold text-violet-200">Lihat peserta</a>
                             <a href="{{ route('tryouts.cards', $trial) }}" target="_blank" class="rounded-xl bg-cyan-400/10 px-3 py-2 text-xs font-semibold text-cyan-200">Cetak kartu</a>
+                            <a href="{{ route('exam-flyers.trial', $trial) }}" target="_blank" rel="noopener" class="rounded-xl bg-emerald-400/10 px-3 py-2 text-xs font-semibold text-emerald-200">Cetak flyer</a>
                             <form method="POST" action="{{ route('tryouts.toggle', $trial) }}">@csrf @method('PATCH')<button class="rounded-xl border border-white/10 px-3 py-2 text-xs text-cyan-200">{{ $trial->is_active ? 'Nonaktifkan' : 'Aktifkan' }}</button></form>
                             <form method="POST" action="{{ route('tryouts.destroy', $trial) }}" onsubmit="return confirm('Hapus ujian uji coba ini?')">@csrf @method('DELETE')<button class="rounded-xl border border-rose-400/20 px-3 py-2 text-xs text-rose-300">Hapus</button></form>
                         </div>

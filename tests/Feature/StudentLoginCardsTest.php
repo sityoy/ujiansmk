@@ -53,6 +53,7 @@ class StudentLoginCardsTest extends TestCase
             'assessment_period_id' => $this->makeRoomPeriod($student->schoolClass->academic_year_id)->id,
         ])->assertOk()
             ->assertSee('login-siswa-khusus')
+            ->assertSee('images/logo-ypmi-bahagia.jpeg')
             ->assertSee('<span>Ruangan</span><span>:</span><strong>Belum diatur</strong>', false)
             ->assertSee('<span>Password</span><span>:</span><strong>SiswaAwal123</strong>', false)
             ->assertHeader('Cache-Control', 'must-revalidate, no-cache, no-store, private');

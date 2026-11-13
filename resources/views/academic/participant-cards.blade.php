@@ -15,6 +15,9 @@
         .sheet { width: 190mm; margin: 12px auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 7mm; }
         .card { min-height: 61mm; overflow: hidden; border: 1.2px solid #0f172a; border-radius: 10px; background: white; break-inside: avoid; }
         .head { padding: 9px 12px; color: white; background: #0f172a; }
+        .head { display: flex; align-items: center; gap: 10px; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+        .brand-logo { width: 46px; height: 46px; flex-shrink: 0; object-fit: contain; border-radius: 6px; background: #fff; padding: 3px; }
+        .brand-copy { min-width: 0; overflow-wrap: anywhere; }
         .school { font-size: 13px; font-weight: 700; text-transform: uppercase; }
         .title { margin-top: 3px; font-size: 10px; letter-spacing: 1.5px; color: #67e8f9; }
         .body { padding: 11px 12px; font-size: 11px; }
@@ -50,8 +53,7 @@
                         @endphp
                         <section class="card">
                             <header class="head">
-                                <div class="school">{{ $school?->name ?? config('app.name') }}</div>
-                                <div class="title">KARTU AKUN PESERTA UJIAN</div>
+                                <x-school-print-heading :school="$school" title="KARTU AKUN PESERTA UJIAN" />
                             </header>
                             <div class="body">
                                 <div class="name">{{ $student->full_name }}</div>

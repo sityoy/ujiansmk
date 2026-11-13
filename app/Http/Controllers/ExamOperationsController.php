@@ -7,6 +7,7 @@ use App\Enums\AttemptStatus;
 use App\Enums\SessionStatus;
 use App\Enums\UserRole;
 use App\Models\AcademicYear;
+use App\Models\AssessmentPeriod;
 use App\Models\ExamAssignment;
 use App\Models\ExamAttempt;
 use App\Models\ExamSession;
@@ -60,6 +61,9 @@ class ExamOperationsController extends Controller
         return view('operations.index', [
             'filters' => $filters,
             'academicYears' => AcademicYear::query()->orderByDesc('starts_on')->get(),
+            'flyerPeriods' => AssessmentPeriod::with('academicYear')
+                ->when($filters['academic_year_id'] ?? null, fn ($query, $year) => $query->where('academic_year_id', $year))
+                ->orderByDesc('starts_on')->get(),
             'sessions' => $groupedSessions,
             'attempts' => (clone $attempts)
                 ->with(['assignment.student', 'assignment.assessmentSubject.subject', 'assignment.examSession'])

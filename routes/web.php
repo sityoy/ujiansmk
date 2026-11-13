@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\PasswordChangeController;
 use App\Http\Controllers\CampusController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExamOperationsController;
+use App\Http\Controllers\ExamFlyerController;
 use App\Http\Controllers\ExamGradingController;
 use App\Http\Controllers\QuestionBankController;
 use App\Http\Controllers\ParticipantCardController;
@@ -258,6 +259,11 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             Route::get('/attempts/{attempt}', [ExamGradingController::class, 'show'])->name('show');
             Route::put('/attempts/{attempt}', [ExamGradingController::class, 'update'])->name('update');
         });
+
+    Route::middleware('role:super_admin,committee,principal')->group(function (): void {
+        Route::get('/exam-flyers/core', [ExamFlyerController::class, 'core'])->name('exam-flyers.core');
+        Route::get('/exam-flyers/trials/{trialExam}', [ExamFlyerController::class, 'trial'])->name('exam-flyers.trial');
+    });
 
     Route::prefix('operations')
         ->middleware('role:super_admin,committee,proctor,teacher,principal')
