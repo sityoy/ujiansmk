@@ -30,21 +30,21 @@ class ExamFlyerTest extends TestCase
     {
         $this->year('2026/2027', true);
         $year = $this->year('2025/2026', false);
-        $period = $this->makeRoomPeriod($year->id);
+        $period = $this->makeRoomPeriod($year->id, 'AAS');
         SchoolProfile::create(['name' => 'SMP Islam Bahagia']);
         $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
         $this->actingAs($admin)->get(route('exam-flyers.core', ['assessment_period_id' => $period->id]))
-            ->assertOk()->assertSee('UJIAN INTI')->assertSee('TAHUN AJARAN 2025/2026')
-            ->assertSee('SMP Islam Bahagia')->assertSee('ATS Ganjil')->assertSee('images/logo-ypmi-bahagia.jpeg')
+            ->assertOk()->assertSee('Asesmen Akhir Semester Ganjil')->assertSee('TAHUN AJARAN 2025/2026')
+            ->assertSee('SMK ISLAM BAHAGIA')->assertDontSee('SMP Islam Bahagia')->assertSee('AAS Ganjil')->assertSee('images/logo-ypmi-bahagia.jpeg')
             ->assertSee(route('login'))->assertDontSee('2026/2027')->assertDontSee('Kode uji coba')
-            ->assertHeader('Cache-Control', 'no-store, private');
+            ->assertDontSee('YPMI BAHAGIA')->assertHeader('Cache-Control', 'no-store, private');
         $this->assertFileExists(public_path('images/logo-ypmi-bahagia.jpeg'));
     }
 
     public function test_trial_flyer_uses_its_linked_year_and_real_access_details(): void
     {
         $year = $this->year('2026/2027', true);
-        $period = $this->makeRoomPeriod($year->id);
+        $period = $this->makeRoomPeriod($year->id, 'AAS');
         $class = SchoolClass::create(['academic_year_id' => $year->id, 'name' => 'X-1', 'grade_level' => 10]);
         $subject = Subject::create(['code' => 'BIN', 'name' => 'Bahasa Indonesia']);
         $component = AssessmentSubject::create(['assessment_period_id' => $period->id, 'school_class_id' => $class->id, 'subject_id' => $subject->id]);
@@ -52,7 +52,7 @@ class ExamFlyerTest extends TestCase
         $trial = TrialExam::create(['assessment_subject_id' => $component->id, 'trial_question_bank_id' => $bank->id, 'title' => 'Uji Coba Bahasa Indonesia', 'slug' => 'latihan-bin', 'access_code' => 'BIN-COBA', 'duration_minutes' => 60, 'is_active' => true]);
         $committee = User::factory()->create(['role' => UserRole::Committee]);
         $this->actingAs($committee)->get(route('exam-flyers.trial', $trial))
-            ->assertOk()->assertSee('UJIAN UJI COBA')->assertSee('TAHUN AJARAN 2026/2027')
+            ->assertOk()->assertSee('Simulasi Asesmen Akhir Semester Ganjil')->assertSee('TAHUN AJARAN 2026/2027')
             ->assertSee('Uji Coba Bahasa Indonesia')->assertSee('Bahasa Indonesia · Kelas 10')
             ->assertSee('BIN-COBA')->assertSee('60 menit')->assertSee(route('tryout.entry', $trial))
             ->assertSee('images/logo-ypmi-bahagia.jpeg');
@@ -61,7 +61,7 @@ class ExamFlyerTest extends TestCase
     public function test_only_organizers_can_print_flyers_and_a_valid_period_is_required(): void
     {
         $year = $this->year('2026/2027', true);
-        $period = $this->makeRoomPeriod($year->id);
+        $period = $this->makeRoomPeriod($year->id, 'AAS');
         foreach ([UserRole::Student, UserRole::Teacher, UserRole::Proctor] as $role) {
             $this->actingAs(User::factory()->create(['role' => $role]))
                 ->get(route('exam-flyers.core', ['assessment_period_id' => $period->id]))->assertForbidden();
@@ -72,6 +72,25 @@ class ExamFlyerTest extends TestCase
         }
         $this->get(route('exam-flyers.core'))->assertSessionHasErrors('assessment_period_id');
         $this->get(route('exam-flyers.core', ['assessment_period_id' => 999999]))->assertSessionHasErrors('assessment_period_id');
+    }
+
+    public function test_warning_flyer_matches_the_selected_year_and_security_rules(): void
+    {
+        $year = $this->year('2026/2027', true);
+        $period = $this->makeRoomPeriod($year->id, 'AAS');
+        $principal = User::factory()->create(['role' => UserRole::Principal]);
+        $this->actingAs($principal)->get(route('exam-flyers.warnings', ['assessment_period_id' => $period->id]))
+            ->assertOk()->assertSee('SMK ISLAM BAHAGIA')->assertSee('Peringatan & Tata Tertib Ujian')
+            ->assertSee('Asesmen Akhir Semester Ganjil')->assertSee('TAHUN AJARAN 2026/2027')
+            ->assertSee('Pelanggaran pertama: peringatan. Kedua: ujian terkunci.')
+            ->assertSee('Waktu ujian tetap berjalan saat terkunci.')->assertSee('maksimal 2 kali')
+            ->assertSee('images/logo-ypmi-bahagia.jpeg')->assertDontSee('Kode uji coba');
+        $this->get(route('exam-flyers.warnings'))->assertSessionHasErrors('assessment_period_id');
+        $teacher = User::factory()->create(['role' => UserRole::Teacher]);
+        $this->actingAs($teacher)->get(route('exam-flyers.warnings', ['assessment_period_id' => $period->id]))->assertForbidden();
+        $period->update(['semester' => 'even']);
+        $this->actingAs($principal)->get(route('exam-flyers.core', ['assessment_period_id' => $period->id]))
+            ->assertOk()->assertSee('Asesmen Akhir Semester Genap');
     }
 
     private function year(string $name, bool $active): AcademicYear

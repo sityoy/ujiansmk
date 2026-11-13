@@ -33,8 +33,11 @@
 
     @if (in_array(auth()->user()->role->value, ['super_admin', 'committee', 'principal'], true))
         <form method="GET" action="{{ route('exam-flyers.core') }}" target="_blank" class="mb-6 grid gap-3 rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.04] p-4 sm:grid-cols-[1fr_auto]">
-            <x-assessment-period-select :periods="$flyerPeriods" :required="true" label="Flyer ujian inti · pilih periode dan tahun ajaran" />
-            <button class="self-end rounded-xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950">Cetak flyer ujian inti</button>
+            <x-assessment-period-select :periods="$flyerPeriods" :required="true" label="Flyer asesmen · pilih periode dan tahun ajaran" />
+            <div class="flex flex-wrap items-end gap-2">
+                <button class="rounded-xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950">Cetak flyer asesmen</button>
+                <button formaction="{{ route('exam-flyers.warnings') }}" class="rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-slate-950">Cetak flyer peringatan</button>
+            </div>
         </form>
     @endif
 
@@ -106,7 +109,7 @@
                     <p class="mt-1 text-xs text-slate-500">{{ $trialExam->questionBank->subject->name }} · Kelas {{ $trialExam->questionBank->grade_level }} · {{ $trialExam->attempts_count }} sudah memulai</p>
                     <a href="{{ route('tryouts.participants', $trialExam) }}" class="mt-4 inline-flex rounded-lg border border-violet-400/30 px-3 py-2 text-xs font-semibold text-violet-300">Lihat seluruh peserta & pelanggaran</a>
                     @if (in_array(auth()->user()->role->value, ['super_admin', 'committee', 'principal'], true))
-                        <a href="{{ route('exam-flyers.trial', $trialExam) }}" target="_blank" rel="noopener" class="mt-4 inline-flex rounded-lg border border-emerald-400/30 px-3 py-2 text-xs font-semibold text-emerald-300">Cetak flyer uji coba</a>
+                        <a href="{{ route('exam-flyers.trial', $trialExam) }}" target="_blank" rel="noopener" class="mt-4 inline-flex rounded-lg border border-emerald-400/30 px-3 py-2 text-xs font-semibold text-emerald-300">Cetak flyer simulasi</a>
                     @endif
                 </article>
             @empty

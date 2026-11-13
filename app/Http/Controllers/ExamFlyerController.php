@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AssessmentType;
+use App\Enums\Semester;
 use App\Models\AssessmentPeriod;
-use App\Models\SchoolProfile;
 use App\Models\TrialExam;
+use App\Services\Exams\ExamResetAllowance;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
@@ -16,7 +18,7 @@ class ExamFlyerController extends Controller
         $period = AssessmentPeriod::with('academicYear')->findOrFail($validated['assessment_period_id']);
 
         return $this->render([
-            'kind' => 'UJIAN INTI', 'period' => $period, 'headline' => $period->name,
+            'kind' => $this->assessmentTitle($period), 'period' => $period, 'headline' => $period->name,
             'subtitle' => 'UJIAN BERBASIS KOMPUTER', 'entryUrl' => route('login'), 'code' => null,
             'details' => [
                 ['Pelaksanaan', $period->starts_on->translatedFormat('d F Y').' – '.$period->ends_on->translatedFormat('d F Y')],
@@ -39,15 +41,39 @@ class ExamFlyerController extends Controller
         }
 
         return $this->render([
-            'kind' => 'UJIAN UJI COBA', 'period' => $period, 'headline' => $trialExam->title,
+            'kind' => 'Simulasi '.$this->assessmentTitle($period), 'period' => $period, 'headline' => $trialExam->title,
             'subtitle' => 'Kenali sistemnya, siapkan dirimu.', 'entryUrl' => route('tryout.entry', $trialExam),
             'code' => $trialExam->access_code, 'details' => $details,
         ]);
     }
 
+    public function warnings(Request $request): Response
+    {
+        $validated = $request->validate(['assessment_period_id' => ['required', 'integer', 'exists:assessment_periods,id']]);
+        $period = AssessmentPeriod::with('academicYear')->findOrFail($validated['assessment_period_id']);
+
+        return $this->render([
+            'kind' => 'Peringatan & Tata Tertib Ujian', 'period' => $period,
+            'headline' => $this->assessmentTitle($period), 'subtitle' => 'Berlaku untuk asesmen dan simulasi.',
+            'warning' => true, 'resetLimit' => ExamResetAllowance::LIMIT,
+        ]);
+    }
+
+    private function assessmentTitle(AssessmentPeriod $period): string
+    {
+        $semester = $period->semester === Semester::Odd ? 'Ganjil' : 'Genap';
+
+        return match ($period->type) {
+            AssessmentType::AAS => 'Asesmen Akhir Semester '.$semester,
+            AssessmentType::ATS => 'Asesmen Tengah Semester '.$semester,
+            AssessmentType::AAT => 'Asesmen Akhir Tahun',
+            default => $period->name,
+        };
+    }
+
     private function render(array $data): Response
     {
-        return response()->view('flyers.exam', [...$data, 'school' => SchoolProfile::first()])
+        return response()->view('flyers.exam', [...$data, 'schoolName' => 'SMK ISLAM BAHAGIA'])
             ->header('Cache-Control', 'no-store, private')->header('X-Robots-Tag', 'noindex, nofollow');
     }
 }

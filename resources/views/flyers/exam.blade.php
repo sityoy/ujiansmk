@@ -16,7 +16,14 @@
         .school { font-size: 21px; font-weight: 800; line-height: 1.25; overflow-wrap: anywhere; }
         .foundation { margin-top: 8px; color: #43795b; font-size: 11px; letter-spacing: 2px; font-weight: bold; }
         .eyebrow { margin: 28px 0 9px; color: #126348; font-size: 12px; font-weight: bold; letter-spacing: 2px; }
-        h1 { margin: 0; font-size: 54px; line-height: 1.03; letter-spacing: -1px; }
+        h1 { margin: 0; font-size: 48px; line-height: 1.08; letter-spacing: -1px; text-transform: uppercase; }
+        .warning-page h1 { font-size: 35px; line-height: 1.15; }
+        .warning-list { display: grid; gap: 12px; margin: 20px 0; }
+        .warning-rule { display: flex; align-items: flex-start; gap: 12px; padding: 12px; border: 1px solid #d9dfcf; border-radius: 12px; background: #f0f5e9; font-size: 14px; line-height: 1.45; }
+        .warning-rule p { margin: 0; }
+        .warning-note { padding: 15px 18px; border-radius: 12px; background: #10233c; color: white; font-size: 14px; line-height: 1.5; }
+        .warning-note p { margin: 0; }
+        .warning-note p + p { margin-top: 9px; }
         .year { display: inline-block; margin: 17px 0 0; padding: 11px 19px; border-radius: 24px; background: #126348; color: white; font-size: 17px; font-weight: bold; }
         .subtitle { margin: 15px 0 20px; color: #436151; font-size: 16px; font-weight: bold; }
         h2 { margin: 0 0 15px; font-size: 21px; line-height: 1.25; overflow-wrap: anywhere; }
@@ -38,15 +45,35 @@
 </head>
 <body>
     <div class="toolbar"><span>Flyer {{ $kind }} · {{ $period->academicYear->name }}</span><button type="button" onclick="window.print()">Cetak / Simpan PDF</button></div>
-    <main class="flyer">
+    <main class="flyer {{ !empty($warning) ? 'warning-page' : '' }}">
         <header class="brand">
             <img class="logo" src="{{ asset('images/logo-ypmi-bahagia.jpeg') }}" alt="Logo YPMI Bahagia" width="94" height="94">
-            <div><div class="school">{{ $school?->name ?? config('app.name') }}</div><div class="foundation">YPMI BAHAGIA</div></div>
+            <div class="school">{{ $schoolName }}</div>
         </header>
         <p class="eyebrow">INFORMASI PESERTA</p>
         <h1>{{ $kind }}</h1>
         <div class="year">TAHUN AJARAN {{ $period->academicYear->name }}</div>
         <p class="subtitle">{{ $subtitle }}</p>
+        @if (!empty($warning))
+            <h2>{{ $headline }}</h2>
+            <section class="warning-list">
+                @foreach ([
+                    'Siapkan kartu peserta dan perangkat.',
+                    'Aktifkan Jangan Ganggu dan tutup aplikasi mengambang sebelum masuk.',
+                    'Jangan berpindah aplikasi/tab atau keluar layar penuh.',
+                    'Jangan memakai split screen, menyalin, atau bekerja sama.',
+                    'Pelanggaran pertama: peringatan. Kedua: ujian terkunci.',
+                    'Jika terkendala, segera hubungi pengawas.',
+                ] as $rule)
+                    <div class="warning-rule"><span class="number">{{ $loop->iteration }}</span><p>{{ $rule }}</p></div>
+                @endforeach
+            </section>
+            <section class="warning-note">
+                <p><strong>Waktu ujian tetap berjalan saat terkunci.</strong></p>
+                <p>Reset hanya oleh petugas berwenang, maksimal {{ $resetLimit }} kali per peserta pada ujian yang sama. Jatah ini berlaku bersama untuk seluruh petugas, termasuk izin lanjut dan mengulang ujian.</p>
+            </section>
+            <footer class="footer">Jujur · Tertib · Bertanggung Jawab</footer>
+        @else
         <section class="details">
             <h2>{{ $headline }}</h2>
             <div class="detail"><p class="label">Periode ujian</p><p class="value">{{ $period->name }}</p></div>
@@ -62,6 +89,7 @@
             <div class="step"><span class="number">3</span><span>Ikuti jadwal dan arahan panitia. Kerjakan dengan jujur dan tertib.</span></div>
         </section>
         <footer class="footer">{{ $code !== null ? 'Berlatih · Mengenal Sistem · Lebih Siap' : 'Jujur · Tertib · Percaya Diri' }}</footer>
+        @endif
     </main>
 </body>
 </html>

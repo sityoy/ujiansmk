@@ -262,6 +262,7 @@ Route::middleware(['auth', 'active'])->group(function (): void {
 
     Route::middleware('role:super_admin,committee,principal')->group(function (): void {
         Route::get('/exam-flyers/core', [ExamFlyerController::class, 'core'])->name('exam-flyers.core');
+        Route::get('/exam-flyers/warnings', [ExamFlyerController::class, 'warnings'])->name('exam-flyers.warnings');
         Route::get('/exam-flyers/trials/{trialExam}', [ExamFlyerController::class, 'trial'])->name('exam-flyers.trial');
     });
 
