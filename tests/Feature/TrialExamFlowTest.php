@@ -439,10 +439,10 @@ class TrialExamFlowTest extends TestCase
 
     public function test_picker_lists_actual_school_subjects_and_filters_by_grade_and_subject(): void
     {
-        Subject::create(['code' => 'PAJAK', 'name' => 'Administrasi Pajak', 'is_active' => true]);
+        Subject::create(['code' => 'KOM-BIS', 'name' => 'Komunikasi Bisnis', 'is_active' => true]);
         $admin = User::factory()->create(['role' => UserRole::Committee, 'must_change_password' => false, 'is_active' => true]);
         $this->actingAs($admin)->get(route('trial-question-banks.index', ['pack_grade_level' => 11]))
-            ->assertOk()->assertSee('Try Out Administrasi Pajak 11')->assertSee('Soal belum tersedia')
+            ->assertOk()->assertSee('Try Out Komunikasi Bisnis 11')->assertSee('Soal belum tersedia')
             ->assertSee('Try Out Bahasa Inggris 11')->assertDontSee('Try Out Bahasa Inggris 12')
             ->assertDontSee('Menampilkan seluruh paket sekaligus');
         $this->get(route('trial-question-banks.index', ['pack_grade_level' => 12, 'pack_search' => 'Matematika']))
