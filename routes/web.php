@@ -197,6 +197,8 @@ Route::middleware(['auth', 'active'])->group(function (): void {
         ->group(function (): void {
             Route::get('/', [TrialQuestionBankController::class, 'index'])->name('index');
             Route::post('/', [TrialQuestionBankController::class, 'store'])->name('store');
+            Route::post('/import-pack', [TrialQuestionBankController::class, 'importPack'])->name('import-pack');
+            Route::patch('/{trialQuestionBank}/restore', [TrialQuestionBankController::class, 'restore'])->name('restore');
             Route::get('/{trialQuestionBank}/questions/export', [TrialQuestionBankController::class, 'export'])->name('questions.export');
             Route::get('/{trialQuestionBank}/questions', [TrialQuestionBankController::class, 'questions'])->name('questions.index');
             Route::post('/{trialQuestionBank}/questions', [TrialQuestionBankController::class, 'storeQuestion'])->name('questions.store');

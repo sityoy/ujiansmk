@@ -125,3 +125,28 @@ Setelah memperbarui kode, jalankan `php artisan migrate --force`, `php artisan o
 Fondasi domain, autentikasi berbasis peran, data akademik, penjadwalan, sesi susulan, absensi, bank soal pilihan ganda/isian/esai, koreksi manual, pengerjaan ujian siswa, monitoring keamanan, dan rapor ATS tersedia. Pengembangan lanjutan dapat mencakup paket soal acak, pengenalan wajah biometrik dengan persetujuan dan kebijakan privasi, serta importer terkontrol untuk data aplikasi lama.
 
 Endpoint pemeriksaan aplikasi tersedia di `GET /health`.
+
+## Paket latihan uji coba per tingkat
+
+Di **Bank Soal Uji Coba**, tombol **Tambahkan paket latihan** mengimpor sembilan bank dengan total 100 soal PG A–E dan kunci:
+
+| Mapel | Tingkat | Jumlah per tingkat |
+| --- | --- | --- |
+| Matematika | XII | 20 (6 mudah, 8 sedang, 6 sulit) |
+| Sejarah | X, XI | 10 |
+| Bahasa Indonesia | X, XI, XII | 10 |
+| Bahasa Inggris | X, XI, XII | 10 |
+
+Konten asli, kunci, dan pembahasan disimpan dalam `database/data/trial-question-pack.json`. Bank lama tidak ditimpa. Impor ulang melewati bank yang terisi, dihapus, atau sudah mempunyai peserta; tidak membuat duplikat paket. Pembahasan dalam berkas sumber merupakan bahan tinjauan guru dan tidak dikirim ke halaman peserta. Kunci dan soal dapat diekspor melalui tombol ekspor bank yang sudah tersedia.
+
+Sesudah deployment/migrasi, paket juga dapat dimasukkan dari terminal:
+
+```bash
+php artisan trial-questions:sample --all --archive-history-12
+```
+
+Opsi `--archive-history-12` hanya memindahkan bank tingkat XII dengan mapel bernama Sejarah atau Sejarah Indonesia ke **Dihapus / pulihkan**, lalu menonaktifkan tautan uji cobanya. Soal, jawaban, nilai, dan riwayat pelanggaran tetap tersimpan. Bank dengan peserta berstatus sedang mengerjakan tidak dihapus; perintah memberi peringatan dan keluar dengan status gagal agar panitia dapat menyelesaikan ujian sebelum mengulang. Tanpa opsi ini, bank Sejarah XII tetap tersedia. Untuk impor per tingkat gunakan `--grade=10`, `--grade=11`, atau `--grade=12`; paket XII tidak memuat Sejarah.
+
+Tombol **Hapus** pada setiap bank memakai mekanisme yang sama, termasuk bank yang terhubung ke ujian. **Pulihkan** mengembalikan bank, sementara tautan ujian tetap nonaktif sampai diaktifkan lagi oleh pengelola. Paket ini hanya masuk ke bank uji coba dan tidak otomatis membuka sesi ujian.
+
+Acuan cakupan materi untuk tinjauan guru (soal ditulis ulang, bukan salinan): [Sejarah X: penelitian sejarah](https://repositori.kemendikdasmen.go.id/21720/), [Sejarah XI: Sumpah Pemuda](https://repositori.kemendikdasmen.go.id/21997/), [Matematika XII: statistika](https://repositori.kemendikdasmen.go.id/20973/), dan [Matematika XII: peluang](https://repositori.kemendikdasmen.go.id/21935/). Guru tetap dapat menyesuaikan cakupan dengan materi yang sudah diajarkan sebelum ujian dimulai.

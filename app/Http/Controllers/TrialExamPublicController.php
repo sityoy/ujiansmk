@@ -6,6 +6,7 @@ use App\Models\Student;
 use App\Models\TrialAttempt;
 use App\Models\TrialExam;
 use App\Models\TrialQuestion;
+use App\Models\TrialQuestionBank;
 use App\Services\Exams\TrialExamAttemptService;
 use App\Services\Exams\TrialExamSecurityService;
 use Illuminate\Http\JsonResponse;
@@ -81,6 +82,11 @@ class TrialExamPublicController extends Controller
 
     private function startForStudent(Request $request, TrialExam $trialExam, Student $student): RedirectResponse
     {
+        $bank = TrialQuestionBank::query()->lockForUpdate()->findOrFail($trialExam->trial_question_bank_id);
+        $trialExam->refresh()->setRelation('questionBank', $bank);
+        if (! $trialExam->isAvailable()) {
+            throw ValidationException::withMessages(['access_code' => 'Ujian uji coba belum dibuka atau sudah ditutup.']);
+        }
         // Serialize starts for this student, including simultaneous requests on another device.
         $student = Student::query()->lockForUpdate()->findOrFail($student->id);
         if (! $student->is_active || $student->schoolClass?->grade_level !== $trialExam->questionBank->grade_level) {

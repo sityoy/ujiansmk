@@ -9,6 +9,8 @@ use App\Models\TrialQuestion;
 use App\Models\TrialQuestionBank;
 use App\Services\Exams\ExamScoreCalculator;
 use App\Services\Exams\QuestionText;
+use App\Services\Exams\TrialQuestionBankArchive;
+use App\Services\Exams\TrialQuestionPack;
 use App\Services\Students\StudentSpreadsheetService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
@@ -31,12 +33,14 @@ class TrialQuestionBankController extends Controller
             ? $request->integer('grade_level')
             : null;
         $search = trim((string) $request->query('q'));
+        $archived = $request->boolean('archived');
         $teacherId = $request->user()->role === UserRole::Teacher ? $request->user()->id : null;
 
         return view('trial-question-banks.catalog', [
             'banks' => TrialQuestionBank::query()
                 ->with(['subject', 'teacher'])
                 ->withCount(['questions', 'trialExams'])
+                ->when($archived, fn ($query) => $query->whereNotNull('archived_at'), fn ($query) => $query->whereNull('archived_at'))
                 ->when($teacherId, fn ($query) => $query->where('teacher_user_id', $teacherId))
                 ->when($gradeLevel, fn ($query) => $query->where('grade_level', $gradeLevel))
                 ->when($search, fn ($query) => $query
@@ -56,6 +60,7 @@ class TrialQuestionBankController extends Controller
             'gradeLevels' => [10, 11, 12],
             'gradeLevel' => $gradeLevel,
             'search' => $search,
+            'archived' => $archived,
         ]);
     }
 
@@ -240,23 +245,38 @@ class TrialQuestionBankController extends Controller
         return back()->with('status', 'Soal dihapus dan nomor soal telah dirapikan.');
     }
 
-    public function destroy(Request $request, TrialQuestionBank $trialQuestionBank): RedirectResponse
+    public function importPack(Request $request, TrialQuestionPack $pack): RedirectResponse
+    {
+        $validated = $request->validate(['archive_history_12' => ['nullable', 'boolean']]);
+        $result = $pack->import();
+        $message = "{$result['created']} bank / {$result['questions']} soal ditambahkan. {$result['skipped']} bank yang sudah terisi atau dihapus dilewati.";
+        if ($validated['archive_history_12'] ?? false) {
+            $history = $pack->archiveHistoryGrade12();
+            $message .= " {$history['archived']} bank Sejarah XII dihapus dari daftar aktif.";
+            if ($history['blocked']) {
+                return back()->with('status', $message)->withErrors([
+                    'bank' => "{$history['blocked']} bank Sejarah XII belum dihapus karena peserta masih mengerjakan ujian.",
+                ]);
+            }
+        }
+
+        return redirect()->route('trial-question-banks.index')->with('status', $message);
+    }
+
+    public function destroy(Request $request, TrialQuestionBank $trialQuestionBank, TrialQuestionBankArchive $archive): RedirectResponse
     {
         $this->authorizeBank($request, $trialQuestionBank);
-        if ($trialQuestionBank->trialExams()->exists()) {
-            return back()->withErrors(['bank' => 'Bank soal sudah dipakai ujian uji coba dan tidak dapat dihapus.']);
-        }
+        $archive->archive($trialQuestionBank);
 
-        $questions = $trialQuestionBank->questions()->get();
-        $paths = $questions->pluck('question_image_path')->filter();
-        $optionPaths = $questions->flatMap(fn (TrialQuestion $question) => $question->option_file_paths ?? [])->filter();
-        $trialQuestionBank->delete();
-        foreach ($paths as $path) {
-            Storage::disk('public')->delete($path);
-        }
-        $this->deleteUnusedOptionFiles($optionPaths->all());
+        return back()->with('status', 'Bank dihapus dari daftar aktif dan tautan uji cobanya dinonaktifkan. Soal serta riwayat peserta tersimpan di bagian Dihapus.');
+    }
 
-        return back()->with('status', 'Bank soal uji coba berhasil dihapus.');
+    public function restore(Request $request, TrialQuestionBank $trialQuestionBank, TrialQuestionBankArchive $archive): RedirectResponse
+    {
+        $this->authorizeBank($request, $trialQuestionBank);
+        $archive->restore($trialQuestionBank);
+
+        return back()->with('status', 'Bank soal dipulihkan. Aktifkan kembali ujian uji coba secara manual jika diperlukan.');
     }
 
     private function validateQuestion(Request $request): array
@@ -338,7 +358,7 @@ class TrialQuestionBankController extends Controller
 
     private function isLocked(TrialQuestionBank $bank): bool
     {
-        return $bank->trialExams()->whereHas('attempts')->exists();
+        return $bank->archived_at !== null || $bank->trialExams()->whereHas('attempts')->exists();
     }
 
     private function assertEditable(TrialQuestionBank $bank): void
@@ -346,7 +366,7 @@ class TrialQuestionBankController extends Controller
         $bank = TrialQuestionBank::query()->lockForUpdate()->findOrFail($bank->id);
         if ($this->isLocked($bank)) {
             throw ValidationException::withMessages([
-                'question' => 'Bank soal uji coba terkunci karena sudah ada peserta yang mulai ujian.',
+                'question' => 'Bank soal terkunci karena sudah dihapus dari daftar aktif atau sudah memiliki peserta ujian.',
             ]);
         }
     }

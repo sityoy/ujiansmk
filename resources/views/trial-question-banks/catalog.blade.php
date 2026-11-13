@@ -15,6 +15,19 @@
         <p class="mt-2 max-w-4xl text-sm leading-6 text-slate-400">Soal di sini hanya digunakan oleh Ujian Uji Coba. Setiap bank berlaku untuk satu mapel dan satu tingkat: Kelas 10, 11, atau 12, tanpa dibedakan berdasarkan rombel.</p>
     </section>
 
+    <form method="POST" action="{{ route('trial-question-banks.import-pack') }}" class="mt-6 space-y-3 rounded-3xl border border-emerald-400/20 bg-emerald-400/[0.04] p-5" onsubmit="return confirm('Tambahkan paket latihan? Jika dicentang, bank Sejarah XII dipindahkan ke Dihapus dan tautan uji cobanya ditutup. Riwayat peserta tetap disimpan.')">
+        @csrf
+        <h2 class="text-lg font-semibold text-white">Paket latihan 100 soal + kunci A–E</h2>
+        <p class="text-sm leading-6 text-slate-400">Matematika XII: 20 soal dari mudah ke sulit. Sejarah X–XI: masing-masing 10 soal. Bahasa Indonesia dan Bahasa Inggris X–XII: masing-masing 10 soal. Soal yang sudah terisi tidak ditimpa.</p>
+        <label class="flex items-start gap-3 text-sm text-slate-300"><input type="checkbox" name="archive_history_12" value="1" checked class="mt-1 size-4 shrink-0">Hapus semua bank Sejarah/Sejarah Indonesia kelas XII dari daftar aktif. Soal dan riwayat disimpan; bank dengan peserta yang sedang ujian akan dilewati.</label>
+        <button class="rounded-xl bg-emerald-400 px-4 py-2.5 text-sm font-semibold text-slate-950">Tambahkan paket latihan</button>
+    </form>
+
+    <nav class="mt-6 flex gap-3 text-sm" aria-label="Status bank soal">
+        <a href="{{ route('trial-question-banks.index') }}" class="rounded-xl border border-white/10 px-4 py-2 {{ ! $archived ? 'text-cyan-300' : 'text-slate-400' }}">Bank aktif</a>
+        <a href="{{ route('trial-question-banks.index', ['archived' => 1]) }}" class="rounded-xl border border-white/10 px-4 py-2 {{ $archived ? 'text-cyan-300' : 'text-slate-400' }}">Dihapus / pulihkan</a>
+    </nav>
+
     <div class="mt-6 grid gap-6 xl:grid-cols-[360px_1fr]">
         <form method="POST" action="{{ route('trial-question-banks.store') }}" class="space-y-4 rounded-3xl border border-white/10 bg-white/[0.035] p-6">
             @csrf
@@ -39,6 +52,7 @@
 
         <div>
             <form method="GET" class="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.025] p-4 md:grid-cols-[180px_1fr_auto_auto]">
+                @if ($archived)<input type="hidden" name="archived" value="1">@endif
                 <select name="grade_level" class="rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
                     <option value="">Semua tingkat</option>
                     @foreach ($gradeLevels as $level)<option value="{{ $level }}" @selected($gradeLevel === $level)>Kelas {{ $level }}</option>@endforeach
@@ -56,13 +70,15 @@
                         <p class="mt-2 text-xs text-slate-500">{{ $bank->trial_exams_count }} ujian uji coba{{ $bank->teacher ? ' · Guru: '.$bank->teacher->name : '' }}</p>
                         <div class="mt-5 flex gap-2">
                             <a href="{{ route('trial-question-banks.questions.index', $bank) }}" class="flex-1 rounded-xl bg-cyan-400 px-4 py-2.5 text-center text-sm font-semibold text-slate-950">Kelola soal</a>
-                            @if ($bank->trial_exams_count === 0)
-                                <form method="POST" action="{{ route('trial-question-banks.destroy', $bank) }}" onsubmit="return confirm('Hapus bank soal uji coba ini?')">@csrf @method('DELETE')<button class="rounded-xl border border-rose-400/20 px-3 py-2.5 text-sm text-rose-300">Hapus</button></form>
+                            @if ($bank->archived_at)
+                                <form method="POST" action="{{ route('trial-question-banks.restore', $bank) }}">@csrf @method('PATCH')<button class="rounded-xl border border-emerald-400/20 px-3 py-2.5 text-sm text-emerald-300">Pulihkan</button></form>
+                            @else
+                                <form method="POST" action="{{ route('trial-question-banks.destroy', $bank) }}" onsubmit="return confirm('Hapus bank dari daftar aktif dan nonaktifkan tautan uji cobanya? Soal serta riwayat peserta tetap disimpan dan bank dapat dipulihkan.')">@csrf @method('DELETE')<button class="rounded-xl border border-rose-400/20 px-3 py-2.5 text-sm text-rose-300">Hapus</button></form>
                             @endif
                         </div>
                     </article>
                 @empty
-                    <div class="rounded-3xl border border-dashed border-white/10 p-10 text-center text-sm text-slate-500 md:col-span-2">Belum ada bank soal uji coba.</div>
+                    <div class="rounded-3xl border border-dashed border-white/10 p-10 text-center text-sm text-slate-500 md:col-span-2">{{ $archived ? 'Belum ada bank soal yang dihapus.' : 'Belum ada bank soal uji coba.' }}</div>
                 @endforelse
             </div>
             @if ($banks->hasPages())<div class="mt-5 rounded-2xl border border-white/10 p-4">{{ $banks->links() }}</div>@endif

@@ -367,6 +367,65 @@ class TrialExamFlowTest extends TestCase
         $this->assertSame($deadline, app(TrialExamAttemptService::class)->deadline($attempt->fresh())->toIso8601String());
     }
 
+    public function test_committee_can_delete_linked_bank_reversibly_without_losing_responses(): void
+    {
+        [$trial, $question] = $this->makeTrial();
+        $attempt = TrialAttempt::create([
+            'trial_exam_id' => $trial->id, 'participant_name' => 'Peserta lama',
+            'participant_identifier' => 'old-1', 'session_token_hash' => hash('sha256', 'old-token'),
+            'status' => 'submitted', 'started_at' => now()->subHour(), 'submitted_at' => now(),
+            'total_questions' => 1,
+        ]);
+        $attempt->answers()->create(['trial_question_id' => $question->id, 'answer' => 'A', 'is_correct' => true, 'points_awarded' => 2]);
+        $admin = User::factory()->create(['role' => UserRole::Committee, 'must_change_password' => false, 'is_active' => true]);
+        $this->actingAs($admin)->get(route('trial-question-banks.index'))->assertOk()->assertSee('Hapus');
+        $this->delete(route('trial-question-banks.destroy', $trial->questionBank))->assertSessionHasNoErrors();
+        $this->assertNotNull($trial->questionBank->fresh()->archived_at);
+        $this->assertFalse($trial->fresh()->is_active);
+        $this->assertDatabaseHas('trial_responses', ['trial_attempt_id' => $attempt->id, 'trial_question_id' => $question->id]);
+        $this->assertDatabaseHas('trial_questions', ['id' => $question->id]);
+        $this->get(route('trial-question-banks.index'))->assertDontSee('Latihan Sejarah Kelas 10');
+        $this->get(route('trial-question-banks.index', ['archived' => 1]))->assertOk()->assertSee('Latihan Sejarah Kelas 10')->assertSee('Pulihkan');
+        $this->get(route('tryouts.cards.all'))->assertOk()->assertViewHas('trialExams', fn ($exams) => $exams->isEmpty());
+        $this->get(route('tryout.entry', $trial))->assertOk()->assertViewHas('available', false);
+        $this->patch(route('tryouts.toggle', $trial))->assertSessionHasErrors('bank');
+        $this->post(route('tryout.start', $trial), ['participant_identifier' => '1234567890', 'access_code' => 'SJR-SMKBHG'])->assertSessionHasErrors('access_code');
+        $this->get(route('tryouts.participants', $trial))->assertOk();
+        $this->patch(route('trial-question-banks.restore', $trial->questionBank))->assertSessionHasNoErrors();
+        $this->assertNull($trial->questionBank->fresh()->archived_at);
+        $this->assertFalse($trial->fresh()->is_active);
+        $this->patch(route('tryouts.toggle', $trial))->assertSessionHasNoErrors();
+        $this->assertTrue($trial->fresh()->isAvailable());
+    }
+
+    public function test_bank_with_student_in_progress_cannot_be_deleted(): void
+    {
+        [$trial] = $this->makeTrial();
+        $this->post(route('tryout.start', $trial), ['participant_identifier' => '1234567890', 'access_code' => 'SJR-SMKBHG'])->assertRedirect();
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin, 'must_change_password' => false, 'is_active' => true]);
+        $this->actingAs($admin)->delete(route('trial-question-banks.destroy', $trial->questionBank))->assertSessionHasErrors('bank');
+        $this->assertNull($trial->questionBank->fresh()->archived_at);
+        $this->assertTrue($trial->fresh()->is_active);
+        $this->assertDatabaseCount('trial_questions', 1);
+    }
+
+    public function test_pack_import_is_admin_only_and_can_archive_history_12(): void
+    {
+        [$trial] = $this->makeTrial();
+        $trial->questionBank->update(['grade_level' => 12]);
+        $teacher = User::factory()->create(['role' => UserRole::Teacher, 'must_change_password' => false, 'is_active' => true]);
+        $this->actingAs($teacher)->post(route('trial-question-banks.import-pack'))->assertForbidden();
+        $this->delete(route('trial-question-banks.destroy', $trial->questionBank))->assertForbidden();
+        $this->patch(route('trial-question-banks.restore', $trial->questionBank))->assertForbidden();
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin, 'must_change_password' => false, 'is_active' => true]);
+        $this->actingAs($admin)->post(route('trial-question-banks.import-pack'), ['archive_history_12' => 1])->assertRedirect(route('trial-question-banks.index'))->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('trial_questions', 101);
+        $this->assertNotNull($trial->questionBank->fresh()->archived_at);
+        $this->assertFalse($trial->fresh()->is_active);
+        $this->post(route('trial-question-banks.import-pack'))->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('trial_questions', 101);
+    }
+
     private function makeTrial(): array
     {
         $year = AcademicYear::create([

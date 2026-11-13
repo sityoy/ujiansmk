@@ -43,6 +43,7 @@ class TrialExam extends Model
     public function isAvailable(): bool
     {
         return $this->is_active
+            && $this->questionBank !== null && $this->questionBank->archived_at === null
             && (! $this->starts_at || now()->greaterThanOrEqualTo($this->starts_at))
             && (! $this->ends_at || now()->lessThanOrEqualTo($this->ends_at));
     }

@@ -12,7 +12,7 @@ class TrialQuestionBank extends Model
 {
     protected function casts(): array
     {
-        return ['grade_level' => 'integer'];
+        return ['grade_level' => 'integer', 'archived_at' => 'datetime'];
     }
 
     public function subject(): BelongsTo

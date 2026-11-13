@@ -14,7 +14,7 @@
         <p class="mt-2 text-sm text-slate-400">{{ $questionCount }} soal · Tidak tercampur dengan bank Ujian Inti</p>
         <p class="mt-2 text-xs text-cyan-200">Setiap jawaban PG benar bernilai tetap 2 poin. Nilai PG maksimal 100.</p>
         <div class="mt-4"><a href="{{ route('trial-question-banks.questions.export', $bank) }}" class="inline-flex rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-2.5 text-sm font-semibold text-emerald-200">Ekspor PG ke Excel</a></div>
-        @if ($isLocked)<p class="mt-3 text-sm text-amber-300">Bank terkunci karena sudah ada peserta yang memulai uji coba.</p>@endif
+        @if ($isLocked)<p class="mt-3 text-sm text-amber-300">{{ $bank->archived_at ? 'Bank sudah dihapus dari daftar aktif. Pulihkan sebelum mengelola soal.' : 'Bank terkunci karena sudah ada peserta yang memulai uji coba.' }}</p>@endif
     </section>
 
     <div class="mt-6 grid gap-6 xl:grid-cols-[420px_1fr]">

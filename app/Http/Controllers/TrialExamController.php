@@ -30,7 +30,7 @@ class TrialExamController extends Controller
                 ->withCount('attempts')
                 ->latest()
                 ->paginate(10),
-            'banks' => TrialQuestionBank::query()
+            'banks' => TrialQuestionBank::query()->whereNull('archived_at')
                 ->with('subject')
                 ->withCount('questions')
                 ->whereHas('questions')
@@ -193,6 +193,7 @@ class TrialExamController extends Controller
     public function cards(TrialExam $trialExam): View
     {
         $trialExam->load('questionBank.subject');
+        abort_if($trialExam->questionBank->archived_at !== null, 404);
         $students = Student::query()
             ->with('schoolClass.academicYear')
             ->where('is_active', true)
@@ -219,6 +220,7 @@ class TrialExamController extends Controller
     public function allCards(): View
     {
         $trialExams = TrialExam::query()
+            ->whereHas('questionBank', fn ($query) => $query->whereNull('archived_at'))
             ->with('questionBank.subject')
             ->get()
             ->sortBy(fn (TrialExam $trialExam): string => sprintf(
@@ -280,6 +282,7 @@ class TrialExamController extends Controller
             $bank = TrialQuestionBank::query()
                 ->lockForUpdate()
                 ->whereKey($validated['trial_question_bank_id'])
+                ->whereNull('archived_at')
                 ->whereHas('questions')
                 ->firstOrFail();
 
@@ -352,7 +355,13 @@ class TrialExamController extends Controller
 
     public function toggle(TrialExam $trialExam): RedirectResponse
     {
-        $trialExam->update(['is_active' => ! $trialExam->is_active]);
+        DB::transaction(function () use ($trialExam): void {
+            $bank = TrialQuestionBank::query()->lockForUpdate()->findOrFail($trialExam->trial_question_bank_id);
+            if ($bank->archived_at) {
+                throw ValidationException::withMessages(['bank' => 'Pulihkan bank soal dari bagian Dihapus sebelum mengaktifkan ujian.']);
+            }
+            $trialExam->refresh()->update(['is_active' => ! $trialExam->is_active]);
+        });
 
         return back()->with('status', $trialExam->is_active ? 'Ujian uji coba diaktifkan.' : 'Ujian uji coba dinonaktifkan.');
     }
