@@ -29,7 +29,7 @@
         <strong>Sekolah</strong><span>: {{ $school?->name ?? config('app.name') }}</span>
         <strong>Kelas</strong><span>: {{ $schoolClass->name }}</span>
         <strong>Tahun Ajaran</strong><span>: {{ $period->academicYear->name }}</span>
-        <strong>Jenis Asesmen</strong><span>: {{ strtoupper($period->type->value) }}</span>
+        <strong>Jenis Asesmen</strong><span>: {{ $period->type->label() }}</span>
     </div>
     <table>
         <thead><tr><th>No.</th><th>NIS/NISN</th><th>Nama Peserta Didik</th>

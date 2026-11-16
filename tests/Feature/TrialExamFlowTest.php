@@ -18,6 +18,7 @@ use App\Models\TrialQuestion;
 use App\Models\TrialQuestionBank;
 use App\Models\User;
 use App\Services\Exams\ExamSecurityService;
+use App\Services\Exams\StudentOptionOrder;
 use App\Services\Exams\TrialExamAttemptService;
 use App\Services\Exams\TrialExamSecurityService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -170,8 +171,6 @@ class TrialExamFlowTest extends TestCase
             $statement,
             $attachment,
             $questionText,
-            $optionA,
-            'Pilihan setelah A',
             'Soal posisi ketiga',
         ];
 
@@ -187,7 +186,68 @@ class TrialExamFlowTest extends TestCase
         $this->post(route('tryout.start', $trial), ['access_code' => 'SJR-SMKBHG'])
             ->assertRedirect($showRoute)
             ->assertSessionMissing('trial_question_order_'.$attempt->id);
-        $this->get($showRoute)->assertOk()->assertSeeInOrder($show);
+        $this->get($showRoute)->assertOk()->assertSeeInOrder($show)->assertSee($optionA)->assertSee('Pilihan setelah A');
+    }
+
+    public function test_asas_migration_renames_display_text_without_changing_period_links_or_access_codes(): void
+    {
+        [$trial] = $this->makeTrial();
+        $period = $trial->assessmentSubject->assessmentPeriod;
+        $period->update(['name' => 'AAS Ganjil — Asesmen Akhir Semester', 'type' => AssessmentType::ASAS]);
+        $trial->update(['title' => 'Simulasi AAS Ganjil']);
+        $trial->questionBank->update(['name' => 'Latihan AAS Sejarah']);
+        $migration = require database_path('migrations/2026_11_16_000100_rename_aas_display_names_to_asas.php');
+        $migration->up();
+        $migration->up();
+        $this->assertSame('ASAS Ganjil — Asesmen Sumatif Akhir Semester', $period->fresh()->name);
+        $this->assertSame('ASAS', $period->fresh()->type->label());
+        $this->assertSame('aas', $period->fresh()->getRawOriginal('type'));
+        $this->assertSame('Simulasi ASAS Ganjil', $trial->fresh()->title);
+        $this->assertSame('Latihan ASAS Sejarah', $trial->questionBank->fresh()->name);
+        $this->assertSame($trial->access_code, $trial->fresh()->access_code);
+        $this->assertSame($trial->slug, $trial->fresh()->slug);
+        $this->assertSame($period->code, $period->fresh()->code);
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $this->actingAs($admin)->get(route('scheduling.index'))->assertOk()->assertSee('ASAS')->assertDontSee('>AAS<', false);
+    }
+
+    public function test_trial_options_keep_order_attachments_checked_answer_and_correct_score(): void
+    {
+        [$trial] = $this->makeTrial();
+        $question = $trial->questionBank->questions()->firstOrFail();
+        $question->update(['option_file_paths' => ['A' => 'trial-options/benar.png', 'B' => 'trial-options/lain.pdf']]);
+        $student = Student::query()->where('nisn', '1234567890')->firstOrFail();
+        $this->actingAs($student->user)->post(route('tryout.start', $trial), ['access_code' => 'SJR-SMKBHG'])->assertRedirect();
+        $attempt = TrialAttempt::query()->firstOrFail();
+        $route = route('tryout.show', [$trial, $attempt]);
+        $expected = app(StudentOptionOrder::class)->forQuestion($attempt, $question)->keys()->all();
+        $getOptions = function (string $html) use ($question, $expected): array {
+            $dom = new \DOMDocument;
+            @$dom->loadHTML('<?xml encoding="UTF-8">'.$html);
+            $xpath = new \DOMXPath($dom);
+            $inputs = $xpath->query('//input[@name="answers['.$question->id.']"]');
+            $keys = [];
+            foreach ($inputs as $index => $input) {
+                $key = $input->getAttribute('value');
+                $keys[] = $key;
+                $this->assertSame(chr(65 + $index).'.', trim($xpath->query('.//strong', $input->parentNode)->item(0)->textContent));
+                $this->assertStringContainsString($question->options[$key], $input->parentNode->textContent);
+                if ($question->option_file_paths[$key] ?? null) {
+                    $this->assertStringContainsString($question->option_file_paths[$key], $dom->saveHTML($input->parentNode));
+                }
+            }
+            $this->assertSame($expected, $keys);
+
+            return [$xpath, $inputs];
+        };
+        $getOptions($this->get($route)->assertOk()->getContent());
+        $this->putJson(route('tryout.answer', [$trial, $attempt, $question]), ['answer' => 'A'])->assertOk();
+        [$xpath] = $getOptions($this->get($route)->assertOk()->getContent());
+        $this->assertSame('A', $xpath->query('//input[@name="answers['.$question->id.']"][@checked]')->item(0)->getAttribute('value'));
+        $this->post(route('tryout.submit', [$trial, $attempt]), ['answers' => [$question->id => 'A']])->assertRedirect();
+        $this->assertSame('2.00', $attempt->fresh()->score);
+        $this->assertSame(1, $attempt->refresh()->correct_answers);
+        $this->assertSame(['A', 'B', 'C', 'D', 'E'], array_keys($question->fresh()->options));
     }
 
     public function test_trial_formatting_is_saved_and_rendered_for_the_participant(): void
@@ -483,7 +543,7 @@ class TrialExamFlowTest extends TestCase
             'academic_year_id' => $year->id,
             'code' => 'AAS-UJI',
             'name' => 'AAS Uji Coba',
-            'type' => AssessmentType::AAS,
+            'type' => AssessmentType::ASAS,
             'semester' => Semester::Odd,
             'starts_on' => now()->subDay()->toDateString(),
             'ends_on' => now()->addDay()->toDateString(),

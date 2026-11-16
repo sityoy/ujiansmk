@@ -14,7 +14,25 @@
         </p>
     </section>
 
-    <form method="GET" action="{{ route('question-bank.index') }}" class="mt-6 grid gap-3 rounded-2xl border border-white/10 bg-white/[0.025] p-4 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_auto_auto]">
+    <nav class="mt-6 flex flex-wrap gap-2" aria-label="Tampilan bank soal inti">
+        @foreach (['banks' => 'Daftar Bank Soal', 'summary' => 'Rekap Pembuatan Soal'] as $view => $label)
+            <a href="{{ route('question-bank.index', array_merge(request()->except('page'), ['view' => $view])) }}"
+                @if ($catalogView === $view) aria-current="page" @endif
+                class="rounded-xl border border-white/10 px-4 py-3 text-sm {{ $catalogView === $view ? 'bg-violet-400 font-semibold text-slate-950' : 'text-slate-300' }}">{{ $label }}</a>
+        @endforeach
+    </nav>
+
+    <div class="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
+        @foreach (['banks' => 'Total bank soal', 'filled' => 'Sudah ada soal', 'empty' => 'Belum ada soal', 'questions' => 'Jumlah soal'] as $key => $label)
+            <div class="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+                <p class="text-xs text-slate-400">{{ $label }}</p><p class="mt-2 text-2xl font-semibold text-white">{{ $summary[$key] }}</p>
+            </div>
+        @endforeach
+    </div>
+    <p class="mt-3 text-xs leading-6 text-slate-400">Ringkasan mengikuti periode, tingkat, dan pencarian. Bank bersama antarrombel dihitung satu kali. Nama guru mengikuti penugasan di Penjadwalan.</p>
+
+    <form method="GET" action="{{ route('question-bank.index') }}" class="mt-6 grid gap-3 rounded-2xl border border-white/10 bg-white/[0.025] p-4 md:grid-cols-2 xl:grid-cols-3">
+        <input type="hidden" name="view" value="{{ $catalogView }}">
         <select name="period_id" class="rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2.5 text-sm">
             <option value="">Semua periode</option>
             @foreach ($periods as $period)
@@ -27,34 +45,70 @@
                 <option value="{{ $level }}" @selected($gradeLevel === $level)>Kelas {{ $level }}</option>
             @endforeach
         </select>
-        <input name="q" value="{{ $search }}" placeholder="Cari mapel atau kode"
+        <input name="q" value="{{ $search }}" placeholder="Cari mapel, kode, atau guru"
             class="rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2.5 text-sm outline-none focus:border-violet-400">
+        <select name="question_status" aria-label="Status pembuatan soal" class="rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2.5 text-sm">
+            <option value="">Semua status soal</option>
+            <option value="filled" @selected($questionStatus === 'filled')>Sudah ada soal</option>
+            <option value="empty" @selected($questionStatus === 'empty')>Belum ada soal</option>
+        </select>
         <button class="rounded-xl bg-violet-400 px-4 py-2.5 text-sm font-semibold text-slate-950">Tampilkan</button>
-        <a href="{{ route('question-bank.index') }}" class="rounded-xl border border-white/10 px-4 py-2.5 text-center text-sm text-slate-300">Reset</a>
+        <a href="{{ route('question-bank.index', ['view' => $catalogView]) }}" class="rounded-xl border border-white/10 px-4 py-2.5 text-center text-sm text-slate-300">Reset</a>
     </form>
 
-    <div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        @forelse ($components as $component)
-            <article class="flex flex-col rounded-3xl border border-white/10 bg-white/[0.035] p-5">
-                <div class="flex items-start justify-between gap-3">
-                    <span class="rounded-full bg-violet-400/10 px-3 py-1 text-xs font-medium text-violet-200">{{ strtoupper($component->assessmentPeriod->type->value) }}</span>
-                    <span class="text-xs text-slate-500">{{ $component->questions_count }} soal</span>
-                </div>
-                <h3 class="mt-4 text-lg font-semibold text-white">{{ $component->subject->name }}</h3>
-                <p class="mt-1 text-sm text-slate-400">Kelas {{ $component->grade_level }} · {{ $component->assessmentPeriod->name }}</p>
-                <p class="mt-1 text-xs text-slate-500">{{ $component->assessmentPeriod->academicYear->name }} · Total bobot {{ number_format((float) ($component->questions_sum_points ?? 0), 2, ',', '.') }}</p>
-                <p class="mt-2 text-xs text-slate-400">Rombel {{ $component->rombel_names }}</p>
-                @if (auth()->user()->role->value !== 'teacher')
-                    <p class="mt-3 text-xs text-slate-500">Guru: {{ $component->teacher?->name ?? 'belum ditetapkan' }}</p>
-                @endif
-                <a href="{{ route('scheduling.questions.index', $component) }}" class="mt-5 inline-flex justify-center rounded-xl bg-violet-400 px-4 py-2.5 text-sm font-semibold text-slate-950 xl:mt-auto">Kelola soal</a>
-            </article>
-        @empty
-            <div class="rounded-3xl border border-dashed border-white/10 p-12 text-center text-sm leading-6 text-slate-500 md:col-span-2 xl:col-span-3">
-                Belum ada mapel dan kelas yang ditugaskan untuk akun ini. Panitia atau Super Admin perlu memilih guru pengoreksi pada Penjadwalan terlebih dahulu.
+    @if ($catalogView === 'summary')
+        <section class="mt-6 rounded-3xl border border-white/10 bg-white/[0.035] p-4 sm:p-6">
+            <h2 class="text-lg font-semibold text-white">Rekap Pembuatan Soal</h2>
+            <p class="mt-2 text-xs leading-6 text-slate-400">Jumlah soal per mapel, tingkat, periode, dan guru penanggung jawab. Klik Lihat soal untuk membuka bank terkait.</p>
+            <div class="mt-4 overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead class="border-b border-white/10 text-xs text-slate-400"><tr>
+                        <th scope="col" class="px-3 py-3">Guru penanggung jawab</th><th scope="col" class="px-3 py-3">Mapel / Periode</th><th scope="col" class="px-3 py-3">Kelas / Rombel</th>
+                        <th scope="col" class="px-3 py-3 text-center">PG</th><th scope="col" class="px-3 py-3 text-center">Esai</th><th scope="col" class="px-3 py-3 text-center">Isian singkat</th>
+                        <th scope="col" class="px-3 py-3 text-center">Total soal</th><th scope="col" class="px-3 py-3">Status / Aksi</th>
+                    </tr></thead>
+                    <tbody class="divide-y divide-white/10">
+                        @forelse ($components as $component)
+                            <tr>
+                                <td class="px-3 py-4 text-slate-200">{{ $component->teacher?->name ?? 'Belum ditetapkan' }}</td>
+                                <td class="px-3 py-4"><p class="font-semibold text-white">{{ $component->subject->name }}</p><p class="mt-1 text-xs text-slate-400">{{ $component->assessmentPeriod->name }} · {{ $component->assessmentPeriod->academicYear->name }}</p></td>
+                                <td class="px-3 py-4 text-slate-300">Kelas {{ $component->grade_level }}<p class="mt-1 text-xs text-slate-400">{{ $component->rombel_names }}</p></td>
+                                <td class="px-3 py-4 text-center">{{ $component->pg_count }}</td><td class="px-3 py-4 text-center">{{ $component->essay_count }}</td><td class="px-3 py-4 text-center">{{ $component->short_answer_count }}</td>
+                                <td class="px-3 py-4 text-center font-semibold text-white">{{ $component->questions_count }}</td>
+                                <td class="px-3 py-4"><p class="text-xs {{ $component->questions_count > 0 ? 'text-emerald-300' : 'text-amber-300' }}">{{ $component->questions_count > 0 ? 'Sudah ada soal' : 'Belum ada soal' }}</p><a href="{{ route('scheduling.questions.index', $component) }}" class="mt-2 inline-block whitespace-nowrap text-xs font-semibold text-violet-300">Lihat soal →</a></td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="8" class="px-3 py-10 text-center text-slate-400">Tidak ada bank soal sesuai filter.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
-        @endforelse
-    </div>
+        </section>
+    @else
+        <div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            @forelse ($components as $component)
+                <article class="flex flex-col rounded-3xl border border-white/10 bg-white/[0.035] p-5">
+                    <div class="flex items-start justify-between gap-3">
+                        <span class="rounded-full bg-violet-400/10 px-3 py-1 text-xs font-medium text-violet-200">{{ $component->assessmentPeriod->type->label() }}</span>
+                        <span class="text-xs text-slate-500">{{ $component->questions_count }} soal</span>
+                    </div>
+                    <h3 class="mt-4 text-lg font-semibold text-white">{{ $component->subject->name }}</h3>
+                    <p class="mt-1 text-sm text-slate-400">Kelas {{ $component->grade_level }} · {{ $component->assessmentPeriod->name }}</p>
+                    <p class="mt-1 text-xs text-slate-500">{{ $component->assessmentPeriod->academicYear->name }} · Total bobot {{ number_format((float) ($component->questions_sum_points ?? 0), 2, ',', '.') }}</p>
+                    <p class="mt-2 text-xs text-slate-400">Rombel {{ $component->rombel_names }}</p>
+                    @if (auth()->user()->role->value !== 'teacher')
+                        <p class="mt-3 text-xs text-slate-500">Guru: {{ $component->teacher?->name ?? 'belum ditetapkan' }}</p>
+                    @endif
+                    <a href="{{ route('scheduling.questions.index', $component) }}" class="mt-5 inline-flex justify-center rounded-xl bg-violet-400 px-4 py-2.5 text-sm font-semibold text-slate-950 xl:mt-auto">Kelola soal</a>
+                </article>
+            @empty
+                <div class="rounded-3xl border border-dashed border-white/10 p-12 text-center text-sm leading-6 text-slate-500 md:col-span-2 xl:col-span-3">
+                    Belum ada mapel dan kelas yang ditugaskan untuk akun ini. Panitia atau Super Admin perlu memilih guru pengoreksi pada Penjadwalan terlebih dahulu.
+                </div>
+            @endforelse
+        </div>
+
+    @endif
 
     @if ($components->hasPages())
         <div class="mt-5 rounded-2xl border border-white/10 bg-white/[0.025] p-4">{{ $components->links() }}</div>

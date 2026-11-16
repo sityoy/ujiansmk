@@ -7,7 +7,7 @@
 @section('content')
     <section class="rounded-3xl border border-violet-400/20 bg-violet-400/[0.045] p-6">
         <h2 class="text-xl font-semibold text-white">Jawaban yang sudah dikumpulkan</h2>
-        <p class="mt-2 text-sm leading-6 text-slate-400">Menampilkan jawaban manual dari ATS, AAS, AAT, UUB, dan periode lainnya. Guru hanya melihat mapel/kelas yang ditugaskan kepadanya.</p>
+        <p class="mt-2 text-sm leading-6 text-slate-400">Menampilkan jawaban manual dari ATS, ASAS, AAT, UUB, dan periode lainnya. Guru hanya melihat mapel/kelas yang ditugaskan kepadanya.</p>
     </section>
     <form method="GET" class="mt-6 grid gap-3 rounded-2xl border border-white/10 bg-slate-950/40 p-4 md:grid-cols-2 xl:grid-cols-6">
         <select name="academic_year_id" class="rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
@@ -20,7 +20,7 @@
         </select>
         <select name="type" class="rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
             <option value="">Semua jenis</option>
-            @foreach ($assessmentTypes as $type)<option value="{{ $type->value }}" @selected(($filters['type'] ?? '') === $type->value)>{{ strtoupper($type->value) }}</option>@endforeach
+            @foreach ($assessmentTypes as $type)<option value="{{ $type->value }}" @selected(($filters['type'] ?? '') === $type->value)>{{ $type->label() }}</option>@endforeach
         </select>
         <select name="school_class_id" class="rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
             <option value="">Semua kelas</option>
@@ -42,7 +42,7 @@
                     @forelse ($attempts as $attempt)
                         <tr>
                             <td class="px-5 py-4"><p class="font-medium text-white">{{ $attempt->assignment->student->full_name }}</p><p class="mt-1 text-xs text-slate-500">NIS {{ $attempt->assignment->student->student_number }}</p></td>
-                            <td class="px-5 py-4 text-slate-400"><p>{{ $attempt->assignment->assessmentSubject->assessmentPeriod->name }}</p><p class="mt-1 text-xs text-slate-600">{{ strtoupper($attempt->assignment->assessmentSubject->assessmentPeriod->type->value) }} · {{ $attempt->assignment->assessmentSubject->assessmentPeriod->academicYear->name }}</p></td>
+                            <td class="px-5 py-4 text-slate-400"><p>{{ $attempt->assignment->assessmentSubject->assessmentPeriod->name }}</p><p class="mt-1 text-xs text-slate-600">{{ $attempt->assignment->assessmentSubject->assessmentPeriod->type->label() }} · {{ $attempt->assignment->assessmentSubject->assessmentPeriod->academicYear->name }}</p></td>
                             <td class="px-5 py-4 text-slate-300">{{ $attempt->assignment->assessmentSubject->subject->name }} · {{ $attempt->assignment->assessmentSubject->schoolClass->name }}</td>
                             <td class="px-5 py-4 text-slate-400">{{ $attempt->assignment->assessmentSubject->teacher?->name ?? 'Belum ditentukan' }}</td>
                             <td class="px-5 py-4"><span class="rounded-full px-2.5 py-1 text-xs {{ $attempt->grading_status->value === 'graded' ? 'bg-emerald-400/10 text-emerald-200' : 'bg-amber-400/10 text-amber-200' }}">{{ $attempt->grading_status->label() }}</span><p class="mt-2 text-xs text-slate-500">Nilai: {{ $attempt->score ?? '—' }}</p></td>

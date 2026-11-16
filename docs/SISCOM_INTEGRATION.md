@@ -25,7 +25,7 @@ Identitas sekolah diatur satu kali pada SIS.COM lalu disinkronkan ke instalasi S
 
 - tahun ajaran, kelas, siswa, guru, dan mata pelajaran
 - bank soal dan jawaban
-- jadwal ATS, AAS/AAT, UUB, reguler, dan susulan
+- jadwal ATS, ASAS/AAT, UUB, reguler, dan susulan
 - nilai, peringkat, rapor ATS, dan riwayat pengerjaan
 - selfie, kartu pelajar, lokasi, absensi, serta insiden keamanan
 

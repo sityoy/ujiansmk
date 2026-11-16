@@ -6,7 +6,7 @@
 
 @section('content')
     @php
-        $typeLabels = ['ats' => 'ATS', 'aas' => 'AAS', 'aat' => 'AAT', 'uub' => 'UUB', 'other' => 'Lainnya'];
+        $typeLabels = ['ats' => 'ATS', 'aas' => 'ASAS', 'aat' => 'AAT', 'uub' => 'UUB', 'other' => 'Lainnya'];
         $semesterLabels = ['odd' => 'Ganjil', 'even' => 'Genap'];
         $statusLabels = ['draft' => 'Draf', 'published' => 'Terbit', 'active' => 'Aktif', 'closed' => 'Selesai'];
     @endphp
@@ -30,7 +30,7 @@
 
         <section class="rounded-3xl border border-white/10 bg-white/[0.035] p-6">
             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-violet-300">02 · Periode</p>
-            <h2 class="mt-2 text-xl font-semibold text-white">ATS, AAS/AAT, atau UUB</h2>
+            <h2 class="mt-2 text-xl font-semibold text-white">ATS, ASAS/AAT, atau UUB</h2>
 
             <form method="POST" action="{{ route('scheduling.periods.store') }}" class="mt-6 grid gap-3 sm:grid-cols-2">
                 @csrf

@@ -64,7 +64,7 @@ class ExamFlyerController extends Controller
         $semester = $period->semester === Semester::Odd ? 'Ganjil' : 'Genap';
 
         return match ($period->type) {
-            AssessmentType::AAS => 'Asesmen Akhir Semester '.$semester,
+            AssessmentType::ASAS => 'Asesmen Sumatif Akhir Semester '.$semester,
             AssessmentType::ATS => 'Asesmen Tengah Semester '.$semester,
             AssessmentType::AAT => 'Asesmen Akhir Tahun',
             default => $period->name,

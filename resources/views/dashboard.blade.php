@@ -21,7 +21,7 @@
         @php
             $cards = [
                 ['label' => 'Siswa aktif', 'value' => $statistics['students'], 'accent' => 'text-cyan-300', 'note' => 'Peserta terdaftar'],
-                ['label' => 'Periode asesmen', 'value' => $statistics['assessmentPeriods'], 'accent' => 'text-violet-300', 'note' => 'ATS, AAS/AAT, UUB'],
+                ['label' => 'Periode asesmen', 'value' => $statistics['assessmentPeriods'], 'accent' => 'text-violet-300', 'note' => 'ATS, ASAS/AAT, UUB'],
                 ['label' => 'Sesi ujian', 'value' => $statistics['examSessions'], 'accent' => 'text-amber-300', 'note' => 'Reguler dan susulan'],
                 ['label' => 'Hadir hari ini', 'value' => $statistics['checkinsToday'], 'accent' => 'text-emerald-300', 'note' => 'Terverifikasi sistem'],
             ];
@@ -49,7 +49,7 @@
             <div class="mt-6 grid gap-3 md:grid-cols-2">
                 @foreach ([
                     ['01', 'Data akademik', 'Tahun ajaran, kelas, siswa, dan mata pelajaran.'],
-                    ['02', 'Periode asesmen', 'ATS, AAS/AAT, UUB ganjil maupun genap.'],
+                    ['02', 'Periode asesmen', 'ATS, ASAS/AAT, UUB ganjil maupun genap.'],
                     ['03', 'Sesi & susulan', 'Penempatan peserta tanpa membuat data ganda.'],
                     ['04', 'Rapor ATS', 'Nilai per mapel, rata-rata, dan peringkat kelas.'],
                 ] as [$number, $title, $description])

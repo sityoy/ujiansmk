@@ -212,7 +212,7 @@ class GroupedSchedulingTest extends TestCase
         ]);
         $period = AssessmentPeriod::create([
             'academic_year_id' => $year->id, 'code' => 'AAS-GROUP', 'name' => 'AAS Ganjil',
-            'type' => AssessmentType::AAS, 'semester' => Semester::Odd, 'status' => PeriodStatus::Published,
+            'type' => AssessmentType::ASAS, 'semester' => Semester::Odd, 'status' => PeriodStatus::Published,
             'starts_on' => '2026-11-01', 'ends_on' => '2026-11-30',
         ]);
         $subject = Subject::create(['code' => 'ADM', 'name' => 'Administrasi Pajak', 'is_active' => true]);

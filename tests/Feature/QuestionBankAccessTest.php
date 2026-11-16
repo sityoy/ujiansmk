@@ -92,7 +92,7 @@ class QuestionBankAccessTest extends TestCase
     {
         Storage::fake('public');
         [$teacher, , $assigned] = $this->makeComponents();
-        $assigned->assessmentPeriod()->update(['type' => AssessmentType::AAS]);
+        $assigned->assessmentPeriod()->update(['type' => AssessmentType::ASAS]);
 
         $this->actingAs($teacher)
             ->post(route('scheduling.questions.store', $assigned), [
@@ -132,7 +132,7 @@ class QuestionBankAccessTest extends TestCase
     {
         $this->withoutVite();
         [$teacher, , $assigned] = $this->makeComponents();
-        $assigned->assessmentPeriod()->update(['type' => AssessmentType::AAS]);
+        $assigned->assessmentPeriod()->update(['type' => AssessmentType::ASAS]);
         $payload = [
             'question_type' => 'multiple_choice', 'text_format' => 'html',
             'question_text' => '<p>Pilih <strong>kata baku</strong> yang <em>tepat</em>.</p><script>alert(1)</script>',
@@ -299,6 +299,73 @@ class QuestionBankAccessTest extends TestCase
         $this->assertFalse($assigned->questions()->exists());
         $this->assertFalse($sibling->questions()->exists());
         $this->assertTrue($other->questions()->exists());
+    }
+
+    public function test_recap_counts_shared_banks_once_and_lists_question_types(): void
+    {
+        $this->withoutVite();
+        [$teacher, , $assigned, $other] = $this->makeComponents();
+        foreach ([ExamQuestionType::MultipleChoice, ExamQuestionType::Essay, ExamQuestionType::ShortAnswer] as $position => $type) {
+            $assigned->questions()->create(['question_text' => 'Soal '.$position, 'question_type' => $type, 'points' => 2, 'position' => $position + 1]);
+        }
+        $class = SchoolClass::create(['academic_year_id' => $assigned->schoolClass->academic_year_id, 'name' => 'X-2', 'grade_level' => 10]);
+        $sibling = $assigned->replicate();
+        $sibling->school_class_id = $class->id;
+        $sibling->save();
+        foreach ($assigned->questions as $question) {
+            $sibling->questions()->save($question->replicate());
+        }
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $this->actingAs($committee)->get(route('question-bank.index', ['view' => 'summary']))->assertOk()
+            ->assertSee('Rekap Pembuatan Soal')->assertSee($teacher->name)->assertSee('X-1, X-2')
+            ->assertViewHas('summary', ['banks' => 2, 'filled' => 1, 'empty' => 1, 'questions' => 3])
+            ->assertViewHas('components', function ($banks) use ($assigned): bool {
+                $bank = $banks->firstWhere('subject_id', $assigned->subject_id);
+
+                return $banks->total() === 2 && $bank->questions_count === 3
+                    && $bank->pg_count === 1 && $bank->essay_count === 1 && $bank->short_answer_count === 1;
+            });
+        $this->get(route('question-bank.index', ['view' => 'summary', 'question_status' => 'filled']))->assertOk()
+            ->assertViewHas('components', fn ($banks): bool => $banks->total() === 1 && $banks->first()->subject_id === $assigned->subject_id);
+        $this->get(route('question-bank.index', ['view' => 'summary', 'question_status' => 'empty']))->assertOk()
+            ->assertViewHas('components', fn ($banks): bool => $banks->total() === 1 && $banks->first()->id === $other->id);
+        $this->actingAs($teacher)->get(route('question-bank.index', ['view' => 'summary']))->assertOk()
+            ->assertDontSee($other->subject->name)
+            ->assertViewHas('summary', ['banks' => 1, 'filled' => 1, 'empty' => 0, 'questions' => 3]);
+    }
+
+    public function test_recap_filters_period_grade_and_teacher_without_leaking_other_teachers(): void
+    {
+        $this->withoutVite();
+        [$teacher, $otherTeacher, $assigned] = $this->makeComponents();
+        $teacher->update(['name' => 'Guru Informatika Khusus']);
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $filters = ['view' => 'summary', 'period_id' => $assigned->assessment_period_id, 'grade_level' => 10, 'q' => $teacher->name];
+        $this->actingAs($committee)->get(route('question-bank.index', $filters))->assertOk()
+            ->assertViewHas('summary', ['banks' => 1, 'filled' => 0, 'empty' => 1, 'questions' => 0]);
+        $this->get(route('question-bank.index', [...$filters, 'grade_level' => 11]))->assertOk()
+            ->assertViewHas('components', fn ($banks): bool => $banks->total() === 0);
+        $this->get(route('question-bank.index', [...$filters, 'period_id' => 99999]))->assertOk()
+            ->assertViewHas('components', fn ($banks): bool => $banks->total() === 0);
+        $this->actingAs($otherTeacher)->get(route('question-bank.index', $filters))->assertOk()
+            ->assertViewHas('summary', ['banks' => 0, 'filled' => 0, 'empty' => 0, 'questions' => 0]);
+    }
+
+    public function test_recap_totals_cover_every_page_and_links_keep_filters(): void
+    {
+        $this->withoutVite();
+        [$teacher, , $assigned] = $this->makeComponents();
+        for ($i = 0; $i < 13; $i++) {
+            $subject = Subject::create(['name' => 'Mapel Tambahan '.$i, 'code' => 'TAM'.$i, 'is_active' => true]);
+            $bank = $assigned->replicate();
+            $bank->subject_id = $subject->id;
+            $bank->save();
+            $bank->questions()->create(['question_text' => 'Soal', 'question_type' => ExamQuestionType::Essay, 'points' => 1, 'position' => 1]);
+        }
+        $this->actingAs($teacher)->get(route('question-bank.index', ['view' => 'summary', 'question_status' => 'filled', 'page' => 2]))
+            ->assertOk()->assertViewHas('summary', ['banks' => 14, 'filled' => 13, 'empty' => 1, 'questions' => 13])
+            ->assertViewHas('components', fn ($banks): bool => $banks->total() === 13 && $banks->count() === 1)
+            ->assertSee('view=summary', false)->assertSee('question_status=filled', false);
     }
 
     /** @return array{User, User, AssessmentSubject, AssessmentSubject} */

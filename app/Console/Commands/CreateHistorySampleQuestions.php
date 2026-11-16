@@ -37,7 +37,7 @@ class CreateHistorySampleQuestions extends Command
                     $item->assessmentPeriod->name,
                     $item->subject->name,
                     $item->schoolClass->name,
-                    strtoupper($item->assessmentPeriod->type->value),
+                    $item->assessmentPeriod->type->label(),
                     $item->questions_count,
                 ])->all(),
             );
@@ -63,7 +63,7 @@ class CreateHistorySampleQuestions extends Command
         }
 
         if ($component->assessmentPeriod->type === AssessmentType::ATS) {
-            $this->error('Periode ATS hanya menerima isian singkat dan esai. Gunakan komponen AAS, AAT, UUB, atau lainnya.');
+            $this->error('Periode ATS hanya menerima isian singkat dan esai. Gunakan komponen ASAS, AAT, UUB, atau lainnya.');
 
             return self::FAILURE;
         }

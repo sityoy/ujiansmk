@@ -2,6 +2,8 @@
 
 @section('title', $trialExam->title)
 
+@inject('optionOrder', 'App\Services\Exams\StudentOptionOrder')
+
 @section('content')
     <div id="exam-security"
         data-state-url="{{ route('tryout.security', [$trialExam, $attempt]) }}"
@@ -56,15 +58,16 @@
                             <div class="min-w-0 flex-1">
                                 <x-question-prompt :question="$question" />
                                 <div class="mt-5 grid gap-3">
-                                    @foreach (collect($question->options)->sortKeys() as $key => $option)
+                                    @foreach ($optionOrder->forQuestion($attempt, $question) as $key => $option)
+                                        @php($displayKey = chr(65 + $loop->index))
                                         <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-slate-950/50 px-4 py-3 hover:border-cyan-400/30">
                                             <input type="radio" name="answers[{{ $question->id }}]" value="{{ $key }}"
                                                 data-save-url="{{ route('tryout.answer', [$trialExam, $attempt, $question]) }}"
                                                 @checked($answers->get($question->id)?->answer === $key) class="mt-1">
-                                            <div class="min-w-0 flex-1"><div class="flex items-start gap-2"><strong class="mr-2 text-cyan-300">{{ $key }}.</strong><x-question-text :text="$option" :format="$question->text_format" /></div>
+                                            <div class="min-w-0 flex-1"><div class="flex items-start gap-2"><strong class="mr-2 text-cyan-300">{{ $displayKey }}.</strong><x-question-text :text="$option" :format="$question->text_format" /></div>
                                                 @if($question->option_file_paths[$key] ?? null)
                                                     @php($optionIsImage = in_array(strtolower(pathinfo($question->option_file_paths[$key], PATHINFO_EXTENSION)), ['jpg','jpeg','png','webp'], true))
-                                                    @if($optionIsImage)<img loading="lazy" decoding="async" src="{{ Storage::url($question->option_file_paths[$key]) }}" alt="Lampiran pilihan {{ $key }}" class="mt-3 max-h-64 max-w-full rounded-xl border border-white/10 bg-white object-contain p-2">@else<a href="{{ Storage::url($question->option_file_paths[$key]) }}" target="_blank" class="mt-2 block text-xs font-semibold text-cyan-300">Buka lampiran pilihan {{ $key }}</a>@endif
+                                                    @if($optionIsImage)<img loading="lazy" decoding="async" src="{{ Storage::url($question->option_file_paths[$key]) }}" alt="Lampiran pilihan {{ $displayKey }}" class="mt-3 max-h-64 max-w-full rounded-xl border border-white/10 bg-white object-contain p-2">@else<a href="{{ Storage::url($question->option_file_paths[$key]) }}" target="_blank" class="mt-2 block text-xs font-semibold text-cyan-300">Buka lampiran pilihan {{ $displayKey }}</a>@endif
                                                 @endif
                                             </div>
                                         </label>

@@ -5,7 +5,7 @@ Aplikasi ini adalah pengembangan ulang sistem ujian sekolah menggunakan Laravel 
 ## Ruang lingkup tahap pertama
 
 - Tahun ajaran, semester ganjil/genap, kelas, siswa, kampus, dan mata pelajaran.
-- Periode asesmen ATS, AAS, AAT, UUB, dan jenis lain yang dapat dikembangkan.
+- Periode asesmen ATS, ASAS, AAT, UUB, dan jenis lain yang dapat dikembangkan.
 - Jadwal ujian reguler dan susulan.
 - Satu penugasan ujian untuk setiap siswa dan komponen asesmen.
 - Satu percobaan aktif untuk setiap penugasan.
@@ -153,3 +153,11 @@ Server sekolah saat ini: **https://ujiansmkbhg.sityoyitsolutions.com**. Atur `AP
 Acuan cakupan materi untuk tinjauan guru (soal ditulis ulang, bukan salinan): [Sejarah X: penelitian sejarah](https://repositori.kemendikdasmen.go.id/21720/), [Sejarah XI: Sumpah Pemuda](https://repositori.kemendikdasmen.go.id/21997/), [Matematika XII: statistika](https://repositori.kemendikdasmen.go.id/20973/), dan [Matematika XII: peluang](https://repositori.kemendikdasmen.go.id/21935/). Guru dapat menyesuaikan cakupan dengan materi yang sudah diajarkan sebelum ujian dimulai.
 
 Acuan tambahan untuk pengecekan konsep: [DJP — fungsi pajak](https://www.pajak.go.id/id/fungsi-pajak), [JDIH Kemenkeu — SAP berbasis akrual](https://jdih.kemenkeu.go.id/kamus-hukum/sap-berbasis-akrual?id=218e89294fb322e94f14871eb983f2dc), serta [Microsoft — fungsi SUM](https://support.microsoft.com/en-us/excel/functions/sum-function) dan [fungsi statistik](https://support.microsoft.com/en-us/excel/statistical-functions-reference). Contoh transaksi, angka, dialog, dan kasus latihan disusun untuk paket ini.
+
+### Rekap bank soal inti dan pilihan jawaban siswa
+
+Di **Bank Soal Inti → Rekap Pembuatan Soal**, lihat guru penanggung jawab, mapel, tingkat/rombel, periode/tahun ajaran, jumlah PG/esai/isian singkat, dan total soal. Filter **Sudah ada soal** atau **Belum ada soal** tersedia bersama pencarian mapel/kode/guru. Ringkasan menghitung bank bersama antarrombel satu kali dan mencakup seluruh halaman. Guru hanya melihat penugasannya sendiri; nama guru mengikuti penugasan, bukan bukti audit siapa yang memasukkan soal lama.
+
+Nama asesmen ditampilkan sebagai **ASAS**. Nilai jenis `aas` pada database dan kode/tautan lama dipertahankan agar data tetap kompatibel. Migrasi memperbarui nama periode, judul uji coba, dan nama bank uji coba yang memuat singkatan AAS.
+
+Pada ujian inti dan uji coba, **hanya isi pilihan A–E diacak** per percobaan peserta. Nomor dan urutan pertanyaan tetap mengikuti bank. Label tampilan tetap A–E; teks dan lampiran berpindah bersama. Urutan opsi stabil saat muat ulang/masuk kembali, jawaban tersimpan tetap terpilih, dan koreksi menggunakan kunci asli. Pengaturan ini hanya berlaku di halaman peserta.

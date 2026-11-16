@@ -6,12 +6,12 @@
 
 @section('content')
     @php
-        $typeLabels = ['ats' => 'ATS', 'aas' => 'AAS', 'aat' => 'AAT', 'uub' => 'UUB', 'other' => 'Lainnya'];
+        $typeLabels = ['ats' => 'ATS', 'aas' => 'ASAS', 'aat' => 'AAT', 'uub' => 'UUB', 'other' => 'Lainnya'];
         $statusLabels = ['draft' => 'Draf', 'published' => 'Terbit', 'active' => 'Aktif', 'closed' => 'Selesai'];
     @endphp
 
     <section class="rounded-3xl border border-white/10 bg-white/[0.035] p-6 md:p-8">
-        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">ATS · AAS · AAT · UUB · Lainnya</p>
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">ATS · ASAS · AAT · UUB · Lainnya</p>
         <h2 class="mt-2 text-2xl font-semibold text-white">Hasil seluruh periode ujian</h2>
         <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-400">Pilih tahun pelajaran, jenis asesmen, dan status periode. Rekap mengambil nilai akhir yang sudah tersimpan pada pengerjaan peserta.</p>
 

@@ -48,7 +48,7 @@ class MidtermReportServiceTest extends TestCase
     public function test_report_is_rejected_for_a_non_midterm_period(): void
     {
         [$period, $class] = $this->makeReportData();
-        $period->update(['type' => AssessmentType::AAS]);
+        $period->update(['type' => AssessmentType::ASAS]);
 
         $this->expectException(InvalidArgumentException::class);
 

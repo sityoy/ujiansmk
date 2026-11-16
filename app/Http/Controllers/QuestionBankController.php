@@ -37,6 +37,9 @@ class QuestionBankController extends Controller
             ? $request->integer('grade_level')
             : null;
         $search = trim((string) $request->query('q'));
+        $catalogView = $request->query('view') === 'summary' ? 'summary' : 'banks';
+        $questionStatus = in_array($request->query('question_status'), ['filled', 'empty'], true)
+            ? $request->query('question_status') : null;
         $scopeTeacher = fn ($query) => $query->when(
             $teacherId,
             fn ($query) => $query->where('teacher_user_id', $teacherId),
@@ -44,15 +47,21 @@ class QuestionBankController extends Controller
 
         $grouped = AssessmentSubject::query()
             ->with(['assessmentPeriod.academicYear', 'subject', 'schoolClass', 'teacher'])
-            ->withCount('questions')
+            ->withCount([
+                'questions',
+                'questions as pg_count' => fn ($query) => $query->where('question_type', ExamQuestionType::MultipleChoice->value),
+                'questions as essay_count' => fn ($query) => $query->where('question_type', ExamQuestionType::Essay->value),
+                'questions as short_answer_count' => fn ($query) => $query->where('question_type', ExamQuestionType::ShortAnswer->value),
+            ])
             ->withSum('questions', 'points')
             ->when($teacherId, fn ($query) => $query->where('teacher_user_id', $teacherId))
             ->when($periodId, fn ($query) => $query->where('assessment_period_id', $periodId))
             ->when($gradeLevel, fn ($query) => $query->whereHas('schoolClass', fn ($query) => $query
                 ->where('grade_level', $gradeLevel)))
-            ->when($search, fn ($query) => $query->whereHas('subject', fn ($query) => $query
-                ->where('name', 'like', '%'.$search.'%')
-                ->orWhere('code', 'like', '%'.$search.'%')))
+            ->when($search, fn ($query) => $query->where(fn ($query) => $query
+                ->whereHas('subject', fn ($query) => $query->where('name', 'like', '%'.$search.'%')
+                    ->orWhere('code', 'like', '%'.$search.'%'))
+                ->orWhereHas('teacher', fn ($query) => $query->where('name', 'like', '%'.$search.'%'))))
             ->latest()
             ->get()
             ->groupBy(fn (AssessmentSubject $component): string => implode('|', [
@@ -71,6 +80,19 @@ class QuestionBankController extends Controller
             ->sortByDesc('id')
             ->values();
 
+        // Count each shared bank once, before applying the filled/empty tab filter.
+        $summary = [
+            'banks' => $grouped->count(),
+            'filled' => $grouped->where('questions_count', '>', 0)->count(),
+            'empty' => $grouped->where('questions_count', 0)->count(),
+            'questions' => (int) $grouped->sum('questions_count'),
+        ];
+        $grouped = $grouped->filter(fn (AssessmentSubject $component): bool => match ($questionStatus) {
+            'filled' => $component->questions_count > 0,
+            'empty' => (int) $component->questions_count === 0,
+            default => true,
+        })->values();
+
         $page = LengthAwarePaginator::resolveCurrentPage();
         $perPage = 12;
         $components = new LengthAwarePaginator(
@@ -83,6 +105,9 @@ class QuestionBankController extends Controller
 
         return view('questions.catalog', [
             'components' => $components,
+            'catalogView' => $catalogView,
+            'questionStatus' => $questionStatus,
+            'summary' => $summary,
             'periods' => AssessmentPeriod::query()
                 ->with('academicYear')
                 ->whereHas('assessmentSubjects', $scopeTeacher)

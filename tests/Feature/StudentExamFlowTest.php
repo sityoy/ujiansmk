@@ -31,6 +31,7 @@ use App\Services\Attendance\DailyCheckinService;
 use App\Services\Exams\ExamAssignmentService;
 use App\Services\Exams\ExamAttemptService;
 use App\Services\Exams\ExamSessionService;
+use App\Services\Exams\StudentOptionOrder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
@@ -108,6 +109,51 @@ class StudentExamFlowTest extends TestCase
             ->assertSee('<em>correct answer</em>', false)->assertSee('<strong>carefully</strong>', false)
             ->assertSee('<u>Answer A</u>', false)
             ->assertSee('Literal &lt;strong&gt; and comparison 2 &lt; 3.', false);
+    }
+
+    public function test_core_options_are_stable_relabelled_and_keep_attachments_and_scoring(): void
+    {
+        [$user, $assignment, $questions] = $this->makeExam();
+        $question = $questions[0];
+        $question->update(['options' => ['A' => 'Jawaban tepat', 'B' => 'Salah B', 'C' => 'Salah C', 'D' => 'Salah D', 'E' => 'Salah E'],
+            'option_file_paths' => ['A' => 'exam-options/benar.png', 'B' => 'exam-options/lain.pdf']]);
+        $attempt = $this->startAttempt($assignment);
+        $route = route('student.exams.show', $attempt);
+        $this->actingAs($user)->withSession(['exam_device_token' => str_repeat('a', 64)]);
+        $order = app(StudentOptionOrder::class)->forQuestion($attempt, $question);
+        $response = $this->get($route)->assertOk()->assertSeeInOrder(array_map(fn ($item) => $item->question_text, $questions));
+        $this->assertCoreOptions($response->getContent(), $question, $order->keys()->all());
+        $this->putJson(route('student.exams.answer', [$attempt, $question]), ['answer' => 'A'])->assertOk();
+        $resumed = $this->get($route)->assertOk();
+        $this->assertCoreOptions($resumed->getContent(), $question, $order->keys()->all());
+        $this->post(route('student.exams.submit', $attempt))->assertRedirect();
+        $this->assertSame('2.00', $attempt->fresh()->score);
+        $this->assertTrue($attempt->answers()->where('exam_question_id', $question->id)->firstOrFail()->is_correct);
+        $this->assertSame(['A', 'B', 'C', 'D', 'E'], array_keys($question->fresh()->options));
+    }
+
+    private function assertCoreOptions(string $html, ExamQuestion $question, array $keys): void
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="UTF-8">'.$html);
+        $xpath = new \DOMXPath($dom);
+        $inputs = $xpath->query('//input[@name="question_'.$question->id.'"]');
+        $this->assertSame($keys, array_map(fn ($node) => $node->getAttribute('value'), iterator_to_array($inputs)));
+        foreach ($inputs as $index => $input) {
+            $label = $input->parentNode;
+            $this->assertSame(chr(65 + $index).'.', trim($xpath->query('.//strong', $label)->item(0)->textContent));
+            $key = $input->getAttribute('value');
+            $this->assertStringContainsString($question->options[$key], $label->textContent);
+            if ($question->option_file_paths[$key] ?? null) {
+                $this->assertStringContainsString($question->option_file_paths[$key], $dom->saveHTML($label));
+            }
+            if ($input->hasAttribute('checked')) {
+                $this->assertSame('A', $key);
+            }
+        }
+        if (str_contains($html, 'checked')) {
+            $this->assertSame(1, $xpath->query('//input[@name="question_'.$question->id.'"][@checked]')->length);
+        }
     }
 
     public function test_student_cannot_start_without_verified_attendance(): void
@@ -1030,7 +1076,7 @@ class StudentExamFlowTest extends TestCase
             'academic_year_id' => $year->id,
             'code' => 'AAS-AKTIF',
             'name' => 'AAS Aktif',
-            'type' => AssessmentType::AAS,
+            'type' => AssessmentType::ASAS,
             'semester' => Semester::Odd,
             'starts_on' => now()->subDay()->toDateString(),
             'ends_on' => now()->addDay()->toDateString(),
