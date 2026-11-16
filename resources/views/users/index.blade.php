@@ -134,7 +134,7 @@
             <div class="flex flex-wrap items-end justify-between gap-4">
                 <div>
                     <h2 class="text-xl font-semibold text-white">Pengguna sistem</h2>
-                    <p class="mt-1 text-sm text-slate-500">10 akun per halaman. Siswa dikelola melalui menu Data Akademik.</p>
+                    <p class="mt-1 text-sm text-slate-500">Jumlah data per halaman dapat dipilih. Siswa dikelola melalui menu Data Akademik.</p>
                 </div>
                 <form method="GET" action="{{ route('users.index') }}" class="grid gap-2 sm:grid-cols-[220px_170px_auto]">
                     <input name="q" value="{{ $search }}" placeholder="Cari nama atau email"
@@ -191,10 +191,9 @@
             </table>
         </div>
         <div class="border-t border-white/10 p-5">
-            <p class="mb-3 text-xs text-slate-500">Menampilkan {{ $users->firstItem() ?? 0 }}–{{ $users->lastItem() ?? 0 }} dari {{ $users->total() }} akun.</p>
-            @if ($users->hasPages())
+
                 {{ $users->links() }}
-            @endif
+
         </div>
     </section>
 @endsection

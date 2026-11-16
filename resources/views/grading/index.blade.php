@@ -54,6 +54,6 @@
                 </tbody>
             </table>
         </div>
-        @if ($attempts->hasPages())<div class="p-5">{{ $attempts->links() }}</div>@endif
+        <div class="p-5">{{ $attempts->links() }}</div>
     </section>
 @endsection

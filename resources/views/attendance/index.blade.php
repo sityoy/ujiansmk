@@ -38,7 +38,7 @@
                 <p class="text-sm text-slate-500">Tidak ada sesi pada filter ini.</p>
             @endforelse
         </div>
-        @if ($sessions->hasPages())<div class="mt-4">{{ $sessions->links() }}</div>@endif
+        <div class="mt-4">{{ $sessions->links() }}</div>
     </section>
 
     @if ($selectedSession)
@@ -72,7 +72,7 @@
                     @endforelse
                 </tbody>
             </table></div>
-            @if($checkins->hasPages())<div class="p-5">{{ $checkins->links() }}</div>@endif
+            <div class="p-5">{{ $checkins->links() }}</div>
         </section>
 
         <section class="mt-6 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035]">
@@ -84,7 +84,7 @@
                     <p class="p-6 text-sm text-slate-500">Belum ada insiden pada sesi ini.</p>
                 @endforelse
             </div>
-            @if($incidents->hasPages())<div class="p-5">{{ $incidents->links() }}</div>@endif
+            <div class="p-5">{{ $incidents->links() }}</div>
         </section>
     @endif
 @endsection

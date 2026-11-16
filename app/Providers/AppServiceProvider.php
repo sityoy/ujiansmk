@@ -4,6 +4,9 @@ namespace App\Providers;
 
 use App\Models\SchoolProfile;
 use App\Services\Exams\QuestionText;
+use App\Support\TablePagination;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -18,6 +21,11 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        Paginator::defaultView('pagination.data');
+        Builder::macro('paginateForDisplay', function (string $pageName = 'page') {
+            return TablePagination::query($this, $pageName);
+        });
+
         View::composer(
             ['auth.login', 'auth.change-password', 'dashboard', 'layouts.app', 'reports.midterm.print'],
             function ($view): void {

@@ -104,7 +104,7 @@
             </div>
         </section>
 
-        <section class="rounded-3xl border border-white/10 bg-white/[0.035] p-6">
+        <section id="class-list" class="scroll-mt-5 rounded-3xl border border-white/10 bg-white/[0.035] p-6">
             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-amber-300">03 · Kelas/Rombel</p>
             <h2 class="mt-2 text-xl font-semibold text-white">Daftar kelas</h2>
 
@@ -123,7 +123,7 @@
                 <button class="sm:col-span-2 rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-slate-950">Tambah kelas</button>
             </form>
 
-            <form method="GET" action="{{ route('academic.index') }}" class="mt-5 grid gap-2 sm:grid-cols-[1fr_140px_auto]">
+            <form method="GET" action="{{ route('academic.index') }}#class-list" class="mt-5 grid gap-2 sm:grid-cols-[1fr_140px_auto]">
                 <select name="class_year" class="rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2 text-xs">
                     <option value="">Semua tahun ajaran</option>
                     @foreach ($academicYears as $year)
@@ -131,8 +131,9 @@
                     @endforeach
                 </select>
                 <select name="class_per_page" class="rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2 text-xs">
-                    <option value="5" @selected($classPerPage === '5')>5 data</option>
-                    <option value="all" @selected($classPerPage === 'all')>Semua data</option>
+                    @foreach (\App\Support\TablePagination::OPTIONS as $value => $label)
+                        <option value="{{ $value }}" @selected($classPerPage === (string) $value)>{{ $label }}</option>
+                    @endforeach
                 </select>
                 <button class="rounded-xl border border-amber-400/30 px-4 py-2 text-xs font-semibold text-amber-200 hover:bg-amber-400/10">Tampilkan</button>
             </form>
@@ -163,16 +164,9 @@
                     <p class="text-sm text-slate-500">Belum ada kelas.</p>
                 @endforelse
             </div>
-            <div class="mt-4 text-xs text-slate-500">
-                @if ($classPerPage === 'all')
-                    Menampilkan seluruh {{ $classes->count() }} data rombel.
-                @else
-                    Menampilkan data {{ $classes->firstItem() ?? 0 }}–{{ $classes->lastItem() ?? 0 }} dari {{ $classes->total() }} rombel.
-                @endif
-            </div>
-            @if ($classPerPage !== 'all' && $classes->hasPages())
-                <div class="mt-4">{{ $classes->links() }}</div>
-            @endif
+
+            <div class="mt-4">{{ $classes->links() }}</div>
+
         </section>
 
         <section class="rounded-3xl border border-white/10 bg-white/[0.035] p-6">
@@ -268,7 +262,7 @@
                     <p class="mt-1 text-sm text-slate-500">Cari berdasarkan nama, NIS, NISN, username, email, atau ruangan.</p>
                 </div>
                 <span class="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1.5 text-xs font-semibold text-cyan-200">
-                    {{ $studentPerPage === 'all' ? $students->count() : $students->total() }} siswa
+                    {{ $students->total() }} siswa
                 </span>
             </div>
 
@@ -293,8 +287,8 @@
                 <label class="text-xs font-medium text-slate-400">
                     Data per halaman
                     <select name="student_per_page" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
-                        @foreach (['20' => '20 data', '50' => '50 data', '100' => '100 data', 'all' => 'Semua data'] as $value => $label)
-                            <option value="{{ $value }}" @selected($studentPerPage === $value)>{{ $label }}</option>
+                        @foreach (\App\Support\TablePagination::OPTIONS as $value => $label)
+                            <option value="{{ $value }}" @selected($studentPerPage === (string) $value)>{{ $label }}</option>
                         @endforeach
                     </select>
                 </label>
@@ -375,16 +369,9 @@
         </div>
 
         <div class="border-t border-white/10 p-5">
-            <div class="text-xs text-slate-500">
-                @if ($studentPerPage === 'all')
-                    Menampilkan seluruh {{ $students->count() }} data siswa.
-                @else
-                    Menampilkan data {{ $students->firstItem() ?? 0 }}–{{ $students->lastItem() ?? 0 }} dari {{ $students->total() }} siswa.
-                @endif
-            </div>
-            @if ($studentPerPage !== 'all' && $students->hasPages())
-                <div class="mt-4">{{ $students->links() }}</div>
-            @endif
+
+            <div class="mt-4">{{ $students->links() }}</div>
+
         </div>
 
     </section>

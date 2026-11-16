@@ -22,11 +22,11 @@ use App\Models\User;
 use App\Services\Exams\CoreQuestionBank;
 use App\Services\Exams\ExamAssignmentService;
 use App\Services\Exams\ExamSessionService;
+use App\Support\TablePagination;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -79,11 +79,7 @@ class SchedulingController extends Controller
 
                 return $representative;
             })->values();
-        $page = LengthAwarePaginator::resolveCurrentPage('session_page');
-        $components = new LengthAwarePaginator(
-            $catalog->forPage($page, 12)->values(), $catalog->count(), 12, $page,
-            ['path' => $request->url(), 'query' => $request->query(), 'pageName' => 'session_page'],
-        );
+        $components = TablePagination::collection($catalog, 'session_page');
 
         return view('scheduling.index', [
             'academicYears' => AcademicYear::query()->orderByDesc('starts_on')->get(),

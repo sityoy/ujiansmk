@@ -33,7 +33,7 @@ class AttendanceSecurityController extends Controller
                 ->whereHas('assessmentSubject', fn ($component) => $component->where('assessment_period_id', $period)))
             ->orderBy('starts_at');
 
-        $sessions = (clone $sessionQuery)->paginate(12, ['*'], 'sessions_page')->withQueryString();
+        $sessions = (clone $sessionQuery)->paginateForDisplay('sessions_page')->withQueryString();
         $selectedSession = filled($filters['session_id'] ?? null)
             ? (clone $sessionQuery)->whereKey($filters['session_id'])->first()
             : $sessions->first();
@@ -60,8 +60,8 @@ class AttendanceSecurityController extends Controller
             'periodOptions' => AssessmentPeriod::query()->with('academicYear')->orderByDesc('starts_on')->get(),
             'sessions' => $sessions,
             'selectedSession' => $selectedSession,
-            'checkins' => (clone $checkinQuery)->latest('verified_at')->paginate(20, ['*'], 'checkins_page')->withQueryString(),
-            'incidents' => (clone $incidentQuery)->latest('occurred_at')->paginate(20, ['*'], 'incidents_page')->withQueryString(),
+            'checkins' => (clone $checkinQuery)->latest('verified_at')->paginateForDisplay('checkins_page')->withQueryString(),
+            'incidents' => (clone $incidentQuery)->latest('occurred_at')->paginateForDisplay('incidents_page')->withQueryString(),
             'checkinStatuses' => CheckinStatus::cases(),
             'statistics' => [
                 'verified' => (clone $checkinQuery)->where('status', CheckinStatus::Verified->value)->count(),

@@ -93,7 +93,7 @@
                 <p class="text-sm text-slate-500">Belum ada sesi ujian. Buat jadwal terlebih dahulu.</p>
             @endforelse
         </div>
-        @if ($sessions->hasPages())<div class="mt-5">{{ $sessions->links() }}</div>@endif
+        <div class="mt-5">{{ $sessions->links() }}</div>
     </section>
 
     <section class="mt-6 rounded-3xl border border-violet-400/20 bg-violet-400/[0.035] p-6">
@@ -116,7 +116,7 @@
                 <p class="text-sm text-slate-500">Belum ada Ujian Uji Coba.</p>
             @endforelse
         </div>
-        @if($trialExams->hasPages())<div class="mt-5">{{ $trialExams->links() }}</div>@endif
+        <div class="mt-5">{{ $trialExams->links() }}</div>
     </section>
 
     <section class="mt-6 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035]">
@@ -143,6 +143,6 @@
                 </tbody>
             </table>
         </div>
-        @if ($attempts->hasPages())<div class="p-5">{{ $attempts->links() }}</div>@endif
+        <div class="p-5">{{ $attempts->links() }}</div>
     </section>
 @endsection

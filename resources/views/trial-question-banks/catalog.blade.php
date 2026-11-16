@@ -121,7 +121,7 @@
                     <div class="rounded-3xl border border-dashed border-white/10 p-10 text-center text-sm text-slate-500 md:col-span-2">{{ $archived ? 'Belum ada bank soal yang dihapus.' : 'Belum ada bank soal uji coba.' }}</div>
                 @endforelse
             </div>
-            @if ($banks->hasPages())<div class="mt-5 rounded-2xl border border-white/10 p-4">{{ $banks->links() }}</div>@endif
+            <div class="mt-5 rounded-2xl border border-white/10 p-4">{{ $banks->links() }}</div>
         </div>
     </div>
 @endsection

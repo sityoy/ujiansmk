@@ -12,11 +12,11 @@ use App\Services\Exams\CoreQuestionBank;
 use App\Services\Exams\ExamScoreCalculator;
 use App\Services\Exams\QuestionText;
 use App\Services\Students\StudentSpreadsheetService;
+use App\Support\TablePagination;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -93,15 +93,7 @@ class QuestionBankController extends Controller
             default => true,
         })->values();
 
-        $page = LengthAwarePaginator::resolveCurrentPage();
-        $perPage = 12;
-        $components = new LengthAwarePaginator(
-            $grouped->forPage($page, $perPage)->values(),
-            $grouped->count(),
-            $perPage,
-            $page,
-            ['path' => $request->url(), 'query' => $request->query()],
-        );
+        $components = TablePagination::collection($grouped, 'page');
 
         return view('questions.catalog', [
             'components' => $components,
@@ -129,7 +121,7 @@ class QuestionBankController extends Controller
         $assessmentSubject->load(['assessmentPeriod.academicYear', 'subject', 'schoolClass', 'teacher']);
         $questions = $assessmentSubject->questions()
             ->orderBy('position')
-            ->paginate(20)
+            ->paginateForDisplay()
             ->withQueryString();
         $questionCount = $assessmentSubject->questions()->count();
         $totalPoints = (float) $assessmentSubject->questions()->sum('points');

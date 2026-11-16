@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Enums\AssessmentType;
 use App\Enums\AttemptStatus;
-use App\Enums\ExamQuestionType;
 use App\Enums\GradingStatus;
 use App\Enums\UserRole;
 use App\Models\AcademicYear;
@@ -61,7 +60,7 @@ class ExamGradingController extends Controller
             ->get();
 
         return view('grading.index', [
-            'attempts' => $attempts->latest('submitted_at')->paginate(25)->withQueryString(),
+            'attempts' => $attempts->latest('submitted_at')->paginateForDisplay()->withQueryString(),
             'academicYears' => AcademicYear::query()->orderByDesc('starts_on')->get(),
             'periodOptions' => $periodOptions,
             'classOptions' => SchoolClass::query()

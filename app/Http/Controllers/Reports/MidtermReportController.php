@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Reports;
 use App\Enums\AssessmentType;
 use App\Http\Controllers\Controller;
 use App\Models\AssessmentPeriod;
-use App\Models\SchoolProfile;
 use App\Models\SchoolClass;
+use App\Models\SchoolProfile;
 use App\Models\Student;
 use App\Services\Reports\MidtermReportAccess;
 use App\Services\Reports\MidtermReportService;
@@ -24,7 +24,7 @@ class MidtermReportController extends Controller
             ->where('type', AssessmentType::ATS)
             ->with(['academicYear', 'assessmentSubjects.schoolClass'])
             ->latest('starts_on')
-            ->paginate(10)
+            ->paginateForDisplay()
             ->withQueryString();
 
         $periods->getCollection()->each(function (AssessmentPeriod $period) use ($request, $access): void {

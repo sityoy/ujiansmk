@@ -246,9 +246,9 @@ class SchedulingManagementTest extends TestCase
         ])->assertSessionHasNoErrors();
         $this->assertSame($teacher->id, $component->fresh()->teacher_user_id);
         $this->get(route('scheduling.index'))->assertOk()
-            ->assertViewHas('components', fn ($components): bool => $components->perPage() === 12)
+            ->assertViewHas('components', fn ($components): bool => $components->perPage() === 10)
             ->assertSee('Buka pengaturan')
-            ->assertSee('maksimal 12 kelompok per halaman')
+            ->assertSee('jumlah kelompok per halaman dapat dipilih')
             ->assertSee('Guru pengoreksi');
     }
 

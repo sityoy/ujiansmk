@@ -132,7 +132,7 @@
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">05 · Sesi Ujian</p>
                 <h2 class="mt-2 text-xl font-semibold text-white">Jadwal reguler dan susulan</h2>
-                <p class="mt-1 text-xs text-slate-500">Jadwal dikelompokkan per mapel dan tingkat, maksimal 12 kelompok per halaman. Buka pengaturan untuk mengatur seluruh rombel sekaligus.</p>
+                <p class="mt-1 text-xs text-slate-500">Jadwal dikelompokkan per mapel dan tingkat, jumlah kelompok per halaman dapat dipilih. Buka pengaturan untuk mengatur seluruh rombel sekaligus.</p>
             </div>
         </div>
 
@@ -164,11 +164,11 @@
                 </div>
             @endforelse
         </div>
-        @if ($components->hasPages())
+
             <div class="mt-5 rounded-2xl border border-white/10 bg-white/[0.025] p-4">
                 {{ $components->links() }}
             </div>
-        @endif
+
     </section>
 
     <section id="peserta-susulan" class="mt-6 rounded-3xl border border-amber-400/20 bg-amber-400/[0.05] p-6">

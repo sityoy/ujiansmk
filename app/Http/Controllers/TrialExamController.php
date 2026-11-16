@@ -10,10 +10,10 @@ use App\Models\TrialAttempt;
 use App\Models\TrialExam;
 use App\Models\TrialQuestionBank;
 use App\Services\Exams\TrialExamSecurityService;
+use App\Support\TablePagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -29,7 +29,7 @@ class TrialExamController extends Controller
                 ->with(['questionBank.subject', 'assessmentSubject.assessmentPeriod.academicYear'])
                 ->withCount('attempts')
                 ->latest()
-                ->paginate(10),
+                ->paginateForDisplay(),
             'banks' => TrialQuestionBank::query()->whereNull('archived_at')
                 ->with('subject')
                 ->withCount('questions')
@@ -106,14 +106,7 @@ class TrialExamController extends Controller
             });
         }
 
-        $page = LengthAwarePaginator::resolveCurrentPage();
-        $participants = new LengthAwarePaginator(
-            $rows->forPage($page, 20)->values(),
-            $rows->count(),
-            20,
-            $page,
-            ['path' => $request->url(), 'query' => $request->query()],
-        );
+        $participants = TablePagination::collection($rows, 'page');
 
         $attempts->whereIn('id', collect($participants->items())->pluck('attempt.id')->filter()->all())
             ->load(['securityIncidents' => fn ($query) => $query->orderBy('id')]);

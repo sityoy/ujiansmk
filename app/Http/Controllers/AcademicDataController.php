@@ -11,6 +11,7 @@ use App\Models\StudentExamRoom;
 use App\Models\Subject;
 use App\Models\User;
 use App\Services\Students\StudentExamRoomService;
+use App\Support\TablePagination;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,8 +27,7 @@ class AcademicDataController extends Controller
     {
         $request->validate(['room_period_id' => ['nullable', 'integer', 'exists:assessment_periods,id']]);
         $roomPeriod = $request->filled('room_period_id') ? AssessmentPeriod::with('academicYear')->findOrFail($request->integer('room_period_id')) : null;
-        $classPerPage = $request->string('class_per_page')->toString();
-        $classPerPage = in_array($classPerPage, ['5', 'all'], true) ? $classPerPage : '5';
+        $classPerPage = TablePagination::selected('class_page');
         $classYearId = $request->filled('class_year') ? $request->integer('class_year') : null;
         $classQuery = SchoolClass::query()
             ->with(['academicYear', 'homeroomTeacher'])
@@ -38,10 +38,7 @@ class AcademicDataController extends Controller
 
         $studentSearch = trim($request->string('student_search')->toString());
         $studentClassId = $request->filled('student_class') ? $request->integer('student_class') : null;
-        $studentPerPage = $request->string('student_per_page')->toString();
-        $studentPerPage = in_array($studentPerPage, ['20', '50', '100', 'all'], true)
-            ? $studentPerPage
-            : '20';
+        $studentPerPage = TablePagination::selected('student_page');
         $studentQuery = Student::query()
             ->with(['schoolClass.academicYear', 'user'])
             ->with(['examRooms' => fn ($query) => $query->where('assessment_period_id', $roomPeriod?->id ?? 0)])
@@ -77,17 +74,10 @@ class AcademicDataController extends Controller
                 ->orderByDesc('academic_year_id')
                 ->orderBy('name')
                 ->get(),
-            'classes' => $classPerPage === 'all'
-                ? $classQuery->get()
-                : $classQuery->paginate(5, ['*'], 'class_page')->withQueryString(),
+            'classes' => $classQuery->paginateForDisplay('class_page')->fragment('class-list'),
             'classPerPage' => $classPerPage,
             'classYearId' => $classYearId,
-            'students' => $studentPerPage === 'all'
-                ? $studentQuery->get()
-                : $studentQuery
-                    ->paginate((int) $studentPerPage, ['*'], 'student_page')
-                    ->withQueryString()
-                    ->fragment('student-list'),
+            'students' => $studentQuery->paginateForDisplay('student_page')->fragment('student-list'),
             'studentSearch' => $studentSearch,
             'studentClassId' => $studentClassId,
             'studentPerPage' => $studentPerPage,

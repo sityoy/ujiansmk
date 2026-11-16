@@ -947,7 +947,7 @@ class StudentExamFlowTest extends TestCase
         }
         $proctor = User::factory()->create(['role' => UserRole::Proctor]);
         $this->actingAs($proctor)->get(route('operations.sessions.show', [$assignment->examSession, 'page' => 2, 'status' => 'scheduled']))
-            ->assertOk()->assertViewHas('participants', fn ($participants) => $participants->total() === 27 && $participants->count() === 2);
+            ->assertOk()->assertViewHas('participants', fn ($participants) => $participants->total() === 27 && $participants->count() === 10 && $participants->perPage() === 10);
         $this->getJson(route('operations.sessions.show', [$assignment->examSession, 'status' => 'unknown']))
             ->assertUnprocessable()->assertJsonValidationErrors('status');
     }

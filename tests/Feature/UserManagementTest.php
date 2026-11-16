@@ -47,7 +47,7 @@ class UserManagementTest extends TestCase
         $this->assertTrue($admin->refresh()->is_active);
     }
 
-    public function test_account_list_uses_ten_rows_and_short_pagination_labels(): void
+    public function test_account_list_uses_ten_rows_and_numbered_pagination(): void
     {
         $admin = User::factory()->create(['role' => UserRole::SuperAdmin, 'name' => 'Admin Utama']);
         User::factory()->count(10)->create(['role' => UserRole::Teacher]);
@@ -56,7 +56,7 @@ class UserManagementTest extends TestCase
 
         $response->assertOk()
             ->assertViewHas('users', fn ($users): bool => $users->count() === 10 && $users->perPage() === 10)
-            ->assertSee('Next.')
+            ->assertSee('Berikutnya')->assertSee('Halaman 2')->assertSee('Semua')
             ->assertDontSee('pagination.next');
     }
 
@@ -256,5 +256,4 @@ class UserManagementTest extends TestCase
             ->post(route('users.credentials.print'))
             ->assertForbidden();
     }
-
 }

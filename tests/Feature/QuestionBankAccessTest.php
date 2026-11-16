@@ -364,8 +364,25 @@ class QuestionBankAccessTest extends TestCase
         }
         $this->actingAs($teacher)->get(route('question-bank.index', ['view' => 'summary', 'question_status' => 'filled', 'page' => 2]))
             ->assertOk()->assertViewHas('summary', ['banks' => 14, 'filled' => 13, 'empty' => 1, 'questions' => 13])
-            ->assertViewHas('components', fn ($banks): bool => $banks->total() === 13 && $banks->count() === 1)
+            ->assertViewHas('components', fn ($banks): bool => $banks->total() === 13 && $banks->count() === 3)
             ->assertSee('view=summary', false)->assertSee('question_status=filled', false);
+    }
+
+    public function test_question_list_sizes_and_all_preserve_order_and_teacher_access(): void
+    {
+        $this->withoutVite();
+        [$teacher, , $assigned, $other] = $this->makeComponents();
+        foreach (range(1, 53) as $position) {
+            $assigned->questions()->create(['question_text' => 'Pertanyaan '.$position, 'question_type' => ExamQuestionType::ShortAnswer, 'points' => 1, 'position' => $position]);
+        }
+        $this->actingAs($teacher)->get(route('scheduling.questions.index', [$assigned, 'per_page' => '15', 'page' => 2]))->assertOk()
+            ->assertViewHas('questions', fn ($questions): bool => $questions->count() === 15 && $questions->first()->position === 16 && $questions->last()->position === 30);
+        $this->get(route('scheduling.questions.index', [$assigned, 'per_page' => 'all', 'page' => 999]))->assertOk()
+            ->assertViewHas('questions', fn ($questions): bool => $questions->count() === 53 && $questions->currentPage() === 1 && $questions->first()->position === 1 && $questions->last()->position === 53);
+        $this->get(route('scheduling.questions.index', [$other, 'per_page' => 'all']))->assertForbidden();
+        $this->get(route('question-bank.index', ['view' => 'summary', 'per_page' => 'all']))->assertOk()
+            ->assertViewHas('components', fn ($banks): bool => $banks->total() === 1 && $banks->first()->id === $assigned->id)
+            ->assertDontSee($other->subject->name);
     }
 
     /** @return array{User, User, AssessmentSubject, AssessmentSubject} */

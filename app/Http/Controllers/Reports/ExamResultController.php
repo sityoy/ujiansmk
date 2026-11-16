@@ -16,8 +16,8 @@ use App\Models\SchoolProfile;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ExamResultController extends Controller
@@ -36,7 +36,7 @@ class ExamResultController extends Controller
             ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->with(['academicYear', 'assessmentSubjects.schoolClass'])
             ->latest('ends_on')
-            ->paginate(10)
+            ->paginateForDisplay()
             ->withQueryString();
 
         $periods->getCollection()->each(function (AssessmentPeriod $period) use ($request): void {

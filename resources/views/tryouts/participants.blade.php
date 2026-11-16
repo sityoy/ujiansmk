@@ -82,7 +82,7 @@
                 </tbody>
             </table>
         </div>
-        <div class="p-5"><p class="mb-3 text-xs text-slate-500">{{ $participants->total() }} peserta sesuai filter · 20 peserta per halaman.</p>{{ $participants->links() }}</div>
+        <div class="p-5">{{ $participants->links() }}</div>
     </section>
     @if ($participants->isNotEmpty())
         <script>

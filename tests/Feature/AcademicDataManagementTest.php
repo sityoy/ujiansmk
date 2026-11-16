@@ -118,7 +118,7 @@ class AcademicDataManagementTest extends TestCase
         $this->assertDatabaseHas('students', ['user_id' => $user->id, 'student_number' => 'S-002']);
     }
 
-    public function test_class_list_can_be_filtered_by_year_and_shows_five_rows_by_default(): void
+    public function test_class_list_can_be_filtered_by_year_and_defaults_to_ten_rows(): void
     {
         $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
         $year = AcademicYear::create([
@@ -139,7 +139,7 @@ class AcademicDataManagementTest extends TestCase
         $this->actingAs($admin)
             ->get(route('academic.index', ['class_year' => $year->id]))
             ->assertOk()
-            ->assertViewHas('classes', fn ($classes) => $classes->count() === 5 && $classes->total() === 6)
+            ->assertViewHas('classes', fn ($classes) => $classes->count() === 6 && $classes->total() === 6 && $classes->perPage() === 10)
             ->assertViewHas('classYearId', $year->id);
 
         $this->actingAs($admin)

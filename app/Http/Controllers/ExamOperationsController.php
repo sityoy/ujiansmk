@@ -15,10 +15,10 @@ use App\Models\TrialExam;
 use App\Services\Exams\ExamAttemptResetService;
 use App\Services\Exams\ExamSecurityService;
 use App\Services\Exams\ExamSessionService;
+use App\Support\TablePagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -52,11 +52,7 @@ class ExamOperationsController extends Controller
 
                 return $representative;
             })->values();
-        $page = LengthAwarePaginator::resolveCurrentPage('sessions_page');
-        $groupedSessions = new LengthAwarePaginator(
-            $groups->forPage($page, 15)->values(), $groups->count(), 15, $page,
-            ['path' => $request->url(), 'query' => $request->query(), 'pageName' => 'sessions_page'],
-        );
+        $groupedSessions = TablePagination::collection($groups, 'sessions_page');
 
         return view('operations.index', [
             'filters' => $filters,
@@ -69,7 +65,7 @@ class ExamOperationsController extends Controller
                 ->with(['assignment.student', 'assignment.assessmentSubject.subject', 'assignment.examSession'])
                 ->latest('started_at')
                 ->orderByDesc('id')
-                ->paginate(30, ['*'], 'attempts_page')->withQueryString(),
+                ->paginateForDisplay('attempts_page')->withQueryString(),
             'trialExams' => TrialExam::query()
                 ->with(['questionBank.subject'])
                 ->withCount('attempts')
@@ -77,7 +73,7 @@ class ExamOperationsController extends Controller
                     ->whereHas('assessmentSubject', fn ($component) => $component
                         ->where('teacher_user_id', $request->user()->id)))
                 ->latest()
-                ->paginate(10, ['*'], 'trials_page')
+                ->paginateForDisplay('trials_page')
                 ->withQueryString(),
             'sessionStatuses' => SessionStatus::cases(),
             'statistics' => [
@@ -136,7 +132,7 @@ class ExamOperationsController extends Controller
                 ->where('campus_id', $examSession->campus_id),
             'attempt' => fn ($query) => $query->withCount('answers')->with(['securityIncidents' => fn ($events) => $events->orderBy('id')]),
             'attemptResets' => fn ($query) => $query->with('performedBy')->latest(),
-        ])->orderBy('id')->paginate(25)->withQueryString();
+        ])->orderBy('id')->paginateForDisplay()->withQueryString();
 
         return view('operations.show', [
             'relatedSessions' => $examSession->scheduleGroup()->with('assessmentSubject.schoolClass')

@@ -110,8 +110,7 @@
 
     @endif
 
-    @if ($components->hasPages())
         <div class="mt-5 rounded-2xl border border-white/10 bg-white/[0.025] p-4">{{ $components->links() }}</div>
-    @endif
+
 @endsection
 

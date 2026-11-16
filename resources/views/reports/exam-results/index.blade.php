@@ -56,6 +56,6 @@
                 <div class="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-slate-500">Tidak ada periode sesuai filter.</div>
             @endforelse
         </div>
-        @if ($periods->hasPages())<div class="mt-6">{{ $periods->links() }}</div>@endif
+        <div class="mt-6">{{ $periods->links() }}</div>
     </section>
 @endsection

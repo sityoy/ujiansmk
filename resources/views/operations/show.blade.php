@@ -144,7 +144,7 @@
                 </tbody>
             </table>
         </div>
-        <div class="p-5"><p class="mb-3 text-xs text-slate-500">{{ $participants->total() }} peserta sesuai filter · 25 peserta per halaman.</p>{{ $participants->links() }}</div>
+        <div class="p-5">{{ $participants->links() }}</div>
     </section>
     @if (in_array(auth()->user()->role->value, ['super_admin', 'committee', 'principal'], true))
         <p class="mt-5 text-sm text-slate-400">Peserta tidak hadir dapat dipindahkan melalui <a href="{{ route('scheduling.index') }}#peserta-susulan" class="text-cyan-300">Penjadwalan → Peserta Susulan</a>. Penugasan lama dipindahkan, bukan dibuat ganda; siswa yang sudah mulai tidak dapat dipindahkan.</p>

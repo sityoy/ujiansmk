@@ -161,3 +161,9 @@ Di **Bank Soal Inti → Rekap Pembuatan Soal**, lihat guru penanggung jawab, map
 Nama asesmen ditampilkan sebagai **ASAS**. Nilai jenis `aas` pada database dan kode/tautan lama dipertahankan agar data tetap kompatibel. Migrasi memperbarui nama periode, judul uji coba, dan nama bank uji coba yang memuat singkatan AAS.
 
 Pada ujian inti dan uji coba, **hanya isi pilihan A–E diacak** per percobaan peserta. Nomor dan urutan pertanyaan tetap mengikuti bank. Label tampilan tetap A–E; teks dan lampiran berpindah bersama. Urutan opsi stabil saat muat ulang/masuk kembali, jawaban tersimpan tetap terpilih, dan koreksi menggunakan kunci asli. Pengaturan ini hanya berlaku di halaman peserta.
+
+### Pagination seluruh daftar
+
+Semua 20 daftar yang memakai pagination menyediakan **10, 15, 20, 50, dan Semua** data per halaman, dengan bawaan 10. Nomor halaman tetap ditampilkan pada layar kecil. Pilihan jumlah data juga tersedia untuk hasil kosong, satu halaman, dan mode Semua, sehingga pengguna dapat kembali ke tampilan bertahap. Semua mengikuti filter dan hak akses, tanpa batas jumlah buatan.
+
+Pada halaman dengan beberapa tabel, pilihan ukuran dan nomor halaman masing-masing tabel berdiri sendiri. Mengubah ukuran mereset halaman tabel tersebut sambil mempertahankan filter dan pilihan tabel lain. Daftar siswa dan rombel tetap memakai tautan ke bagian daftar yang sesuai.

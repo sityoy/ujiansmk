@@ -142,12 +142,12 @@
             @endforelse
         </section>
     </div>
-    @if ($questions->hasPages())
+
         <div class="mt-6 rounded-2xl border border-white/10 bg-white/[0.025] p-4">
-            <p class="mb-3 text-xs text-slate-500">Menampilkan soal {{ $questions->firstItem() }}–{{ $questions->lastItem() }} dari {{ $questions->total() }} soal · 20 soal per halaman.</p>
+
             {{ $questions->links() }}
         </div>
-    @endif
+
     <script>
         const questionType = document.getElementById('question-type');
         const choiceFields = document.getElementById('multiple-choice-fields');

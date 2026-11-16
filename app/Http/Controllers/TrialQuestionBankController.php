@@ -52,7 +52,7 @@ class TrialQuestionBankController extends Controller
                             ->where('name', 'like', '%'.$search.'%')
                             ->orWhere('code', 'like', '%'.$search.'%'))))
                 ->latest()
-                ->paginate(12)
+                ->paginateForDisplay()
                 ->withQueryString(),
             'subjects' => Subject::query()
                 ->where('is_active', true)
@@ -113,7 +113,7 @@ class TrialQuestionBankController extends Controller
 
         return view('trial-question-banks.questions', [
             'bank' => $trialQuestionBank,
-            'questions' => $trialQuestionBank->questions()->paginate(20)->withQueryString(),
+            'questions' => $trialQuestionBank->questions()->paginateForDisplay()->withQueryString(),
             'questionCount' => $trialQuestionBank->questions()->count(),
             'totalPoints' => (float) $trialQuestionBank->questions()->sum('points'),
             'isLocked' => $this->isLocked($trialQuestionBank),

@@ -81,6 +81,6 @@
             @endforelse
         </section>
     </div>
-    @if ($questions->hasPages())<div class="mt-6 rounded-2xl border border-white/10 p-4"><p class="mb-3 text-xs text-slate-500">20 soal per halaman.</p>{{ $questions->links() }}</div>@endif
+    <div class="mt-6 rounded-2xl border border-white/10 p-4">{{ $questions->links() }}</div>
     <script>document.querySelectorAll('[data-edit-toggle]').forEach((button) => button.addEventListener('click', () => document.getElementById(button.dataset.editToggle)?.classList.toggle('hidden')));</script>
 @endsection

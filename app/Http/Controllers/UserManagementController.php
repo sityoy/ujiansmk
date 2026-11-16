@@ -35,7 +35,7 @@ class UserManagementController extends Controller
                 ->when($role, fn ($query) => $query->where('role', $role))
                 ->orderBy('role')
                 ->orderBy('name')
-                ->paginate(10)
+                ->paginateForDisplay()
                 ->withQueryString(),
             'roles' => $managedUsers->roles(),
             'printRoles' => array_values(array_filter(
