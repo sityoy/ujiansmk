@@ -207,6 +207,10 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             Route::delete('/{trialQuestionBank}', [TrialQuestionBankController::class, 'destroy'])->name('destroy');
         });
 
+    Route::get('/question-bank/recap', [QuestionBankController::class, 'recap'])
+        ->middleware('role:super_admin,committee,teacher')
+        ->name('question-bank.recap');
+
     Route::get('/question-bank', [QuestionBankController::class, 'catalog'])
         ->middleware('role:super_admin,committee,teacher')
         ->name('question-bank.index');

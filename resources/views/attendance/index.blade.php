@@ -56,7 +56,7 @@
 
         <section class="mt-6 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035]">
             <div class="border-b border-white/10 p-5"><h2 class="text-lg font-semibold">Absensi peserta mapel ini</h2></div>
-            <div class="overflow-x-auto"><table class="min-w-full text-left text-sm">
+            <div class="overflow-x-auto"><table class="data-grid min-w-full text-left text-sm">
                 <thead class="bg-slate-950/60 text-xs uppercase text-slate-500"><tr><th class="px-5 py-4">Siswa</th><th class="px-5 py-4">Metode</th><th class="px-5 py-4">Jarak/Akurasi</th><th class="px-5 py-4">Status</th></tr></thead>
                 <tbody class="divide-y divide-white/5">
                     @forelse ($checkins as $checkin)

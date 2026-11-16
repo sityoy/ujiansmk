@@ -90,7 +90,7 @@
 
     <section class="mt-6 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035]">
         <div class="overflow-x-auto">
-            <table class="min-w-full text-left text-sm">
+            <table class="data-grid min-w-full text-left text-sm">
                 <thead class="border-b border-white/10 bg-slate-950/60 text-xs uppercase tracking-wider text-slate-400">
                     <tr>
                         <th class="sticky left-0 bg-slate-950 px-4 py-4">Siswa</th>

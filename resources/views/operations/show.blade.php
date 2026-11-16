@@ -57,7 +57,7 @@
             </form>
         </div>
         <div class="overflow-x-auto">
-            <table class="min-w-full text-left text-sm">
+            <table class="data-grid min-w-full text-left text-sm">
                 <thead class="bg-slate-950/60 text-xs uppercase text-slate-500"><tr><th class="px-5 py-4">Peserta</th><th class="px-5 py-4">Absensi sesi</th><th class="px-5 py-4">Status ujian</th><th class="px-5 py-4">Progres</th><th class="px-5 py-4">Waktu</th><th class="px-5 py-4">Nilai</th><th class="px-5 py-4">Insiden</th></tr></thead>
                 <tbody class="divide-y divide-white/5">
                     @forelse ($participants as $assignment)

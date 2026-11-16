@@ -125,7 +125,7 @@
             <p class="mt-1 text-sm text-slate-500">Waktu simpan terakhir bukan penanda siswa sedang online. Insiden browser perlu diperiksa pengawas, bukan otomatis bukti kecurangan.</p>
         </div>
         <div class="overflow-x-auto">
-            <table class="min-w-full text-left text-sm">
+            <table class="data-grid min-w-full text-left text-sm">
                 <thead class="bg-slate-950/60 text-xs uppercase tracking-wider text-slate-500"><tr><th class="px-5 py-4">Siswa</th><th class="px-5 py-4">Mapel</th><th class="px-5 py-4">Status</th><th class="px-5 py-4">Simpan terakhir</th><th class="px-5 py-4">Nilai</th><th class="px-5 py-4">Insiden</th></tr></thead>
                 <tbody class="divide-y divide-white/5">
                     @forelse ($attempts as $attempt)

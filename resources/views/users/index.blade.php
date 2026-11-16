@@ -150,7 +150,7 @@
             </div>
         </div>
         <div class="overflow-x-auto">
-            <table class="min-w-full text-left text-sm">
+            <table class="data-grid min-w-full text-left text-sm">
                 <thead class="bg-slate-950/60 text-xs uppercase tracking-wider text-slate-500">
                     <tr><th class="px-5 py-4">Pengguna</th><th class="px-5 py-4">Akses</th><th class="px-5 py-4">Status</th><th class="px-5 py-4 text-right">Aksi</th></tr>
                 </thead>

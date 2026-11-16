@@ -444,3 +444,46 @@ html[data-exam-lite="1"] .exam-toolbar {
     animation: none !important;
     transition: none !important;
 }
+
+/* Clear row and column boundaries in both application themes. */
+.data-grid {
+    --table-line: #64748b;
+    --table-head: #172235;
+    --table-stripe: rgb(148 163 184 / 0.065);
+    --table-hover: rgb(34 211 238 / 0.09);
+    border-collapse: collapse;
+    border: 1px solid var(--table-line);
+}
+.data-grid > :is(thead, tbody, tfoot) > tr > :is(th, td) {
+    border: 1px solid var(--table-line);
+    vertical-align: top;
+}
+.data-grid > thead > tr > th {
+    background-color: var(--table-head);
+    color: #cbd5e1;
+}
+.data-grid > tbody > tr:nth-child(even) {
+    background-color: var(--table-stripe);
+}
+.data-grid > tbody > tr:hover {
+    background-color: var(--table-hover);
+}
+html[data-theme='light'] .data-grid {
+    --table-line: #8190a5;
+    --table-head: #e2e8f0;
+    --table-stripe: #f1f5f9;
+    --table-hover: #e0f2fe;
+}
+html[data-theme='light'] .data-grid > thead > tr > th { color: #1e293b; }
+@media (max-width: 767px) {
+    .responsive-data-table.data-grid > tbody > tr {
+        border: 1px solid var(--table-line);
+    }
+    .responsive-data-table.data-grid > tbody > tr > td {
+        border-width: 0 0 1px;
+        border-color: var(--table-line);
+    }
+    .responsive-data-table.data-grid > tbody > tr > td:last-child {
+        border-bottom-width: 0;
+    }
+}

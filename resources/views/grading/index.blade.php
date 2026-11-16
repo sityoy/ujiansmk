@@ -36,7 +36,7 @@
 
     <section class="mt-6 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035]">
         <div class="overflow-x-auto">
-            <table class="min-w-full text-left text-sm">
+            <table class="data-grid min-w-full text-left text-sm">
                 <thead class="bg-slate-950/60 text-xs uppercase text-slate-500"><tr><th class="px-5 py-4">Peserta</th><th class="px-5 py-4">Periode</th><th class="px-5 py-4">Mapel/Kelas</th><th class="px-5 py-4">Guru</th><th class="px-5 py-4">Status</th><th class="px-5 py-4">Aksi</th></tr></thead>
                 <tbody class="divide-y divide-white/5">
                     @forelse ($attempts as $attempt)

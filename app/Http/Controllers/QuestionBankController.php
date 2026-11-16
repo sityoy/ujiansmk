@@ -8,7 +8,9 @@ use App\Enums\UserRole;
 use App\Models\AssessmentPeriod;
 use App\Models\AssessmentSubject;
 use App\Models\ExamQuestion;
+use App\Models\SchoolProfile;
 use App\Services\Exams\CoreQuestionBank;
+use App\Services\Exams\CoreQuestionBankCatalog;
 use App\Services\Exams\ExamScoreCalculator;
 use App\Services\Exams\QuestionText;
 use App\Services\Students\StudentSpreadsheetService;
@@ -17,6 +19,7 @@ use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -29,87 +32,66 @@ class QuestionBankController extends Controller
 {
     public function __construct(private readonly CoreQuestionBank $banks, private readonly QuestionText $questionText) {}
 
-    public function catalog(Request $request): View
+    public function catalog(Request $request, CoreQuestionBankCatalog $catalog): View
     {
-        $teacherId = $request->user()->role === UserRole::Teacher ? $request->user()->id : null;
-        $periodId = $request->integer('period_id') ?: null;
-        $gradeLevel = in_array($request->integer('grade_level'), [10, 11, 12], true)
-            ? $request->integer('grade_level')
-            : null;
-        $search = trim((string) $request->query('q'));
-        $catalogView = $request->query('view') === 'summary' ? 'summary' : 'banks';
-        $questionStatus = in_array($request->query('question_status'), ['filled', 'empty'], true)
-            ? $request->query('question_status') : null;
-        $scopeTeacher = fn ($query) => $query->when(
-            $teacherId,
-            fn ($query) => $query->where('teacher_user_id', $teacherId),
-        );
-
-        $grouped = AssessmentSubject::query()
-            ->with(['assessmentPeriod.academicYear', 'subject', 'schoolClass', 'teacher'])
-            ->withCount([
-                'questions',
-                'questions as pg_count' => fn ($query) => $query->where('question_type', ExamQuestionType::MultipleChoice->value),
-                'questions as essay_count' => fn ($query) => $query->where('question_type', ExamQuestionType::Essay->value),
-                'questions as short_answer_count' => fn ($query) => $query->where('question_type', ExamQuestionType::ShortAnswer->value),
-            ])
-            ->withSum('questions', 'points')
-            ->when($teacherId, fn ($query) => $query->where('teacher_user_id', $teacherId))
-            ->when($periodId, fn ($query) => $query->where('assessment_period_id', $periodId))
-            ->when($gradeLevel, fn ($query) => $query->whereHas('schoolClass', fn ($query) => $query
-                ->where('grade_level', $gradeLevel)))
-            ->when($search, fn ($query) => $query->where(fn ($query) => $query
-                ->whereHas('subject', fn ($query) => $query->where('name', 'like', '%'.$search.'%')
-                    ->orWhere('code', 'like', '%'.$search.'%'))
-                ->orWhereHas('teacher', fn ($query) => $query->where('name', 'like', '%'.$search.'%'))))
-            ->latest()
-            ->get()
-            ->groupBy(fn (AssessmentSubject $component): string => implode('|', [
-                $component->assessment_period_id,
-                $component->subject_id,
-                $component->schoolClass->grade_level,
-                $component->teacher_user_id ?? 'rombel-'.$component->id,
-            ]))
-            ->map(function ($components): AssessmentSubject {
-                $representative = $components->sortByDesc('questions_count')->first();
-                $representative->setAttribute('grade_level', $representative->schoolClass->grade_level);
-                $representative->setAttribute('rombel_names', $components->pluck('schoolClass.name')->sort(SORT_NATURAL)->join(', '));
-
-                return $representative;
-            })
-            ->sortByDesc('id')
-            ->values();
-
-        // Count each shared bank once, before applying the filled/empty tab filter.
-        $summary = [
-            'banks' => $grouped->count(),
-            'filled' => $grouped->where('questions_count', '>', 0)->count(),
-            'empty' => $grouped->where('questions_count', 0)->count(),
-            'questions' => (int) $grouped->sum('questions_count'),
-        ];
-        $grouped = $grouped->filter(fn (AssessmentSubject $component): bool => match ($questionStatus) {
-            'filled' => $component->questions_count > 0,
-            'empty' => (int) $component->questions_count === 0,
-            default => true,
-        })->values();
-
-        $components = TablePagination::collection($grouped, 'page');
+        $data = $catalog->data($request);
 
         return view('questions.catalog', [
-            'components' => $components,
-            'catalogView' => $catalogView,
-            'questionStatus' => $questionStatus,
-            'summary' => $summary,
-            'periods' => AssessmentPeriod::query()
-                ->with('academicYear')
-                ->whereHas('assessmentSubjects', $scopeTeacher)
-                ->orderByDesc('starts_on')
-                ->get(),
-            'gradeLevels' => [10, 11, 12],
-            'periodId' => $periodId,
-            'gradeLevel' => $gradeLevel,
-            'search' => $search,
+            ...$data,
+            'components' => TablePagination::collection($data['grouped']),
         ]);
+    }
+
+    public function recap(Request $request, CoreQuestionBankCatalog $catalog): Response
+    {
+        $request->validate([
+            'period_id' => ['nullable', 'integer', 'exists:assessment_periods,id'],
+            'grade_level' => ['nullable', Rule::in([10, 11, 12])],
+            'q' => ['nullable', 'string', 'max:100'],
+            'question_status' => ['nullable', Rule::in(['filled', 'empty'])],
+        ]);
+        $data = $catalog->data($request);
+        if ($request->user()->role === UserRole::Teacher && $data['periodId']) {
+            abort_unless($data['periods']->contains('id', $data['periodId']), 403);
+        }
+        $groups = $data['grouped']->sortBy(fn ($bank) => sprintf('%02d|%010d|%s|%s', $bank->grade_level, $bank->assessment_period_id, $bank->subject->name, $bank->teacher?->name ?? ''))
+            ->groupBy(fn ($bank) => $bank->grade_level.'|'.$bank->assessment_period_id)
+            ->map(function ($banks): array {
+                $first = $banks->first();
+
+                return [
+                    'title' => 'Kelas '.$first->grade_level.' · '.$first->assessmentPeriod->name,
+                    'subtitle' => 'Tahun ajaran '.$first->assessmentPeriod->academicYear->name,
+                    'rows' => $banks->values()->map(fn ($bank) => [
+                        $bank->teacher?->name ?? 'Belum ditetapkan',
+                        $bank->subject->name,
+                        $bank->rombel_names,
+                        (int) $bank->pg_count, (int) $bank->essay_count, (int) $bank->short_answer_count,
+                        (int) $bank->questions_count,
+                        $bank->questions_count > 0 ? 'Sudah ada soal' : 'Belum ada soal',
+                    ])->all(),
+                ];
+            })->values();
+        $banks = $data['grouped'];
+        $totals = [
+            'banks' => $banks->count(), 'filled' => $banks->where('questions_count', '>', 0)->count(),
+            'empty' => $banks->where('questions_count', 0)->count(),
+            'questions' => (int) $banks->sum('questions_count'),
+        ];
+
+        return response()->view('questions.recap', [
+            'groups' => $groups,
+            'totals' => $totals,
+            'school' => SchoolProfile::first(),
+            'gradeLabel' => $data['gradeLevel'] ? 'Kelas '.$data['gradeLevel'] : 'Semua tingkat',
+            'periodLabel' => $data['periodId'] ? AssessmentPeriod::findOrFail($data['periodId'])->name : 'Semua periode',
+            'filterLabel' => collect([
+                $data['questionStatus'] === 'filled' ? 'Sudah ada soal' : ($data['questionStatus'] === 'empty' ? 'Belum ada soal' : null),
+                $data['search'] !== '' ? 'Pencarian: '.$data['search'] : null,
+            ])->filter()->join(' · '),
+            'generatedAt' => now()->timezone('Asia/Jakarta')->format('d/m/Y H:i').' WIB',
+            'filename' => 'rekap-bank-soal-inti-'.($data['gradeLevel'] ?? 'semua-tingkat').'-'.now()->format('Ymd-His'),
+        ])->header('Cache-Control', 'private, no-store')->header('X-Robots-Tag', 'noindex, nofollow');
     }
 
     public function index(Request $request, AssessmentSubject $assessmentSubject): View

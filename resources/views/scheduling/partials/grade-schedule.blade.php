@@ -47,7 +47,7 @@
                     </form>
                 </div>
                 <div class="mt-4 overflow-x-auto">
-                    <table class="w-full text-left text-sm">
+                    <table class="data-grid w-full text-left text-sm">
                         <thead class="text-xs text-slate-400"><tr><th class="p-2">Rombel / Ruangan</th><th class="p-2">Peserta</th><th class="p-2">Belum mulai</th><th class="p-2">Mengerjakan</th><th class="p-2">Selesai</th><th class="p-2">Pemantauan</th></tr></thead>
                         <tbody>
                             @foreach ($sessions->sortBy('assessmentSubject.schoolClass.name', SORT_NATURAL) as $classSession)

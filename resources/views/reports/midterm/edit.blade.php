@@ -65,7 +65,7 @@
                             @csrf @method('PUT')
                             <p class="text-xs text-slate-500">Masukkan nilai akhir, lalu pilih TP yang tercapai optimal dan yang perlu ditingkatkan. Satu TP hanya dapat dipilih pada salah satu kolom. Jika tidak ada pilihan, sistem menentukannya otomatis berdasarkan nilai.</p>
                             <div class="mt-5 overflow-x-auto">
-                                <table class="min-w-full text-left text-xs">
+                                <table class="data-grid min-w-full text-left text-xs">
                                     <thead class="border-b border-white/10 text-slate-500"><tr><th class="min-w-48 px-3 py-3">Peserta Didik</th><th class="w-28 px-3 py-3">Nilai Akhir</th><th class="min-w-[24rem] px-3 py-3">TP Tercapai Optimal</th><th class="min-w-[24rem] px-3 py-3">TP Perlu Peningkatan</th></tr></thead>
                                     <tbody class="divide-y divide-white/5">
                                         @foreach ($rows->sortBy(fn ($item) => $item['student']->full_name) as $row)
@@ -153,7 +153,7 @@
                         <form method="POST" action="{{ route('reports.midterm.extracurriculars.grades', [$period, $schoolClass, $activity]) }}">
                             @csrf @method('PUT')
                             <p class="mb-3 text-xs text-slate-500">Pembina cukup memilih predikat. Keterangan ekstrakurikuler dibuat otomatis oleh sistem.</p>
-                            <div class="overflow-x-auto"><table class="min-w-full text-left text-xs"><thead class="border-b border-white/10 text-slate-500"><tr><th class="px-3 py-3">Peserta</th><th class="w-44 px-3 py-3">Predikat</th><th class="min-w-96 px-3 py-3">Keterangan Otomatis</th></tr></thead><tbody class="divide-y divide-white/5">
+                            <div class="overflow-x-auto"><table class="data-grid min-w-full text-left text-xs"><thead class="border-b border-white/10 text-slate-500"><tr><th class="px-3 py-3">Peserta</th><th class="w-44 px-3 py-3">Predikat</th><th class="min-w-96 px-3 py-3">Keterangan Otomatis</th></tr></thead><tbody class="divide-y divide-white/5">
                                 @foreach ($activity->participants as $student)
                                     @php($grade = $activity->grades->firstWhere('student_id', $student->id))
                                     <tr><td class="px-3 py-3 font-medium text-white">{{ $student->full_name }}</td><td class="px-3 py-3"><select name="ratings[{{ $student->id }}]" required class="w-full rounded-lg border border-white/10 bg-slate-950 px-3 py-2"><option value="">Pilih</option>@foreach($ratings as $rating)<option value="{{ $rating->value }}" @selected(old('ratings.'.$student->id, $grade?->rating?->value) === $rating->value)>{{ $rating->label() }}</option>@endforeach</select></td><td class="px-3 py-3 leading-5 text-slate-400">{{ $grade?->description ?: 'Akan dibuat setelah predikat disimpan.' }}</td></tr>
@@ -177,7 +177,7 @@
         @if ($canRecordAttendance)
             <form method="POST" action="{{ route('reports.midterm.attendance.update', [$period, $schoolClass]) }}" class="mt-5">
                 @csrf @method('PUT')
-                <div class="overflow-x-auto"><table class="min-w-full text-left text-xs"><thead class="border-b border-white/10 text-slate-500"><tr><th class="px-3 py-3">Peserta Didik</th><th class="w-24 px-3 py-3">Sakit</th><th class="w-24 px-3 py-3">Izin</th><th class="w-32 px-3 py-3">Tanpa Ket.</th><th class="min-w-80 px-3 py-3">Catatan Wali Kelas</th></tr></thead><tbody class="divide-y divide-white/5">
+                <div class="overflow-x-auto"><table class="data-grid min-w-full text-left text-xs"><thead class="border-b border-white/10 text-slate-500"><tr><th class="px-3 py-3">Peserta Didik</th><th class="w-24 px-3 py-3">Sakit</th><th class="w-24 px-3 py-3">Izin</th><th class="w-32 px-3 py-3">Tanpa Ket.</th><th class="min-w-80 px-3 py-3">Catatan Wali Kelas</th></tr></thead><tbody class="divide-y divide-white/5">
                     @foreach ($rows->sortBy(fn ($item) => $item['student']->full_name) as $row)
                         @php($attendance = $row['attendance'])
                         <tr><td class="px-3 py-3"><span class="font-medium text-white">{{ $row['student']->full_name }}</span><span class="mt-1 block text-slate-600">{{ $row['student']->student_number }}</span></td>@foreach(['sick_days','excused_days','unexcused_days'] as $field)<td class="px-3 py-3"><input type="number" name="attendance[{{ $row['student']->id }}][{{ $field }}]" value="{{ old('attendance.'.$row['student']->id.'.'.$field, $attendance->{$field}) }}" min="0" max="366" required class="w-20 rounded-lg border border-white/10 bg-slate-950 px-3 py-2"></td>@endforeach<td class="px-3 py-3"><textarea name="attendance[{{ $row['student']->id }}][notes]" rows="2" maxlength="1000" class="w-full rounded-lg border border-white/10 bg-slate-950 px-3 py-2 leading-5">{{ old('attendance.'.$row['student']->id.'.notes', $attendance->notes) }}</textarea></td></tr>

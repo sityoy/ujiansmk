@@ -321,7 +321,7 @@
         </div>
 
         <div class="overflow-x-auto">
-            <table class="responsive-data-table min-w-full text-left text-sm">
+            <table class="data-grid responsive-data-table min-w-full text-left text-sm">
                 <thead class="bg-slate-950/60 text-xs uppercase tracking-wider text-slate-500">
                     <tr><th class="px-5 py-4"><input type="checkbox" data-room-select-all @disabled(! $roomPeriod) aria-label="Pilih semua siswa pada halaman ini"></th><th class="px-5 py-4">NIS</th><th class="px-5 py-4">NISN</th><th class="px-5 py-4">Nama</th><th class="px-5 py-4">Kelas</th><th class="px-5 py-4">Ruangan</th><th class="px-5 py-4">Login</th><th class="px-5 py-4 text-right">Aksi</th></tr>
                 </thead>

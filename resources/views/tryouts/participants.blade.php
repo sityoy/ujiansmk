@@ -45,7 +45,7 @@
             </form>
         </div>
         <div class="overflow-x-auto">
-            <table class="min-w-full text-left text-sm">
+            <table class="data-grid min-w-full text-left text-sm">
                 <thead class="bg-slate-950/60 text-xs uppercase text-slate-500"><tr><th class="px-5 py-4">Peserta</th><th class="px-5 py-4">Mulai</th><th class="px-5 py-4">Selesai</th><th class="px-5 py-4">Status</th><th class="px-5 py-4">Pelanggaran</th><th class="px-5 py-4">Tindakan</th></tr></thead>
                 <tbody class="divide-y divide-white/5">
                     @forelse ($participants as $row)

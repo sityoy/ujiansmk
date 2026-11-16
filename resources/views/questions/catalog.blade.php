@@ -60,8 +60,23 @@
         <section class="mt-6 rounded-3xl border border-white/10 bg-white/[0.035] p-4 sm:p-6">
             <h2 class="text-lg font-semibold text-white">Rekap Pembuatan Soal</h2>
             <p class="mt-2 text-xs leading-6 text-slate-400">Jumlah soal per mapel, tingkat, periode, dan guru penanggung jawab. Klik Lihat soal untuk membuka bank terkait.</p>
+            <form method="GET" action="{{ route('question-bank.recap') }}" target="_blank" class="mt-4 flex flex-wrap items-end gap-3 rounded-xl border border-white/10 p-4">
+                <input type="hidden" name="period_id" value="{{ $periodId }}">
+                <input type="hidden" name="q" value="{{ $search }}">
+                <input type="hidden" name="question_status" value="{{ $questionStatus }}">
+                <label class="text-xs text-slate-400">Tingkat yang diunduh
+                    <select name="grade_level" class="mt-2 block rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-sm text-slate-200">
+                        <option value="">Semua tingkat</option>
+                        @foreach ($gradeLevels as $level)
+                            <option value="{{ $level }}" @selected($gradeLevel === $level)>Kelas {{ $level }}</option>
+                        @endforeach
+                    </select>
+                </label>
+                <button class="rounded-xl bg-violet-400 px-4 py-2.5 text-sm font-semibold text-slate-950">Unduh rekap PDF / PNG</button>
+                <p class="w-full text-xs leading-6 text-slate-400">Memuat seluruh hasil sesuai periode, pencarian, dan status di atas. Jumlah data per halaman tidak membatasi unduhan.</p>
+            </form>
             <div class="mt-4 overflow-x-auto">
-                <table class="w-full text-left text-sm">
+                <table class="data-grid w-full text-left text-sm">
                     <thead class="border-b border-white/10 text-xs text-slate-400"><tr>
                         <th scope="col" class="px-3 py-3">Guru penanggung jawab</th><th scope="col" class="px-3 py-3">Mapel / Periode</th><th scope="col" class="px-3 py-3">Kelas / Rombel</th>
                         <th scope="col" class="px-3 py-3 text-center">PG</th><th scope="col" class="px-3 py-3 text-center">Esai</th><th scope="col" class="px-3 py-3 text-center">Isian singkat</th>

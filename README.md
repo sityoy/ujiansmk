@@ -167,3 +167,11 @@ Pada ujian inti dan uji coba, **hanya isi pilihan A–E diacak** per percobaan p
 Semua 20 daftar yang memakai pagination menyediakan **10, 15, 20, 50, dan Semua** data per halaman, dengan bawaan 10. Nomor halaman tetap ditampilkan pada layar kecil. Pilihan jumlah data juga tersedia untuk hasil kosong, satu halaman, dan mode Semua, sehingga pengguna dapat kembali ke tampilan bertahap. Semua mengikuti filter dan hak akses, tanpa batas jumlah buatan.
 
 Pada halaman dengan beberapa tabel, pilihan ukuran dan nomor halaman masing-masing tabel berdiri sendiri. Mengubah ukuran mereset halaman tabel tersebut sambil mempertahankan filter dan pilihan tabel lain. Daftar siswa dan rombel tetap memakai tautan ke bagian daftar yang sesuai.
+
+### Garis tabel dan unduhan rekap bank soal inti
+
+Tabel data aplikasi menggunakan garis horizontal dan vertikal yang lebih jelas, kepala tabel berwarna, serta baris selang-seling untuk tema gelap dan terang. Tampilan kartu siswa pada HP tetap dipertahankan.
+
+Di **Bank Soal Inti → Rekap Pembuatan Soal**, pilih tingkat pada bagian **Unduh rekap PDF / PNG** (kelas 10, 11, 12, atau semua tingkat). Laporan mengikuti periode, pencarian, status pengisian, dan kewenangan akun. Seluruh hasil disertakan tanpa terpotong pagination dan bank bersama antarrombel dihitung sekali.
+
+Halaman laporan menyediakan **Unduh PDF**, **Unduh gambar PNG**, dan **Cetak**. PDF berorientasi A4 lanskap dan memuat seluruh halaman. Satu halaman gambar diunduh sebagai PNG; beberapa halaman gambar dikemas dalam satu ZIP. Laporan dikelompokkan per tingkat dan periode dengan logo sekolah, tahun ajaran, jumlah PG/esai/isian, total, dan waktu pembuatan. Unduhan dibuat lokal di browser tanpa layanan konversi pihak ketiga atau dependensi tambahan di VPS; tiap halaman kanvas dilepas setelah diproses. Tombol Cetak juga dapat dipakai untuk membuat PDF melalui dialog browser.
