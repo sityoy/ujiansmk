@@ -10,6 +10,7 @@ use App\Models\Student;
 use App\Models\StudentExamRoom;
 use App\Models\Subject;
 use App\Models\User;
+use App\Services\Students\StudentDeletionService;
 use App\Services\Students\StudentExamRoomService;
 use App\Support\TablePagination;
 use Illuminate\Database\QueryException;
@@ -56,7 +57,7 @@ class AcademicDataController extends Controller
                 });
             })
             ->when($studentClassId, fn ($query) => $query->where('school_class_id', $studentClassId))
-            ->orderBy('full_name');
+            ->orderBy('full_name')->orderBy('id');
 
         return view('academic.index', [
             'academicYears' => AcademicYear::query()
@@ -309,19 +310,47 @@ class AcademicDataController extends Controller
         return back()->with('status', 'Status siswa berhasil diperbarui.');
     }
 
-    public function destroyStudent(Student $student): RedirectResponse
+    public function destroyStudents(Request $request, StudentDeletionService $deletion): RedirectResponse
     {
-        return $this->deleteSafely(
-            function () use ($student): void {
-                DB::transaction(function () use ($student): void {
-                    $user = $student->user;
-                    $student->delete();
-                    $user?->delete();
-                });
-            },
-            'Data siswa berhasil dihapus.',
-            'Siswa tidak dapat dihapus karena sudah memiliki penugasan, nilai, atau absensi.',
-        );
+        $validated = $request->validate([
+            'student_ids' => ['required', 'array', 'min:1', 'max:500'],
+            'student_ids.*' => ['required', 'integer', 'distinct', 'exists:students,id'],
+        ], ['student_ids.required' => 'Centang siswa yang akan dihapus terlebih dahulu.']);
+
+        try {
+            $count = $deletion->delete($validated['student_ids']);
+        } catch (QueryException $exception) {
+            report($exception);
+
+            return back()->withErrors(['student_ids' => 'Penghapusan dibatalkan karena ada data terkait yang belum dapat dihapus. Tidak ada siswa yang dihapus.']);
+        }
+
+        return $this->studentListRedirect($request)->with('status', $count.' siswa terpilih beserta akun dan data terkait berhasil dihapus.');
+    }
+
+    public function destroyStudent(Request $request, Student $student, StudentDeletionService $deletion): RedirectResponse
+    {
+        try {
+            $deletion->delete([$student->id]);
+        } catch (QueryException $exception) {
+            report($exception);
+
+            return back()->withErrors(['student_ids' => 'Siswa tidak dapat dihapus karena masih ada data terkait. Penghapusan dibatalkan.']);
+        }
+
+        return $this->studentListRedirect($request)->with('status', 'Data siswa beserta akun dan data terkait berhasil dihapus.');
+    }
+
+    private function studentListRedirect(Request $request): RedirectResponse
+    {
+        $query = array_intersect_key($request->query(), array_flip([
+            'student_search', 'student_class', 'student_per_page', 'room_period_id',
+            'class_year', 'class_per_page', 'class_page',
+        ]));
+
+        // Restart the student list after deletion so removing the last row on
+        // the last page never strands the user on an empty, stale page.
+        return redirect()->to(route('academic.index', $query).'#student-list');
     }
 
     private function deleteSafely(callable $callback, string $success, string $failure): RedirectResponse

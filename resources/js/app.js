@@ -1,3 +1,4 @@
+import { initializeStudentSelection } from './student-selection';
 const themeStorageKey = 'ujiansmk-theme';
 
 const currentTheme = () => document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
@@ -138,25 +139,4 @@ if (document.querySelector('[data-question-editor]')) {
     import('./question-editor').then(({initializeQuestionEditors}) => initializeQuestionEditors());
 }
 
-const roomForm = document.getElementById('student-room-bulk');
-if (roomForm) {
-    const students = [...document.querySelectorAll('[data-room-student]')];
-    const selectAll = document.querySelector('[data-room-select-all]');
-    const count = roomForm.querySelector('[data-room-selection-count]');
-    const submit = roomForm.querySelector('button');
-    const updateSelection = () => {
-        const selected = students.filter((student) => student.checked).length;
-        count.textContent = `${selected} siswa terpilih.`;
-        submit.disabled = selected === 0 || selected > 500;
-        selectAll.checked = students.length > 0 && selected === students.length;
-        selectAll.indeterminate = selected > 0 && selected < students.length;
-        selectAll.disabled = students.length === 0;
-    };
-    selectAll.addEventListener('change', () => {
-        students.forEach((student) => { student.checked = selectAll.checked; });
-        updateSelection();
-    });
-    students.forEach((student) => student.addEventListener('change', updateSelection));
-    window.addEventListener('pageshow', updateSelection);
-    updateSelection();
-}
+initializeStudentSelection();

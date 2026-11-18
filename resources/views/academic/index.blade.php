@@ -299,6 +299,16 @@
                 </div>
             </form>
 
+            <form id="student-bulk-delete" method="POST" action="{{ route('academic.students.bulk-destroy', request()->query()) }}"
+                class="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-rose-400/25 bg-rose-400/[0.04] p-4">
+                @csrf @method('DELETE')
+                <div data-selected-students></div>
+                <button type="submit" data-bulk-delete-submit disabled class="rounded-xl border border-rose-400/40 bg-rose-400/10 px-4 py-3 text-sm font-semibold text-rose-300 disabled:cursor-not-allowed disabled:opacity-50">Hapus siswa terpilih</button>
+                <span data-student-selection-count class="text-sm text-slate-400" aria-live="polite">0 siswa terpilih.</span>
+                <p class="w-full text-xs leading-6 text-slate-400">Centang siswa yang ingin dihapus. Pilih semua hanya mencentang data pada halaman ini; pilih Semua pada jumlah data untuk melihat seluruh hasil filter. Maksimal 500 siswa sekali hapus. Akun login, ruangan, absensi, nilai, serta riwayat ujian siswa terpilih ikut dihapus permanen.</p>
+                <p data-student-selection-warning hidden class="w-full text-xs text-amber-300" role="status">Pilih maksimal 500 siswa sekaligus, atau gunakan filter kelas dan jumlah data per halaman.</p>
+            </form>
+
             @if ($roomPeriod)
             <p class="mt-4 text-sm font-medium text-emerald-300">Ruangan untuk {{ $roomPeriod->name }} · {{ $roomPeriod->academicYear->name }}</p>
             <form id="student-room-bulk" method="POST" action="{{ route('academic.students.rooms') }}"
@@ -323,12 +333,13 @@
         <div class="overflow-x-auto">
             <table class="data-grid responsive-data-table min-w-full text-left text-sm">
                 <thead class="bg-slate-950/60 text-xs uppercase tracking-wider text-slate-500">
-                    <tr><th class="px-5 py-4"><input type="checkbox" data-room-select-all @disabled(! $roomPeriod) aria-label="Pilih semua siswa pada halaman ini"></th><th class="px-5 py-4">NIS</th><th class="px-5 py-4">NISN</th><th class="px-5 py-4">Nama</th><th class="px-5 py-4">Kelas</th><th class="px-5 py-4">Ruangan</th><th class="px-5 py-4">Login</th><th class="px-5 py-4 text-right">Aksi</th></tr>
+                    <tr><th class="px-5 py-4"><input type="checkbox" data-room-select-all aria-label="Pilih semua siswa pada halaman ini"></th><th class="px-5 py-4">No.</th><th class="px-5 py-4">NIS</th><th class="px-5 py-4">NISN</th><th class="px-5 py-4">Nama</th><th class="px-5 py-4">Kelas</th><th class="px-5 py-4">Ruangan</th><th class="px-5 py-4">Login</th><th class="px-5 py-4 text-right">Aksi</th></tr>
                 </thead>
                 <tbody class="divide-y divide-white/5">
                     @forelse ($students as $student)
                         <tr>
-                            <td data-label="Pilih" class="px-5 py-4"><input type="checkbox" name="student_ids[]" value="{{ $student->id }}" form="student-room-bulk" data-room-student @disabled(! $roomPeriod) aria-label="Pilih {{ $student->full_name }}"></td>
+                            <td data-label="Pilih" class="px-5 py-4"><input type="checkbox" name="student_ids[]" value="{{ $student->id }}" form="student-room-bulk" data-room-student aria-label="Pilih {{ $student->full_name }}"></td>
+                            <td data-label="No." data-student-row-number class="px-5 py-4 text-slate-400">{{ ($students->firstItem() ?? 1) + $loop->index }}</td>
                             <td data-label="NIS" class="px-5 py-4 text-slate-400">{{ $student->student_number }}</td>
                             <td data-label="NISN" class="px-5 py-4 text-slate-400">{{ $student->nisn ?? '—' }}</td>
                             <td data-label="Nama" class="px-5 py-4 font-medium text-white">{{ $student->full_name }}</td>
@@ -355,14 +366,14 @@
                                     <form method="POST" action="{{ route('academic.students.toggle', $student) }}">@csrf @method('PATCH')
                                         <button class="text-xs {{ $student->is_active ? 'text-emerald-300' : 'text-slate-500' }}">{{ $student->is_active ? 'Aktif' : 'Nonaktif' }}</button>
                                     </form>
-                                    <form method="POST" action="{{ route('academic.students.destroy', $student) }}" onsubmit="return confirm('Hapus siswa ini?')">@csrf @method('DELETE')
+                                    <form method="POST" action="{{ route('academic.students.destroy', [...request()->query(), 'student' => $student]) }}" onsubmit="return confirm('Hapus permanen siswa ini beserta akun, ruangan, absensi, nilai, dan riwayat ujian terkait?')">@csrf @method('DELETE')
                                         <button class="text-xs text-rose-300">Hapus</button>
                                     </form>
                                 </div>
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="8" class="px-6 py-12 text-center text-slate-500">Data siswa tidak ditemukan.</td></tr>
+                        <tr><td colspan="9" class="px-6 py-12 text-center text-slate-500">Data siswa tidak ditemukan.</td></tr>
                     @endforelse
                 </tbody>
             </table>
