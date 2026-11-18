@@ -17,67 +17,114 @@ use Throwable;
 
 class StudentDeletionService
 {
+    public function __construct(private StudentRosterRevision $revision) {}
+
     /** @param array<int, int|string> $studentIds */
-    public function delete(array $studentIds): int
+    public function delete(array $studentIds, int $revision = 0): int
     {
         $ids = array_values(array_unique(array_map('intval', $studentIds)));
         if ($ids === [] || count($ids) > 500) {
             throw ValidationException::withMessages(['student_ids' => 'Pilih 1 sampai 500 siswa untuk dihapus.']);
         }
 
-        return DB::transaction(function () use ($ids): int {
-            // The parent locks also serialize this operation with trial starts.
-            $students = Student::query()->whereKey($ids)->orderBy('id')->lockForUpdate()->get();
-            if ($students->count() !== count($ids)) {
-                throw ValidationException::withMessages(['student_ids' => 'Data siswa berubah. Muat ulang daftar lalu pilih kembali siswa.']);
-            }
-            $users = User::query()->whereKey($students->pluck('user_id')->filter())->orderBy('id')->lockForUpdate()->get();
-            if ($users->contains(fn (User $user): bool => $user->role !== UserRole::Student)) {
-                throw ValidationException::withMessages(['student_ids' => 'Ada siswa yang terhubung ke akun selain siswa. Periksa data akun sebelum menghapus.']);
-            }
+        return $this->revision->withCurrent(fn () => $this->deleteBatch($ids), $revision);
+    }
 
-            // Core starts lock their assignment before creating an attempt. A
-            // locking read below sees attempts committed while waiting for it.
-            $assignments = ExamAssignment::query()->whereIn('student_id', $ids)->orderBy('id')->lockForUpdate()->pluck('id');
-            $attempts = ExamAttempt::query()->whereIn('exam_assignment_id', $assignments)->orderBy('id')->lockForUpdate()->get(['id', 'status']);
-            $identifiers = $students->flatMap(fn (Student $student) => [$student->student_number, $student->nisn])->filter(fn ($value) => $value !== null && $value !== '')->unique()->values();
-            $conflicts = Student::query()->whereNotIn('id', $ids)
-                ->where(fn ($query) => $query->whereIn('student_number', $identifiers)->orWhereIn('nisn', $identifiers))
-                ->get(['student_number', 'nisn'])->flatMap(fn (Student $student) => [$student->student_number, $student->nisn])->filter(fn ($value) => $value !== null && $value !== '');
-            $legacyIdentifiers = $identifiers->diff($conflicts)->values();
-            $trials = TrialAttempt::query()->where(fn ($query) => $query
-                ->whereIn('student_id', $ids)
-                ->orWhere(fn ($legacy) => $legacy->whereNull('student_id')
-                    ->whereIn('participant_identifier', $legacyIdentifiers)
-                    ->whereIn('participant_name', $students->pluck('full_name'))))
-                ->orderBy('id')->lockForUpdate()->get(['id', 'status']);
-            if ($attempts->contains('status', AttemptStatus::InProgress) || $trials->contains('status', 'in_progress')) {
-                throw ValidationException::withMessages(['student_ids' => 'Penghapusan dibatalkan karena ada siswa terpilih yang masih mengerjakan ujian inti atau uji coba. Selesaikan ujiannya terlebih dahulu.']);
+    /** @return array{count: int, reset: bool} */
+    public function deleteAll(int $expectedCount, int $expectedLastId, int $revision): array
+    {
+        $driver = DB::connection()->getDriverName();
+        $count = $this->revision->withCurrent(function () use ($expectedCount, $expectedLastId, $driver): int {
+            $ids = Student::query()->orderBy('id')->lockForUpdate()->pluck('id');
+            if ($ids->isEmpty() || $ids->count() !== $expectedCount || (int) $ids->last() !== $expectedLastId) {
+                throw ValidationException::withMessages([
+                    'student_ids' => 'Daftar siswa berubah. Muat ulang halaman dan periksa jumlah siswa sebelum menghapus semuanya.',
+                ]);
             }
 
-            $selfies = DailyCheckin::query()->whereIn('student_id', $ids)->pluck('selfie_path')->filter()->unique()->all();
-            // The trial FK normally becomes NULL on student deletion. Remove
-            // owned attempts and unambiguous legacy matches explicitly so they
-            // cannot reattach on re-import. Ambiguous legacy identities remain.
-            TrialAttempt::query()->whereKey($trials->modelKeys())->delete();
-            Student::query()->whereKey($ids)->delete();
-            User::query()->whereKey($users->modelKeys())->where('role', UserRole::Student)->delete();
+            foreach ($ids->chunk(200) as $batch) {
+                $this->deleteBatch($batch->values()->all());
+            }
 
-            DB::afterCommit(function () use ($selfies): void {
-                foreach ($selfies as $path) {
-                    try {
-                        if (! DailyCheckin::query()->where('selfie_path', $path)->exists()) {
-                            Storage::disk('local')->delete($path);
-                        }
-                    } catch (Throwable $exception) {
-                        // A file cleanup error must not report a failed deletion
-                        // after the database transaction has already committed.
-                        report($exception);
-                    }
+            $this->revision->advance();
+            if ($driver === 'sqlite') {
+                DB::table('sqlite_sequence')->where('name', 'students')->delete();
+            }
+
+            return $ids->count();
+        }, $revision);
+
+        $reset = $driver === 'sqlite';
+        if (in_array($driver, ['mysql', 'mariadb'], true)) {
+            // ALTER TABLE commits implicitly on these engines. Run it only
+            // after the deletion has committed, and report failure separately.
+            try {
+                if (! Student::query()->exists()) {
+                    DB::statement('ALTER TABLE students AUTO_INCREMENT = 1');
+                    $reset = ! Student::query()->exists();
                 }
-            });
+            } catch (Throwable $exception) {
+                report($exception);
+            }
+        }
 
-            return $students->count();
-        }, 3);
+        return ['count' => $count, 'reset' => $reset];
+    }
+
+    /** @param list<int> $ids */
+    private function deleteBatch(array $ids): int
+    {
+        // The parent locks also serialize this operation with trial starts.
+        $students = Student::query()->whereKey($ids)->orderBy('id')->lockForUpdate()->get();
+        if ($students->count() !== count($ids)) {
+            throw ValidationException::withMessages(['student_ids' => 'Data siswa berubah. Muat ulang daftar lalu pilih kembali siswa.']);
+        }
+        $users = User::query()->whereKey($students->pluck('user_id')->filter())->orderBy('id')->lockForUpdate()->get();
+        if ($users->contains(fn (User $user): bool => $user->role !== UserRole::Student)) {
+            throw ValidationException::withMessages(['student_ids' => 'Ada siswa yang terhubung ke akun selain siswa. Periksa data akun sebelum menghapus.']);
+        }
+
+        // Core starts lock their assignment before creating an attempt. A
+        // locking read below sees attempts committed while waiting for it.
+        $assignments = ExamAssignment::query()->whereIn('student_id', $ids)->orderBy('id')->lockForUpdate()->pluck('id');
+        $attempts = ExamAttempt::query()->whereIn('exam_assignment_id', $assignments)->orderBy('id')->lockForUpdate()->get(['id', 'status']);
+        $identifiers = $students->flatMap(fn (Student $student) => [$student->student_number, $student->nisn])->filter(fn ($value) => $value !== null && $value !== '')->unique()->values();
+        $conflicts = Student::query()->whereNotIn('id', $ids)
+            ->where(fn ($query) => $query->whereIn('student_number', $identifiers)->orWhereIn('nisn', $identifiers))
+            ->get(['student_number', 'nisn'])->flatMap(fn (Student $student) => [$student->student_number, $student->nisn])->filter(fn ($value) => $value !== null && $value !== '');
+        $legacyIdentifiers = $identifiers->diff($conflicts)->values();
+        $trials = TrialAttempt::query()->where(fn ($query) => $query
+            ->whereIn('student_id', $ids)
+            ->orWhere(fn ($legacy) => $legacy->whereNull('student_id')
+                ->whereIn('participant_identifier', $legacyIdentifiers)
+                ->whereIn('participant_name', $students->pluck('full_name'))))
+            ->orderBy('id')->lockForUpdate()->get(['id', 'status']);
+        if ($attempts->contains('status', AttemptStatus::InProgress) || $trials->contains('status', 'in_progress')) {
+            throw ValidationException::withMessages(['student_ids' => 'Penghapusan dibatalkan karena ada siswa terpilih yang masih mengerjakan ujian inti atau uji coba. Selesaikan ujiannya terlebih dahulu.']);
+        }
+
+        $selfies = DailyCheckin::query()->whereIn('student_id', $ids)->pluck('selfie_path')->filter()->unique()->all();
+        // The trial FK normally becomes NULL on student deletion. Remove
+        // owned attempts and unambiguous legacy matches explicitly so they
+        // cannot reattach on re-import. Ambiguous legacy identities remain.
+        TrialAttempt::query()->whereKey($trials->modelKeys())->delete();
+        Student::query()->whereKey($ids)->delete();
+        User::query()->whereKey($users->modelKeys())->where('role', UserRole::Student)->delete();
+
+        DB::afterCommit(function () use ($selfies): void {
+            foreach ($selfies as $path) {
+                try {
+                    if (! DailyCheckin::query()->where('selfie_path', $path)->exists()) {
+                        Storage::disk('local')->delete($path);
+                    }
+                } catch (Throwable $exception) {
+                    // A file cleanup error must not report a failed deletion
+                    // after the database transaction has already committed.
+                    report($exception);
+                }
+            }
+        });
+
+        return $students->count();
     }
 }

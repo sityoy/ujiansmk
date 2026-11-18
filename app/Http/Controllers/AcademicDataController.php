@@ -12,6 +12,7 @@ use App\Models\Subject;
 use App\Models\User;
 use App\Services\Students\StudentDeletionService;
 use App\Services\Students\StudentExamRoomService;
+use App\Services\Students\StudentRosterRevision;
 use App\Support\TablePagination;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
@@ -24,8 +25,10 @@ use Illuminate\View\View;
 
 class AcademicDataController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, StudentRosterRevision $roster): View
     {
+        $rosterRevision = $roster->current();
+        $rosterTotals = Student::query()->selectRaw('COUNT(*) AS student_count, MAX(id) AS last_id')->first();
         $request->validate(['room_period_id' => ['nullable', 'integer', 'exists:assessment_periods,id']]);
         $roomPeriod = $request->filled('room_period_id') ? AssessmentPeriod::with('academicYear')->findOrFail($request->integer('room_period_id')) : null;
         $classPerPage = TablePagination::selected('class_page');
@@ -81,6 +84,8 @@ class AcademicDataController extends Controller
             'students' => $studentQuery->paginateForDisplay('student_page')->fragment('student-list'),
             'studentSearch' => $studentSearch,
             'studentClassId' => $studentClassId,
+            'rosterRevision' => $rosterRevision,
+            'rosterTotals' => $rosterTotals,
             'studentPerPage' => $studentPerPage,
             'assessmentPeriods' => AssessmentPeriod::with('academicYear')->orderByDesc('starts_on')->orderByDesc('id')->get(),
             'roomPeriod' => $roomPeriod,
@@ -272,19 +277,22 @@ class AcademicDataController extends Controller
         return back()->with('status', 'Data siswa berhasil ditambahkan.');
     }
 
-    public function updateStudentRoom(Request $request, Student $student, StudentExamRoomService $rooms): RedirectResponse
+    public function updateStudentRoom(Request $request, Student $student, StudentExamRoomService $rooms, StudentRosterRevision $roster): RedirectResponse
     {
         $validated = $request->validate([
             'room_name' => ['present', 'nullable', 'string', 'max:80'],
             'assessment_period_id' => ['required', 'integer', 'exists:assessment_periods,id'],
         ]);
 
-        $rooms->assign(AssessmentPeriod::findOrFail($validated['assessment_period_id']), [$student->id], $validated['room_name']);
+        $roster->withCurrent(
+            fn () => $rooms->assign(AssessmentPeriod::findOrFail($validated['assessment_period_id']), [$student->id], $validated['room_name']),
+            $request->integer('roster_revision'),
+        );
 
         return back()->with('status', 'Ruangan '.$student->full_name.' berhasil diperbarui.');
     }
 
-    public function updateStudentRooms(Request $request, StudentExamRoomService $rooms): RedirectResponse
+    public function updateStudentRooms(Request $request, StudentExamRoomService $rooms, StudentRosterRevision $roster): RedirectResponse
     {
         $validated = $request->validate([
             'student_ids' => ['required', 'array', 'min:1', 'max:500'],
@@ -295,17 +303,20 @@ class AcademicDataController extends Controller
             'student_ids.required' => 'Pilih siswa yang akan diatur ruangannya.',
         ]);
 
-        $rooms->assign(AssessmentPeriod::findOrFail($validated['assessment_period_id']), $validated['student_ids'], $validated['bulk_room_name']);
+        $roster->withCurrent(
+            fn () => $rooms->assign(AssessmentPeriod::findOrFail($validated['assessment_period_id']), $validated['student_ids'], $validated['bulk_room_name']),
+            $request->integer('roster_revision'),
+        );
 
         return back()->with('status', 'Ruangan untuk '.count($validated['student_ids']).' siswa terpilih berhasil diperbarui.');
     }
 
-    public function toggleStudent(Student $student): RedirectResponse
+    public function toggleStudent(Request $request, Student $student, StudentRosterRevision $roster): RedirectResponse
     {
-        DB::transaction(function () use ($student): void {
+        $roster->withCurrent(function () use ($student): void {
             $student->update(['is_active' => ! $student->is_active]);
             $student->user?->update(['is_active' => $student->is_active]);
-        });
+        }, $request->integer('roster_revision'));
 
         return back()->with('status', 'Status siswa berhasil diperbarui.');
     }
@@ -318,7 +329,7 @@ class AcademicDataController extends Controller
         ], ['student_ids.required' => 'Centang siswa yang akan dihapus terlebih dahulu.']);
 
         try {
-            $count = $deletion->delete($validated['student_ids']);
+            $count = $deletion->delete($validated['student_ids'], $request->integer('roster_revision'));
         } catch (QueryException $exception) {
             report($exception);
 
@@ -328,10 +339,34 @@ class AcademicDataController extends Controller
         return $this->studentListRedirect($request)->with('status', $count.' siswa terpilih beserta akun dan data terkait berhasil dihapus.');
     }
 
+    public function destroyAllStudents(Request $request, StudentDeletionService $deletion): RedirectResponse
+    {
+        $validated = $request->validate([
+            'confirmation' => ['required', 'string', Rule::in(['HAPUS SEMUA'])],
+            'expected_count' => ['required', 'integer', 'min:1'],
+            'expected_last_id' => ['required', 'integer', 'min:1'],
+            'roster_revision' => ['required', 'integer', 'min:0'],
+        ], ['confirmation.in' => 'Ketik HAPUS SEMUA untuk mengonfirmasi penghapusan.']);
+
+        try {
+            $result = $deletion->deleteAll((int) $validated['expected_count'], (int) $validated['expected_last_id'], (int) $validated['roster_revision']);
+        } catch (QueryException $exception) {
+            report($exception);
+
+            return back()->withErrors(['student_ids' => 'Penghapusan dibatalkan karena ada data terkait yang belum dapat dihapus. Tidak ada siswa yang dihapus.']);
+        }
+
+        $numbering = $result['reset']
+            ? ' ID siswa baru akan dimulai dari 1.'
+            : ' Urutan ID database belum bisa direset.';
+
+        return $this->studentListRedirect($request)->with('status', $result['count'].' siswa beserta akun dan riwayat terkait berhasil dihapus.'.$numbering);
+    }
+
     public function destroyStudent(Request $request, Student $student, StudentDeletionService $deletion): RedirectResponse
     {
         try {
-            $deletion->delete([$student->id]);
+            $deletion->delete([$student->id], $request->integer('roster_revision'));
         } catch (QueryException $exception) {
             report($exception);
 

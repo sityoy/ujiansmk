@@ -302,6 +302,7 @@
             <form id="student-bulk-delete" method="POST" action="{{ route('academic.students.bulk-destroy', request()->query()) }}"
                 class="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-rose-400/25 bg-rose-400/[0.04] p-4">
                 @csrf @method('DELETE')
+                <input type="hidden" name="roster_revision" value="{{ $rosterRevision }}">
                 <div data-selected-students></div>
                 <button type="submit" data-bulk-delete-submit disabled class="rounded-xl border border-rose-400/40 bg-rose-400/10 px-4 py-3 text-sm font-semibold text-rose-300 disabled:cursor-not-allowed disabled:opacity-50">Hapus siswa terpilih</button>
                 <span data-student-selection-count class="text-sm text-slate-400" aria-live="polite">0 siswa terpilih.</span>
@@ -309,11 +310,31 @@
                 <p data-student-selection-warning hidden class="w-full text-xs text-amber-300" role="status">Pilih maksimal 500 siswa sekaligus, atau gunakan filter kelas dan jumlah data per halaman.</p>
             </form>
 
+            @if ($rosterTotals->student_count > 0)
+                <details class="mt-4 rounded-2xl border border-rose-400/30 p-4" @if ($errors->has('confirmation') || $errors->has('expected_count') || $errors->has('expected_last_id')) open @endif>
+                    <summary class="cursor-pointer text-sm font-semibold text-rose-300">Hapus semua siswa ({{ $rosterTotals->student_count }})</summary>
+                    <form method="POST" action="{{ route('academic.students.destroy-all', request()->query()) }}" class="mt-3 space-y-3">
+                        @csrf @method('DELETE')
+                        <input type="hidden" name="roster_revision" value="{{ $rosterRevision }}">
+                        <input type="hidden" name="expected_count" value="{{ $rosterTotals->student_count }}">
+                        <input type="hidden" name="expected_last_id" value="{{ $rosterTotals->last_id }}">
+                        <p class="text-sm text-slate-300">Menghapus permanen {{ $rosterTotals->student_count }} siswa dari seluruh kelas dan tahun ajaran, termasuk akun, nilai, absensi, dan riwayat ujian. Pilihan filter tabel tidak berlaku.</p>
+                        <div class="flex flex-wrap items-end gap-3">
+                            <label for="confirm-delete-all-students" class="text-xs text-slate-300">Ketik HAPUS SEMUA untuk konfirmasi
+                                <input id="confirm-delete-all-students" name="confirmation" required maxlength="11" autocomplete="off" class="mt-2 block rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2 text-sm">
+                            </label>
+                            <button type="submit" class="rounded-xl border border-rose-400/40 bg-rose-400/10 px-4 py-2.5 text-sm font-semibold text-rose-300">Hapus semua siswa permanen</button>
+                        </div>
+                    </form>
+                </details>
+            @endif
+
             @if ($roomPeriod)
             <p class="mt-4 text-sm font-medium text-emerald-300">Ruangan untuk {{ $roomPeriod->name }} · {{ $roomPeriod->academicYear->name }}</p>
             <form id="student-room-bulk" method="POST" action="{{ route('academic.students.rooms') }}"
                 class="mt-5 grid gap-3 rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.04] p-4 sm:grid-cols-[1fr_auto]">
                 @csrf @method('PATCH')
+                <input type="hidden" name="roster_revision" value="{{ $rosterRevision }}">
                 <input type="hidden" name="assessment_period_id" value="{{ $roomPeriod->id }}">
                 <label class="text-xs font-medium text-slate-400">Atur ruangan siswa terpilih
                     <input name="bulk_room_name" maxlength="80" list="student-room-options" value="{{ old('bulk_room_name') }}" placeholder="Contoh Ruang 01 atau Lab Komputer"
@@ -348,6 +369,7 @@
                                 @if ($roomPeriod)
                                 <form method="POST" action="{{ route('academic.students.room', $student) }}" class="flex items-center gap-2">
                                     @csrf @method('PATCH')
+                                    <input type="hidden" name="roster_revision" value="{{ $rosterRevision }}">
                                     <input type="hidden" name="assessment_period_id" value="{{ $roomPeriod->id }}">
                                     <input name="room_name" value="{{ $student->examRooms->first()?->room_name }}" maxlength="80" list="student-room-options" placeholder="Belum diatur" aria-label="Ruangan {{ $student->full_name }}"
                                         class="min-w-32 w-full rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-xs outline-none focus:border-emerald-400">
@@ -364,9 +386,11 @@
                             <td data-label="Aksi" class="px-5 py-4">
                                 <div class="flex justify-end gap-3">
                                     <form method="POST" action="{{ route('academic.students.toggle', $student) }}">@csrf @method('PATCH')
+                                        <input type="hidden" name="roster_revision" value="{{ $rosterRevision }}">
                                         <button class="text-xs {{ $student->is_active ? 'text-emerald-300' : 'text-slate-500' }}">{{ $student->is_active ? 'Aktif' : 'Nonaktif' }}</button>
                                     </form>
                                     <form method="POST" action="{{ route('academic.students.destroy', [...request()->query(), 'student' => $student]) }}" onsubmit="return confirm('Hapus permanen siswa ini beserta akun, ruangan, absensi, nilai, dan riwayat ujian terkait?')">@csrf @method('DELETE')
+                                        <input type="hidden" name="roster_revision" value="{{ $rosterRevision }}">
                                         <button class="text-xs text-rose-300">Hapus</button>
                                     </form>
                                 </div>

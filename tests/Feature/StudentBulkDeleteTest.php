@@ -178,6 +178,94 @@ class StudentBulkDeleteTest extends TestCase
         Schema::drop('student_delete_blockers');
     }
 
+    public function test_delete_all_ignores_list_filters_resets_sqlite_ids_and_rejects_stale_actions(): void
+    {
+        [$admin, $students] = $this->students();
+        $class = $students[0]->schoolClass;
+        $otherClass = SchoolClass::create([
+            'academic_year_id' => $class->academic_year_id, 'name' => 'XI-1', 'grade_level' => 11,
+        ]);
+        $students[2]->update(['school_class_id' => $otherClass->id]);
+
+        $this->actingAs($admin)
+            ->get(route('academic.index', ['student_class' => $class->id]))
+            ->assertOk()
+            ->assertSee('Hapus semua siswa (3)')
+            ->assertViewHas('students', fn ($filtered) => $filtered->total() === 2);
+
+        $this->delete(route('academic.students.destroy-all', ['student_class' => $class->id]), [
+            'confirmation' => 'HAPUS SEMUA',
+            'expected_count' => 3,
+            'expected_last_id' => $students[2]->id,
+            'roster_revision' => 0,
+        ])->assertSessionHas('status', '3 siswa beserta akun dan riwayat terkait berhasil dihapus. ID siswa baru akan dimulai dari 1.');
+
+        $this->assertDatabaseCount('students', 0);
+        $this->assertDatabaseCount('users', 1);
+        $this->assertDatabaseHas('school_classes', ['id' => $otherClass->id]);
+
+        $new = Student::create([
+            'school_class_id' => $class->id, 'student_number' => 'SISWA-BARU', 'full_name' => 'Siswa Baru',
+        ]);
+        $this->assertSame(1, $new->id);
+        $this->delete(route('academic.students.destroy', $new), ['roster_revision' => 0])->assertSessionHasErrors('student_ids');
+        $this->delete(route('academic.students.bulk-destroy'), ['student_ids' => [$new->id], 'roster_revision' => 0])->assertSessionHasErrors('student_ids');
+        $this->patch(route('academic.students.toggle', $new), ['roster_revision' => 0])->assertSessionHasErrors('student_ids');
+        $this->assertDatabaseHas('students', ['id' => $new->id, 'is_active' => true]);
+        $this->delete(route('academic.students.destroy', $new), ['roster_revision' => 1])->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('students', 0);
+    }
+
+    public function test_delete_all_requires_confirmation_current_roster_and_super_admin(): void
+    {
+        [$admin, $students] = $this->students();
+        $route = route('academic.students.destroy-all');
+        $payload = [
+            'confirmation' => 'HAPUS SEMUA',
+            'expected_count' => 3,
+            'expected_last_id' => $students[2]->id,
+            'roster_revision' => 0,
+        ];
+
+        $this->actingAs($admin)->delete($route, [...$payload, 'confirmation' => 'HAPUS'])->assertSessionHasErrors('confirmation');
+        $this->delete($route, [...$payload, 'expected_count' => 2])->assertSessionHasErrors('student_ids');
+        $this->delete($route, [...$payload, 'expected_last_id' => $students[1]->id])->assertSessionHasErrors('student_ids');
+        $teacher = User::factory()->create(['role' => UserRole::Teacher]);
+        $this->actingAs($teacher)->delete($route, $payload)->assertForbidden();
+        $this->assertDatabaseCount('students', 3);
+    }
+
+    public function test_delete_all_spans_batches_and_rolls_back_if_a_later_student_is_taking_an_exam(): void
+    {
+        [$admin, $students] = $this->students();
+        $classId = $students[0]->school_class_id;
+        foreach (array_chunk(range(4, 501), 100) as $batch) {
+            Student::query()->insert(array_map(fn (int $i) => [
+                'school_class_id' => $classId, 'student_number' => 'BATCH-'.$i, 'full_name' => 'Siswa '.$i,
+            ], $batch));
+        }
+        $last = Student::where('student_number', 'BATCH-501')->firstOrFail();
+        [$attempt] = $this->exam($last, 'in_progress');
+        $route = route('academic.students.destroy-all');
+        $payload = [
+            'confirmation' => 'HAPUS SEMUA',
+            'expected_count' => 501,
+            'expected_last_id' => $last->id,
+            'roster_revision' => 0,
+        ];
+
+        $this->actingAs($admin)->delete($route, $payload)->assertSessionHasErrors('student_ids');
+        $this->assertDatabaseCount('students', 501);
+        $this->assertDatabaseCount('users', 4);
+        $this->assertDatabaseHas('student_roster_revision', ['id' => 1, 'revision' => 0]);
+
+        $attempt->update(['status' => 'submitted']);
+        $this->delete($route, $payload)->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('students', 0);
+        $this->assertDatabaseCount('exam_attempts', 0);
+        $this->assertDatabaseCount('users', 1);
+    }
+
     private function students(int $count = 3): array
     {
         $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
