@@ -90,45 +90,46 @@ class GroupedSchedulingTest extends TestCase
         $this->assertSame(3, ExamSession::query()->distinct()->count('schedule_group_id'));
     }
 
-    public function test_editing_period_dates_allows_a_group_schedule_and_preserves_existing_sessions(): void
+    public function test_period_dates_and_group_session_dates_can_be_edited_independently(): void
     {
         [$components, $campus] = $this->makeComponents();
         $period = $components[0]->assessmentPeriod;
-        $period->update(['ends_on' => '2026-11-29']);
+        $period->update(['starts_on' => '2026-11-30', 'ends_on' => '2026-11-20']);
         $edit = route('scheduling.periods.update', $period);
         $this->get(route('scheduling.index'))->assertOk()
-            ->assertSee('Edit periode')
-            ->assertSee($edit)
-            ->assertSee('01/11/2026–29/11/2026');
+            ->assertSee('Edit periode')->assertSee($edit)->assertSee('30/11/2026–20/11/2026');
 
-        $this->post(route('scheduling.sessions.store'), $this->scheduleData($components[3], $campus))
-            ->assertSessionHasNoErrors();
-        $existing = ExamSession::query()->sole();
         $schedule = [...$this->scheduleData($components[0], $campus), 'starts_at' => '2026-11-30 07:45:00'];
-        $this->post(route('scheduling.sessions.store'), $schedule)
-            ->assertSessionHasErrors(['starts_at' => 'Jadwal reguler pada 30/11/2026 harus berada dalam rentang periode AAS Ganjil (AAS-GROUP), yaitu 01/11/2026 sampai 29/11/2026. Ubah rentangnya melalui Edit periode di Daftar Periode.']);
-        $this->assertDatabaseCount('exam_sessions', 1);
+        $this->post(route('scheduling.sessions.store'), $schedule)->assertSessionHasNoErrors();
+        $sessions = ExamSession::query()->orderBy('id')->get();
+        $this->assertCount(3, $sessions);
+        $this->assertDatabaseCount('exam_assignments', 3);
+        $this->assertSame('2026-11-30 07:45:00', $sessions->first()->starts_at->toDateTimeString());
 
-        $newDates = ['starts_on' => '2026-11-01', 'ends_on' => '2026-11-30'];
+        $newDates = ['starts_on' => '2026-12-05', 'ends_on' => '2026-12-06'];
         $this->actingAs(User::factory()->create(['role' => UserRole::Teacher]))
             ->patch($edit, $newDates)->assertForbidden();
         $this->actingAs(User::factory()->create(['role' => UserRole::Committee]));
-        $this->patch($edit, [...$newDates, 'ends_on' => '2026-10-31'])
+        $this->patch($edit, [...$newDates, 'ends_on' => '2026-12-04'])
             ->assertSessionHasErrorsIn('periodDates', 'ends_on');
-        $this->patch($edit, [...$newDates, 'starts_on' => '2026-11-12'])
-            ->assertSessionHasErrorsIn('periodDates', 'starts_on');
-        $this->assertSame('2026-11-29', $period->fresh()->ends_on->toDateString());
         $this->patch($edit, $newDates)->assertSessionHasNoErrors();
-        $this->assertSame('2026-11-30', $period->fresh()->ends_on->toDateString());
+        $this->assertSame('2026-12-05', $period->fresh()->starts_on->toDateString());
+        $this->assertSame('2026-12-06', $period->fresh()->ends_on->toDateString());
         $this->assertSame(PeriodStatus::Published, $period->fresh()->status);
-        $this->assertSame('2026-11-11 08:00:00', $existing->fresh()->starts_at->toDateTimeString());
+        $this->assertSame('2026-11-30 07:45:00', $sessions->first()->fresh()->starts_at->toDateTimeString());
 
-        $this->post(route('scheduling.sessions.store'), $schedule)->assertSessionHasNoErrors();
-        $this->assertSame(3, ExamSession::query()->where('starts_at', '2026-11-30 07:45:00')->count());
-        $this->assertDatabaseCount('exam_assignments', 4);
-        $this->patch($edit, [...$newDates, 'ends_on' => '2026-11-29'])
-            ->assertSessionHasErrorsIn('periodDates', 'starts_on');
-        $this->assertSame('2026-11-30', $period->fresh()->ends_on->toDateString());
+        $this->patch(route('scheduling.sessions.update', $sessions->first()), [
+            ...$schedule, 'starts_at' => '2026-12-01 07:45:00',
+        ])->assertSessionHasNoErrors();
+        $this->assertSame(3, ExamSession::query()->where('starts_at', '2026-12-01 07:45:00')->count());
+        $this->post(route('scheduling.sessions.store'), [
+            ...$schedule,
+            'kind' => 'makeup',
+            'source_session_id' => $sessions->first()->id,
+            'starts_at' => '2026-12-02 07:45:00',
+        ])->assertSessionHasNoErrors();
+        $this->assertSame(3, ExamSession::query()->where('kind', 'makeup')->where('starts_at', '2026-12-02 07:45:00')->count());
+        $this->assertDatabaseCount('exam_assignments', 3);
     }
 
     public function test_conflict_in_last_class_rolls_back_sessions_and_participants_in_all_classes(): void

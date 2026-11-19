@@ -156,31 +156,7 @@ class SchedulingController extends Controller
             'ends_on.required' => 'Isi tanggal akhir periode.',
             'ends_on.after_or_equal' => 'Tanggal akhir harus sama dengan atau setelah tanggal mulai.',
         ]);
-        $start = Carbon::parse($dates['starts_on'])->startOfDay();
-        $endExclusive = Carbon::parse($dates['ends_on'])->addDay()->startOfDay();
-
-        DB::transaction(function () use ($assessmentPeriod, $dates, $start, $endExclusive): void {
-            // The session create and update transactions take the same period lock.
-            $period = AssessmentPeriod::query()->lockForUpdate()->findOrFail($assessmentPeriod->id);
-            $outside = ExamSession::query()
-                ->whereHas('assessmentSubject', fn ($query) => $query->where('assessment_period_id', $period->id))
-                ->where(fn ($query) => $query->where('starts_at', '<', $start)
-                    ->orWhere(fn ($regular) => $regular->where('kind', SessionKind::Regular)->where('ends_at', '>=', $endExclusive)))
-                ->orderBy('starts_at')
-                ->first();
-
-            if ($outside) {
-                throw ValidationException::withMessages([
-                    'starts_on' => sprintf(
-                        'Rentang baru harus mencakup jadwal %s yang sudah dibuat pada %s.',
-                        $outside->kind === SessionKind::Regular ? 'reguler' : 'susulan',
-                        $outside->starts_at->format('d/m/Y H:i'),
-                    ),
-                ])->errorBag('periodDates');
-            }
-
-            $period->update($dates);
-        }, 3);
+        $assessmentPeriod->update($dates);
 
         return back()->with('status', 'Tanggal periode asesmen berhasil diperbarui.');
     }
@@ -362,7 +338,6 @@ class SchedulingController extends Controller
             $groupId = $wholeGrade ? (string) Str::uuid() : null;
             $created = new Collection;
             foreach ($components as $member) {
-                $member->setRelation('assessmentPeriod', $period);
                 $data = $wholeGrade ? $this->sessionRequestForClass($request, $member) : $request;
                 $validated = $this->validatedSessionData($data, $member);
                 if ($wholeGrade && $validated['status'] === SessionStatus::Closed->value) {
@@ -395,14 +370,13 @@ class SchedulingController extends Controller
             Campus::query()->whereKey([$examSession->campus_id, $request->integer('campus_id')])
                 ->orderBy('id')->lockForUpdate()->get();
             $examSession->loadMissing('assessmentSubject');
-            $period = AssessmentPeriod::query()->lockForUpdate()->findOrFail($examSession->assessmentSubject->assessment_period_id);
+            AssessmentPeriod::query()->lockForUpdate()->findOrFail($examSession->assessmentSubject->assessment_period_id);
             $group = $examSession->scheduleGroup()->with('assessmentSubject')->orderBy('id')->lockForUpdate()->get();
             SchoolClass::query()->whereKey($group->pluck('assessmentSubject.school_class_id'))
                 ->orderBy('id')->lockForUpdate()->get();
             $attributes = [];
             $rooms = [];
             foreach ($group as $session) {
-                $session->assessmentSubject->setRelation('assessmentPeriod', $period);
                 $data = $this->sessionRequestForClass($request, $session->assessmentSubject, $session);
                 $validated = $this->validatedSessionData($data, $session->assessmentSubject, $session, $group->modelKeys());
                 $this->assertSessionUpdate($session, $validated);
@@ -471,40 +445,16 @@ class SchedulingController extends Controller
             'duration_minutes' => ['required', 'integer', 'between:10,600'],
         ]);
 
-        $component->loadMissing('assessmentPeriod');
         $sourceSession = ! empty($validated['source_session_id'])
             ? ExamSession::findOrFail($validated['source_session_id'])
             : null;
         $startsAt = Carbon::parse($validated['starts_at']);
         $endsAt = $startsAt->copy()->addMinutes((int) $validated['duration_minutes']);
-        $period = $component->assessmentPeriod;
         $isMakeup = $validated['kind'] === SessionKind::Makeup->value;
 
         if (! $startsAt->isSameDay($endsAt)) {
             throw ValidationException::withMessages([
                 'duration_minutes' => 'Sesi ujian harus selesai pada tanggal yang sama. Sesuaikan jam mulai atau durasi.',
-            ]);
-        }
-
-        if (! $isMakeup && (
-            $startsAt->toDateString() < $period->starts_on->toDateString()
-            || $endsAt->toDateString() > $period->ends_on->toDateString()
-        )) {
-            throw ValidationException::withMessages([
-                'starts_at' => sprintf(
-                    'Jadwal reguler pada %s harus berada dalam rentang periode %s (%s), yaitu %s sampai %s. Ubah rentangnya melalui Edit periode di Daftar Periode.',
-                    $startsAt->format('d/m/Y'),
-                    $period->name,
-                    $period->code,
-                    $period->starts_on->format('d/m/Y'),
-                    $period->ends_on->format('d/m/Y'),
-                ),
-            ]);
-        }
-
-        if ($isMakeup && $startsAt->toDateString() < $period->starts_on->toDateString()) {
-            throw ValidationException::withMessages([
-                'starts_at' => 'Jadwal susulan tidak boleh mendahului periode asesmen.',
             ]);
         }
 

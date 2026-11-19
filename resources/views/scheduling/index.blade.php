@@ -100,6 +100,7 @@
                             </div>
                             <details class="mt-3 rounded-xl border border-white/10 p-3" @if ($editingDates) open @endif>
                                 <summary class="cursor-pointer text-sm font-medium text-cyan-300">Edit periode</summary>
+                                <p class="mt-2 text-xs text-slate-400">Tanggal periode dicatat untuk administrasi. Tanggal dan jam ujian diatur pada sesi masing-masing mapel.</p>
                                 @if ($editingDates && $errors->periodDates->any())
                                     <p class="mt-2 text-sm text-rose-200" role="alert">{{ $errors->periodDates->first() }}</p>
                                 @endif
