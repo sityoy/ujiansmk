@@ -12,15 +12,18 @@
         data-attempt-id="trial-{{ $attempt->id }}"
         data-count="{{ $attempt->violation_count }}"
         data-locked="{{ $attempt->security_locked_at ? '1' : '0' }}">
-        <div id="security-panel" role="dialog" aria-modal="true" aria-labelledby="security-title" class="fixed inset-0 z-50 overflow-y-auto bg-slate-950/95 p-6 backdrop-blur">
-            <section class="mx-auto mt-12 max-w-xl rounded-3xl border border-amber-400/30 bg-slate-900 p-6 shadow-xl">
-                <p class="text-xs font-semibold uppercase tracking-widest text-amber-300">Pengawasan uji coba · batas 2 pelanggaran</p>
+        <div id="security-panel" role="dialog" aria-modal="true" aria-labelledby="security-title" class="fixed inset-0 z-50 overflow-y-auto bg-slate-950/95 p-3 backdrop-blur sm:p-6">
+            <section class="mx-auto mt-3 max-w-xl rounded-3xl border border-amber-400/30 bg-slate-900 p-4 shadow-xl sm:mt-12 sm:p-6">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <p class="text-xs font-semibold uppercase tracking-widest text-amber-300">Pengawasan uji coba · batas 2 pelanggaran</p>
+                    <x-tryout-theme-toggle />
+                </div>
                 <h2 id="security-title" class="mt-4 text-2xl font-semibold">Siap masuk mode ujian?</h2>
                 <p id="security-message" class="mt-4 text-sm leading-7 text-slate-300">Pengamanan sama dengan Ujian Inti: layar penuh wajib dan sistem memantau perpindahan tab/aplikasi, bubble, bilah notifikasi, split screen, tombol terlarang, serta navigasi keluar. Pelanggaran kedua mengunci ujian.</p>
                 <p class="mt-3 text-xs leading-6 text-slate-400">Aktifkan Jangan Ganggu, tutup aplikasi lain, dan jangan menarik panel notifikasi. Waktu tetap berjalan ketika ujian terkunci.</p>
                 <p class="mt-3 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.06] p-3 text-sm text-cyan-100">Setiap jawaban PG benar bernilai tetap <strong>2 poin</strong>. Nilai PG maksimal 100.</p>
                 <x-exam-device-preparation />
-                    <button id="security-continue" type="button" class="mt-6 w-full rounded-xl bg-cyan-400 px-5 py-3 font-semibold text-slate-950">Saya paham, masuk mode ujian</button>
+                <button id="security-continue" type="button" class="mt-6 w-full rounded-xl bg-cyan-400 px-5 py-3 font-semibold text-slate-950">Saya paham, masuk mode ujian</button>
                 <p id="security-network" aria-live="polite" class="mt-3 text-sm text-amber-300"></p>
             </section>
         </div>
@@ -61,7 +64,7 @@
                                     @foreach ($optionOrder->forQuestion($attempt, $question) as $key => $option)
                                         @php($displayKey = chr(65 + $loop->index))
                                         @php($optionPath = $question->option_file_paths[$key] ?? null)
-                                        <div class="rounded-xl border border-white/10 bg-slate-950/50 hover:border-cyan-400/30">
+                                        <div class="tryout-option rounded-xl border border-white/10 bg-slate-950/50 hover:border-cyan-400/30">
                                             <label class="flex cursor-pointer items-start gap-3 px-4 py-3">
                                                 <input type="radio" name="answers[{{ $question->id }}]" value="{{ $key }}"
                                                     data-save-url="{{ route('tryout.answer', [$trialExam, $attempt, $question]) }}"

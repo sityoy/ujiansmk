@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import 'quill/dist/quill.snow.css';
+@import './login.css';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
@@ -173,6 +174,33 @@ html[data-theme='light'] [data-theme-toggle]:hover {
 
 html[data-theme='light'] .exam-toolbar {
     box-shadow: 0 14px 35px rgb(15 23 42 / 0.12);
+}
+
+.tryout-page [data-theme-toggle] {
+    flex-shrink: 0;
+}
+
+.tryout-page [data-theme-toggle]:focus-visible {
+    outline: 2px solid #0284a0;
+    outline-offset: 2px;
+}
+
+html[data-theme='light'] .tryout-page ::selection {
+    color: #0f172a;
+    background: #a5f3fc;
+}
+
+html[data-theme='light'] .tryout-page input:is([type='radio'], [type='checkbox']) {
+    accent-color: #0e7490;
+}
+
+html[data-theme='light'] .tryout-page .tryout-option:has(input:checked) {
+    border-color: #0e7490 !important;
+    background-color: #ecfeff !important;
+}
+
+html[data-theme='light'] .tryout-page [data-exam-image-close] {
+    background-color: #e2e8f0;
 }
 
 

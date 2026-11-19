@@ -44,6 +44,7 @@ class TrialExamFlowTest extends TestCase
 
         $this->get(route('tryout.entry', $trial))
             ->assertOk()
+            ->assertSee('data-theme="light"', false)
             ->assertSee('Setiap jawaban PG benar bernilai tetap 2 poin')
             ->assertSee('Nama peserta diambil otomatis dari data siswa');
 

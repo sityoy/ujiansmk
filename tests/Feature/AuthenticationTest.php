@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\UserRole;
+use App\Models\SchoolProfile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
@@ -123,6 +124,16 @@ class AuthenticationTest extends TestCase
     {
         $this->get(route('dashboard'))
             ->assertRedirect(route('login'));
+    }
+
+    public function test_login_displays_both_logos_and_the_configured_school_name(): void
+    {
+        SchoolProfile::create(['name' => 'SMK Islam Bahagia']);
+
+        $this->get(route('login'))->assertOk()
+            ->assertSeeInOrder(['logo-ypmi-bahagia.jpeg', 'SMK Islam Bahagia', 'logo-pt-sityoy.png', 'PT Sityoy IT Solutions', 'Masuk ke sistem'])
+            ->assertSee('data-password-toggle', false);
+        $this->assertFileExists(public_path('images/logo-pt-sityoy.png'));
     }
 
     public function test_authenticated_user_can_sign_out(): void
