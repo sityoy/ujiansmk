@@ -2,7 +2,7 @@
     <input name="title" value="{{ old('title', $trial?->title) }}" required placeholder="Uji Coba Sejarah" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3">
 </label>
 <label class="block text-sm text-slate-300">Kode bersama
-    <input name="access_code" value="{{ old('access_code', $trial?->access_code) }}" required placeholder="SJR-SMKBHG" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 uppercase">
+    <input name="access_code" value="{{ old('access_code', $trial?->access_code) }}" required placeholder="" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 uppercase">
     <span class="mt-1 block text-xs text-slate-500">Huruf, angka, dan tanda hubung.</span>
 </label>
 <label class="block text-sm text-slate-300">Durasi (menit)
