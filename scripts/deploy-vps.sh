@@ -25,20 +25,26 @@ if ! git cat-file -e "origin/$BRANCH:public/build/manifest.json" 2>/dev/null; th
     exit 1
 fi
 
-# Finalize expired attempts and refuse updates while students are actively
-# answering. Both commands use the currently deployed application before any
-# source file is replaced, then maintenance mode is enabled immediately.
-php artisan exams:finalize-expired
-php artisan tinker --execute='
-    $count = App\Models\ExamAttempt::query()->where("status", "in_progress")->count();
-    if ($count > 0) { fwrite(STDERR, "Deployment ditolak: {$count} ujian masih berlangsung.\n"); exit(23); }
-' >/dev/null
+# Stop before maintenance if participants are active. Repeat inside maintenance
+# before replacing files to also catch starts admitted during the first check.
+assert_no_active_exams() {
+    php artisan tinker --execute='
+        $core = App\Models\ExamAttempt::query()->where("status", "in_progress")->exists();
+        $trial = App\Models\TrialAttempt::query()->where("status", "in_progress")
+            ->with("trialExam")->lazyById(200)
+            ->contains(fn ($attempt) => ! app(App\Services\Exams\TrialExamAttemptService::class)->isExpired($attempt));
+        if ($core || $trial) { fwrite(STDERR, "Deployment ditolak: masih ada Ujian Inti atau Uji Coba yang berlangsung.\n"); exit(23); }
+    ' >/dev/null
+}
 
+php artisan exams:finalize-expired
+assert_no_active_exams
 php artisan down --retry=30
 restore_app() {
     php artisan up >/dev/null 2>&1 || true
 }
 trap restore_app EXIT
+assert_no_active_exams
 
 git merge --ff-only "origin/$BRANCH"
 
@@ -46,7 +52,6 @@ COMPOSER_MEMORY_LIMIT=512M composer install \
     --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader
 composer check-platform-reqs --no-dev
 php artisan migrate --force
-php artisan optimize:clear
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache

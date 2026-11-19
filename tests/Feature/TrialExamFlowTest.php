@@ -233,7 +233,7 @@ class TrialExamFlowTest extends TestCase
                 $this->assertSame(chr(65 + $index).'.', trim($xpath->query('.//strong', $input->parentNode)->item(0)->textContent));
                 $this->assertStringContainsString($question->options[$key], $input->parentNode->textContent);
                 if ($question->option_file_paths[$key] ?? null) {
-                    $this->assertStringContainsString($question->option_file_paths[$key], $dom->saveHTML($input->parentNode));
+                    $this->assertStringContainsString($question->option_file_paths[$key], $dom->saveHTML($input->parentNode->parentNode));
                 }
             }
             $this->assertSame($expected, $keys);
@@ -512,7 +512,7 @@ class TrialExamFlowTest extends TestCase
         $this->assertDatabaseCount('trial_questions', 0);
     }
 
-    public function test_only_exam_staff_can_print_submitted_trial_scores(): void
+    public function test_only_exam_staff_can_print_trial_roster_and_completed_scores(): void
     {
         [$trial, $question] = $this->makeTrial();
         $student = Student::firstOrFail();
@@ -520,19 +520,36 @@ class TrialExamFlowTest extends TestCase
         $attempt = $trial->currentAttempts()->firstOrFail();
         app(TrialExamAttemptService::class)->submit($attempt, [$question->id => 'A']);
 
+        $pendingStudent = Student::create([
+            'school_class_id' => $student->school_class_id,
+            'full_name' => 'Peserta Belum Mulai',
+            'student_number' => 'TEST-BELUM',
+            'is_active' => true,
+        ]);
+
         $print = route('tryouts.scores.print', $trial);
         $teacher = User::factory()->create(['role' => UserRole::Teacher]);
         $trial->assessmentSubject->update(['teacher_user_id' => $teacher->id]);
         $this->get($print)->assertForbidden();
         $this->get(route('tryout.result', [$trial, $attempt]))->assertOk()->assertDontSee('2,00');
         $this->actingAs($teacher)->get($print)->assertForbidden();
-        $this->get(route('tryouts.participants', $trial))->assertOk()->assertDontSee('Cetak nilai uji coba')->assertDontSee('2,00');
+        $this->get(route('tryouts.participants', $trial))->assertOk()->assertDontSee('Cetak Nilai')->assertDontSee('2,00');
+        $this->get(route('operations.index'))->assertOk()->assertDontSee($print);
 
         foreach ([UserRole::SuperAdmin, UserRole::Committee, UserRole::Principal, UserRole::Proctor] as $role) {
             $response = $this->actingAs(User::factory()->create(['role' => $role]))
                 ->get($print)->assertOk()->assertSee('Rekap Nilai Simulasi Ujian')
-                ->assertSee('Peserta Uji Coba')->assertSee('2,00')->assertDontSee($trial->access_code);
+                ->assertSee('Peserta Uji Coba')->assertSee('2,00')
+                ->assertSee('Peserta Belum Mulai')->assertSee('1 belum mengerjakan')
+                ->assertDontSee($trial->access_code);
             $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
+            $this->get(route('tryouts.participants', $trial))->assertOk()->assertSee($print);
+            $this->get(route('operations.index'))->assertOk()->assertSee($print);
+            $this->get(route('tryouts.progress', $trial))
+                ->assertOk()->assertJsonPath('participants.'.$pendingStudent->id.'.status', 'not_started');
+            if (in_array($role, [UserRole::SuperAdmin, UserRole::Committee], true)) {
+                $this->get(route('tryouts.index'))->assertOk()->assertSee($print);
+            }
         }
     }
 

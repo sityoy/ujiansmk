@@ -5,11 +5,15 @@ namespace App\Providers;
 use App\Models\SchoolProfile;
 use App\Services\Exams\QuestionText;
 use App\Support\TablePagination;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 use Throwable;
 
 class AppServiceProvider extends ServiceProvider
@@ -21,6 +25,31 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        RateLimiter::for('school-login', function (Request $request): array {
+            $input = $request->input('login');
+            $login = is_string($input) ? Str::lower(trim(substr($input, 0, 255))) : '';
+
+            return [
+                Limit::perMinute(5)->by('account:'.$request->ip().'|'.$login),
+                Limit::perMinute(360)->by('school:'.$request->ip()),
+            ];
+        });
+
+        foreach (['trial-start' => 20, 'trial-security' => 30, 'trial-answer' => 120, 'trial-incident' => 30, 'trial-submit' => 10] as $name => $maximum) {
+            RateLimiter::for($name, function (Request $request) use ($name, $maximum): array {
+                if ($user = $request->user()) {
+                    return [Limit::perMinute($maximum)->by('account:'.$user->id)];
+                }
+
+                $limits = [Limit::perMinute($maximum)->by('session:'.$request->session()->getId())];
+                if ($name === 'trial-start') {
+                    $limits[] = Limit::perMinute(360)->by('school:'.$request->ip());
+                }
+
+                return $limits;
+            });
+        }
+
         Paginator::defaultView('pagination.data');
         Builder::macro('paginateForDisplay', function (string $pageName = 'page') {
             return TablePagination::query($this, $pageName);

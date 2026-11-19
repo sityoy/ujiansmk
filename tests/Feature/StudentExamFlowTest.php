@@ -145,7 +145,7 @@ class StudentExamFlowTest extends TestCase
             $key = $input->getAttribute('value');
             $this->assertStringContainsString($question->options[$key], $label->textContent);
             if ($question->option_file_paths[$key] ?? null) {
-                $this->assertStringContainsString($question->option_file_paths[$key], $dom->saveHTML($label));
+                $this->assertStringContainsString($question->option_file_paths[$key], $dom->saveHTML($label->parentNode));
             }
             if ($input->hasAttribute('checked')) {
                 $this->assertSame('A', $key);

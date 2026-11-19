@@ -1,4 +1,4 @@
-@props(['question', 'multipleChoice' => true])
+@props(['question', 'multipleChoice' => true, 'imagePreview' => false])
 
 <div {{ $attributes->class('space-y-3 text-sm leading-7 text-white') }}>
     @if ($multipleChoice && $question->statement !== null)
@@ -9,7 +9,9 @@
     @endif
     @if ($question->question_image_path)
         @php($isImage = in_array(strtolower(pathinfo($question->question_image_path, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'webp'], true))
-        @if ($isImage)
+        @if ($isImage && $imagePreview)
+            <x-exam-image :path="$question->question_image_path" :alt="'Gambar soal '.$question->position" />
+        @elseif ($isImage)
             <img src="{{ Storage::url($question->question_image_path) }}" alt="Gambar soal {{ $question->position }}"
                 loading="lazy" decoding="async" class="max-h-[32rem] w-auto max-w-full rounded-xl border border-white/10 bg-white object-contain p-2">
         @else

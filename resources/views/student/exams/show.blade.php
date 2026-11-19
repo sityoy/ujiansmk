@@ -64,23 +64,24 @@
         @foreach ($questions as $question)
             <article class="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
                 <p class="text-xs font-semibold text-cyan-300">Soal {{ $loop->iteration }} dari {{ $questions->count() }}</p>
-                <x-question-prompt :question="$question" :multiple-choice="$question->question_type->value === 'multiple_choice'" class="mt-3" />
+                <x-question-prompt :question="$question" image-preview :multiple-choice="$question->question_type->value === 'multiple_choice'" class="mt-3" />
                 @if ($question->question_type->value === 'multiple_choice')
                     <div class="mt-4 grid gap-2">
                         @foreach ($optionOrder->forQuestion($attempt, $question) as $key => $option)
                             @php($displayKey = chr(65 + $loop->index))
-                            <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 px-4 py-3 text-sm text-slate-300 transition hover:border-cyan-400/30 hover:bg-cyan-400/5">
-                                <input type="radio" name="question_{{ $question->id }}" value="{{ $key }}"
-                                    data-save-url="{{ route('student.exams.answer', [$attempt, $question]) }}"
-                                    @checked($answers->get($question->id)?->answer === $key)
-                                    class="mt-1">
-                                <div class="min-w-0 flex-1"><div class="flex items-start gap-2"><strong class="text-cyan-300">{{ $displayKey }}.</strong> <x-question-text :text="$option" :format="$question->text_format" /></div>
-                                    @if($question->option_file_paths[$key] ?? null)
-                                        @php($optionIsImage = in_array(strtolower(pathinfo($question->option_file_paths[$key], PATHINFO_EXTENSION)), ['jpg','jpeg','png','webp'], true))
-                                        @if($optionIsImage)<img loading="lazy" decoding="async" src="{{ Storage::url($question->option_file_paths[$key]) }}" alt="Lampiran pilihan {{ $displayKey }}" class="mt-3 max-h-64 max-w-full rounded-xl border border-white/10 bg-white object-contain p-2">@else<a href="{{ Storage::url($question->option_file_paths[$key]) }}" target="_blank" class="mt-2 block text-xs font-semibold text-cyan-300">Buka lampiran pilihan {{ $displayKey }}</a>@endif
-                                    @endif
-                                </div>
-                            </label>
+                            @php($optionPath = $question->option_file_paths[$key] ?? null)
+                            <div class="rounded-xl border border-white/10 text-sm text-slate-300 transition hover:border-cyan-400/30 hover:bg-cyan-400/5">
+                                <label class="flex cursor-pointer items-start gap-3 px-4 py-3">
+                                    <input type="radio" name="question_{{ $question->id }}" value="{{ $key }}"
+                                        data-save-url="{{ route('student.exams.answer', [$attempt, $question]) }}"
+                                        @checked($answers->get($question->id)?->answer === $key) class="mt-1">
+                                    <strong class="text-cyan-300">{{ $displayKey }}.</strong>
+                                    <x-question-text :text="$option" :format="$question->text_format" />
+                                </label>
+                                @if ($optionPath)
+                                    <x-exam-option-attachment :path="$optionPath" :label="$displayKey" />
+                                @endif
+                            </div>
                         @endforeach
                     </div>
                 @else
@@ -99,6 +100,7 @@
         @csrf
         <button class="w-full rounded-xl bg-emerald-400 px-5 py-4 font-semibold text-slate-950">Selesai dan kumpulkan jawaban</button>
     </form>
+        <x-exam-image-dialog />
     </fieldset>
 
     <script>
@@ -226,7 +228,7 @@
 
     </script>
     @if ($attempt->security_enabled)
-        <script src="{{ asset('js/exam-security.js') }}?v=20261113-1" defer></script>
+        <script src="{{ asset('js/exam-security.js') }}?v=20261119-1" defer></script>
     @else
         <script>
             document.addEventListener('visibilitychange', () => {

@@ -11,8 +11,7 @@
         <a href="{{ route('operations.index') }}" class="text-sm text-cyan-300">← Pemantauan peserta</a>
         <a href="{{ request()->fullUrl() }}" class="text-xs text-cyan-300">Muat ulang riwayat pelanggaran</a>
         @if ($canPrintScores)
-            <a href="{{ route('tryouts.scores.print', $trialExam) }}" target="_blank" rel="noopener"
-                class="rounded-xl bg-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950">Cetak nilai uji coba</a>
+            <x-trial-score-link :trial="$trialExam" />
         @endif
         @if(in_array(auth()->user()->role->value, ['super_admin','committee'], true))
             <div class="flex flex-wrap gap-2">
@@ -29,7 +28,7 @@
     </section>
 
     <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        @foreach (['total' => ['Total siswa', $statistics['total']], 'not_started' => ['Belum login / belum ujian', $statistics['not_started']], 'in_progress' => ['Mengerjakan', $statistics['in_progress']], 'locked' => ['Terkunci', $statistics['locked']], 'submitted' => ['Selesai', $statistics['submitted']]] as $key => [$label, $value])
+        @foreach (['total' => ['Total siswa', $statistics['total']], 'not_started' => ['Belum mengerjakan', $statistics['not_started']], 'in_progress' => ['Mengerjakan', $statistics['in_progress']], 'locked' => ['Terkunci', $statistics['locked']], 'submitted' => ['Selesai', $statistics['submitted']]] as $key => [$label, $value])
             <div class="rounded-2xl border border-white/10 bg-white/[0.035] p-4"><p class="text-xs text-slate-400">{{ $label }}</p><p data-trial-stat="{{ $key }}" class="mt-2 text-2xl font-semibold text-cyan-300">{{ $value }}</p></div>
         @endforeach
     </div>
@@ -42,7 +41,7 @@
                 <input name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Cari nama, NIS, atau NISN" class="min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-950 px-4 py-2.5 text-sm">
                 <select name="status" class="rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
                     <option value="">Semua status</option>
-                    @foreach(['not_started'=>'Belum login / belum ujian','in_progress'=>'Mengerjakan','locked'=>'Terkunci','submitted'=>'Selesai'] as $value=>$label)<option value="{{ $value }}" @selected(($filters['status'] ?? '') === $value)>{{ $label }}</option>@endforeach
+                    @foreach(['not_started'=>'Belum mengerjakan','in_progress'=>'Mengerjakan','locked'=>'Terkunci','submitted'=>'Selesai'] as $value=>$label)<option value="{{ $value }}" @selected(($filters['status'] ?? '') === $value)>{{ $label }}</option>@endforeach
                 </select>
                 <button class="rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950">Tampilkan</button>
                 <a href="{{ route('tryouts.participants', $trialExam) }}" class="px-2 py-2.5 text-sm text-slate-400">Reset</a>
@@ -57,7 +56,7 @@
                             $student = $row['student'];
                             $attempt = $row['attempt'];
                             $locked = $attempt?->status === 'in_progress' && $attempt?->security_locked_at;
-                            $status = !$attempt ? 'Belum login / belum ujian' : ($locked ? 'Terkunci' : ($attempt->status === 'submitted' ? 'Selesai' : 'Mengerjakan'));
+                            $status = ['not_started' => 'Belum mengerjakan', 'in_progress' => 'Mengerjakan', 'locked' => 'Terkunci', 'submitted' => 'Selesai'][$row['status']];
                         @endphp
                         <tr data-trial-student="{{ $student->id }}">
                             <td class="px-5 py-4"><p class="font-medium text-white">{{ $student->full_name }}</p><p class="mt-1 text-xs text-slate-500">NIS {{ $student->student_number }} · NISN {{ $student->nisn ?: '—' }}</p></td>
@@ -101,8 +100,10 @@
             (() => {
                 const rows = [...document.querySelectorAll('[data-trial-student]')];
                 const url = new URL(@json(route('tryouts.progress', $trialExam)), window.location.origin);
-                rows.forEach((row) => url.searchParams.append('student_ids[]', row.dataset.trialStudent));
-                const labels = {not_started: 'Belum login / belum ujian', in_progress: 'Mengerjakan', locked: 'Terkunci', submitted: 'Selesai'};
+                if (rows.length <= 50) {
+                    rows.forEach((row) => url.searchParams.append('student_ids[]', row.dataset.trialStudent));
+                }
+                const labels = {not_started: 'Belum mengerjakan', in_progress: 'Mengerjakan', locked: 'Terkunci', submitted: 'Selesai'};
                 const styles = {
                     not_started: 'bg-slate-400/10 text-slate-300',
                     in_progress: 'bg-amber-400/10 text-amber-200',

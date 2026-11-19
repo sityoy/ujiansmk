@@ -66,6 +66,7 @@
         if (content) { content.hidden = true; content.disabled = true; }
         title.textContent = heading;
         message.textContent = text;
+        window.dispatchEvent(new Event('examsecurity:blocked'));
     };
     const applyState = state => {
         if (!['in_progress', 'submitted', 'terminated'].includes(state.status)) throw new Error('Status server tidak valid.');
@@ -311,7 +312,12 @@
         if (accepted && content?.contains(event.target)) event.preventDefault();
     }));
     window.addEventListener('online', check);
-    setInterval(() => { if (!document.hidden && !window.examAutoSubmit) check(); }, 15000);
+    const poll = () => { if (!document.hidden && !window.examAutoSubmit) check(); };
+    // Spread periodic checks across students who open the exam at the same time.
+    setTimeout(() => {
+        poll();
+        setInterval(poll, 15000);
+    }, 1500 + Math.floor(Math.random() * 13500));
     if (!fullscreenSupported && !locked) {
         message.textContent += ' Browser ini tidak mendukung fullscreen; pengawasan perpindahan halaman tetap aktif.';
     }

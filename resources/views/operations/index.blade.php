@@ -108,6 +108,9 @@
                     <p class="font-medium text-white">{{ $trialExam->title }}</p>
                     <p class="mt-1 text-xs text-slate-500">{{ $trialExam->questionBank->subject->name }} · Kelas {{ $trialExam->questionBank->grade_level }} · {{ $trialExam->attempts_count }} sudah memulai</p>
                     <a href="{{ route('tryouts.participants', $trialExam) }}" class="mt-4 inline-flex rounded-lg border border-violet-400/30 px-3 py-2 text-xs font-semibold text-violet-300">Lihat seluruh peserta & pelanggaran</a>
+                    @if (in_array(auth()->user()->role->value, ['super_admin', 'committee', 'principal', 'proctor'], true))
+                        <x-trial-score-link :trial="$trialExam" class="mt-4" />
+                    @endif
                     @if (in_array(auth()->user()->role->value, ['super_admin', 'committee', 'principal'], true))
                         <a href="{{ route('exam-flyers.trial', $trialExam) }}" target="_blank" rel="noopener" class="mt-4 inline-flex rounded-lg border border-emerald-400/30 px-3 py-2 text-xs font-semibold text-emerald-300">Cetak flyer simulasi</a>
                     @endif

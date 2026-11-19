@@ -79,6 +79,7 @@
                         </div>
                         <div class="flex flex-wrap gap-2">
                             <a href="{{ route('tryouts.participants', $trial) }}" class="rounded-xl bg-violet-400/10 px-3 py-2 text-xs font-semibold text-violet-200">Lihat peserta</a>
+                            <x-trial-score-link :trial="$trial" />
                             @unless ($trial->questionBank->archived_at)
                             <a href="{{ route('tryouts.cards', $trial) }}" target="_blank" class="rounded-xl bg-cyan-400/10 px-3 py-2 text-xs font-semibold text-cyan-200">Cetak kartu</a>
                             <a href="{{ route('exam-flyers.trial', $trial) }}" target="_blank" rel="noopener" class="rounded-xl bg-emerald-400/10 px-3 py-2 text-xs font-semibold text-emerald-200">Cetak flyer</a>

@@ -96,6 +96,7 @@ class TrialExamAttemptService
             $questionCount = $questions->count();
             $questionWeight = ExamScoreCalculator::MULTIPLE_CHOICE_POINTS;
             $correctAnswers = 0;
+            $responses = [];
 
             foreach ($questions as $question) {
                 $raw = array_key_exists($question->id, $submittedAnswers)
@@ -106,11 +107,18 @@ class TrialExamAttemptService
                     && hash_equals(Str::upper(trim((string) $question->correct_answer)), $answer);
                 $awarded = $correct ? $questionWeight : 0.0;
 
-                TrialAnswer::updateOrCreate(
-                    ['trial_attempt_id' => $attempt->id, 'trial_question_id' => $question->id],
-                    ['answer' => $answer, 'is_correct' => $correct, 'points_awarded' => $awarded]
-                );
+                $responses[] = [
+                    'trial_attempt_id' => $attempt->id,
+                    'trial_question_id' => $question->id,
+                    'answer' => $answer,
+                    'is_correct' => $correct,
+                    'points_awarded' => $awarded,
+                ];
                 $correctAnswers += $correct ? 1 : 0;
+            }
+
+            foreach (array_chunk($responses, 100) as $batch) {
+                TrialAnswer::query()->upsert($batch, ['trial_attempt_id', 'trial_question_id'], ['answer', 'is_correct', 'points_awarded']);
             }
 
             $attempt->update([
@@ -119,7 +127,7 @@ class TrialExamAttemptService
                 'last_seen_at' => now(),
                 'score' => app(ExamScoreCalculator::class)->multipleChoiceScore($correctAnswers, $questionCount),
                 'correct_answers' => $correctAnswers,
-                'total_questions' => $questions->count(),
+                'total_questions' => $questionCount,
             ]);
 
             return $attempt->fresh();

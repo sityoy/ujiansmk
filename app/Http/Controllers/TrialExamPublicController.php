@@ -27,7 +27,7 @@ class TrialExamPublicController extends Controller
         return view('tryouts.entry', [
             'trialExam' => $trialExam,
             'available' => $trialExam->isAvailable(),
-            'questionCount' => $this->questions($trialExam)->count(),
+            'questionCount' => $trialExam->questionBank->questions()->count(),
         ]);
     }
 
@@ -118,8 +118,8 @@ class TrialExamPublicController extends Controller
             ]);
         }
 
-        $questions = $this->questions($trialExam);
-        if ($questions->isEmpty()) {
+        $questionCount = $trialExam->questionBank->questions()->count();
+        if ($questionCount === 0) {
             throw ValidationException::withMessages(['access_code' => 'Bank soal pilihan ganda belum tersedia.']);
         }
 
@@ -135,7 +135,7 @@ class TrialExamPublicController extends Controller
             'last_seen_at' => now(),
             'ip_address' => $request->ip(),
             'user_agent' => Str::limit((string) $request->userAgent(), 1000, ''),
-            'total_questions' => $questions->count(),
+            'total_questions' => $questionCount,
         ]);
 
         session()->put($this->tokenKey($attempt), $token);
@@ -241,11 +241,12 @@ class TrialExamPublicController extends Controller
         TrialExamSecurityService $security,
     ): JsonResponse {
         $this->authorizeAttempt($trialExam, $trialAttempt);
+        $trialAttempt->setRelation('trialExam', $trialExam);
         if ($trialAttempt->status === 'in_progress' && $attempts->isExpired($trialAttempt)) {
-            $trialAttempt = $attempts->submit($trialAttempt, [], true);
+            $trialAttempt = $attempts->submit($trialAttempt, [], true)->setRelation('trialExam', $trialExam);
         }
 
-        return response()->json($security->state($trialAttempt->fresh()))->header('Cache-Control', 'no-store');
+        return response()->json($security->state($trialAttempt))->header('Cache-Control', 'no-store');
     }
 
     public function result(TrialExam $trialExam, TrialAttempt $trialAttempt): View

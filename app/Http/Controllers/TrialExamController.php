@@ -17,6 +17,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -53,39 +54,9 @@ class TrialExamController extends Controller
             'q' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', Rule::in(['not_started', 'in_progress', 'locked', 'submitted'])],
         ]);
-        $students = Student::query()
-            ->with('schoolClass')
-            ->where('is_active', true)
-            ->when($request->user()->role === UserRole::Teacher, fn ($query) => $query->whereIn('school_class_id', AssessmentSubject::query()
-                ->where('assessment_period_id', $trialExam->assessmentSubject->assessment_period_id)->where('subject_id', $trialExam->assessmentSubject->subject_id)
-                ->where('teacher_user_id', $request->user()->id)->select('school_class_id')))
-            ->whereHas('schoolClass', fn ($query) => $query
-                ->where('grade_level', $trialExam->questionBank->grade_level)
-                ->whereHas('academicYear', fn ($year) => $year->where('is_active', true)))
-            ->orderBy('full_name')
-            ->get();
-        $attempts = $trialExam->currentAttempts()
-            ->withCount('securityIncidents')
-            ->get();
-        $byStudent = $attempts->whereNotNull('student_id')->keyBy('student_id');
-        $byIdentifier = $attempts->whereNull('student_id')->whereNotNull('participant_identifier')->keyBy('participant_identifier');
-
-        $rows = $students->map(function (Student $student) use ($byStudent, $byIdentifier): array {
-            $attempt = $byStudent->get($student->id)
-                ?? $byIdentifier->get($student->nisn)
-                ?? $byIdentifier->get($student->student_number);
-
-            return ['student' => $student, 'attempt' => $attempt];
-        });
-        $statistics = [
-            'total' => $rows->count(),
-            'not_started' => $rows->where('attempt', null)->count(),
-            'in_progress' => $rows->filter(fn (array $row): bool => $row['attempt']?->status === 'in_progress'
-                && ! $row['attempt']?->security_locked_at)->count(),
-            'locked' => $rows->filter(fn (array $row): bool => $row['attempt']?->status === 'in_progress'
-                && (bool) $row['attempt']?->security_locked_at)->count(),
-            'submitted' => $rows->filter(fn (array $row): bool => $row['attempt']?->status === 'submitted')->count(),
-        ];
+        $attempts = $trialExam->currentAttempts()->withCount('securityIncidents')->get();
+        $rows = $this->participantRows($trialExam, $request->user(), $attempts);
+        $statistics = $this->participantStatistics($rows);
 
         $search = trim((string) ($filters['q'] ?? ''));
         if ($search !== '') {
@@ -95,18 +66,7 @@ class TrialExamController extends Controller
             );
         }
         if ($status = $filters['status'] ?? null) {
-            $rows = $rows->filter(function (array $row) use ($status): bool {
-                $attempt = $row['attempt'];
-                if ($status === 'not_started') {
-                    return $attempt === null;
-                }
-                if ($status === 'locked') {
-                    return $attempt?->status === 'in_progress' && (bool) $attempt?->security_locked_at;
-                }
-
-                return $attempt?->status === $status
-                    && ($status !== 'in_progress' || ! $attempt?->security_locked_at);
-            });
+            $rows = $rows->where('status', $status);
         }
 
         $participants = TablePagination::collection($rows, 'page');
@@ -127,54 +87,23 @@ class TrialExamController extends Controller
         $trialExam->load(['questionBank.subject', 'assessmentSubject']);
         $this->authorizeMonitor($request, $trialExam);
         $validated = $request->validate([
-            'student_ids' => ['required', 'array', 'max:20'],
+            'student_ids' => ['sometimes', 'required', 'array', 'max:50'],
             'student_ids.*' => ['integer'],
         ]);
 
-        $students = Student::query()
-            ->where('is_active', true)
-            ->when($request->user()->role === UserRole::Teacher, fn ($query) => $query->whereIn('school_class_id', AssessmentSubject::query()
-                ->where('assessment_period_id', $trialExam->assessmentSubject->assessment_period_id)->where('subject_id', $trialExam->assessmentSubject->subject_id)
-                ->where('teacher_user_id', $request->user()->id)->select('school_class_id')))
-            ->whereHas('schoolClass', fn ($query) => $query
-                ->where('grade_level', $trialExam->questionBank->grade_level)
-                ->whereHas('academicYear', fn ($year) => $year->where('is_active', true)))
-            ->get(['id', 'student_number', 'nisn']);
-        $attempts = $trialExam->currentAttempts()
-            ->withCount('securityIncidents')
-            ->get();
-        $byStudent = $attempts->whereNotNull('student_id')->keyBy('student_id');
-        $byIdentifier = $attempts->whereNull('student_id')->whereNotNull('participant_identifier')->keyBy('participant_identifier');
-
-        $rows = $students->map(function (Student $student) use ($byStudent, $byIdentifier): array {
-            return [
-                'student' => $student,
-                'attempt' => $byStudent->get($student->id)
-                    ?? $byIdentifier->get($student->nisn)
-                    ?? $byIdentifier->get($student->student_number),
-            ];
-        });
-        $statistics = [
-            'total' => $rows->count(),
-            'not_started' => $rows->where('attempt', null)->count(),
-            'in_progress' => $rows->filter(fn (array $row): bool => $row['attempt']?->status === 'in_progress'
-                && ! $row['attempt']?->security_locked_at)->count(),
-            'locked' => $rows->filter(fn (array $row): bool => $row['attempt']?->status === 'in_progress'
-                && (bool) $row['attempt']?->security_locked_at)->count(),
-            'submitted' => $rows->filter(fn (array $row): bool => $row['attempt']?->status === 'submitted')->count(),
-        ];
-        $requested = collect($validated['student_ids'])->map(fn ($id): int => (int) $id);
+        $attempts = $trialExam->currentAttempts()->withCount('securityIncidents')->get();
+        $rows = $this->participantRows($trialExam, $request->user(), $attempts);
+        $statistics = $this->participantStatistics($rows);
+        $requested = isset($validated['student_ids']) ? array_flip($validated['student_ids']) : null;
 
         $canRestart = $this->canRestart($request->user());
         $participants = $rows
-            ->filter(fn (array $row): bool => $requested->contains((int) $row['student']->id))
+            ->filter(fn (array $row): bool => $requested === null || isset($requested[$row['student']->id]))
             ->mapWithKeys(function (array $row) use ($canRestart, $trialExam): array {
                 $attempt = $row['attempt'];
-                $locked = $attempt?->status === 'in_progress' && (bool) $attempt?->security_locked_at;
-                $status = ! $attempt ? 'not_started' : ($locked ? 'locked' : $attempt->status);
 
                 return [(string) $row['student']->id => [
-                    'status' => $status,
+                    'status' => $row['status'],
                     'started_at' => $attempt?->started_at?->format('d/m/Y H:i:s'),
                     'submitted_at' => $attempt?->submitted_at?->format('d/m/Y H:i:s'),
                     'violations' => $attempt?->violation_count,
@@ -195,15 +124,26 @@ class TrialExamController extends Controller
     {
         abort_unless($this->canPrintScores($request->user()), 403);
         $trialExam->load(['questionBank.subject', 'assessmentSubject.assessmentPeriod.academicYear']);
-        $attempts = $trialExam->currentAttempts()->where('status', 'submitted')
-            ->with('student.schoolClass')
-            ->get()
-            ->sortBy([['student.schoolClass.name', 'asc'], ['participant_name', 'asc'], ['id', 'asc']])
-            ->values();
+        $attempts = $trialExam->currentAttempts()->with('student.schoolClass')->get();
+        $rows = $this->participantRows($trialExam, $request->user(), $attempts);
+        $matched = array_flip($rows->pluck('attempt.id')->filter()->all());
+
+        // Keep historical results whose participant is now outside the active roster.
+        foreach ($attempts->where('status', 'submitted') as $attempt) {
+            if (! isset($matched[$attempt->id])) {
+                $rows->push($this->participantRow($attempt->student, $attempt));
+            }
+        }
+
+        $rows = $rows->sortBy([
+            ['student.schoolClass.name', 'asc'],
+            ['name', 'asc'],
+        ])->values();
 
         return response()->view('tryouts.scores-print', [
             'trialExam' => $trialExam,
-            'attempts' => $attempts,
+            'rows' => $rows,
+            'statistics' => $this->participantStatistics($rows),
             'school' => SchoolProfile::query()->first(),
         ])->header('Cache-Control', 'private, no-store')->header('X-Robots-Tag', 'noindex, nofollow');
     }
@@ -406,6 +346,56 @@ class TrialExamController extends Controller
         $trialExam->delete();
 
         return back()->with('status', 'Ujian uji coba dihapus.');
+    }
+
+    private function participantRows(TrialExam $trialExam, User $user, Collection $attempts): Collection
+    {
+        $students = Student::query()
+            ->with('schoolClass')
+            ->where('is_active', true)
+            ->when($user->role === UserRole::Teacher, fn ($query) => $query->whereIn('school_class_id', AssessmentSubject::query()
+                ->where('assessment_period_id', $trialExam->assessmentSubject->assessment_period_id)
+                ->where('subject_id', $trialExam->assessmentSubject->subject_id)
+                ->where('teacher_user_id', $user->id)->select('school_class_id')))
+            ->whereHas('schoolClass', fn ($query) => $query
+                ->where('grade_level', $trialExam->questionBank->grade_level)
+                ->whereHas('academicYear', fn ($year) => $year->where('is_active', true)))
+            ->orderBy('full_name')
+            ->get();
+
+        $byStudent = $attempts->whereNotNull('student_id')->keyBy('student_id');
+        $byIdentifier = $attempts->whereNull('student_id')->whereNotNull('participant_identifier')->keyBy('participant_identifier');
+
+        return $students->map(fn (Student $student): array => $this->participantRow($student,
+            $byStudent->get($student->id) ?? $byIdentifier->get($student->nisn) ?? $byIdentifier->get($student->student_number),
+        ));
+    }
+
+    private function participantRow(?Student $student, ?TrialAttempt $attempt): array
+    {
+        return [
+            'student' => $student,
+            'attempt' => $attempt,
+            'name' => $student?->full_name ?? $attempt?->participant_name,
+            'status' => match (true) {
+                $attempt === null => 'not_started',
+                $attempt->status === 'in_progress' && $attempt->security_locked_at !== null => 'locked',
+                default => $attempt->status,
+            },
+        ];
+    }
+
+    private function participantStatistics(Collection $rows): array
+    {
+        $counts = $rows->countBy('status');
+
+        return [
+            'total' => $rows->count(),
+            'not_started' => $counts->get('not_started', 0),
+            'in_progress' => $counts->get('in_progress', 0),
+            'locked' => $counts->get('locked', 0),
+            'submitted' => $counts->get('submitted', 0),
+        ];
     }
 
     private function canPrintScores(User $user): bool

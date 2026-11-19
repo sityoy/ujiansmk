@@ -35,7 +35,10 @@
         @if ($period = $trialExam->assessmentSubject?->assessmentPeriod)
             <p>{{ $period->name }} · Tahun Ajaran {{ $period->academicYear->name }}</p>
         @endif
-        <p>{{ $attempts->count() }} peserta selesai · Dokumen internal petugas</p>
+        <p>{{ $statistics['total'] }} peserta · {{ $statistics['submitted'] }} selesai · {{ $statistics['not_started'] }} belum mengerjakan · {{ $statistics['in_progress'] }} mengerjakan · {{ $statistics['locked'] }} terkunci</p>
+        @if ($statistics['submitted'] === 0)
+            <p>Belum ada peserta yang menyelesaikan simulasi.</p>
+        @endif
     </header>
     <div class="table-wrap">
         <table>
@@ -44,29 +47,37 @@
                 <th scope="col">NIS / NISN</th>
                 <th scope="col">Nama peserta</th>
                 <th scope="col">Kelas</th>
+                <th scope="col">Status</th>
                 <th class="number" scope="col">Benar / Soal</th>
                 <th class="number" scope="col">Nilai</th>
                 <th scope="col">Waktu selesai</th>
             </tr></thead>
             <tbody>
-                @forelse ($attempts as $attempt)
+                @php $labels = ['not_started' => 'Belum mengerjakan', 'in_progress' => 'Mengerjakan', 'locked' => 'Terkunci', 'submitted' => 'Selesai']; @endphp
+                @forelse ($rows as $row)
+                    @php
+                        $student = $row['student'];
+                        $attempt = $row['attempt'];
+                        $finished = $row['status'] === 'submitted';
+                    @endphp
                     <tr>
                         <td class="number">{{ $loop->iteration }}</td>
                         <td>
-                            @if ($attempt->student)
-                                {{ $attempt->student->student_number }} / {{ $attempt->student->nisn ?: '—' }}
+                            @if ($student)
+                                {{ $student->student_number }} / {{ $student->nisn ?: '—' }}
                             @else
-                                {{ $attempt->participant_identifier ?: '—' }}
+                                {{ $attempt?->participant_identifier ?: '—' }}
                             @endif
                         </td>
-                        <td>{{ $attempt->participant_name }}</td>
-                        <td>{{ $attempt->student?->schoolClass?->name ?? '—' }}</td>
-                        <td class="number">{{ $attempt->correct_answers }} / {{ $attempt->total_questions }}</td>
-                        <td class="number">{{ $attempt->score === null ? '—' : number_format((float) $attempt->score, 2, ',', '.') }}</td>
-                        <td>{{ $attempt->submitted_at?->format('d/m/Y H:i') ?? '—' }}</td>
+                        <td>{{ $row['name'] }}</td>
+                        <td>{{ $student?->schoolClass?->name ?? '—' }}</td>
+                        <td>{{ $labels[$row['status']] }}</td>
+                        <td class="number">{{ $finished ? $attempt->correct_answers.' / '.$attempt->total_questions : '—' }}</td>
+                        <td class="number">{{ $finished && $attempt->score !== null ? number_format((float) $attempt->score, 2, ',', '.') : '—' }}</td>
+                        <td>{{ $finished ? ($attempt->submitted_at?->format('d/m/Y H:i') ?? '—') : '—' }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="7">Belum ada peserta yang menyelesaikan simulasi.</td></tr>
+                    <tr><td colspan="8">Tidak ada peserta pada tingkat kelas ini.</td></tr>
                 @endforelse
             </tbody>
         </table>

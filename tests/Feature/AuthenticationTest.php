@@ -40,6 +40,23 @@ class AuthenticationTest extends TestCase
             ->assertSee('Selamat datang');
     }
 
+    public function test_students_on_one_school_ip_can_sign_in_while_repeated_guesses_are_limited(): void
+    {
+        $login = route('login.store');
+        for ($index = 0; $index < 5; $index++) {
+            $this->post($login, ['login' => 'unknown', 'password' => 'invalid'])
+                ->assertRedirect()->assertSessionHasErrors('login');
+        }
+        $this->post($login, ['login' => 'UNKNOWN', 'password' => 'invalid'])->assertTooManyRequests();
+
+        foreach (User::factory()->count(10)->create(['role' => UserRole::Student]) as $student) {
+            $this->post($login, ['login' => $student->email, 'password' => 'password'])
+                ->assertRedirect(route('dashboard'));
+            $this->assertAuthenticatedAs($student);
+            $this->post(route('logout'))->assertRedirect(route('login'));
+        }
+    }
+
     public function test_inactive_user_cannot_sign_in(): void
     {
         $user = User::factory()->create([

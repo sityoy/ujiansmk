@@ -39,23 +39,23 @@ Route::redirect('/', '/login');
 Route::prefix('tryout')->name('tryout.')->group(function (): void {
     Route::get('/{trialExam:slug}', [TrialExamPublicController::class, 'entry'])->name('entry');
     Route::post('/{trialExam:slug}/start', [TrialExamPublicController::class, 'start'])
-        ->middleware('throttle:20,1')->name('start');
+        ->middleware('throttle:trial-start')->name('start');
     Route::get('/{trialExam:slug}/attempts/{trialAttempt}', [TrialExamPublicController::class, 'show'])->name('show');
     Route::get('/{trialExam:slug}/attempts/{trialAttempt}/security', [TrialExamPublicController::class, 'securityState'])
-        ->middleware('throttle:30,1')->name('security');
+        ->middleware('throttle:trial-security')->name('security');
     Route::put('/{trialExam:slug}/attempts/{trialAttempt}/questions/{question}', [TrialExamPublicController::class, 'answer'])
-        ->middleware('throttle:120,1')->name('answer');
+        ->middleware('throttle:trial-answer')->name('answer');
     Route::post('/{trialExam:slug}/attempts/{trialAttempt}/incidents', [TrialExamPublicController::class, 'incident'])
-        ->middleware('throttle:30,1')->name('incident');
+        ->middleware('throttle:trial-incident')->name('incident');
     Route::post('/{trialExam:slug}/attempts/{trialAttempt}/submit', [TrialExamPublicController::class, 'submit'])
-        ->middleware('throttle:10,1')->name('submit');
+        ->middleware('throttle:trial-submit')->name('submit');
     Route::get('/{trialExam:slug}/attempts/{trialAttempt}/result', [TrialExamPublicController::class, 'result'])->name('result');
 });
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [LoginController::class, 'create'])->name('login');
     Route::post('/login', [LoginController::class, 'store'])
-        ->middleware('throttle:5,1')
+        ->middleware('throttle:school-login')
         ->name('login.store');
 });
 
@@ -73,14 +73,14 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             ->group(function (): void {
                 Route::get('/exams', [StudentExamController::class, 'index'])->name('exams.index');
                 Route::post('/attendance/{assignment}', [StudentAttendanceController::class, 'store'])
-                    ->middleware('throttle:10,1')
+                    ->middleware('throttle:10,1,attendance')
                     ->name('attendance.store');
                 Route::post('/exams/{assignment}/start', [StudentExamController::class, 'start'])->name('exams.start');
                 Route::get('/attempts/{attempt}', [StudentExamController::class, 'show'])->name('exams.show');
                 Route::get('/attempts/{attempt}/security', [StudentExamController::class, 'securityState'])
-                    ->middleware('throttle:30,1')->name('exams.security');
+                    ->middleware('throttle:30,1,core-security')->name('exams.security');
                 Route::put('/attempts/{attempt}/questions/{question}', [StudentExamController::class, 'answer'])
-                    ->middleware('throttle:120,1')
+                    ->middleware('throttle:120,1,core-answer')
                     ->name('exams.answer');
                 Route::post('/attempts/{attempt}/submit', [StudentExamController::class, 'submit'])->name('exams.submit');
                 Route::post('/attempts/{attempt}/incidents', [StudentExamController::class, 'incident'])
