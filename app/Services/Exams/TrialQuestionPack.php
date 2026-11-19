@@ -4,17 +4,21 @@ namespace App\Services\Exams;
 
 use App\Models\Subject;
 use App\Models\TrialQuestionBank;
+use Illuminate\Http\File;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class TrialQuestionPack
 {
     public function sets(?int $grade = null): array
     {
         $sets = json_decode(file_get_contents(database_path('data/trial-question-pack.json')), true, 512, JSON_THROW_ON_ERROR);
+        $optional = json_decode(file_get_contents(database_path('data/trial-question-pack-optional.json')), true, 512, JSON_THROW_ON_ERROR);
 
-        return array_values(array_filter($sets, fn ($set) => $grade === null || $set['grade'] === $grade));
+        return array_values(array_filter([...$sets, ...$optional], fn ($set) => $grade === null || $set['grade'] === $grade));
     }
 
     /** Only metadata is exposed to the picker; answers stay on the server. */
@@ -68,33 +72,58 @@ class TrialQuestionPack
             throw ValidationException::withMessages(['pack_key' => 'Pilihan paket 20 soal tidak tersedia.']);
         }
 
-        return DB::transaction(function () use ($set): array {
-            $bank = TrialQuestionBank::query()->where('source_pack_key', $set['id'])->first();
-            if (! $bank) {
-                $subject = Subject::query()->whereIn(DB::raw('LOWER(TRIM(name))'), $this->subjectNames($set))->orderBy('id')->first()
-                    ?? Subject::query()->where('code', $set['code'])->first()
-                    ?? Subject::query()->firstOrCreate(['code' => $set['code']], ['name' => $set['subject'], 'is_active' => true]);
-                $bank = TrialQuestionBank::query()->firstOrCreate([
-                    'subject_id' => $subject->id, 'grade_level' => $set['grade'], 'name' => $set['name'],
-                ], ['teacher_user_id' => null, 'source_pack_key' => $set['id']]);
-            }
-            $bank = TrialQuestionBank::query()->lockForUpdate()->findOrFail($bank->id);
-            if ($bank->source_pack_key !== $set['id']) {
-                throw ValidationException::withMessages(['pack_key' => 'Nama bank ini sudah dipakai bank buatan pengelola. Ubah nama bank tersebut sebelum menambahkan paket.']);
-            }
-            if ($bank->archived_at || $bank->questions()->exists() || $bank->trialExams()->whereHas('attempts')->exists()) {
-                return ['bank' => $bank, 'created' => false];
-            }
-            foreach ($set['questions'] as $index => $question) {
-                $bank->questions()->create([
-                    'question_text' => $question['question'], 'text_format' => 'plain',
-                    'options' => $question['options'], 'correct_answer' => $question['answer'],
-                    'points' => ExamScoreCalculator::MULTIPLE_CHOICE_POINTS, 'position' => $index + 1,
-                ]);
+        $uploadedImages = [];
+
+        try {
+            return DB::transaction(function () use ($set, &$uploadedImages): array {
+                return $this->importSet($set, $uploadedImages);
+            });
+        } catch (Throwable $exception) {
+            if ($uploadedImages !== []) {
+                Storage::disk('public')->delete($uploadedImages);
             }
 
-            return ['bank' => $bank, 'created' => true];
-        });
+            throw $exception;
+        }
+    }
+
+    private function importSet(array $set, array &$uploadedImages): array
+    {
+        $bank = TrialQuestionBank::query()->where('source_pack_key', $set['id'])->first();
+        if (! $bank) {
+            $subject = Subject::query()->whereIn(DB::raw('LOWER(TRIM(name))'), $this->subjectNames($set))->orderBy('id')->first()
+                ?? Subject::query()->where('code', $set['code'])->first()
+                ?? Subject::query()->firstOrCreate(['code' => $set['code']], ['name' => $set['subject'], 'is_active' => true]);
+            $bank = TrialQuestionBank::query()->firstOrCreate([
+                'subject_id' => $subject->id, 'grade_level' => $set['grade'], 'name' => $set['name'],
+            ], ['teacher_user_id' => null, 'source_pack_key' => $set['id']]);
+        }
+        $bank = TrialQuestionBank::query()->lockForUpdate()->findOrFail($bank->id);
+        if ($bank->source_pack_key !== $set['id']) {
+            throw ValidationException::withMessages(['pack_key' => 'Nama bank ini sudah dipakai bank buatan pengelola. Ubah nama bank tersebut sebelum menambahkan paket.']);
+        }
+        if ($bank->archived_at || $bank->questions()->exists() || $bank->trialExams()->whereHas('attempts')->exists()) {
+            return ['bank' => $bank, 'created' => false];
+        }
+        foreach ($set['questions'] as $index => $question) {
+            $imagePath = null;
+            if (isset($question['image'])) {
+                $image = database_path('data/trial-question-images/'.$question['image']);
+                if (! is_file($image) || ! ($imagePath = Storage::disk('public')->putFile('trial-questions', new File($image)))) {
+                    throw ValidationException::withMessages(['pack_key' => 'Gambar soal gagal disimpan. Coba tambahkan paket kembali.']);
+                }
+                $uploadedImages[] = $imagePath;
+            }
+            $bank->questions()->create([
+                'statement' => $question['statement'] ?? null,
+                'question_text' => $question['question'], 'text_format' => 'plain',
+                'question_image_path' => $imagePath,
+                'options' => $question['options'], 'correct_answer' => $question['answer'],
+                'points' => ExamScoreCalculator::MULTIPLE_CHOICE_POINTS, 'position' => $index + 1,
+            ]);
+        }
+
+        return ['bank' => $bank, 'created' => true];
     }
 
     /** Terminal bulk imports remain explicit; the web picker always imports one selection. */
@@ -103,6 +132,9 @@ class TrialQuestionPack
         return DB::transaction(function () use ($grade): array {
             $result = ['created' => 0, 'questions' => 0, 'skipped' => 0];
             foreach ($this->sets($grade) as $set) {
+                if ($set['manual_only'] ?? false) {
+                    continue;
+                }
                 $import = $this->importSelected($set['id']);
                 $result[$import['created'] ? 'created' : 'skipped']++;
                 if ($import['created']) {

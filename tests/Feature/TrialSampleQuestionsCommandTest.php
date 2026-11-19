@@ -124,10 +124,10 @@ class TrialSampleQuestionsCommandTest extends TestCase
         $this->assertCount(27, $coverage['subjects']);
         $this->assertSame(44, collect($coverage['subjects'])->where('scheduled', true)->sum(fn ($subject) => count($subject['grades'])));
         foreach ($coverage['subjects'] as $subject) {
-            $actual = $sets->where('code', $subject['code'])->pluck('grade')->sort()->values()->all();
+            $actual = $sets->where('code', $subject['code'])->pluck('grade')->unique()->sort()->values()->all();
             $this->assertSame($subject['grades'], $actual, $subject['name']);
         }
-        $this->assertSame([10, 11], $sets->where('code', 'SJR')->pluck('grade')->values()->all());
+        $this->assertSame([10, 11], $sets->where('code', 'SJR')->pluck('grade')->unique()->sort()->values()->all());
     }
 
     public function test_command_rejects_unsupported_grade(): void

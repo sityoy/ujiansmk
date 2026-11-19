@@ -23,6 +23,7 @@ use App\Services\Exams\TrialExamAttemptService;
 use App\Services\Exams\TrialExamSecurityService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -495,6 +496,56 @@ class TrialExamFlowTest extends TestCase
         $this->post(route('trial-question-banks.import-pack'), ['pack_key' => 'bin-10'])->assertRedirect(route('trial-question-banks.index', ['archived' => 1]));
         $this->assertNotNull($bank->fresh()->archived_at);
         $this->assertDatabaseCount('trial_questions', 21);
+    }
+
+    public function test_illustrated_history_pack_imports_and_displays_in_a_trial_exam(): void
+    {
+        Storage::fake('public');
+        [$existingTrial] = $this->makeTrial();
+        $admin = User::factory()->create(['role' => UserRole::Committee, 'must_change_password' => false, 'is_active' => true]);
+
+        $this->actingAs($admin)
+            ->get(route('trial-question-banks.index', ['pack_grade_level' => 10, 'pack_search' => 'Sejarah']))
+            ->assertOk()
+            ->assertSee('Try Out Sejarah 10 - Campuran Bergambar');
+        $this->post(route('trial-question-banks.import-pack'), ['pack_key' => 'sjr-10-campuran'])
+            ->assertSessionHasNoErrors();
+
+        $bank = TrialQuestionBank::query()->where('source_pack_key', 'sjr-10-campuran')->sole();
+        $questions = $bank->questions()->orderBy('position')->get();
+        $images = $questions->whereNotNull('question_image_path')->pluck('question_image_path', 'position');
+        $this->assertCount(20, $questions);
+        $this->assertSame([4, 9, 13, 17], $images->keys()->all());
+        foreach ($images as $path) {
+            Storage::disk('public')->assertExists($path);
+        }
+        $this->assertSame(1, $existingTrial->questionBank->questions()->count());
+
+        $this->post(route('trial-question-banks.import-pack'), ['pack_key' => 'sjr-10-campuran'])
+            ->assertRedirect(route('trial-question-banks.questions.index', $bank));
+        $this->assertDatabaseCount('trial_questions', 21);
+        $this->assertCount(4, Storage::disk('public')->files('trial-questions'));
+
+        $this->post(route('tryouts.store'), [
+            'trial_question_bank_id' => $bank->id,
+            'title' => 'Simulasi Sejarah Kelas 10 Campuran',
+            'access_code' => 'SEJARAH-X-MIX',
+            'duration_minutes' => 60,
+            'is_active' => '1',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $trial = $bank->trialExams()->sole();
+        $this->post(route('tryout.start', $trial), [
+            'participant_identifier' => '1234567890',
+            'access_code' => 'SEJARAH-X-MIX',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $attempt = TrialAttempt::query()->sole();
+        $this->get(route('tryout.show', [$trial, $attempt]))
+            ->assertOk()
+            ->assertSee('Seorang siswa menemukan buku transaksi asli')
+            ->assertSee(Storage::disk('public')->url($images->first()))
+            ->assertSee('data-exam-image aria-haspopup="dialog"', false);
     }
 
     public function test_picker_lists_actual_school_subjects_and_filters_by_grade_and_subject(): void
