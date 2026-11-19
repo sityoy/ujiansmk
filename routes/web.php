@@ -183,8 +183,10 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             Route::delete('/{trialExam}', [TrialExamController::class, 'destroy'])->name('destroy');
         });
 
-    Route::get('/tryouts/{trialExam}/scores/print', [TrialExamController::class, 'printScores'])
-        ->middleware('role:super_admin,committee,principal,proctor')->name('tryouts.scores.print');
+    Route::middleware('role:super_admin,committee,principal,proctor')->group(function (): void {
+        Route::get('/tryouts/scores/print', [TrialExamController::class, 'printAllScores'])->name('tryouts.scores.all');
+        Route::get('/tryouts/{trialExam}/scores/print', [TrialExamController::class, 'printScores'])->name('tryouts.scores.print');
+    });
     Route::post('/tryouts/{trialExam}/attempts/{trialAttempt}/restart', [TrialExamController::class, 'restartParticipant'])
         ->middleware('role:super_admin,committee,principal')->name('tryouts.attempts.restart');
 
@@ -194,6 +196,9 @@ Route::middleware(['auth', 'active'])->group(function (): void {
     Route::get('/tryouts/{trialExam}/progress', [TrialExamController::class, 'progress'])
         ->middleware('role:super_admin,committee,teacher,proctor,principal')
         ->name('tryouts.progress');
+    Route::get('/tryouts/participants/switch', [TrialExamController::class, 'switchParticipants'])
+        ->middleware('role:super_admin,committee,teacher,proctor,principal')
+        ->name('tryouts.participants.switch');
     Route::get('/tryouts/{trialExam}', [TrialExamController::class, 'show'])
         ->middleware('role:super_admin,committee,teacher,proctor,principal')
         ->name('tryouts.participants');

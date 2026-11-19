@@ -67,14 +67,13 @@ class ExamOperationsController extends Controller
                 ->orderByDesc('id')
                 ->paginateForDisplay('attempts_page')->withQueryString(),
             'trialExams' => TrialExam::query()
+                ->visibleToMonitor($request->user())
                 ->with(['questionBank.subject'])
                 ->withCount('currentAttempts as attempts_count')
-                ->when($request->user()->role === UserRole::Teacher, fn ($query) => $query
-                    ->whereHas('assessmentSubject', fn ($component) => $component
-                        ->where('teacher_user_id', $request->user()->id)))
                 ->latest()
                 ->paginateForDisplay('trials_page')
                 ->withQueryString(),
+            'canPrintTrialScores' => in_array($request->user()->role, [UserRole::SuperAdmin, UserRole::Committee, UserRole::Principal, UserRole::Proctor], true),
             'sessionStatuses' => SessionStatus::cases(),
             'statistics' => [
                 'activeSessions' => $groups->where('status', SessionStatus::Active)->count(),

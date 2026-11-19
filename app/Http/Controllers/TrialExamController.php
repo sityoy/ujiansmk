@@ -13,6 +13,8 @@ use App\Models\User;
 use App\Services\Exams\TrialExamAttemptService;
 use App\Services\Exams\TrialExamSecurityService;
 use App\Support\TablePagination;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -77,9 +79,21 @@ class TrialExamController extends Controller
         return view('tryouts.participants', compact(
             'trialExam', 'participants', 'statistics', 'filters'
         ) + [
+            'trialsByGrade' => $this->examsByGradeAndSubject(TrialExam::query()
+                ->visibleToMonitor($request->user())->with('questionBank.subject')->get())
+                ->groupBy('questionBank.grade_level'),
             'canPrintScores' => $this->canPrintScores($request->user()),
             'canRestart' => $this->canRestart($request->user()),
         ]);
+    }
+
+    public function switchParticipants(Request $request): RedirectResponse
+    {
+        $validated = $request->validate(['exam' => ['required', 'string', 'max:255']]);
+        $exam = TrialExam::query()->visibleToMonitor($request->user())
+            ->where('slug', $validated['exam'])->firstOrFail();
+
+        return redirect()->route('tryouts.participants', $exam);
     }
 
     public function progress(Request $request, TrialExam $trialExam): JsonResponse
@@ -123,9 +137,46 @@ class TrialExamController extends Controller
     public function printScores(Request $request, TrialExam $trialExam): Response
     {
         abort_unless($this->canPrintScores($request->user()), 403);
-        $trialExam->load(['questionBank.subject', 'assessmentSubject.assessmentPeriod.academicYear']);
-        $attempts = $trialExam->currentAttempts()->with('student.schoolClass')->get();
-        $rows = $this->participantRows($trialExam, $request->user(), $attempts);
+
+        return $this->scorePrintView($trialExam->newCollection([$trialExam]), $trialExam);
+    }
+
+    public function printAllScores(Request $request): Response
+    {
+        abort_unless($this->canPrintScores($request->user()), 403);
+
+        return $this->scorePrintView(TrialExam::all());
+    }
+
+    private function scorePrintView(EloquentCollection $exams, ?TrialExam $singleExam = null): Response
+    {
+        $exams->load([
+            'questionBank.subject',
+            'assessmentSubject.assessmentPeriod.academicYear',
+            'currentAttempts.student.schoolClass',
+        ]);
+        $studentsByGrade = $this->activeRoster($exams->pluck('questionBank.grade_level')->unique()->all())
+            ->get()->groupBy('schoolClass.grade_level');
+
+        $reports = $this->examsByGradeAndSubject($exams)->map(function (TrialExam $exam) use ($studentsByGrade): array {
+            $rows = $this->scoreRows(
+                $studentsByGrade->get($exam->questionBank->grade_level, collect()),
+                $exam->currentAttempts,
+            );
+
+            return ['exam' => $exam, 'rows' => $rows, 'statistics' => $this->participantStatistics($rows)];
+        });
+
+        return response()->view('tryouts.scores-print', [
+            'singleExam' => $singleExam,
+            'reports' => $reports,
+            'school' => SchoolProfile::query()->first(),
+        ])->header('Cache-Control', 'private, no-store')->header('X-Robots-Tag', 'noindex, nofollow');
+    }
+
+    private function scoreRows(Collection $students, Collection $attempts): Collection
+    {
+        $rows = $this->matchParticipants($students, $attempts);
         $matched = array_flip($rows->pluck('attempt.id')->filter()->all());
 
         // Keep historical results whose participant is now outside the active roster.
@@ -135,17 +186,10 @@ class TrialExamController extends Controller
             }
         }
 
-        $rows = $rows->sortBy([
+        return $rows->sortBy([
             ['student.schoolClass.name', 'asc'],
             ['name', 'asc'],
         ])->values();
-
-        return response()->view('tryouts.scores-print', [
-            'trialExam' => $trialExam,
-            'rows' => $rows,
-            'statistics' => $this->participantStatistics($rows),
-            'school' => SchoolProfile::query()->first(),
-        ])->header('Cache-Control', 'private, no-store')->header('X-Robots-Tag', 'noindex, nofollow');
     }
 
     public function cards(TrialExam $trialExam): View
@@ -350,25 +394,44 @@ class TrialExamController extends Controller
 
     private function participantRows(TrialExam $trialExam, User $user, Collection $attempts): Collection
     {
-        $students = Student::query()
-            ->with('schoolClass')
-            ->where('is_active', true)
+        $students = $this->activeRoster([$trialExam->questionBank->grade_level])
             ->when($user->role === UserRole::Teacher, fn ($query) => $query->whereIn('school_class_id', AssessmentSubject::query()
                 ->where('assessment_period_id', $trialExam->assessmentSubject->assessment_period_id)
                 ->where('subject_id', $trialExam->assessmentSubject->subject_id)
                 ->where('teacher_user_id', $user->id)->select('school_class_id')))
-            ->whereHas('schoolClass', fn ($query) => $query
-                ->where('grade_level', $trialExam->questionBank->grade_level)
-                ->whereHas('academicYear', fn ($year) => $year->where('is_active', true)))
-            ->orderBy('full_name')
             ->get();
 
+        return $this->matchParticipants($students, $attempts);
+    }
+
+    private function activeRoster(array $gradeLevels): Builder
+    {
+        return Student::query()
+            ->with('schoolClass')
+            ->where('is_active', true)
+            ->whereHas('schoolClass', fn ($query) => $query
+                ->whereIn('grade_level', $gradeLevels)
+                ->whereHas('academicYear', fn ($year) => $year->where('is_active', true)))
+            ->orderBy('full_name');
+    }
+
+    private function matchParticipants(Collection $students, Collection $attempts): Collection
+    {
         $byStudent = $attempts->whereNotNull('student_id')->keyBy('student_id');
         $byIdentifier = $attempts->whereNull('student_id')->whereNotNull('participant_identifier')->keyBy('participant_identifier');
 
         return $students->map(fn (Student $student): array => $this->participantRow($student,
             $byStudent->get($student->id) ?? $byIdentifier->get($student->nisn) ?? $byIdentifier->get($student->student_number),
         ));
+    }
+
+    private function examsByGradeAndSubject(Collection $exams): Collection
+    {
+        return $exams->sortBy([
+            ['questionBank.grade_level', 'asc'],
+            ['questionBank.subject.name', 'asc'],
+            ['title', 'asc'],
+        ])->values();
     }
 
     private function participantRow(?Student $student, ?TrialAttempt $attempt): array

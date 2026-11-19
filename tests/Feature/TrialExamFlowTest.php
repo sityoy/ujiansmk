@@ -553,6 +553,79 @@ class TrialExamFlowTest extends TestCase
         }
     }
 
+    public function test_staff_can_print_all_subjects_and_switch_to_another_exam_from_participants(): void
+    {
+        [$trial, $question] = $this->makeTrial();
+        $student = Student::firstOrFail();
+        $teacher = User::factory()->create(['role' => UserRole::Teacher]);
+        $trial->assessmentSubject->update(['teacher_user_id' => $teacher->id]);
+        $this->actingAs($student->user)->post(route('tryout.start', $trial), ['access_code' => $trial->access_code])->assertRedirect();
+        app(TrialExamAttemptService::class)->submit($trial->currentAttempts()->sole(), [$question->id => 'A']);
+
+        $otherSubject = Subject::create(['code' => 'MAT', 'name' => 'Matematika', 'is_active' => true]);
+        $otherClass = SchoolClass::create([
+            'academic_year_id' => $student->schoolClass->academic_year_id,
+            'name' => 'XI-1',
+            'grade_level' => 11,
+        ]);
+        Student::create([
+            'school_class_id' => $otherClass->id,
+            'full_name' => 'Peserta Matematika',
+            'student_number' => '221',
+            'is_active' => true,
+        ]);
+        $otherComponent = AssessmentSubject::create([
+            'assessment_period_id' => $trial->assessmentSubject->assessment_period_id,
+            'subject_id' => $otherSubject->id,
+            'school_class_id' => $otherClass->id,
+            'teacher_user_id' => User::factory()->create(['role' => UserRole::Teacher])->id,
+        ]);
+        $otherBank = TrialQuestionBank::create([
+            'subject_id' => $otherSubject->id,
+            'grade_level' => 11,
+            'name' => 'Latihan Matematika',
+        ]);
+        $otherTrial = TrialExam::create([
+            'assessment_subject_id' => $otherComponent->id,
+            'trial_question_bank_id' => $otherBank->id,
+            'title' => 'Simulasi Matematika',
+            'slug' => 'simulasi-matematika',
+            'access_code' => 'MAT-PRIVAT',
+            'duration_minutes' => 60,
+            'is_active' => false,
+        ]);
+        $print = route('tryouts.scores.all');
+        $switch = route('tryouts.participants.switch', ['exam' => $otherTrial->slug]);
+
+        $this->get($print)->assertForbidden();
+        $this->get($switch)->assertForbidden();
+        $this->actingAs($teacher)->get($print)->assertForbidden();
+        $this->get($switch)->assertNotFound();
+        $this->get(route('tryouts.participants', $trial))
+            ->assertOk()->assertDontSee($otherTrial->slug)->assertDontSee('Cetak Nilai Semua Mapel');
+
+        $this->actingAs(User::factory()->create(['role' => UserRole::Proctor]));
+        $this->get(route('operations.index'))->assertOk()->assertSee('Cetak Nilai Semua Mapel')->assertSee($print);
+        $this->get(route('tryouts.participants', $trial))
+            ->assertOk()->assertSee('Pilih mata pelajaran')->assertSee($otherTrial->slug)->assertSee($print);
+        $this->get($switch)->assertRedirect(route('tryouts.participants', $otherTrial));
+        $this->get(route('tryouts.participants', $otherTrial))
+            ->assertOk()->assertViewHas('participants', fn ($participants) =>
+                collect($participants->items())->pluck('name')->all() === ['Peserta Matematika']);
+
+        $response = $this->get($print)->assertOk()
+            ->assertSee('Cetak / Simpan PDF')
+            ->assertSeeInOrder(['Kelas 10', 'Peserta Uji Coba', '2,00', 'Kelas 11', 'Peserta Matematika', 'Belum mengerjakan'])
+            ->assertDontSee($otherTrial->access_code);
+        $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="UTF-8">'.$response->getContent());
+        $sheets = (new \DOMXPath($dom))->query('//section[@class="score-sheet"]');
+        $this->assertCount(2, $sheets);
+        $this->assertStringNotContainsString('Peserta Matematika', $sheets->item(0)->textContent);
+        $this->assertStringNotContainsString('Peserta Uji Coba', $sheets->item(1)->textContent);
+    }
+
     public function test_trial_restart_preserves_history_and_allows_fresh_attempt_after_finishing_or_locking(): void
     {
         [$trial, $question] = $this->makeTrial();

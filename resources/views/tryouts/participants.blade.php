@@ -8,10 +8,13 @@
     @if ($errors->any())<div class="mb-5 rounded-2xl border border-rose-400/20 bg-rose-400/10 p-4 text-sm text-rose-200">{{ $errors->first() }}</div>@endif
 
     <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <a href="{{ route('operations.index') }}" class="text-sm text-cyan-300">← Pemantauan peserta</a>
+        <a href="{{ route('operations.index') }}#pemantauan-uji-coba" class="text-sm text-cyan-300">← Pemantauan peserta</a>
         <a href="{{ request()->fullUrl() }}" class="text-xs text-cyan-300">Muat ulang riwayat pelanggaran</a>
         @if ($canPrintScores)
-            <x-trial-score-link :trial="$trialExam" />
+            <div class="flex flex-wrap gap-2">
+                <x-trial-score-link :trial="$trialExam" />
+                <x-trial-score-link />
+            </div>
         @endif
         @if(in_array(auth()->user()->role->value, ['super_admin','committee'], true))
             <div class="flex flex-wrap gap-2">
@@ -21,10 +24,29 @@
         @endif
     </div>
 
-    <section class="rounded-3xl border border-cyan-400/20 bg-cyan-400/[0.04] p-6">
-        <p class="text-xs uppercase tracking-wider text-cyan-300">{{ $trialExam->questionBank->subject->name }} · Kelas {{ $trialExam->questionBank->grade_level }}</p>
-        <h2 class="mt-2 text-2xl font-semibold">{{ $trialExam->title }}</h2>
-        <p class="mt-2 text-sm text-slate-400">{{ $trialExam->duration_minutes }} menit · Cetak nilai khusus petugas · Batas 2 pelanggaran</p>
+    <section class="grid gap-5 rounded-3xl border border-cyan-400/20 bg-cyan-400/[0.04] p-6 lg:grid-cols-2 lg:items-end">
+        <div>
+            <p class="text-xs uppercase tracking-wider text-cyan-300">{{ $trialExam->questionBank->subject->name }} · Kelas {{ $trialExam->questionBank->grade_level }}</p>
+            <h2 class="mt-2 text-2xl font-semibold">{{ $trialExam->title }}</h2>
+            <p class="mt-2 text-sm text-slate-400">{{ $trialExam->duration_minutes }} menit · Batas 2 pelanggaran</p>
+        </div>
+        <form method="GET" action="{{ route('tryouts.participants.switch') }}">
+            <label for="monitored-exam" class="text-sm font-medium text-slate-300">Pilih mata pelajaran</label>
+            <div class="mt-2 flex flex-wrap gap-2 sm:flex-nowrap">
+                <select id="monitored-exam" name="exam" class="w-full min-w-0 flex-1 rounded-xl border border-white/10 bg-slate-950 px-4 py-2.5 text-sm">
+                    @foreach ($trialsByGrade as $grade => $exams)
+                        <optgroup label="Kelas {{ $grade }}">
+                            @foreach ($exams as $exam)
+                                <option value="{{ $exam->slug }}" @selected($exam->is($trialExam))>
+                                    {{ $exam->questionBank->subject->name }} · {{ $exam->title }}
+                                </option>
+                            @endforeach
+                        </optgroup>
+                    @endforeach
+                </select>
+                <button type="submit" class="rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950">Lihat Peserta</button>
+            </div>
+        </form>
     </section>
 
     <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">

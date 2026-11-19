@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -43,6 +45,12 @@ class TrialExam extends Model
     public function currentAttempts(): HasMany
     {
         return $this->attempts()->where('status', '!=', TrialAttempt::RESET_STATUS);
+    }
+
+    public function scopeVisibleToMonitor(Builder $query, User $user): Builder
+    {
+        return $query->when($user->role === UserRole::Teacher, fn (Builder $query) => $query
+            ->whereHas('assessmentSubject', fn (Builder $component) => $component->where('teacher_user_id', $user->id)));
     }
 
     public function isAvailable(): bool

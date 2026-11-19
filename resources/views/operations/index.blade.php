@@ -96,11 +96,16 @@
         <div class="mt-5">{{ $sessions->links() }}</div>
     </section>
 
-    <section class="mt-6 rounded-3xl border border-violet-400/20 bg-violet-400/[0.035] p-6">
-        <div class="mb-5">
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-violet-300">Ujian Uji Coba</p>
-            <h2 class="mt-2 text-xl font-semibold text-white">Pemantauan peserta uji coba</h2>
-            <p class="mt-2 text-sm text-slate-500">Daftar peserta mencakup siswa yang belum login/belum memulai, sedang mengerjakan, terkunci, dan sudah selesai.</p>
+    <section id="pemantauan-uji-coba" class="mt-6 scroll-mt-6 rounded-3xl border border-violet-400/20 bg-violet-400/[0.035] p-6">
+        <div class="mb-5 flex flex-wrap items-start justify-between gap-3">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-violet-300">Ujian Uji Coba</p>
+                <h2 class="mt-2 text-xl font-semibold text-white">Pemantauan peserta uji coba</h2>
+                <p class="mt-2 text-sm text-slate-500">Daftar peserta mencakup siswa yang belum login/belum memulai, sedang mengerjakan, terkunci, dan sudah selesai.</p>
+            </div>
+            @if ($canPrintTrialScores && $trialExams->total() > 0)
+                <x-trial-score-link />
+            @endif
         </div>
         <div class="grid gap-3 xl:grid-cols-2">
             @forelse($trialExams as $trialExam)
@@ -108,7 +113,7 @@
                     <p class="font-medium text-white">{{ $trialExam->title }}</p>
                     <p class="mt-1 text-xs text-slate-500">{{ $trialExam->questionBank->subject->name }} · Kelas {{ $trialExam->questionBank->grade_level }} · {{ $trialExam->attempts_count }} sudah memulai</p>
                     <a href="{{ route('tryouts.participants', $trialExam) }}" class="mt-4 inline-flex rounded-lg border border-violet-400/30 px-3 py-2 text-xs font-semibold text-violet-300">Lihat seluruh peserta & pelanggaran</a>
-                    @if (in_array(auth()->user()->role->value, ['super_admin', 'committee', 'principal', 'proctor'], true))
+                    @if ($canPrintTrialScores)
                         <x-trial-score-link :trial="$trialExam" class="mt-4" />
                     @endif
                     @if (in_array(auth()->user()->role->value, ['super_admin', 'committee', 'principal'], true))
