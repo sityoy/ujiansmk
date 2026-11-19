@@ -18,6 +18,20 @@
             class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3 text-xs">
     </label>
 </div>
+@if ($hasCheckins ?? false)
+    <p class="rounded-xl border border-amber-400/20 bg-amber-400/10 p-3 text-sm text-amber-200">Lokasi simulasi {{ $trial->location?->name }} · absensi sudah tercatat.</p>
+@else
+    <label class="block text-sm text-slate-300">Lokasi dan absensi simulasi
+        <select name="trial_location_id" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3">
+            <option value="">Tanpa absensi lokasi</option>
+            @foreach ($trialLocations as $location)
+                <option value="{{ $location->id }}" @selected(old('trial_location_id', $trial?->trial_location_id) == $location->id)>{{ $location->name }} · GPS wajib</option>
+            @endforeach
+        </select>
+        <span class="mt-1 block text-xs text-slate-400">Untuk simulasi di sekolah, pilih lokasi agar siswa absen sebelum waktu ujian berjalan.</span>
+    </label>
+@endif
+<a href="{{ route('trial-locations.index') }}" class="inline-flex text-sm font-semibold text-cyan-300">Kelola lokasi simulasi →</a>
 <input type="hidden" name="is_active" value="0">
 <label class="flex items-center gap-3 text-sm text-slate-300">
     <input type="checkbox" name="is_active" value="1" @checked(old('is_active', $trial?->is_active))

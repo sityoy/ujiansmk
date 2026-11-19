@@ -9,11 +9,13 @@ use App\Enums\UserRole;
 use App\Models\AcademicYear;
 use App\Models\AssessmentPeriod;
 use App\Models\AssessmentSubject;
+use App\Models\Campus;
 use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\Subject;
 use App\Models\TrialAttempt;
 use App\Models\TrialExam;
+use App\Models\TrialLocation;
 use App\Models\TrialQuestion;
 use App\Models\TrialQuestionBank;
 use App\Models\User;
@@ -500,6 +502,92 @@ class TrialExamFlowTest extends TestCase
         $this->post(route('trial-question-banks.import-pack'), ['pack_key' => 'bin-10'])->assertRedirect(route('trial-question-banks.index', ['archived' => 1]));
         $this->assertNotNull($bank->fresh()->archived_at);
         $this->assertDatabaseCount('trial_questions', 21);
+    }
+
+    public function test_simulation_attendance_checks_the_radius_and_gates_start_in_the_same_browser(): void
+    {
+        [$trial] = $this->makeTrial();
+        $location = TrialLocation::create([
+            'name' => 'Sekolah Simulasi', 'latitude' => -6.2, 'longitude' => 106.8,
+            'radius_meters' => 100, 'max_accuracy_meters' => 50,
+        ]);
+        $trial->update(['trial_location_id' => $location->id]);
+        Student::create([
+            'school_class_id' => $trial->assessmentSubject->school_class_id,
+            'student_number' => '1234', 'nisn' => '1234567891', 'full_name' => 'Siswa Belum Absen', 'is_active' => true,
+        ]);
+
+        $attendance = route('tryout.attendance', $trial);
+        $start = route('tryout.start', $trial);
+        $credentials = ['participant_identifier' => '1234567890', 'access_code' => $trial->access_code];
+        $inside = [...$credentials, 'latitude' => -6.2, 'longitude' => 106.8, 'accuracy_meters' => 12];
+
+        $this->get(route('tryout.entry', $trial))->assertOk()
+            ->assertSee('Sekolah Simulasi')->assertSee($attendance)
+            ->assertSee('Ambil Lokasi &amp; Absen Simulasi', false)
+            ->assertSee('type="submit" disabled', false);
+        $this->post($start, $credentials)->assertSessionHasErrors('location');
+        $this->postJson($attendance, [...$inside, 'access_code' => 'SALAH'])->assertUnprocessable()
+            ->assertJsonValidationErrors('access_code');
+        $this->postJson($attendance, [...$inside, 'accuracy_meters' => 80])->assertUnprocessable()
+            ->assertJsonValidationErrors('location');
+        $this->postJson($attendance, [...$inside, 'latitude' => -6.21])->assertUnprocessable()
+            ->assertJsonValidationErrors('location');
+        $this->assertDatabaseCount('trial_checkins', 0);
+
+        $this->postJson($attendance, $inside)->assertOk()->assertJsonPath('message', 'Absensi simulasi terverifikasi. Anda bisa mulai ujian.');
+        $this->postJson($attendance, $inside)->assertOk();
+        $this->assertDatabaseCount('trial_checkins', 1);
+        $this->assertDatabaseCount('daily_checkins', 0);
+        $this->assertDatabaseCount('trial_attempts', 0);
+        $this->assertSame('X-1', $trial->checkins()->sole()->class_name);
+
+        $this->post($start, [...$credentials, 'participant_identifier' => '1234567891'])->assertSessionHasErrors('location');
+        $this->flushSession();
+        $this->post($start, $credentials)->assertSessionHasErrors('location');
+        $this->postJson($attendance, $inside)->assertOk();
+        $this->post($start, $credentials)->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('trial_attempts', 1);
+    }
+
+    public function test_trial_location_settings_and_printed_attendance_are_separate_from_core(): void
+    {
+        [$trial] = $this->makeTrial();
+        $settings = ['name' => 'Kampus Utama', 'latitude' => -6.2, 'longitude' => 106.8, 'radius_meters' => 100, 'max_accuracy_meters' => 50];
+        Campus::create([...$settings, 'is_active' => true]);
+        $teacher = User::factory()->create(['role' => UserRole::Teacher]);
+        $report = route('tryouts.attendance.print', $trial);
+        $this->actingAs($teacher)->get(route('trial-locations.index'))->assertForbidden();
+        $this->get($report)->assertForbidden();
+
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $this->actingAs($committee)->post(route('trial-locations.store'), $settings)->assertSessionHasNoErrors();
+        $location = TrialLocation::query()->sole();
+        $this->get(route('trial-locations.index'))->assertOk()->assertSee('Kampus Utama');
+        $this->get(route('tryouts.edit', $trial))->assertOk()->assertSee('GPS wajib');
+        $changes = [
+            'title' => $trial->title, 'access_code' => $trial->access_code,
+            'duration_minutes' => 60, 'is_active' => '1', 'trial_location_id' => $location->id,
+        ];
+        $this->put(route('tryouts.update', $trial), $changes)->assertSessionHasNoErrors();
+        $this->assertSame($location->id, $trial->refresh()->trial_location_id);
+        $this->get(route('tryouts.participants', $trial))->assertOk()->assertSee($report);
+        $this->get($report)->assertOk()->assertSee('0 hadir terverifikasi · 1 belum absen');
+
+        $trial->checkins()->create([
+            'student_id' => Student::query()->sole()->id,
+            'class_name' => 'X-1', 'distance_meters' => 5, 'accuracy_meters' => 12, 'verified_at' => now(),
+        ]);
+        $this->put(route('tryouts.update', $trial), [...$changes, 'trial_location_id' => null])
+            ->assertSessionHasErrors('trial_location_id');
+        $this->delete(route('tryouts.destroy', $trial))->assertSessionHasErrors('trial_exam');
+        $this->actingAs(User::factory()->create(['role' => UserRole::Proctor]))->get($report)->assertOk()
+            ->assertSee('Laporan Absensi Simulasi')->assertSee('1 hadir terverifikasi · 0 belum absen')
+            ->assertSee('Peserta Uji Coba')->assertSee('5 m / ±12 m')->assertSee('Cetak / Simpan PDF')
+            ->assertDontSee('106.8');
+        $this->assertDatabaseCount('campuses', 1);
+        $this->assertDatabaseCount('trial_attempts', 0);
+        $this->assertDatabaseCount('daily_checkins', 0);
     }
 
     public function test_staff_can_print_and_copy_trial_links_by_grade(): void

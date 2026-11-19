@@ -55,7 +55,7 @@ Untuk pengujian lokal, jalankan `php artisan schedule:work` pada terminal terpis
 
 Aset frontend branch `laravel-v2` dibangun otomatis oleh GitHub Actions dan disimpan di `public/build`. VPS production tidak perlu menjalankan `npm ci`, `npm install`, atau `npm run build`. Gunakan `scripts/deploy-vps.sh`; skrip menolak deployment jika masih ada peserta yang sedang mengerjakan dan menjalankan pemeriksaan kesiapan setelah pembaruan.
 
-Konfigurasi PHP-FPM, Nginx, `.env`, scheduler, serta checklist untuk VPS 2 GB tersedia di [docs/VPS_2GB.md](docs/VPS_2GB.md).
+Untuk VPS CBT 8 vCPU / RAM 10 GB, gunakan [profil VPS ujian](docs/VPS_UJIAN.md). Konfigurasi untuk VPS 2 GB tersedia di [docs/VPS_2GB.md](docs/VPS_2GB.md).
 
 Absensi dibuka pada hari ujian mulai 60 menit sebelum sesi sampai waktu selesai. Portal menampilkan alasan jika absensi tertutup, termasuk sesi draf, lokasi nonaktif, jadwal tidak valid, atau penugasan tidak aktif. Absensi yang ditolak/diperiksa pengawas tidak dapat diverifikasi ulang sendiri oleh siswa. Selfie dan GPS merupakan bukti pendukung, bukan pengenalan wajah biometrik atau jaminan bahwa lokasi tidak dipalsukan.
 

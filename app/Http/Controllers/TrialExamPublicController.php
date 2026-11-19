@@ -4,9 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Student;
 use App\Models\TrialAttempt;
+use App\Models\TrialCheckin;
 use App\Models\TrialExam;
+use App\Models\TrialLocation;
 use App\Models\TrialQuestion;
 use App\Models\TrialQuestionBank;
+use App\Services\Attendance\Geofence;
 use App\Services\Exams\TrialExamAttemptService;
 use App\Services\Exams\TrialExamSecurityService;
 use Illuminate\Http\JsonResponse;
@@ -22,7 +25,7 @@ class TrialExamPublicController extends Controller
 {
     public function entry(TrialExam $trialExam): View
     {
-        $trialExam->load(['questionBank.subject']);
+        $trialExam->load(['questionBank.subject', 'location']);
 
         return view('tryouts.entry', [
             'trialExam' => $trialExam,
@@ -32,6 +35,54 @@ class TrialExamPublicController extends Controller
     }
 
     public function start(Request $request, TrialExam $trialExam): RedirectResponse
+    {
+        [$student, $accessCode] = $this->entryParticipant($request, $trialExam);
+
+        return DB::transaction(fn () => $this->startForStudent($request, $trialExam, $student, $accessCode), 3);
+    }
+
+    public function checkIn(Request $request, TrialExam $trialExam, Geofence $geofence): JsonResponse
+    {
+        [$student, $accessCode] = $this->entryParticipant($request, $trialExam);
+        $coordinates = $request->validate([
+            'latitude' => ['required', 'numeric', 'between:-90,90'],
+            'longitude' => ['required', 'numeric', 'between:-180,180'],
+            'accuracy_meters' => ['required', 'numeric', 'between:0,5000'],
+        ]);
+
+        $checkin = DB::transaction(function () use ($trialExam, $student, $accessCode, $coordinates, $geofence): TrialCheckin {
+            $bank = TrialQuestionBank::query()->sharedLock()->findOrFail($trialExam->trial_question_bank_id);
+            $exam = TrialExam::query()->sharedLock()->findOrFail($trialExam->id)->setRelation('questionBank', $bank);
+            $this->validateEntry($exam, $accessCode);
+            if (! $exam->trial_location_id) {
+                throw ValidationException::withMessages(['location' => 'Ujian ini tidak menggunakan absensi lokasi. Muat ulang halaman ujian.']);
+            }
+
+            $location = TrialLocation::query()->sharedLock()->findOrFail($exam->trial_location_id);
+            $distance = $geofence->verify(
+                $location,
+                (float) $coordinates['latitude'],
+                (float) $coordinates['longitude'],
+                (float) $coordinates['accuracy_meters'],
+            );
+            $student = Student::query()->lockForUpdate()->findOrFail($student->id);
+            $this->validateGrade($student, $exam);
+
+            return $exam->checkins()->firstOrCreate(['student_id' => $student->id], [
+                'class_name' => $student->schoolClass->name,
+                'distance_meters' => round($distance, 2),
+                'accuracy_meters' => $coordinates['accuracy_meters'],
+                'verified_at' => now(),
+            ]);
+        }, 3);
+
+        $request->session()->put('trial_checkin.'.$trialExam->id, $checkin->id);
+
+        return response()->json(['message' => 'Absensi simulasi terverifikasi. Anda bisa mulai ujian.'])->header('Cache-Control', 'no-store');
+    }
+
+    /** @return array{Student, string} */
+    private function entryParticipant(Request $request, TrialExam $trialExam): array
     {
         $validated = $request->validate([
             'participant_identifier' => ['nullable', 'string', 'max:50'],
@@ -43,12 +94,7 @@ class TrialExamPublicController extends Controller
 
         $student = $request->user()?->student;
         if ($student) {
-            $student->loadMissing('schoolClass');
-            if (! $student->is_active || $student->schoolClass?->grade_level !== $trialExam->questionBank->grade_level) {
-                throw ValidationException::withMessages([
-                    'participant_identifier' => 'Tingkat kelas akun siswa tidak sesuai dengan Ujian Uji Coba ini.',
-                ]);
-            }
+            $this->validateGrade($student, $trialExam);
         } else {
             $identifier = trim((string) ($validated['participant_identifier'] ?? ''));
             if ($identifier === '') {
@@ -73,7 +119,16 @@ class TrialExamPublicController extends Controller
             }
         }
 
-        return DB::transaction(fn () => $this->startForStudent($request, $trialExam, $student, $accessCode));
+        return [$student, $accessCode];
+    }
+
+    private function validateGrade(Student $student, TrialExam $trialExam): void
+    {
+        if (! $student->is_active || $student->schoolClass?->grade_level !== $trialExam->questionBank->grade_level) {
+            throw ValidationException::withMessages([
+                'participant_identifier' => 'Data atau tingkat kelas siswa tidak sesuai dengan ujian ini. Hubungi panitia.',
+            ]);
+        }
     }
 
     private function validateEntry(TrialExam $trialExam, string $accessCode): void
@@ -94,9 +149,7 @@ class TrialExamPublicController extends Controller
 
         // Serialize starts for this student, including simultaneous requests on another device.
         $student = Student::query()->lockForUpdate()->findOrFail($student->id);
-        if (! $student->is_active || $student->schoolClass?->grade_level !== $trialExam->questionBank->grade_level) {
-            throw ValidationException::withMessages(['participant_identifier' => 'Data siswa sudah berubah. Hubungi panitia ujian.']);
-        }
+        $this->validateGrade($student, $trialExam);
         $participantIdentifier = $student->nisn ?: $student->student_number;
         $existingAttempt = $trialExam->currentAttempts()
             ->where(function ($query) use ($student, $participantIdentifier): void {
@@ -121,6 +174,12 @@ class TrialExamPublicController extends Controller
             throw ValidationException::withMessages([
                 'participant_identifier' => 'Siswa ini sudah pernah memulai Ujian Uji Coba tersebut.',
             ]);
+        }
+
+        if ($trialExam->trial_location_id && ! $trialExam->checkins()
+            ->whereKey($request->session()->get('trial_checkin.'.$trialExam->id))
+            ->where('student_id', $student->id)->exists()) {
+            throw ValidationException::withMessages(['location' => 'Selesaikan absensi lokasi simulasi di browser ini sebelum mulai ujian.']);
         }
 
         $questionCount = $trialExam->questionBank->questions()->count();

@@ -1,4 +1,4 @@
-@props(['core' => false])
+@props(['core' => false, 'locationRequired' => false])
 
 @php($headingId = $core ? 'core-exam-rules-title' : 'trial-exam-rules-title')
 
@@ -15,6 +15,9 @@
                     <li>Selesaikan absensi lokasi hingga terverifikasi sebelum mulai.</li>
                 @else
                     <li>Siapkan NIS atau NISN milik sendiri dan kode ujian dari panitia.</li>
+                    @if ($locationRequired)
+                        <li>Saat di sekolah, izinkan lokasi presisi di browser dan selesaikan absensi simulasi sebelum mulai.</li>
+                    @endif
                 @endif
                 <li>Aktifkan <strong>Jangan Ganggu</strong> jika tersedia. Tutup aplikasi lain, gelembung chat, dan jendela mengambang. Atur ukuran tampilan dan posisi layar sebelum mulai.</li>
             </ul>

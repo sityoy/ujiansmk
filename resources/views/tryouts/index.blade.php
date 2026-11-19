@@ -9,6 +9,8 @@
         <div class="mb-6 rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">{{ $errors->first() }}</div>
     @endif
 
+    <a href="{{ route('trial-locations.index') }}" class="mb-5 inline-flex rounded-xl border border-cyan-400/30 px-4 py-2.5 text-sm font-semibold text-cyan-200">Lokasi Simulasi</a>
+
     @if ($trialExams->total() > 0)
         <div class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.04] px-5 py-4">
             <div>
@@ -62,11 +64,17 @@
                             </div>
                             <p class="mt-2 text-sm text-slate-400">{{ $trial->questionBank->subject->name }} · Kelas {{ $trial->questionBank->grade_level }} · {{ $trial->questionBank->name }}</p>
                             <p class="mt-1 text-xs text-slate-500">{{ $trial->duration_minutes }} menit · {{ $trial->attempts_count }} peserta · Nilai tidak ditampilkan kepada peserta</p>
+                            @if ($trial->location)
+                                <p class="mt-1 text-xs text-emerald-300">GPS wajib · {{ $trial->location->name }}</p>
+                            @endif
                         </div>
                         <div class="flex flex-wrap gap-2">
                             <a href="{{ route('tryouts.participants', $trial) }}" class="rounded-xl bg-violet-400/10 px-3 py-2 text-xs font-semibold text-violet-200">Lihat peserta</a>
                             <a href="{{ route('tryouts.edit', $trial) }}" class="rounded-xl border border-cyan-400/30 px-3 py-2 text-xs font-semibold text-cyan-200">Edit</a>
                             <x-trial-score-link :trial="$trial" />
+                            @if ($trial->trial_location_id)
+                                <a href="{{ route('tryouts.attendance.print', $trial) }}" class="rounded-xl border border-emerald-400/30 px-3 py-2 text-xs font-semibold text-emerald-200">Laporan absensi</a>
+                            @endif
                             @unless ($trial->questionBank->archived_at)
                             <a href="{{ route('tryouts.cards', $trial) }}" target="_blank" class="rounded-xl bg-cyan-400/10 px-3 py-2 text-xs font-semibold text-cyan-200">Cetak kartu</a>
                             <a href="{{ route('exam-flyers.trial', $trial) }}" target="_blank" rel="noopener" class="rounded-xl bg-emerald-400/10 px-3 py-2 text-xs font-semibold text-emerald-200">Cetak flyer</a>

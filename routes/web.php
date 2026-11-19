@@ -21,6 +21,7 @@ use App\Http\Controllers\StudentExamController;
 use App\Http\Controllers\StudentSpreadsheetController;
 use App\Http\Controllers\TrialExamController;
 use App\Http\Controllers\TrialExamPublicController;
+use App\Http\Controllers\TrialLocationController;
 use App\Http\Controllers\TrialQuestionBankController;
 use App\Http\Controllers\SubjectSpreadsheetController;
 use App\Http\Controllers\UserManagementController;
@@ -38,6 +39,8 @@ Route::redirect('/', '/login');
 
 Route::prefix('tryout')->name('tryout.')->group(function (): void {
     Route::get('/{trialExam:slug}', [TrialExamPublicController::class, 'entry'])->name('entry');
+    Route::post('/{trialExam:slug}/attendance', [TrialExamPublicController::class, 'checkIn'])
+        ->middleware('throttle:trial-attendance')->name('attendance');
     Route::post('/{trialExam:slug}/start', [TrialExamPublicController::class, 'start'])
         ->middleware('throttle:trial-start')->name('start');
     Route::get('/{trialExam:slug}/attempts/{trialAttempt}', [TrialExamPublicController::class, 'show'])->name('show');
@@ -172,6 +175,13 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             Route::delete('/{campus}', [CampusController::class, 'destroy'])->name('destroy');
         });
 
+    Route::prefix('trial-locations')->middleware('role:super_admin,committee')->name('trial-locations.')
+        ->group(function (): void {
+            Route::get('/', [TrialLocationController::class, 'index'])->name('index');
+            Route::post('/', [TrialLocationController::class, 'store'])->name('store');
+            Route::put('/{trialLocation}', [TrialLocationController::class, 'update'])->name('update');
+        });
+
     Route::prefix('tryouts')
         ->middleware('role:super_admin,committee')
         ->name('tryouts.')
@@ -187,6 +197,7 @@ Route::middleware(['auth', 'active'])->group(function (): void {
         });
 
     Route::middleware('role:super_admin,committee,principal,proctor')->group(function (): void {
+        Route::get('/tryouts/{trialExam}/attendance/print', [TrialExamController::class, 'attendanceReport'])->name('tryouts.attendance.print');
         Route::get('/tryouts/scores/print', [TrialExamController::class, 'printAllScores'])->name('tryouts.scores.all');
         Route::get('/tryouts/{trialExam}/scores/print', [TrialExamController::class, 'printScores'])->name('tryouts.scores.print');
     });

@@ -8,6 +8,7 @@ use App\Models\SchoolProfile;
 use App\Models\Student;
 use App\Models\TrialAttempt;
 use App\Models\TrialExam;
+use App\Models\TrialLocation;
 use App\Models\TrialQuestionBank;
 use App\Models\User;
 use App\Services\Exams\TrialExamAttemptService;
@@ -33,10 +34,11 @@ class TrialExamController extends Controller
     {
         return view('tryouts.index', [
             'trialExams' => TrialExam::query()
-                ->with(['questionBank.subject', 'assessmentSubject.assessmentPeriod.academicYear'])
+                ->with(['questionBank.subject', 'assessmentSubject.assessmentPeriod.academicYear', 'location'])
                 ->withCount('currentAttempts as attempts_count')
                 ->latest()
                 ->paginateForDisplay(),
+            'trialLocations' => TrialLocation::query()->orderBy('name')->get(),
             'banks' => TrialQuestionBank::query()->whereNull('archived_at')
                 ->with('subject')
                 ->withCount('questions')
@@ -401,7 +403,11 @@ class TrialExamController extends Controller
     {
         $trialExam->load('questionBank.subject');
 
-        return view('tryouts.edit', compact('trialExam'));
+        return view('tryouts.edit', [
+            'trialExam' => $trialExam,
+            'trialLocations' => TrialLocation::query()->orderBy('name')->get(),
+            'hasCheckins' => $trialExam->checkins()->exists(),
+        ]);
     }
 
     public function update(Request $request, TrialExam $trialExam): RedirectResponse
@@ -415,6 +421,12 @@ class TrialExamController extends Controller
                 $exam = TrialExam::query()->lockForUpdate()->findOrFail($trialExam->id);
                 if ($settings['is_active'] && $bank->archived_at) {
                     throw ValidationException::withMessages(['is_active' => 'Pulihkan bank soal sebelum mengaktifkan ujian.']);
+                }
+
+                if (array_key_exists('trial_location_id', $settings)
+                    && (int) $settings['trial_location_id'] !== (int) $exam->trial_location_id
+                    && $exam->checkins()->exists()) {
+                    throw ValidationException::withMessages(['trial_location_id' => 'Lokasi ujian tidak dapat diganti setelah ada absensi simulasi.']);
                 }
 
                 $exam->update($settings);
@@ -444,6 +456,7 @@ class TrialExamController extends Controller
             'starts_at' => ['nullable', 'date'],
             'ends_at' => ['nullable', 'date', Rule::when($request->filled('starts_at'), ['after:starts_at'])],
             'is_active' => ['nullable', 'boolean'],
+            'trial_location_id' => ['nullable', 'integer', 'exists:trial_locations,id'],
         ]);
 
         return [
@@ -495,13 +508,48 @@ class TrialExamController extends Controller
 
     public function destroy(TrialExam $trialExam): RedirectResponse
     {
-        if ($trialExam->attempts()->exists()) {
-            return back()->withErrors(['trial_exam' => 'Ujian uji coba yang sudah memiliki peserta tidak dapat dihapus. Nonaktifkan saja agar riwayat tetap tersimpan.']);
-        }
+        DB::transaction(function () use ($trialExam): void {
+            TrialQuestionBank::query()->lockForUpdate()->findOrFail($trialExam->trial_question_bank_id);
+            $exam = TrialExam::query()->lockForUpdate()->findOrFail($trialExam->id);
+            if ($exam->attempts()->exists() || $exam->checkins()->exists()) {
+                throw ValidationException::withMessages([
+                    'trial_exam' => 'Ujian sudah memiliki riwayat pengerjaan atau absensi. Nonaktifkan ujian untuk menyimpan riwayat.',
+                ]);
+            }
 
-        $trialExam->delete();
+            $exam->delete();
+        }, 3);
 
         return back()->with('status', 'Ujian uji coba dihapus.');
+    }
+
+    public function attendanceReport(TrialExam $trialExam): Response
+    {
+        $trialExam->load(['questionBank.subject', 'location']);
+        abort_unless($trialExam->location, 404);
+
+        $checkins = $trialExam->checkins()->with('student')->get()->keyBy('student_id');
+        $students = $this->activeRoster([$trialExam->questionBank->grade_level])->get()
+            ->merge($checkins->pluck('student')->filter())
+            ->sortBy('full_name', SORT_NATURAL | SORT_FLAG_CASE);
+
+        $rows = $students->map(function (Student $student) use ($checkins): array {
+            $checkin = $checkins->get($student->id);
+
+            return [
+                'student' => $student,
+                'class' => $checkin?->class_name ?? $student->schoolClass?->name ?? '—',
+                'checkin' => $checkin,
+            ];
+        });
+
+        return response()->view('tryouts.attendance-report', [
+            'school' => SchoolProfile::query()->first(),
+            'trialExam' => $trialExam,
+            'presentCount' => $rows->whereNotNull('checkin')->count(),
+            'total' => $rows->count(),
+            'classes' => $rows->groupBy('class')->sortKeys(SORT_NATURAL),
+        ])->header('Cache-Control', 'private, no-store');
     }
 
     private function participantRows(TrialExam $trialExam, User $user, Collection $attempts): Collection

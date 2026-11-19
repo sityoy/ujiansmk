@@ -28,28 +28,7 @@ class DailyCheckinService
             ]);
         }
 
-        if ($accuracyMeters > $campus->max_accuracy_meters) {
-            throw ValidationException::withMessages([
-                'location' => 'Akurasi lokasi belum memadai. Aktifkan GPS presisi tinggi lalu coba lagi.',
-            ]);
-        }
-
-        $distanceMeters = $this->distanceInMeters(
-            (float) $campus->latitude,
-            (float) $campus->longitude,
-            $latitude,
-            $longitude,
-        );
-
-        if ($distanceMeters > $campus->radius_meters) {
-            throw ValidationException::withMessages([
-                'location' => sprintf(
-                    'Posisi berada %.0f meter dari sekolah dan melewati radius %d meter.',
-                    $distanceMeters,
-                    $campus->radius_meters,
-                ),
-            ]);
-        }
+        $distanceMeters = app(Geofence::class)->verify($campus, $latitude, $longitude, $accuracyMeters);
 
         return DB::transaction(function () use (
             $student,
@@ -99,23 +78,5 @@ class DailyCheckinService
 
             return $checkin->refresh();
         });
-    }
-
-    public function distanceInMeters(
-        float $originLatitude,
-        float $originLongitude,
-        float $targetLatitude,
-        float $targetLongitude,
-    ): float {
-        $earthRadiusMeters = 6_371_000;
-        $latitudeDelta = deg2rad($targetLatitude - $originLatitude);
-        $longitudeDelta = deg2rad($targetLongitude - $originLongitude);
-
-        $a = sin($latitudeDelta / 2) ** 2
-            + cos(deg2rad($originLatitude))
-            * cos(deg2rad($targetLatitude))
-            * sin($longitudeDelta / 2) ** 2;
-
-        return $earthRadiusMeters * 2 * atan2(sqrt($a), sqrt(1 - $a));
     }
 }

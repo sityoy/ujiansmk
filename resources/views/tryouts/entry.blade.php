@@ -16,10 +16,11 @@
             <div class="mt-5 rounded-3xl border border-amber-400/20 bg-amber-400/10 p-6 text-sm text-amber-100">Ujian uji coba belum dibuka atau sudah ditutup. Hubungi panitia.</div>
         @endunless
 
-        <x-exam-rules class="mt-5" />
+        <x-exam-rules class="mt-5" :location-required="(bool) $trialExam->trial_location_id" />
 
         @if ($available)
-            <form method="POST" action="{{ route('tryout.start', $trialExam) }}" class="mt-5 space-y-4 rounded-3xl border border-white/10 bg-white/[0.035] p-5 sm:p-7">
+            <form method="POST" action="{{ route('tryout.start', $trialExam) }}" class="mt-5 space-y-4 rounded-3xl border border-white/10 bg-white/[0.035] p-5 sm:p-7"
+                @if ($trialExam->location) data-trial-attendance-url="{{ route('tryout.attendance', $trialExam) }}" @endif>
                 @csrf
                 <p class="text-sm text-slate-300">Setiap jawaban PG benar bernilai tetap 2 poin. Nilai PG maksimal 100.</p>
                 @if (auth()->user()?->student)
@@ -35,12 +36,22 @@
                     </label>
                 @endif
                 <label class="block text-sm text-slate-300">Kode ujian<input name="access_code" required autocomplete="off" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 uppercase tracking-wider" placeholder=""></label>
+                @if ($trialExam->location)
+                    <section class="space-y-3 rounded-xl border border-cyan-400/20 p-4" aria-label="Absensi lokasi simulasi">
+                        <p class="font-semibold text-cyan-200">Absensi di {{ $trialExam->location->name }}</p>
+                        <p class="text-sm text-slate-300">Browser meminta izin lokasi untuk memeriksa posisi Anda sekali. Laporan mencatat waktu verifikasi, jarak dari lokasi ujian, dan akurasi GPS.</p>
+                        <button type="button" data-location-check class="rounded-xl border border-cyan-400/30 px-4 py-3 text-sm font-semibold text-cyan-200 disabled:opacity-60">Ambil Lokasi &amp; Absen Simulasi</button>
+                        <p data-location-status role="status" class="text-sm text-slate-300"></p>
+                        <noscript><p class="text-sm text-amber-200">Aktifkan JavaScript agar browser dapat memverifikasi lokasi.</p></noscript>
+                    </section>
+                    <script src="{{ asset('js/trial-attendance.js') }}" defer></script>
+                @endif
                 <a href="#trial-exam-rules-title" class="inline-block text-sm font-semibold text-cyan-300 underline">Baca kembali peringatan ujian</a>
                 <label class="flex items-start gap-3 text-sm leading-6 text-slate-300">
                     <input type="checkbox" required aria-describedby="trial-exam-rules-title" class="mt-1.5 shrink-0">
                     <span>Saya sudah membaca dan memahami aturan serta siap memulai ujian.</span>
                 </label>
-                <button class="w-full rounded-xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950">Mulai ujian uji coba</button>
+                <button type="submit" @disabled($trialExam->location) class="w-full rounded-xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950 disabled:opacity-50">Mulai ujian uji coba</button>
             </form>
         @endif
     </div>

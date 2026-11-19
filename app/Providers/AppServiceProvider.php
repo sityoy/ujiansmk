@@ -35,14 +35,14 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
-        foreach (['trial-start' => 20, 'trial-security' => 30, 'trial-answer' => 120, 'trial-incident' => 30, 'trial-submit' => 10] as $name => $maximum) {
+        foreach (['trial-start' => 20, 'trial-attendance' => 15, 'trial-security' => 30, 'trial-answer' => 120, 'trial-incident' => 30, 'trial-submit' => 10] as $name => $maximum) {
             RateLimiter::for($name, function (Request $request) use ($name, $maximum): array {
                 if ($user = $request->user()) {
                     return [Limit::perMinute($maximum)->by('account:'.$user->id)];
                 }
 
                 $limits = [Limit::perMinute($maximum)->by('session:'.$request->session()->getId())];
-                if ($name === 'trial-start') {
+                if (in_array($name, ['trial-start', 'trial-attendance'], true)) {
                     $limits[] = Limit::perMinute(360)->by('school:'.$request->ip());
                 }
 
