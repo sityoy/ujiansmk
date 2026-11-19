@@ -14,6 +14,9 @@
             <div class="flex flex-wrap gap-2">
                 <x-trial-score-link :trial="$trialExam" />
                 <x-trial-score-link />
+                @if (in_array(auth()->user()->role->value, ['super_admin', 'committee', 'principal'], true))
+                    <a href="{{ route('tryouts.links', ['grade' => $trialExam->questionBank->grade_level]) }}" class="inline-flex rounded-xl border border-violet-400/30 px-4 py-2 text-sm font-semibold text-violet-200">Cetak / Salin Tautan per Kelas</a>
+                @endif
             </div>
         @endif
         @if(in_array(auth()->user()->role->value, ['super_admin','committee'], true))

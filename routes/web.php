@@ -190,6 +190,8 @@ Route::middleware(['auth', 'active'])->group(function (): void {
         Route::get('/tryouts/scores/print', [TrialExamController::class, 'printAllScores'])->name('tryouts.scores.all');
         Route::get('/tryouts/{trialExam}/scores/print', [TrialExamController::class, 'printScores'])->name('tryouts.scores.print');
     });
+    Route::get('/tryouts/links/share', [TrialExamController::class, 'links'])
+        ->middleware('role:super_admin,committee,principal')->name('tryouts.links');
     Route::post('/tryouts/{trialExam}/attempts/{trialAttempt}/restart', [TrialExamController::class, 'restartParticipant'])
         ->middleware('role:super_admin,committee,principal')->name('tryouts.attempts.restart');
 

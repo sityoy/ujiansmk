@@ -213,6 +213,47 @@ class TrialExamController extends Controller
         })->sortBy([['student.schoolClass.name', 'asc'], ['name', 'asc']])->values();
     }
 
+    public function links(Request $request): Response
+    {
+        $grades = [10, 11, 12];
+        $filters = $request->validate(['grade' => ['nullable', 'integer', Rule::in($grades)]]);
+        $grade = isset($filters['grade']) ? (int) $filters['grade'] : null;
+        $exams = TrialExam::query()
+            ->whereHas('questionBank', fn ($query) => $query->whereNull('archived_at')
+                ->whereIn('grade_level', $grade ? [$grade] : $grades))
+            ->with('questionBank.subject')
+            ->get();
+
+        $groups = $this->examsByGradeAndSubject($exams)->groupBy('questionBank.grade_level')
+            ->map(fn ($exams) => $exams->map(fn (TrialExam $exam): array => [
+                'subject' => $exam->questionBank->subject->name,
+                'title' => $exam->title,
+                'url' => route('tryout.entry', $exam),
+                'code' => $exam->access_code,
+                'status' => match (true) {
+                    ! $exam->is_active => 'Nonaktif',
+                    $exam->starts_at?->isFuture() => 'Dibuka '.$exam->starts_at->format('d/m/Y H:i'),
+                    $exam->ends_at?->isPast() => 'Sudah ditutup',
+                    default => 'Terbuka',
+                },
+            ]));
+        $shareText = $groups->map(function ($rows, int $level): string {
+            $links = $rows->map(fn (array $row): string =>
+                "{$row['subject']} — {$row['title']} ({$row['status']})\n{$row['url']}\nKode akses {$row['code']}"
+            )->implode("\n\n");
+
+            return "Ujian Uji Coba Kelas {$level}\n\n{$links}\n\nMasuk menggunakan NIS atau NISN dan kode akses sesuai ujian.";
+        })->implode("\n\n");
+
+        return response()->view('tryouts.links', [
+            'school' => SchoolProfile::query()->first(),
+            'grades' => $grades,
+            'grade' => $grade,
+            'groups' => $groups,
+            'shareText' => $shareText,
+        ])->header('Cache-Control', 'private, no-store');
+    }
+
     public function cards(TrialExam $trialExam): View
     {
         $trialExam->load('questionBank.subject');

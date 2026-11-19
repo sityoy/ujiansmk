@@ -498,6 +498,60 @@ class TrialExamFlowTest extends TestCase
         $this->assertDatabaseCount('trial_questions', 21);
     }
 
+    public function test_staff_can_print_and_copy_trial_links_by_grade(): void
+    {
+        [$trial] = $this->makeTrial();
+        $trial->update(['starts_at' => now()->addDay()]);
+        $grade11 = TrialQuestionBank::create([
+            'subject_id' => $trial->questionBank->subject_id,
+            'grade_level' => 11,
+            'name' => 'Latihan Sejarah Kelas 11',
+        ]);
+        $otherTrial = $trial->replicate()->fill([
+            'trial_question_bank_id' => $grade11->id,
+            'title' => 'Simulasi Sejarah Kelas 11',
+            'slug' => 'simulasi-sejarah-11',
+            'access_code' => 'SJR-11',
+            'is_active' => false,
+        ]);
+        $otherTrial->save();
+        $archivedBank = $grade11->replicate()->fill(['name' => 'Bank arsip']);
+        $archivedBank->archived_at = now();
+        $archivedBank->save();
+        $archivedTrial = $trial->replicate()->fill([
+            'trial_question_bank_id' => $archivedBank->id,
+            'slug' => 'ujian-sudah-diarsipkan',
+            'access_code' => 'JANGAN-BAGIKAN',
+        ]);
+        $archivedTrial->save();
+
+        $links = route('tryouts.links');
+        foreach ([UserRole::Student, UserRole::Teacher, UserRole::Proctor] as $role) {
+            $this->actingAs(User::factory()->create(['role' => $role]))
+                ->get($links)->assertForbidden();
+        }
+        $this->actingAs(User::factory()->create(['role' => UserRole::Principal]));
+        $this->get(route('operations.index'))->assertOk()->assertSee($links);
+        $this->get(route('tryouts.participants', $trial))->assertOk()
+            ->assertSee(route('tryouts.links', ['grade' => 10]));
+        $this->get($links)->assertOk()
+            ->assertSeeInOrder(['Tautan Ujian Uji Coba Kelas 10', 'Tautan Ujian Uji Coba Kelas 11'])
+            ->assertSee('Cetak / Simpan PDF')
+            ->assertSee('Salin Teks')
+            ->assertSee('Dibuka 06/11/2026 10:00')
+            ->assertSee('Nonaktif')
+            ->assertDontSee('JANGAN-BAGIKAN')
+            ->assertViewHas('shareText', fn (string $text): bool =>
+                str_contains($text, route('tryout.entry', $trial)."\nKode akses SJR-SMKBHG")
+                && str_contains($text, route('tryout.entry', $otherTrial)."\nKode akses SJR-11"));
+        $this->get(route('tryouts.links', ['grade' => 11]))->assertOk()
+            ->assertSee(route('tryout.entry', $otherTrial))
+            ->assertDontSee(route('tryout.entry', $trial).'"', false)
+            ->assertViewHas('shareText', fn (string $text): bool => ! str_contains($text, 'SJR-SMKBHG'));
+        $this->get(route('tryouts.links', ['grade' => 12]))->assertOk()
+            ->assertSee('Belum ada tautan Ujian Uji Coba untuk Kelas 12.');
+    }
+
     public function test_illustrated_history_pack_imports_and_displays_in_a_trial_exam(): void
     {
         Storage::fake('public');

@@ -103,9 +103,14 @@
                 <h2 class="mt-2 text-xl font-semibold text-white">Pemantauan peserta uji coba</h2>
                 <p class="mt-2 text-sm text-slate-500">Daftar peserta mencakup siswa yang belum login/belum memulai, sedang mengerjakan, terkunci, dan sudah selesai.</p>
             </div>
-            @if ($canPrintTrialScores && $trialExams->total() > 0)
-                <x-trial-score-link />
-            @endif
+            <div class="flex flex-wrap gap-2">
+                @if ($canPrintTrialScores && $trialExams->total() > 0)
+                    <x-trial-score-link />
+                @endif
+                @if (in_array(auth()->user()->role->value, ['super_admin', 'committee', 'principal'], true) && $trialExams->total() > 0)
+                    <a href="{{ route('tryouts.links') }}" class="inline-flex rounded-xl border border-violet-400/30 px-4 py-2 text-sm font-semibold text-violet-200">Cetak / Salin Tautan per Kelas</a>
+                @endif
+            </div>
         </div>
         <div class="grid gap-3 xl:grid-cols-2">
             @forelse($trialExams as $trialExam)

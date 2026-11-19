@@ -19,6 +19,7 @@ use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\Subject;
 use App\Models\User;
+use App\Services\Exams\ExamAttemptResetService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -151,6 +152,53 @@ class GroupedSchedulingTest extends TestCase
         $this->assertDatabaseCount('exam_assignments', 0);
     }
 
+    public function test_unused_regular_schedule_can_be_deleted_and_recreated_for_all_its_classes(): void
+    {
+        [$components, $campus] = $this->makeComponents();
+        $data = $this->scheduleData($components[0], $campus);
+        $this->post(route('scheduling.sessions.store'), $data)->assertSessionHasNoErrors();
+        $session = $components[1]->examSessions()->sole();
+        $this->post(route('scheduling.sessions.store'), $this->scheduleData($components[3], $campus))
+            ->assertSessionHasNoErrors();
+
+        $this->delete(route('scheduling.sessions.destroy', $session))->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('exam_sessions', 1);
+        $this->assertDatabaseCount('exam_assignments', 1);
+        $this->assertDatabaseCount('students', 6);
+        $this->assertDatabaseCount('assessment_subjects', 5);
+        $this->assertSame($components[3]->id, ExamAssignment::query()->sole()->assessment_subject_id);
+
+        $this->post(route('scheduling.sessions.store'), $data)->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('exam_sessions', 4);
+        $this->assertDatabaseCount('exam_assignments', 4);
+    }
+
+    public function test_schedule_cannot_be_deleted_after_a_participant_starts_even_after_reset(): void
+    {
+        [$components, $campus] = $this->makeComponents();
+        $this->post(route('scheduling.sessions.store'), $this->scheduleData($components[0], $campus))
+            ->assertSessionHasNoErrors();
+        $sessions = ExamSession::query()->orderBy('id')->get();
+        $assignment = $sessions[2]->assignments()->sole();
+        ExamAttempt::create([
+            'exam_assignment_id' => $assignment->id,
+            'status' => AttemptStatus::InProgress,
+            'started_at' => now(),
+            'device_session_hash' => str_repeat('a', 64),
+        ]);
+
+        $delete = route('scheduling.sessions.destroy', $sessions[0]);
+        $this->delete($delete)->assertSessionHasErrors('session');
+        $this->assertDatabaseCount('exam_attempts', 1);
+        app(ExamAttemptResetService::class)->reset($assignment, auth()->user(), 'Peserta perlu mengulang.');
+        $this->assertDatabaseCount('exam_attempts', 0);
+
+        $this->delete($delete)->assertSessionHasErrors('session');
+        $this->assertDatabaseCount('exam_sessions', 3);
+        $this->assertDatabaseCount('exam_assignments', 3);
+        $this->assertDatabaseCount('exam_attempt_resets', 1);
+    }
+
     public function test_one_started_class_locks_the_whole_schedule_and_closure_is_shared(): void
     {
         [$components, $campus] = $this->makeComponents();
@@ -196,6 +244,8 @@ class GroupedSchedulingTest extends TestCase
         ])->assertSessionHasNoErrors();
         $makeup = ExamSession::query()->where('kind', 'makeup')->orderBy('id')->get();
         $this->assertCount(3, $makeup);
+        $this->delete(route('scheduling.sessions.destroy', $regular[0]))->assertSessionHasErrors('session');
+        $this->assertDatabaseCount('exam_sessions', 6);
         foreach ($makeup as $session) {
             $this->assertSame($session->assessment_subject_id, $session->sourceSession->assessment_subject_id);
             $this->assertSame(0, $session->assignments()->count());
@@ -206,6 +256,8 @@ class GroupedSchedulingTest extends TestCase
         ])->assertSessionHasNoErrors();
         $this->assertSame($makeup[2]->id, $assignment->fresh()->exam_session_id);
         $this->assertDatabaseCount('exam_assignments', 3);
+        $this->delete(route('scheduling.sessions.destroy', $makeup[0]))->assertSessionHasErrors('session');
+        $this->assertDatabaseCount('exam_sessions', 6);
 
         $this->actingAs($components[0]->teacher)->get(route('operations.sessions.show', $regular[0]))
             ->assertOk()->assertDontSee('href="'.route('operations.sessions.show', $regular[2]).'"', false);

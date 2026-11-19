@@ -446,7 +446,7 @@ class SchedulingController extends Controller
         ]);
 
         $sourceSession = ! empty($validated['source_session_id'])
-            ? ExamSession::findOrFail($validated['source_session_id'])
+            ? ExamSession::query()->lockForUpdate()->findOrFail($validated['source_session_id'])
             : null;
         $startsAt = Carbon::parse($validated['starts_at']);
         $endsAt = $startsAt->copy()->addMinutes((int) $validated['duration_minutes']);
@@ -590,18 +590,37 @@ class SchedulingController extends Controller
     {
         return $this->deleteSafely(
             fn () => DB::transaction(function () use ($examSession): void {
-                $group = $examSession->scheduleGroup()->orderBy('id')->lockForUpdate()->get();
-                foreach ($group as $session) {
-                    if ($session->assignments()->exists() || ExamSession::query()->where('source_session_id', $session->id)->exists()) {
-                        throw ValidationException::withMessages(['session' => 'Jadwal tidak dapat dihapus karena salah satu rombel memiliki peserta atau sesi susulan.']);
-                    }
+                $group = $examSession->scheduleGroup()->orderBy('id')->lockForUpdate()->get(['id', 'kind']);
+                $sessionIds = $group->modelKeys();
+
+                // Exam starts also lock the session and assignment before writing an attempt.
+                $assignments = ExamAssignment::query()->whereIn('exam_session_id', $sessionIds);
+                $assignmentIds = (clone $assignments)->orderBy('id')->lockForUpdate()->pluck('id');
+                if ($assignments->where(fn ($query) => $query
+                    ->where('status', '!=', AssignmentStatus::Scheduled)
+                    ->orWhere('security_reset_count', '>', 0)
+                    ->orWhereHas('attempt')
+                    ->orWhereHas('attemptResets'))->exists()) {
+                    throw ValidationException::withMessages([
+                        'session' => 'Jadwal tidak dapat dihapus karena peserta sudah memulai ujian atau memiliki riwayat ujian di salah satu rombel.',
+                    ]);
                 }
-                foreach ($group as $session) {
-                    $session->delete();
+                if (ExamSession::query()->whereIn('source_session_id', $sessionIds)->exists()) {
+                    throw ValidationException::withMessages([
+                        'session' => 'Jadwal reguler ini masih digunakan oleh sesi susulan. Hapus sesi susulan terkait terlebih dahulu.',
+                    ]);
                 }
-            }),
+                if ($assignmentIds->isNotEmpty() && $group->contains('kind', SessionKind::Makeup)) {
+                    throw ValidationException::withMessages([
+                        'session' => 'Sesi susulan ini masih memiliki peserta. Pindahkan peserta ke sesi susulan lain terlebih dahulu.',
+                    ]);
+                }
+
+                ExamAssignment::query()->whereKey($assignmentIds)->delete();
+                ExamSession::query()->whereKey($sessionIds)->delete();
+            }, 3),
             'Sesi ujian berhasil dihapus.',
-            'Sesi tidak dapat dihapus karena sudah memiliki peserta atau aktivitas ujian.',
+            'Sesi ujian tidak dapat dihapus karena masih terkait dengan data ujian lain.',
         );
     }
 

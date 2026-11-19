@@ -83,7 +83,8 @@
                             <button class="text-xs font-semibold text-emerald-300">Tempatkan siswa aktif semua rombel</button>
                         </form>
                     @endif
-                    <form method="POST" action="{{ route('scheduling.sessions.destroy', $session) }}" onsubmit="return confirm('Hapus jadwal seluruh rombel yang tercantum? Jadwal yang sudah memiliki peserta dipertahankan.')">
+                    <form method="POST" action="{{ route('scheduling.sessions.destroy', $session) }}"
+                        onsubmit="return confirm('{{ $session->kind->value === 'regular' ? 'Hapus jadwal seluruh rombel beserta penempatan peserta yang belum mulai?' : 'Hapus jadwal susulan seluruh rombel yang tercantum?' }}')">
                         @csrf @method('DELETE')
                         <button class="text-xs text-rose-300">Hapus jadwal</button>
                     </form>
