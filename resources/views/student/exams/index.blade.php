@@ -54,6 +54,9 @@
             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Ujian Inti</p>
             <h2 class="mt-2 text-xl font-semibold text-white">Jadwal dan pelaksanaan ujian</h2>
         </div>
+        @if ($assignments->isNotEmpty())
+            <x-exam-rules core />
+        @endif
         @forelse ($assignments as $assignment)
             @php
                 $session = $assignment->examSession;
@@ -66,7 +69,6 @@
                 $hasCheckin = $checkin?->status->value === 'verified' && $checkin->campus_id === $session->campus_id;
                 $pgCount = $assignment->assessmentSubject->questions
                     ->filter(fn ($question) => $question->question_type->value === 'multiple_choice')->count();
-                $pgWeight = $pgCount > 0 ? 70 / $pgCount : 0;
             @endphp
             <article class="rounded-3xl border border-white/10 bg-white/[0.035] p-6">
                 <div class="flex flex-wrap items-start justify-between gap-4">
@@ -104,18 +106,16 @@
                     @elseif ($attendanceReason)
                         <span class="text-sm text-amber-300">{{ $attendanceReason }}</span>
                     @elseif ($isOpen && $hasCheckin)
-                        <div class="w-full rounded-2xl border border-amber-400/25 bg-amber-400/[0.06] p-4 text-sm">
-                            <p class="font-semibold text-amber-200">Peringatan sebelum memulai ujian</p>
-                            <ul class="mt-2 list-disc space-y-1 pl-5 text-xs leading-5 text-slate-300">
-                                <li>Layar penuh wajib. Jangan berpindah tab/aplikasi, membuka bubble, split screen, bilah notifikasi, tombol kembali, atau keluar dari halaman.</li>
-                                <li>Pelanggaran pertama mendapat peringatan; pelanggaran kedua mengunci ujian. Waktu tetap berjalan.</li>
-                                <li>Aktifkan mode Jangan Ganggu dan tutup aplikasi lain sebelum memulai.</li>
-                                @if ($pgCount > 0)<li>Setiap jawaban PG benar bernilai tetap 2 poin. Nilai PG maksimal 100.</li>@endif
-                            </ul>
-                        </div>
-                        <form method="POST" action="{{ route('student.exams.start', $assignment) }}" onsubmit="return confirm('Mulai ujian sekarang? Waktu akan langsung berjalan.')" class="space-y-3">
+                        <form method="POST" action="{{ route('student.exams.start', $assignment) }}" onsubmit="return confirm('Mulai ujian sekarang? Waktu akan langsung berjalan.')" class="w-full space-y-3">
                             @csrf
-                            <label class="flex items-start gap-2 text-xs text-slate-300"><input type="checkbox" required class="mt-0.5">Saya sudah membaca dan menyetujui aturan ujian.</label>
+                            @if ($pgCount > 0)
+                                <p class="text-sm text-slate-300">Setiap jawaban PG benar bernilai tetap 2 poin. Nilai PG maksimal 100.</p>
+                            @endif
+                            <a href="#core-exam-rules-title" class="inline-block text-sm font-semibold text-cyan-300 underline">Baca kembali peringatan ujian</a>
+                            <label class="flex items-start gap-3 text-sm leading-6 text-slate-300">
+                                <input type="checkbox" required aria-describedby="core-exam-rules-title" class="mt-1.5 shrink-0">
+                                <span>Saya sudah membaca dan memahami aturan serta siap memulai ujian.</span>
+                            </label>
                             <button class="rounded-xl bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950">Mulai ujian</button>
                         </form>
                     @elseif (now()->lt($session->starts_at->copy()->subMinutes(60)))

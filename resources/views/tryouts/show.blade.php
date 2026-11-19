@@ -19,8 +19,8 @@
                     <x-tryout-theme-toggle />
                 </div>
                 <h2 id="security-title" class="mt-4 text-2xl font-semibold">Siap masuk mode ujian?</h2>
-                <p id="security-message" class="mt-4 text-sm leading-7 text-slate-300">Pengamanan sama dengan Ujian Inti: layar penuh wajib dan sistem memantau perpindahan tab/aplikasi, bubble, bilah notifikasi, split screen, tombol terlarang, serta navigasi keluar. Pelanggaran kedua mengunci ujian.</p>
-                <p class="mt-3 text-xs leading-6 text-slate-400">Aktifkan Jangan Ganggu, tutup aplikasi lain, dan jangan menarik panel notifikasi. Waktu tetap berjalan ketika ujian terkunci.</p>
+                <p id="security-message" aria-live="polite" class="mt-4 text-sm leading-7 text-slate-300">Pengamanan sama dengan Ujian Inti. Tetap di halaman ujian dan gunakan layar penuh jika didukung. Jangan berpindah aplikasi atau tab, menarik bilah notifikasi, maupun mengubah zoom.</p>
+                <p class="mt-3 text-sm leading-6 text-amber-200">Waktu sedang berjalan, termasuk saat peringatan muncul atau ujian terkunci. Jika ada masalah, panggil pengawas dan biarkan ujian tetap terbuka.</p>
                 <p class="mt-3 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.06] p-3 text-sm text-cyan-100">Setiap jawaban PG benar bernilai tetap <strong>2 poin</strong>. Nilai PG maksimal 100.</p>
                 <x-exam-device-preparation />
                 <button id="security-continue" type="button" class="mt-6 w-full rounded-xl bg-cyan-400 px-5 py-3 font-semibold text-slate-950">Saya paham, masuk mode ujian</button>

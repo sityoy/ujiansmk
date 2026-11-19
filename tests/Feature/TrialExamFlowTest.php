@@ -45,6 +45,9 @@ class TrialExamFlowTest extends TestCase
         $this->get(route('tryout.entry', $trial))
             ->assertOk()
             ->assertSee('data-theme="light"', false)
+            ->assertSeeInOrder(['Peringatan sebelum memulai ujian', 'Siapkan NIS atau NISN milik sendiri', 'Jangan tarik bilah notifikasi', 'Pelanggaran kedua', 'Saya sudah membaca dan memahami aturan'])
+            ->assertSee('required aria-describedby="trial-exam-rules-title"', false)
+            ->assertDontSee('Selesaikan absensi lokasi hingga terverifikasi')
             ->assertSee('Setiap jawaban PG benar bernilai tetap 2 poin')
             ->assertSee('Nama peserta diambil otomatis dari data siswa');
 

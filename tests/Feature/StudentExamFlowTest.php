@@ -67,6 +67,10 @@ class StudentExamFlowTest extends TestCase
             ->assertRedirect()
             ->assertSessionHasNoErrors();
 
+        $this->get(route('student.exams.index'))->assertOk()
+            ->assertSeeInOrder(['Peringatan sebelum memulai ujian', 'Selesaikan absensi lokasi hingga terverifikasi', 'Cara mengaktifkan Jangan Ganggu di HP', 'Baca kembali peringatan ujian', 'Saya sudah membaca dan memahami aturan'])
+            ->assertSee('required aria-describedby="core-exam-rules-title"', false);
+
         $this->withSession(['exam_device_token' => $deviceToken])
             ->post(route('student.exams.start', $assignment))
             ->assertRedirect();
@@ -336,6 +340,8 @@ class StudentExamFlowTest extends TestCase
         $this->actingAs($user)->withSession(['exam_device_token' => str_repeat('a', 64)])
             ->get(route('student.exams.show', $attempt))->assertOk()
             ->assertSee('Coba simpan lagi')->assertSee('remainingAtLoad', false)
+            ->assertSee('Waktu sedang berjalan, termasuk saat peringatan muncul atau ujian terkunci.')
+            ->assertSee('Konfirmasi kesiapan perangkat')
             ->assertSee('Peserta Uji')->assertSee('S-001')->assertSee('IX-2')
             ->assertSee('Informatika')->assertSee('data-theme-toggle', false);
     }

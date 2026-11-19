@@ -12,18 +12,16 @@
 
         @if ($errors->any())<div class="mt-5 rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">{{ $errors->first() }}</div>@endif
 
+        @unless ($available)
+            <div class="mt-5 rounded-3xl border border-amber-400/20 bg-amber-400/10 p-6 text-sm text-amber-100">Ujian uji coba belum dibuka atau sudah ditutup. Hubungi panitia.</div>
+        @endunless
+
+        <x-exam-rules class="mt-5" />
+
         @if ($available)
-            <div class="mt-5 rounded-3xl border border-amber-400/25 bg-amber-400/[0.06] p-6">
-                <p class="font-semibold text-amber-200">Peringatan sebelum memulai ujian</p>
-                <ul class="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-slate-300">
-                    <li>Layar penuh wajib. Dilarang berpindah tab/aplikasi, membuka bubble, split screen, bilah notifikasi, tombol kembali, atau keluar dari halaman.</li>
-                    <li>Pelanggaran pertama mendapat peringatan; pelanggaran kedua mengunci ujian. Waktu tetap berjalan.</li>
-                    <li>Aktifkan mode Jangan Ganggu dan tutup aplikasi lain sebelum mulai.</li>
-                    <li>Setiap jawaban PG benar bernilai tetap 2 poin. Nilai PG maksimal 100.</li>
-                </ul>
-            </div>
-            <form method="POST" action="{{ route('tryout.start', $trialExam) }}" class="mt-5 space-y-4 rounded-3xl border border-white/10 bg-white/[0.035] p-7">
+            <form method="POST" action="{{ route('tryout.start', $trialExam) }}" class="mt-5 space-y-4 rounded-3xl border border-white/10 bg-white/[0.035] p-5 sm:p-7">
                 @csrf
+                <p class="text-sm text-slate-300">Setiap jawaban PG benar bernilai tetap 2 poin. Nilai PG maksimal 100.</p>
                 @if (auth()->user()?->student)
                     <div class="rounded-xl border border-cyan-400/20 bg-cyan-400/[0.05] p-4">
                         <p class="text-xs text-slate-400">Peserta dari akun yang sedang login</p>
@@ -37,12 +35,13 @@
                     </label>
                 @endif
                 <label class="block text-sm text-slate-300">Kode ujian<input name="access_code" required autocomplete="off" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 uppercase tracking-wider" placeholder=""></label>
-                <label class="flex items-start gap-2 text-xs text-slate-300"><input type="checkbox" required class="mt-0.5">Saya sudah membaca dan menyetujui aturan ujian.</label>
+                <a href="#trial-exam-rules-title" class="inline-block text-sm font-semibold text-cyan-300 underline">Baca kembali peringatan ujian</a>
+                <label class="flex items-start gap-3 text-sm leading-6 text-slate-300">
+                    <input type="checkbox" required aria-describedby="trial-exam-rules-title" class="mt-1.5 shrink-0">
+                    <span>Saya sudah membaca dan memahami aturan serta siap memulai ujian.</span>
+                </label>
                 <button class="w-full rounded-xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950">Mulai ujian uji coba</button>
-                <p class="text-center text-xs text-slate-500">Gunakan satu perangkat dan jangan memuat ulang halaman setelah ujian dimulai.</p>
             </form>
-        @else
-            <div class="mt-5 rounded-3xl border border-amber-400/20 bg-amber-400/10 p-6 text-sm text-amber-100">Ujian uji coba belum dibuka atau sudah ditutup. Hubungi panitia.</div>
         @endif
     </div>
 @endsection
