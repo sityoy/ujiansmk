@@ -38,12 +38,8 @@ class TrialExamPublicController extends Controller
             'access_code' => ['required', 'string', 'max:50'],
         ]);
 
-        if (! $trialExam->isAvailable()) {
-            throw ValidationException::withMessages(['access_code' => 'Ujian uji coba belum dibuka atau sudah ditutup.']);
-        }
-        if (! hash_equals($trialExam->access_code, Str::upper(trim($validated['access_code'])))) {
-            throw ValidationException::withMessages(['access_code' => 'Kode ujian uji coba tidak sesuai.']);
-        }
+        $accessCode = Str::upper(trim($validated['access_code']));
+        $this->validateEntry($trialExam, $accessCode);
 
         $student = $request->user()?->student;
         if ($student) {
@@ -77,16 +73,25 @@ class TrialExamPublicController extends Controller
             }
         }
 
-        return DB::transaction(fn () => $this->startForStudent($request, $trialExam, $student));
+        return DB::transaction(fn () => $this->startForStudent($request, $trialExam, $student, $accessCode));
     }
 
-    private function startForStudent(Request $request, TrialExam $trialExam, Student $student): RedirectResponse
+    private function validateEntry(TrialExam $trialExam, string $accessCode): void
     {
-        $bank = TrialQuestionBank::query()->lockForUpdate()->findOrFail($trialExam->trial_question_bank_id);
-        $trialExam->refresh()->setRelation('questionBank', $bank);
         if (! $trialExam->isAvailable()) {
             throw ValidationException::withMessages(['access_code' => 'Ujian uji coba belum dibuka atau sudah ditutup.']);
         }
+        if (! hash_equals($trialExam->access_code, $accessCode)) {
+            throw ValidationException::withMessages(['access_code' => 'Kode ujian uji coba tidak sesuai.']);
+        }
+    }
+
+    private function startForStudent(Request $request, TrialExam $trialExam, Student $student, string $accessCode): RedirectResponse
+    {
+        $bank = TrialQuestionBank::query()->lockForUpdate()->findOrFail($trialExam->trial_question_bank_id);
+        $trialExam->refresh()->setRelation('questionBank', $bank);
+        $this->validateEntry($trialExam, $accessCode);
+
         // Serialize starts for this student, including simultaneous requests on another device.
         $student = Student::query()->lockForUpdate()->findOrFail($student->id);
         if (! $student->is_active || $student->schoolClass?->grade_level !== $trialExam->questionBank->grade_level) {
@@ -131,6 +136,7 @@ class TrialExamPublicController extends Controller
             'participant_identifier' => $participantIdentifier,
             'session_token_hash' => hash('sha256', $token),
             'status' => 'in_progress',
+            'duration_minutes' => $trialExam->duration_minutes,
             'started_at' => now(),
             'last_seen_at' => now(),
             'ip_address' => $request->ip(),

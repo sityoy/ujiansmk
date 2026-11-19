@@ -676,6 +676,73 @@ class TrialExamFlowTest extends TestCase
         }
     }
 
+    public function test_staff_can_edit_trial_settings_with_a_stable_link_and_durations(): void
+    {
+        [$trial] = $this->makeTrial();
+        $firstStudent = Student::firstOrFail();
+        $secondUser = User::factory()->create(['role' => UserRole::Student]);
+        Student::create([
+            'user_id' => $secondUser->id,
+            'school_class_id' => $firstStudent->school_class_id,
+            'full_name' => 'Peserta Kedua',
+            'student_number' => '2222',
+            'is_active' => true,
+        ]);
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $start = route('tryout.start', $trial);
+        $edit = route('tryouts.edit', $trial);
+        $update = route('tryouts.update', $trial);
+        $oldCode = $trial->access_code;
+        $settings = [
+            'title' => 'Judul baru simulasi',
+            'access_code' => ' kode-baru ',
+            'duration_minutes' => 20,
+            'starts_at' => '',
+            'ends_at' => '2026-11-05T12:00:00',
+            'is_active' => '1',
+        ];
+
+        $this->actingAs($firstStudent->user)->post($start, ['access_code' => $oldCode])->assertRedirect();
+        $first = $trial->currentAttempts()->sole();
+        $this->assertSame(60, $first->duration_minutes);
+        $this->get($edit)->assertForbidden();
+        $this->put($update, $settings)->assertForbidden();
+
+        // Existing attempts also keep the duration recorded during the upgrade.
+        $migration = require database_path('migrations/2026_11_19_000100_preserve_trial_attempt_duration.php');
+        $migration->down();
+        $migration->up();
+        $this->assertSame(60, $first->fresh()->duration_minutes);
+
+        $this->actingAs($committee)->get(route('tryouts.index'))->assertOk()->assertSee($edit);
+        $this->get($edit)->assertOk()->assertSee($oldCode)->assertSee('Simpan perubahan');
+        $this->put($update, [
+            ...$settings, 'starts_at' => '2026-11-05T13:00:00',
+        ])->assertSessionHasErrors('ends_at');
+        $this->put($update, [...$settings, 'access_code' => $oldCode])
+            ->assertRedirect($edit)->assertSessionHasNoErrors();
+        $this->put($update, $settings)->assertRedirect($edit)->assertSessionHasNoErrors();
+
+        $updated = $trial->fresh();
+        $this->assertSame($trial->slug, $updated->slug);
+        $this->assertSame($trial->trial_question_bank_id, $updated->trial_question_bank_id);
+        $this->assertSame('Judul baru simulasi', $updated->title);
+        $this->assertSame('KODE-BARU', $updated->access_code);
+        $this->assertNull($updated->starts_at);
+        $this->assertSame('2026-11-05 12:00:00', $updated->ends_at->toDateTimeString());
+
+        $this->travel(25)->minutes();
+        $this->actingAs($firstStudent->user)->getJson(route('tryout.security', [$trial, $first]))
+            ->assertOk()->assertJsonPath('status', 'in_progress');
+        $this->assertSame(60, $first->fresh()->duration_minutes);
+
+        $this->actingAs($secondUser)->post($start, ['access_code' => $oldCode])->assertSessionHasErrors('access_code');
+        $this->post($start, ['access_code' => 'KODE-BARU'])->assertSessionHasNoErrors();
+        $second = $trial->currentAttempts()->where('student_id', $secondUser->student->id)->sole();
+        $this->assertSame(20, $second->duration_minutes);
+        $this->assertTrue(app(TrialExamAttemptService::class)->deadline($second)->equalTo($second->started_at->copy()->addMinutes(20)));
+    }
+
     public function test_trial_restart_preserves_history_and_allows_fresh_attempt_after_finishing_or_locking(): void
     {
         [$trial, $question] = $this->makeTrial();

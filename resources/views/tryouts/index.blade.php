@@ -39,21 +39,7 @@
                 </select>
                 <a href="{{ route('trial-question-banks.index') }}" class="mt-2 inline-block text-xs text-cyan-300">Kelola bank soal uji coba →</a>
             </label>
-            <label class="block text-sm text-slate-300">Judul
-                <input name="title" value="{{ old('title') }}" required placeholder="Uji Coba Sejarah" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3">
-            </label>
-            <label class="block text-sm text-slate-300">Kode bersama
-                <input name="access_code" value="{{ old('access_code') }}" required placeholder="SJR-SMKBHG" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 uppercase">
-                <span class="mt-1 block text-xs text-slate-500">Huruf, angka, dan tanda hubung.</span>
-            </label>
-            <label class="block text-sm text-slate-300">Durasi (menit)
-                <input type="number" name="duration_minutes" min="10" max="300" value="{{ old('duration_minutes', 60) }}" required class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3">
-            </label>
-            <div class="grid gap-3 sm:grid-cols-2">
-                <label class="block text-sm text-slate-300">Mulai (opsional)<input type="datetime-local" name="starts_at" value="{{ old('starts_at') }}" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3 text-xs"></label>
-                <label class="block text-sm text-slate-300">Selesai (opsional)<input type="datetime-local" name="ends_at" value="{{ old('ends_at') }}" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-3 text-xs"></label>
-            </div>
-            <label class="flex items-center gap-3 text-sm text-slate-300"><input type="checkbox" name="is_active" value="1" @checked(old('is_active')) class="size-4 rounded border-white/20 bg-slate-950">Langsung aktifkan</label>
+            @include('tryouts.settings-fields', ['trial' => null])
             <button class="w-full rounded-xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950">Buat ujian uji coba</button>
         </form>
         @else
@@ -79,6 +65,7 @@
                         </div>
                         <div class="flex flex-wrap gap-2">
                             <a href="{{ route('tryouts.participants', $trial) }}" class="rounded-xl bg-violet-400/10 px-3 py-2 text-xs font-semibold text-violet-200">Lihat peserta</a>
+                            <a href="{{ route('tryouts.edit', $trial) }}" class="rounded-xl border border-cyan-400/30 px-3 py-2 text-xs font-semibold text-cyan-200">Edit</a>
                             <x-trial-score-link :trial="$trial" />
                             @unless ($trial->questionBank->archived_at)
                             <a href="{{ route('tryouts.cards', $trial) }}" target="_blank" class="rounded-xl bg-cyan-400/10 px-3 py-2 text-xs font-semibold text-cyan-200">Cetak kartu</a>

@@ -15,6 +15,7 @@ use App\Services\Exams\TrialExamSecurityService;
 use App\Support\TablePagination;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -283,7 +284,6 @@ class TrialExamController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $request->merge(['access_code' => Str::upper(trim((string) $request->input('access_code')))]);
         $validated = $request->validate([
             'trial_question_bank_id' => [
                 'required',
@@ -291,15 +291,10 @@ class TrialExamController extends Controller
                 'exists:trial_question_banks,id',
                 Rule::unique('trial_exams', 'trial_question_bank_id'),
             ],
-            'title' => ['required', 'string', 'max:150'],
-            'access_code' => ['required', 'string', 'max:50', 'regex:/^[A-Z0-9-]+$/', Rule::unique('trial_exams', 'access_code')],
-            'duration_minutes' => ['required', 'integer', 'min:10', 'max:300'],
-            'starts_at' => ['nullable', 'date'],
-            'ends_at' => ['nullable', 'date', 'after:starts_at'],
-            'is_active' => ['nullable', 'boolean'],
         ]);
+        $settings = $this->validateSettings($request);
 
-        DB::transaction(function () use ($request, $validated): void {
+        DB::transaction(function () use ($settings, $validated): void {
             // Lock the parent bank so two simultaneous clicks cannot create duplicates.
             $bank = TrialQuestionBank::query()
                 ->lockForUpdate()
@@ -344,22 +339,78 @@ class TrialExamController extends Controller
                 ]);
             }
 
-            $slugBase = Str::slug($validated['title']) ?: 'uji-coba';
+            $slugBase = Str::slug($settings['title']) ?: 'uji-coba';
             $slug = $slugBase;
             while (TrialExam::query()->where('slug', $slug)->exists()) {
                 $slug = $slugBase.'-'.Str::lower(Str::random(6));
             }
 
             TrialExam::create([
-                ...$validated,
+                ...$settings,
                 'assessment_subject_id' => $component->id,
                 'trial_question_bank_id' => $bank->id,
                 'slug' => $slug,
-                'is_active' => $request->boolean('is_active'),
             ]);
         });
 
         return back()->with('status', 'Ujian uji coba dibuat. Tautan dan kode sudah dapat dibagikan.');
+    }
+
+    public function edit(TrialExam $trialExam): View
+    {
+        $trialExam->load('questionBank.subject');
+
+        return view('tryouts.edit', compact('trialExam'));
+    }
+
+    public function update(Request $request, TrialExam $trialExam): RedirectResponse
+    {
+        $settings = $this->validateSettings($request, $trialExam);
+
+        try {
+            DB::transaction(function () use ($trialExam, $settings): void {
+                // Starting an attempt takes the same bank lock before reading these settings.
+                $bank = TrialQuestionBank::query()->lockForUpdate()->findOrFail($trialExam->trial_question_bank_id);
+                $exam = TrialExam::query()->lockForUpdate()->findOrFail($trialExam->id);
+                if ($settings['is_active'] && $bank->archived_at) {
+                    throw ValidationException::withMessages(['is_active' => 'Pulihkan bank soal sebelum mengaktifkan ujian.']);
+                }
+
+                $exam->update($settings);
+            });
+        } catch (UniqueConstraintViolationException) {
+            throw ValidationException::withMessages(['access_code' => 'Kode bersama sudah dipakai oleh ujian lain.']);
+        }
+
+        return redirect()->route('tryouts.edit', $trialExam)->with('status', 'Pengaturan Ujian Uji Coba disimpan.');
+    }
+
+    private function validateSettings(Request $request, ?TrialExam $trialExam = null): array
+    {
+        $code = $request->input('access_code');
+        if (is_string($code)) {
+            $request->merge(['access_code' => Str::upper(trim($code))]);
+        }
+
+        $uniqueCode = Rule::unique('trial_exams', 'access_code');
+        if ($trialExam) {
+            $uniqueCode->ignore($trialExam);
+        }
+        $settings = $request->validate([
+            'title' => ['required', 'string', 'max:150'],
+            'access_code' => ['required', 'string', 'max:50', 'regex:/^[A-Z0-9-]+$/', $uniqueCode],
+            'duration_minutes' => ['required', 'integer', 'min:10', 'max:300'],
+            'starts_at' => ['nullable', 'date'],
+            'ends_at' => ['nullable', 'date', Rule::when($request->filled('starts_at'), ['after:starts_at'])],
+            'is_active' => ['nullable', 'boolean'],
+        ]);
+
+        return [
+            ...$settings,
+            'starts_at' => $settings['starts_at'] ?? null,
+            'ends_at' => $settings['ends_at'] ?? null,
+            'is_active' => $request->boolean('is_active'),
+        ];
     }
 
     public function restartParticipant(

@@ -179,6 +179,8 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             Route::post('/', [TrialExamController::class, 'store'])->name('store');
             Route::get('/cards/all', [TrialExamController::class, 'allCards'])->name('cards.all');
             Route::get('/{trialExam}/cards', [TrialExamController::class, 'cards'])->name('cards');
+            Route::get('/{trialExam}/edit', [TrialExamController::class, 'edit'])->name('edit');
+            Route::put('/{trialExam}', [TrialExamController::class, 'update'])->name('update');
             Route::patch('/{trialExam}/toggle', [TrialExamController::class, 'toggle'])->name('toggle');
             Route::delete('/{trialExam}', [TrialExamController::class, 'destroy'])->name('destroy');
         });

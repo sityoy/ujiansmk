@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'trial_exam_id', 'student_id', 'participant_name', 'participant_identifier', 'session_token_hash',
-    'status', 'started_at', 'submitted_at', 'score', 'correct_answers', 'total_questions',
+    'status', 'duration_minutes', 'started_at', 'submitted_at', 'score', 'correct_answers', 'total_questions',
     'violation_count', 'security_locked_at', 'security_lock_version', 'last_seen_at',
     'ip_address', 'user_agent',
 ])]
@@ -20,6 +20,7 @@ class TrialAttempt extends Model
     protected function casts(): array
     {
         return [
+            'duration_minutes' => 'integer',
             'started_at' => 'datetime',
             'submitted_at' => 'datetime',
             'score' => 'decimal:2',

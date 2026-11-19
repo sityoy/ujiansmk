@@ -17,9 +17,9 @@ class TrialExamAttemptService
 {
     public function deadline(TrialAttempt $attempt): Carbon
     {
-        $attempt->loadMissing('trialExam');
+        $duration = $attempt->duration_minutes ?? $attempt->loadMissing('trialExam')->trialExam->duration_minutes;
 
-        return $attempt->started_at->copy()->addMinutes($attempt->trialExam->duration_minutes);
+        return $attempt->started_at->copy()->addMinutes($duration);
     }
 
     public function isExpired(TrialAttempt $attempt): bool
