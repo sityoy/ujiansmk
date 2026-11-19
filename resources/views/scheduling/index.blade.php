@@ -64,7 +64,10 @@
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-amber-300">03 · Daftar Periode</p>
                 <div class="mt-4 space-y-3">
                     @forelse ($periods as $period)
-                        <div class="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                        @php
+                            $editingDates = old('_editing_period') == $period->id;
+                        @endphp
+                        <div id="periode-{{ $period->id }}" class="scroll-mt-6 rounded-2xl border border-white/10 bg-slate-950/40 p-4">
                             <div class="flex flex-wrap items-start justify-between gap-3">
                                 <div>
                                     <div class="flex items-center gap-2">
@@ -73,6 +76,7 @@
                                     </div>
                                     <p class="mt-2 font-medium text-white">{{ $period->name }}</p>
                                     <p class="text-xs text-slate-500">{{ $period->academicYear->name }} · {{ $period->code }} · {{ $period->assessment_subjects_count }} komponen</p>
+                                    <p class="mt-1 text-xs text-slate-400">{{ $period->starts_on->format('d/m/Y') }}–{{ $period->ends_on->format('d/m/Y') }}</p>
                                 </div>
                                 <div class="flex flex-col items-end gap-2">
                                     <form method="POST" action="{{ route('scheduling.periods.status', $period) }}" class="flex items-center gap-2">
@@ -94,6 +98,25 @@
                                     @endif
                                 </div>
                             </div>
+                            <details class="mt-3 rounded-xl border border-white/10 p-3" @if ($editingDates) open @endif>
+                                <summary class="cursor-pointer text-sm font-medium text-cyan-300">Edit periode</summary>
+                                @if ($editingDates && $errors->periodDates->any())
+                                    <p class="mt-2 text-sm text-rose-200" role="alert">{{ $errors->periodDates->first() }}</p>
+                                @endif
+                                <form method="POST" action="{{ route('scheduling.periods.update', $period) }}" class="mt-3 grid gap-3 sm:grid-cols-2">
+                                    @csrf @method('PATCH')
+                                    <input type="hidden" name="_editing_period" value="{{ $period->id }}">
+                                    <label class="block text-xs text-slate-300">Tanggal mulai periode
+                                        <input type="date" name="starts_on" required value="{{ $editingDates ? old('starts_on') : $period->starts_on->toDateString() }}"
+                                            class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
+                                    </label>
+                                    <label class="block text-xs text-slate-300">Tanggal akhir periode
+                                        <input type="date" name="ends_on" required value="{{ $editingDates ? old('ends_on') : $period->ends_on->toDateString() }}"
+                                            class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
+                                    </label>
+                                    <button type="submit" class="rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950 sm:col-span-2">Simpan tanggal periode</button>
+                                </form>
+                            </details>
                         </div>
                     @empty
                         <p class="text-sm text-slate-500">Belum ada periode asesmen.</p>

@@ -146,6 +146,45 @@ class SchedulingController extends Controller
         return back()->with('status', 'Periode asesmen berhasil dibuat.');
     }
 
+    public function updatePeriod(Request $request, AssessmentPeriod $assessmentPeriod): RedirectResponse
+    {
+        $dates = $request->validateWithBag('periodDates', [
+            'starts_on' => ['required', 'date_format:Y-m-d'],
+            'ends_on' => ['required', 'date_format:Y-m-d', 'after_or_equal:starts_on'],
+        ], [
+            'starts_on.required' => 'Isi tanggal mulai periode.',
+            'ends_on.required' => 'Isi tanggal akhir periode.',
+            'ends_on.after_or_equal' => 'Tanggal akhir harus sama dengan atau setelah tanggal mulai.',
+        ]);
+        $start = Carbon::parse($dates['starts_on'])->startOfDay();
+        $endExclusive = Carbon::parse($dates['ends_on'])->addDay()->startOfDay();
+
+        DB::transaction(function () use ($assessmentPeriod, $dates, $start, $endExclusive): void {
+            // The session create and update transactions take the same period lock.
+            $period = AssessmentPeriod::query()->lockForUpdate()->findOrFail($assessmentPeriod->id);
+            $outside = ExamSession::query()
+                ->whereHas('assessmentSubject', fn ($query) => $query->where('assessment_period_id', $period->id))
+                ->where(fn ($query) => $query->where('starts_at', '<', $start)
+                    ->orWhere(fn ($regular) => $regular->where('kind', SessionKind::Regular)->where('ends_at', '>=', $endExclusive)))
+                ->orderBy('starts_at')
+                ->first();
+
+            if ($outside) {
+                throw ValidationException::withMessages([
+                    'starts_on' => sprintf(
+                        'Rentang baru harus mencakup jadwal %s yang sudah dibuat pada %s.',
+                        $outside->kind === SessionKind::Regular ? 'reguler' : 'susulan',
+                        $outside->starts_at->format('d/m/Y H:i'),
+                    ),
+                ])->errorBag('periodDates');
+            }
+
+            $period->update($dates);
+        }, 3);
+
+        return back()->with('status', 'Tanggal periode asesmen berhasil diperbarui.');
+    }
+
     public function updatePeriodStatus(Request $request, AssessmentPeriod $assessmentPeriod): RedirectResponse
     {
         $validated = $request->validate([
@@ -300,13 +339,18 @@ class SchedulingController extends Controller
             'rooms' => ['nullable', 'array'],
             'rooms.*' => ['nullable', 'string', 'max:100'],
         ]);
-        $component = AssessmentSubject::query()->with('assessmentPeriod', 'schoolClass')
-            ->findOrFail($identity['assessment_subject_id']);
+        $component = AssessmentSubject::query()->findOrFail($identity['assessment_subject_id']);
         $wholeGrade = ($identity['scope'] ?? 'class') === 'grade';
 
         DB::transaction(function () use ($request, $component, $wholeGrade): void {
             Campus::query()->lockForUpdate()->findOrFail($request->integer('campus_id'));
-            AssessmentPeriod::query()->lockForUpdate()->findOrFail($component->assessment_period_id);
+            $period = AssessmentPeriod::query()->lockForUpdate()->findOrFail($component->assessment_period_id);
+            $component->refresh();
+            if ($component->assessment_period_id !== $period->id) {
+                throw ValidationException::withMessages([
+                    'assessment_subject_id' => 'Periode komponen baru saja berubah. Muat ulang Penjadwalan Ujian dan pilih kembali mapel.',
+                ]);
+            }
             $components = $wholeGrade
                 ? AssessmentSubject::query()->where('assessment_period_id', $component->assessment_period_id)
                     ->where('subject_id', $component->subject_id)
@@ -318,6 +362,7 @@ class SchedulingController extends Controller
             $groupId = $wholeGrade ? (string) Str::uuid() : null;
             $created = new Collection;
             foreach ($components as $member) {
+                $member->setRelation('assessmentPeriod', $period);
                 $data = $wholeGrade ? $this->sessionRequestForClass($request, $member) : $request;
                 $validated = $this->validatedSessionData($data, $member);
                 if ($wholeGrade && $validated['status'] === SessionStatus::Closed->value) {
@@ -350,13 +395,14 @@ class SchedulingController extends Controller
             Campus::query()->whereKey([$examSession->campus_id, $request->integer('campus_id')])
                 ->orderBy('id')->lockForUpdate()->get();
             $examSession->loadMissing('assessmentSubject');
-            AssessmentPeriod::query()->lockForUpdate()->findOrFail($examSession->assessmentSubject->assessment_period_id);
+            $period = AssessmentPeriod::query()->lockForUpdate()->findOrFail($examSession->assessmentSubject->assessment_period_id);
             $group = $examSession->scheduleGroup()->with('assessmentSubject')->orderBy('id')->lockForUpdate()->get();
             SchoolClass::query()->whereKey($group->pluck('assessmentSubject.school_class_id'))
                 ->orderBy('id')->lockForUpdate()->get();
             $attributes = [];
             $rooms = [];
             foreach ($group as $session) {
+                $session->assessmentSubject->setRelation('assessmentPeriod', $period);
                 $data = $this->sessionRequestForClass($request, $session->assessmentSubject, $session);
                 $validated = $this->validatedSessionData($data, $session->assessmentSubject, $session, $group->modelKeys());
                 $this->assertSessionUpdate($session, $validated);
@@ -445,7 +491,14 @@ class SchedulingController extends Controller
             || $endsAt->toDateString() > $period->ends_on->toDateString()
         )) {
             throw ValidationException::withMessages([
-                'starts_at' => 'Jadwal reguler harus berada di dalam rentang tanggal periode asesmen.',
+                'starts_at' => sprintf(
+                    'Jadwal reguler pada %s harus berada dalam rentang periode %s (%s), yaitu %s sampai %s. Ubah rentangnya melalui Edit periode di Daftar Periode.',
+                    $startsAt->format('d/m/Y'),
+                    $period->name,
+                    $period->code,
+                    $period->starts_on->format('d/m/Y'),
+                    $period->ends_on->format('d/m/Y'),
+                ),
             ]);
         }
 

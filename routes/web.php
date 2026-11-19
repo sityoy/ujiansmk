@@ -143,6 +143,7 @@ Route::middleware(['auth', 'active'])->group(function (): void {
         ->group(function (): void {
             Route::get('/', [SchedulingController::class, 'index'])->name('index');
             Route::post('/periods', [SchedulingController::class, 'storePeriod'])->name('periods.store');
+            Route::patch('/periods/{assessmentPeriod}', [SchedulingController::class, 'updatePeriod'])->name('periods.update');
             Route::patch('/periods/{assessmentPeriod}/status', [SchedulingController::class, 'updatePeriodStatus'])->name('periods.status');
             Route::delete('/periods/{assessmentPeriod}', [SchedulingController::class, 'destroyPeriod'])->name('periods.destroy');
 
