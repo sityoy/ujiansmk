@@ -19,6 +19,12 @@
         .number { text-align: center; white-space: nowrap; }
         thead { display: table-header-group; }
         tr { break-inside: avoid; }
+        .has-history { break-after: avoid; }
+        .history-row td { padding: 7px 12px; font-size: 9pt; background: #f1f5f9; overflow-wrap: anywhere; }
+        .history-row strong { display: block; margin-bottom: 3px; }
+        .history-row ol { margin: 2px 0 6px; padding-left: 21px; }
+        .history-row ol:last-child { margin-bottom: 0; }
+        .history-row li + li { margin-top: 2px; }
         .score-sheet + .score-sheet { margin-top: 24px; }
         @media screen { body { padding: 0 12px 12px; } .table-wrap { overflow-x: auto; } }
         @media print {
@@ -72,8 +78,11 @@
                                     $student = $row['student'];
                                     $attempt = $row['attempt'];
                                     $finished = $row['status'] === 'submitted';
+                                    $previousAttempts = $row['previousAttempts'];
+                                    $hasCurrentHistory = $attempt && ($attempt->violation_count > 0 || $attempt->securityIncidents->isNotEmpty());
+                                    $hasHistory = $hasCurrentHistory || $previousAttempts->isNotEmpty();
                                 @endphp
-                                <tr>
+                                <tr @class(['has-history' => $hasHistory])>
                                     <td class="number">{{ $loop->iteration }}</td>
                                     <td>
                                         @if ($student)
@@ -89,6 +98,33 @@
                                     <td class="number">{{ $finished && $attempt->score !== null ? number_format((float) $attempt->score, 2, ',', '.') : '—' }}</td>
                                     <td>{{ $finished ? ($attempt->submitted_at?->format('d/m/Y H:i') ?? '—') : '—' }}</td>
                                 </tr>
+                                @if ($hasHistory)
+                                    <tr class="history-row">
+                                        <td colspan="8">
+                                            <strong>Riwayat pelanggaran · {{ $row['name'] }}</strong>
+                                            @foreach ($previousAttempts as $previousAttempt)
+                                                <p>Percobaan sebelumnya · mulai {{ $previousAttempt->started_at?->format('d/m/Y H:i:s') ?? '—' }}</p>
+                                                <ol>
+                                                    @foreach ($previousAttempt->securityIncidents as $incident)
+                                                        <li><x-exam-incident-entry :incident="$incident" for-print /></li>
+                                                    @endforeach
+                                                </ol>
+                                            @endforeach
+                                            @if ($attempt)
+                                                <p>Percobaan terakhir · Hitungan pelanggaran {{ (int) $attempt->violation_count }}/{{ \App\Services\Exams\TrialExamSecurityService::LIMIT }}</p>
+                                                @if ($hasCurrentHistory)
+                                                    <ol>
+                                                        @forelse ($attempt->securityIncidents as $incident)
+                                                            <li><x-exam-incident-entry :incident="$incident" for-print /></li>
+                                                        @empty
+                                                            <li>Rincian kejadian belum tercatat.</li>
+                                                        @endforelse
+                                                    </ol>
+                                                @endif
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endif
                             @empty
                                 <tr><td colspan="8">Tidak ada peserta pada tingkat kelas ini.</td></tr>
                             @endforelse

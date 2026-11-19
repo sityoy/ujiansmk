@@ -150,10 +150,16 @@ class TrialExamController extends Controller
 
     private function scorePrintView(EloquentCollection $exams, ?TrialExam $singleExam = null): Response
     {
+        $incidentOrder = fn ($query) => $query->orderBy('occurred_at')->orderBy('id');
         $exams->load([
             'questionBank.subject',
             'assessmentSubject.assessmentPeriod.academicYear',
             'currentAttempts.student.schoolClass',
+            'currentAttempts.securityIncidents' => $incidentOrder,
+            'attempts' => fn ($query) => $query->where('status', TrialAttempt::RESET_STATUS)
+                ->whereHas('securityIncidents', fn ($incidents) => $incidents
+                    ->whereIn('category', TrialExamSecurityService::CLIENT_CATEGORIES)),
+            'attempts.securityIncidents' => $incidentOrder,
         ]);
         $studentsByGrade = $this->activeRoster($exams->pluck('questionBank.grade_level')->unique()->all())
             ->get()->groupBy('schoolClass.grade_level');
@@ -162,6 +168,7 @@ class TrialExamController extends Controller
             $rows = $this->scoreRows(
                 $studentsByGrade->get($exam->questionBank->grade_level, collect()),
                 $exam->currentAttempts,
+                $exam->attempts,
             );
 
             return ['exam' => $exam, 'rows' => $rows, 'statistics' => $this->participantStatistics($rows)];
@@ -174,7 +181,7 @@ class TrialExamController extends Controller
         ])->header('Cache-Control', 'private, no-store')->header('X-Robots-Tag', 'noindex, nofollow');
     }
 
-    private function scoreRows(Collection $students, Collection $attempts): Collection
+    private function scoreRows(Collection $students, Collection $attempts, Collection $previousAttempts): Collection
     {
         $rows = $this->matchParticipants($students, $attempts);
         $matched = array_flip($rows->pluck('attempt.id')->filter()->all());
@@ -186,10 +193,23 @@ class TrialExamController extends Controller
             }
         }
 
-        return $rows->sortBy([
-            ['student.schoolClass.name', 'asc'],
-            ['name', 'asc'],
-        ])->values();
+        $previousByStudent = $previousAttempts->whereNotNull('student_id')->groupBy('student_id');
+        $previousByIdentifier = $previousAttempts->whereNull('student_id')
+            ->whereNotNull('participant_identifier')->groupBy('participant_identifier');
+
+        return $rows->map(function (array $row) use ($previousByStudent, $previousByIdentifier): array {
+            $student = $row['student'];
+            $attempt = $row['attempt'];
+            $studentId = $student?->id ?? $attempt?->student_id;
+            $identifiers = collect([$student?->nisn, $student?->student_number, $attempt?->participant_identifier])
+                ->filter()->unique();
+
+            $row['previousAttempts'] = $previousByStudent->get($studentId, collect())
+                ->concat($identifiers->flatMap(fn ($identifier) => $previousByIdentifier->get($identifier, collect())))
+                ->sortBy([['started_at', 'asc'], ['id', 'asc']]);
+
+            return $row;
+        })->sortBy([['student.schoolClass.name', 'asc'], ['name', 'asc']])->values();
     }
 
     public function cards(TrialExam $trialExam): View

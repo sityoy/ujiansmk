@@ -626,6 +626,56 @@ class TrialExamFlowTest extends TestCase
         $this->assertStringNotContainsString('Peserta Uji Coba', $sheets->item(1)->textContent);
     }
 
+    public function test_score_print_includes_current_and_restarted_violation_history(): void
+    {
+        [$trial, $question] = $this->makeTrial();
+        $student = Student::firstOrFail();
+        $reviewer = User::factory()->create(['role' => UserRole::Committee, 'name' => 'Petugas Simulasi']);
+        $start = route('tryout.start', $trial);
+        $payload = ['access_code' => $trial->access_code];
+        $security = app(TrialExamSecurityService::class);
+        $attempts = app(TrialExamAttemptService::class);
+
+        $this->actingAs($student->user)->post($start, $payload)->assertRedirect();
+        $previous = $trial->currentAttempts()->sole();
+        $security->record($previous, 'tab_hidden', (string) Str::uuid());
+        $security->record($previous, 'window_blur', (string) Str::uuid());
+        $attempts->restart($trial, $previous, $reviewer);
+
+        $this->travel(5)->seconds();
+        $this->post($start, $payload)->assertRedirect();
+        $current = $trial->currentAttempts()->sole();
+        $security->record($current, 'fullscreen_exit', (string) Str::uuid());
+        $security->resetViolations($current, $reviewer, 'Perangkat sudah diperiksa');
+        $attempts->submit($current, [$question->id => 'A']);
+
+        Student::create([
+            'school_class_id' => $student->school_class_id,
+            'full_name' => 'Peserta Tanpa Catatan',
+            'student_number' => 'NO-INCIDENTS',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($reviewer);
+        foreach ([route('tryouts.scores.print', $trial), route('tryouts.scores.all')] as $printUrl) {
+            $this->get($printUrl)->assertOk()
+                ->assertSee('2,00')
+                ->assertSee('Peserta Tanpa Catatan')
+                ->assertDontSee('Riwayat pelanggaran · Peserta Tanpa Catatan')
+                ->assertSeeInOrder([
+                    'Riwayat pelanggaran · Peserta Uji Coba',
+                    'Percobaan sebelumnya',
+                    '05/11/2026 10:00:00 · Berpindah tab/aplikasi',
+                    'Sinyal bersamaan, tidak dihitung ulang',
+                    'Ujian diulang oleh pengawas',
+                    'Hitungan pelanggaran 0/2',
+                    'Keluar layar penuh',
+                    'Hitungan pelanggaran direset',
+                    'Perangkat sudah diperiksa',
+                ]);
+        }
+    }
+
     public function test_trial_restart_preserves_history_and_allows_fresh_attempt_after_finishing_or_locking(): void
     {
         [$trial, $question] = $this->makeTrial();
