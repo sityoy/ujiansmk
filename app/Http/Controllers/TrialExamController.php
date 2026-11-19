@@ -9,11 +9,14 @@ use App\Models\Student;
 use App\Models\TrialAttempt;
 use App\Models\TrialExam;
 use App\Models\TrialQuestionBank;
+use App\Models\User;
+use App\Services\Exams\TrialExamAttemptService;
 use App\Services\Exams\TrialExamSecurityService;
 use App\Support\TablePagination;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -27,7 +30,7 @@ class TrialExamController extends Controller
         return view('tryouts.index', [
             'trialExams' => TrialExam::query()
                 ->with(['questionBank.subject', 'assessmentSubject.assessmentPeriod.academicYear'])
-                ->withCount('attempts')
+                ->withCount('currentAttempts as attempts_count')
                 ->latest()
                 ->paginateForDisplay(),
             'banks' => TrialQuestionBank::query()->whereNull('archived_at')
@@ -61,11 +64,11 @@ class TrialExamController extends Controller
                 ->whereHas('academicYear', fn ($year) => $year->where('is_active', true)))
             ->orderBy('full_name')
             ->get();
-        $attempts = $trialExam->attempts()
+        $attempts = $trialExam->currentAttempts()
             ->withCount('securityIncidents')
             ->get();
         $byStudent = $attempts->whereNotNull('student_id')->keyBy('student_id');
-        $byIdentifier = $attempts->whereNotNull('participant_identifier')->keyBy('participant_identifier');
+        $byIdentifier = $attempts->whereNull('student_id')->whereNotNull('participant_identifier')->keyBy('participant_identifier');
 
         $rows = $students->map(function (Student $student) use ($byStudent, $byIdentifier): array {
             $attempt = $byStudent->get($student->id)
@@ -113,7 +116,10 @@ class TrialExamController extends Controller
 
         return view('tryouts.participants', compact(
             'trialExam', 'participants', 'statistics', 'filters'
-        ));
+        ) + [
+            'canPrintScores' => $this->canPrintScores($request->user()),
+            'canRestart' => $this->canRestart($request->user()),
+        ]);
     }
 
     public function progress(Request $request, TrialExam $trialExam): JsonResponse
@@ -134,11 +140,11 @@ class TrialExamController extends Controller
                 ->where('grade_level', $trialExam->questionBank->grade_level)
                 ->whereHas('academicYear', fn ($year) => $year->where('is_active', true)))
             ->get(['id', 'student_number', 'nisn']);
-        $attempts = $trialExam->attempts()
+        $attempts = $trialExam->currentAttempts()
             ->withCount('securityIncidents')
             ->get();
         $byStudent = $attempts->whereNotNull('student_id')->keyBy('student_id');
-        $byIdentifier = $attempts->whereNotNull('participant_identifier')->keyBy('participant_identifier');
+        $byIdentifier = $attempts->whereNull('student_id')->whereNotNull('participant_identifier')->keyBy('participant_identifier');
 
         $rows = $students->map(function (Student $student) use ($byStudent, $byIdentifier): array {
             return [
@@ -159,9 +165,10 @@ class TrialExamController extends Controller
         ];
         $requested = collect($validated['student_ids'])->map(fn ($id): int => (int) $id);
 
+        $canRestart = $this->canRestart($request->user());
         $participants = $rows
             ->filter(fn (array $row): bool => $requested->contains((int) $row['student']->id))
-            ->mapWithKeys(function (array $row): array {
+            ->mapWithKeys(function (array $row) use ($canRestart, $trialExam): array {
                 $attempt = $row['attempt'];
                 $locked = $attempt?->status === 'in_progress' && (bool) $attempt?->security_locked_at;
                 $status = ! $attempt ? 'not_started' : ($locked ? 'locked' : $attempt->status);
@@ -173,6 +180,7 @@ class TrialExamController extends Controller
                     'violations' => $attempt?->violation_count,
                     'reset_used' => (int) ($attempt?->security_reset_count ?? 0),
                     'incidents' => $attempt?->security_incidents_count,
+                    ...($canRestart ? ['restart_url' => $attempt ? route('tryouts.attempts.restart', [$trialExam, $attempt]) : null] : []),
                 ]];
             });
 
@@ -181,6 +189,23 @@ class TrialExamController extends Controller
             'participants' => $participants,
             'updated_at' => now()->format('H:i:s'),
         ])->header('Cache-Control', 'no-store');
+    }
+
+    public function printScores(Request $request, TrialExam $trialExam): Response
+    {
+        abort_unless($this->canPrintScores($request->user()), 403);
+        $trialExam->load(['questionBank.subject', 'assessmentSubject.assessmentPeriod.academicYear']);
+        $attempts = $trialExam->currentAttempts()->where('status', 'submitted')
+            ->with('student.schoolClass')
+            ->get()
+            ->sortBy([['student.schoolClass.name', 'asc'], ['participant_name', 'asc'], ['id', 'asc']])
+            ->values();
+
+        return response()->view('tryouts.scores-print', [
+            'trialExam' => $trialExam,
+            'attempts' => $attempts,
+            'school' => SchoolProfile::query()->first(),
+        ])->header('Cache-Control', 'private, no-store')->header('X-Robots-Tag', 'noindex, nofollow');
     }
 
     public function cards(TrialExam $trialExam): View
@@ -333,6 +358,19 @@ class TrialExamController extends Controller
         return back()->with('status', 'Ujian uji coba dibuat. Tautan dan kode sudah dapat dibagikan.');
     }
 
+    public function restartParticipant(
+        Request $request,
+        TrialExam $trialExam,
+        TrialAttempt $trialAttempt,
+        TrialExamAttemptService $attempts,
+    ): RedirectResponse {
+        abort_unless($this->canRestart($request->user()), 403);
+        abort_unless($trialAttempt->trial_exam_id === $trialExam->id, 404);
+        $attempts->restart($trialExam, $trialAttempt, $request->user());
+
+        return back()->with('status', 'Peserta sudah direset dan bisa mulai lagi saat simulasi dibuka.');
+    }
+
     public function resetViolations(
         Request $request,
         TrialExam $trialExam,
@@ -368,6 +406,16 @@ class TrialExamController extends Controller
         $trialExam->delete();
 
         return back()->with('status', 'Ujian uji coba dihapus.');
+    }
+
+    private function canPrintScores(User $user): bool
+    {
+        return $this->canRestart($user) || $user->role === UserRole::Proctor;
+    }
+
+    private function canRestart(User $user): bool
+    {
+        return in_array($user->role, [UserRole::SuperAdmin, UserRole::Committee, UserRole::Principal], true);
     }
 
     private function authorizeMonitor(Request $request, TrialExam $trialExam): void

@@ -68,7 +68,7 @@ class ExamOperationsController extends Controller
                 ->paginateForDisplay('attempts_page')->withQueryString(),
             'trialExams' => TrialExam::query()
                 ->with(['questionBank.subject'])
-                ->withCount('attempts')
+                ->withCount('currentAttempts as attempts_count')
                 ->when($request->user()->role === UserRole::Teacher, fn ($query) => $query
                     ->whereHas('assessmentSubject', fn ($component) => $component
                         ->where('teacher_user_id', $request->user()->id)))

@@ -93,8 +93,7 @@ class TrialExamPublicController extends Controller
             throw ValidationException::withMessages(['participant_identifier' => 'Data siswa sudah berubah. Hubungi panitia ujian.']);
         }
         $participantIdentifier = $student->nisn ?: $student->student_number;
-        $existingAttempt = TrialAttempt::query()
-            ->where('trial_exam_id', $trialExam->id)
+        $existingAttempt = $trialExam->currentAttempts()
             ->where(function ($query) use ($student, $participantIdentifier): void {
                 $query->where('student_id', $student->id)
                     ->orWhere('participant_identifier', $participantIdentifier);
@@ -264,7 +263,7 @@ class TrialExamPublicController extends Controller
 
     private function authorizeAttempt(TrialExam $trialExam, TrialAttempt $trialAttempt): void
     {
-        abort_unless($trialAttempt->trial_exam_id === $trialExam->id, 404);
+        abort_unless($trialAttempt->trial_exam_id === $trialExam->id && $trialAttempt->status !== TrialAttempt::RESET_STATUS, 404);
 
         $authenticatedStudent = auth()->user()?->student;
         if ($authenticatedStudent && (

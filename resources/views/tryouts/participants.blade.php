@@ -10,6 +10,10 @@
     <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
         <a href="{{ route('operations.index') }}" class="text-sm text-cyan-300">← Pemantauan peserta</a>
         <a href="{{ request()->fullUrl() }}" class="text-xs text-cyan-300">Muat ulang riwayat pelanggaran</a>
+        @if ($canPrintScores)
+            <a href="{{ route('tryouts.scores.print', $trialExam) }}" target="_blank" rel="noopener"
+                class="rounded-xl bg-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950">Cetak nilai uji coba</a>
+        @endif
         @if(in_array(auth()->user()->role->value, ['super_admin','committee'], true))
             <div class="flex flex-wrap gap-2">
                 <a href="{{ route('tryouts.cards', $trialExam) }}" target="_blank" class="rounded-xl bg-cyan-400/10 px-4 py-2 text-sm font-semibold text-cyan-200">Cetak kartu peserta</a>
@@ -21,7 +25,7 @@
     <section class="rounded-3xl border border-cyan-400/20 bg-cyan-400/[0.04] p-6">
         <p class="text-xs uppercase tracking-wider text-cyan-300">{{ $trialExam->questionBank->subject->name }} · Kelas {{ $trialExam->questionBank->grade_level }}</p>
         <h2 class="mt-2 text-2xl font-semibold">{{ $trialExam->title }}</h2>
-        <p class="mt-2 text-sm text-slate-400">{{ $trialExam->duration_minutes }} menit · Nilai peserta tidak ditampilkan · Batas 2 pelanggaran</p>
+        <p class="mt-2 text-sm text-slate-400">{{ $trialExam->duration_minutes }} menit · Cetak nilai khusus petugas · Batas 2 pelanggaran</p>
     </section>
 
     <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
@@ -62,6 +66,14 @@
                             <td class="px-5 py-4"><span data-trial-status class="rounded-full px-2.5 py-1 text-xs {{ !$attempt ? 'bg-slate-400/10 text-slate-300' : ($locked ? 'bg-rose-400/10 text-rose-200' : ($attempt->status === 'submitted' ? 'bg-emerald-400/10 text-emerald-200' : 'bg-amber-400/10 text-amber-200')) }}">{{ $status }}</span></td>
                             <td class="px-5 py-4 text-slate-300"><p data-trial-violations>{{ $attempt ? $attempt->violation_count.'/2' : '—' }} @if($attempt)<span class="text-xs text-slate-500">({{ $attempt->security_incidents_count }} catatan)</span>@endif</p>@if($attempt)<x-exam-incident-history :incidents="$attempt->securityIncidents" />@endif</td>
                             <td class="min-w-64 px-5 py-4">
+                                @if ($canRestart)
+                                    <form method="POST" action="{{ $attempt ? route('tryouts.attempts.restart', [$trialExam, $attempt]) : '' }}"
+                                        data-trial-restart @if (! $attempt) hidden @endif class="mb-2"
+                                        onsubmit="return confirm('Reset peserta agar bisa mengulang dari awal? Nilai lama akan dikeluarkan dari rekap aktif.')">
+                                        @csrf
+                                        <button type="submit" class="rounded-lg border border-amber-300/30 px-3 py-2 text-xs font-semibold text-amber-200">Reset &amp; ulangi simulasi</button>
+                                    </form>
+                                @endif
                                 @if($attempt)<p data-reset-used class="mb-2 text-xs text-amber-200">Pemulihan terpakai {{ $attempt->security_reset_count }}/2 · jatah bersama seluruh petugas</p>@endif
                                 @if ($attempt && $attempt->security_reset_count < 2 && $attempt->status === 'in_progress' && $attempt->violation_count > 0 && in_array(auth()->user()->role->value, ['super_admin','committee','principal'], true))
                                     <details><summary class="cursor-pointer text-xs font-semibold text-rose-300">Reset pelanggaran</summary>
@@ -120,6 +132,11 @@
                             if (status) {
                                 status.textContent = labels[participant.status] ?? 'Perlu pemeriksaan';
                                 status.className = 'rounded-full px-2.5 py-1 text-xs ' + (styles[participant.status] ?? styles.not_started);
+                            }
+                            const restart = row.querySelector('[data-trial-restart]');
+                            if (restart) {
+                                restart.hidden = !participant.restart_url;
+                                if (participant.restart_url) restart.action = participant.restart_url;
                             }
                             const resets = row.querySelector('[data-reset-used]');
                             if (resets) resets.textContent = 'Pemulihan terpakai ' + participant.reset_used + '/2 · jatah bersama seluruh petugas';

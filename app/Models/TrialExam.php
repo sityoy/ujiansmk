@@ -40,6 +40,11 @@ class TrialExam extends Model
         return $this->hasMany(TrialAttempt::class);
     }
 
+    public function currentAttempts(): HasMany
+    {
+        return $this->attempts()->where('status', '!=', TrialAttempt::RESET_STATUS);
+    }
+
     public function isAvailable(): bool
     {
         return $this->is_active

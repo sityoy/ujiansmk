@@ -183,6 +183,11 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             Route::delete('/{trialExam}', [TrialExamController::class, 'destroy'])->name('destroy');
         });
 
+    Route::get('/tryouts/{trialExam}/scores/print', [TrialExamController::class, 'printScores'])
+        ->middleware('role:super_admin,committee,principal,proctor')->name('tryouts.scores.print');
+    Route::post('/tryouts/{trialExam}/attempts/{trialAttempt}/restart', [TrialExamController::class, 'restartParticipant'])
+        ->middleware('role:super_admin,committee,principal')->name('tryouts.attempts.restart');
+
     Route::post('/tryouts/{trialExam}/attempts/{trialAttempt}/reset-violations', [TrialExamController::class, 'resetViolations'])
         ->middleware('role:super_admin,committee,principal')->name('tryouts.attempts.reset-violations');
 

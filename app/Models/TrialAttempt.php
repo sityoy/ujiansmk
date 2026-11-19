@@ -15,6 +15,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 ])]
 class TrialAttempt extends Model
 {
+    public const RESET_STATUS = 'reset';
+
     protected function casts(): array
     {
         return [

@@ -11,7 +11,7 @@
             <p class="mt-2 text-slate-400">{{ $trialExam->title }}</p>
             <div class="mt-7 rounded-2xl border border-white/10 bg-slate-950/60 p-5">
                 <p class="font-medium text-white">Ujian uji coba telah selesai.</p>
-                <p class="mt-2 text-sm leading-6 text-slate-400">Nilai dan jumlah jawaban benar tidak ditampilkan kepada peserta. Panitia hanya melihat status pengerjaan dan catatan pengawasan.</p>
+                <p class="mt-2 text-sm leading-6 text-slate-400">Nilai dan jumlah jawaban benar tidak ditampilkan kepada peserta.</p>
             </div>
         </section>
     </div>

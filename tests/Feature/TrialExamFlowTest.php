@@ -512,6 +512,73 @@ class TrialExamFlowTest extends TestCase
         $this->assertDatabaseCount('trial_questions', 0);
     }
 
+    public function test_only_exam_staff_can_print_submitted_trial_scores(): void
+    {
+        [$trial, $question] = $this->makeTrial();
+        $student = Student::firstOrFail();
+        $this->actingAs($student->user)->post(route('tryout.start', $trial), ['access_code' => $trial->access_code])->assertRedirect();
+        $attempt = $trial->currentAttempts()->firstOrFail();
+        app(TrialExamAttemptService::class)->submit($attempt, [$question->id => 'A']);
+
+        $print = route('tryouts.scores.print', $trial);
+        $teacher = User::factory()->create(['role' => UserRole::Teacher]);
+        $trial->assessmentSubject->update(['teacher_user_id' => $teacher->id]);
+        $this->get($print)->assertForbidden();
+        $this->get(route('tryout.result', [$trial, $attempt]))->assertOk()->assertDontSee('2,00');
+        $this->actingAs($teacher)->get($print)->assertForbidden();
+        $this->get(route('tryouts.participants', $trial))->assertOk()->assertDontSee('Cetak nilai uji coba')->assertDontSee('2,00');
+
+        foreach ([UserRole::SuperAdmin, UserRole::Committee, UserRole::Principal, UserRole::Proctor] as $role) {
+            $response = $this->actingAs(User::factory()->create(['role' => $role]))
+                ->get($print)->assertOk()->assertSee('Rekap Nilai Simulasi Ujian')
+                ->assertSee('Peserta Uji Coba')->assertSee('2,00')->assertDontSee($trial->access_code);
+            $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
+        }
+    }
+
+    public function test_trial_restart_preserves_history_and_allows_fresh_attempt_after_finishing_or_locking(): void
+    {
+        [$trial, $question] = $this->makeTrial();
+        $student = Student::firstOrFail();
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $teacher = User::factory()->create(['role' => UserRole::Teacher]);
+        $start = route('tryout.start', $trial);
+        $payload = ['access_code' => $trial->access_code];
+        $this->actingAs($student->user)->post($start, $payload)->assertRedirect();
+        $first = $trial->currentAttempts()->sole();
+        app(TrialExamAttemptService::class)->submit($first, [$question->id => 'A']);
+        $restart = route('tryouts.attempts.restart', [$trial, $first]);
+
+        $this->post($restart)->assertForbidden();
+        $this->actingAs($teacher)->post($restart)->assertForbidden();
+        $this->actingAs($committee)->post($restart)->assertRedirect()->assertSessionHasNoErrors();
+        $this->post($restart)->assertNotFound();
+        $this->assertSame(TrialAttempt::RESET_STATUS, $first->fresh()->status);
+        $this->assertSame('2.00', $first->fresh()->score);
+        $this->assertSame(1, $first->answers()->count());
+        $this->assertSame($committee->id, $first->securityIncidents()->where('category', 'supervisor_restart')->sole()->details['reviewer_id']);
+        $this->get(route('tryouts.scores.print', $trial))->assertOk()->assertSee('Belum ada peserta yang menyelesaikan simulasi.');
+        $this->get(route('tryouts.progress', ['trialExam' => $trial, 'student_ids' => [$student->id]]))
+            ->assertOk()->assertJsonPath('participants.'.$student->id.'.status', 'not_started')
+            ->assertJsonPath('participants.'.$student->id.'.restart_url', null);
+
+        $this->actingAs($student->user)->get(route('tryout.result', [$trial, $first]))->assertNotFound();
+        $this->get(route('student.exams.index'))->assertOk()->assertViewHas('trialAttempts', fn ($attempts) => $attempts->isEmpty());
+        $this->post($start, $payload)->assertRedirect();
+        $second = $trial->currentAttempts()->sole();
+        $this->assertNotSame($first->id, $second->id);
+        $this->assertSame(0, $second->answers()->count());
+        $second->forceFill(['security_reset_count' => 2, 'violation_count' => 2, 'security_locked_at' => now()])->save();
+
+        $this->actingAs($committee)
+            ->post(route('tryouts.attempts.restart', [$trial, $second]))->assertRedirect()->assertSessionHasNoErrors();
+        $this->actingAs($student->user)->post($start, $payload)->assertRedirect();
+        $third = $trial->currentAttempts()->sole();
+        $this->assertSame(0, $third->violation_count);
+        $this->assertSame(0, $third->security_reset_count);
+        $this->assertNull($third->security_locked_at);
+    }
+
     private function makeTrial(): array
     {
         $year = AcademicYear::create([

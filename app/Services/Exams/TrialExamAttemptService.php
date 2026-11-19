@@ -4,7 +4,10 @@ namespace App\Services\Exams;
 
 use App\Models\TrialAnswer;
 use App\Models\TrialAttempt;
+use App\Models\TrialExam;
 use App\Models\TrialQuestion;
+use App\Models\TrialQuestionBank;
+use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -22,6 +25,27 @@ class TrialExamAttemptService
     public function isExpired(TrialAttempt $attempt): bool
     {
         return now()->greaterThanOrEqualTo($this->deadline($attempt));
+    }
+
+    public function restart(TrialExam $exam, TrialAttempt $attempt, User $reviewer): void
+    {
+        DB::transaction(function () use ($exam, $attempt, $reviewer): void {
+            // Match the bank lock used by the student start endpoint.
+            TrialQuestionBank::query()->lockForUpdate()->findOrFail($exam->trial_question_bank_id);
+            $attempt = $exam->currentAttempts()->lockForUpdate()->findOrFail($attempt->id);
+
+            $attempt->securityIncidents()->create([
+                'category' => 'supervisor_restart',
+                'severity' => 0,
+                'occurred_at' => now(),
+                'details' => [
+                    'reviewer_id' => $reviewer->id,
+                    'reviewer_name' => $reviewer->name,
+                    'previous_status' => $attempt->status,
+                ],
+            ]);
+            $attempt->update(['status' => TrialAttempt::RESET_STATUS]);
+        }, 3);
     }
 
     public function saveAnswer(TrialAttempt $attempt, TrialQuestion $question, string $answer): void
@@ -115,4 +139,3 @@ class TrialExamAttemptService
         }
     }
 }
-

@@ -47,11 +47,12 @@ class StudentExamController extends Controller
                     $available->where('is_active', true)
                         ->where(fn ($window) => $window->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
                         ->where(fn ($window) => $window->whereNull('ends_at')->orWhere('ends_at', '>=', now()));
-                })->orWhereHas('attempts', fn ($attempts) => $attempts->where('student_id', $student->id));
+                })->orWhereHas('currentAttempts', fn ($attempts) => $attempts->where('student_id', $student->id));
             })
             ->orderBy('title')
             ->get();
         $trialAttempts = TrialAttempt::query()
+            ->where('status', '!=', TrialAttempt::RESET_STATUS)
             ->where('student_id', $student->id)
             ->whereIn('trial_exam_id', $trialExams->modelKeys())
             ->get()
