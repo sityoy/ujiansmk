@@ -4,7 +4,9 @@
     display: grid;
     place-items: center;
     padding: clamp(1rem, 4vw, 3rem);
-    background: #ebf1f6;
+    background:
+        radial-gradient(ellipse at 9% 14%, #0d466d, transparent 52%),
+        linear-gradient(118deg, #071e40, #0b1e46 47%, #102e65);
 }
 
 .login-card {
@@ -12,9 +14,9 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     width: min(100%, 65rem);
     overflow: hidden;
-    border: 1px solid #cbd9e4;
+    border: 1px solid #8eadd441;
     border-radius: 1.75rem;
-    box-shadow: 0 1.5rem 4rem #0f172a22;
+    box-shadow: 0 1.5rem 4rem #02061770;
 }
 
 .login-brand {
@@ -26,8 +28,9 @@
     padding: clamp(2rem, 5vw, 4rem) clamp(1.25rem, 3vw, 2.75rem);
     color: #f8fafc;
     background:
-        radial-gradient(ellipse at 10% 12%, #164e6380, transparent 58%),
-        linear-gradient(150deg, #0b1d30, #071121 76%);
+        radial-gradient(ellipse at 94% 9%, #0b3547, transparent 48%),
+        radial-gradient(ellipse at 10% 100%, #1a3058, transparent 58%),
+        #020617;
 }
 
 .login-logos {
