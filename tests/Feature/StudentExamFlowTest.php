@@ -68,7 +68,7 @@ class StudentExamFlowTest extends TestCase
             ->assertSessionHasNoErrors();
 
         $this->get(route('student.exams.index'))->assertOk()
-            ->assertSeeInOrder(['Peringatan sebelum memulai ujian', 'Selesaikan absensi lokasi hingga terverifikasi', 'Cara mengaktifkan Jangan Ganggu di HP', 'Baca kembali peringatan ujian', 'Saya sudah membaca dan memahami aturan'])
+            ->assertSeeInOrder(['Peringatan sebelum memulai ujian', 'Absensi lokasi sebelum ujian', 'Waktu ujian belum berjalan saat Anda absen', 'Jika absensi gagal', 'Cara mengaktifkan Jangan Ganggu di HP', 'Baca kembali peringatan ujian', 'Saya sudah membaca dan memahami aturan'])
             ->assertSee('required aria-describedby="core-exam-rules-title"', false);
 
         $this->withSession(['exam_device_token' => $deviceToken])

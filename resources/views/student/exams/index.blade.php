@@ -88,9 +88,10 @@
                         <input type="hidden" name="longitude">
                         <input type="hidden" name="accuracy_meters">
                         <p class="text-sm font-semibold text-amber-200">Absensi lokasi ujian</p>
-                        <p class="mt-2 text-xs leading-5 text-slate-400">Tidak menggunakan selfie. Sistem hanya memeriksa GPS, akurasi, dan radius lokasi sekolah.</p>
-                        <button class="attendance-button mt-4 w-full rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-slate-950 sm:w-auto">Ambil lokasi & kirim absensi</button>
-                        <p class="attendance-message mt-3 text-xs leading-5 text-slate-500">Izinkan GPS presisi tinggi. Fitur lokasi membutuhkan HTTPS atau localhost.</p>
+                        <p class="mt-2 text-sm leading-6 text-slate-300">Izinkan lokasi presisi saat browser meminta izin. Tunggu sampai absensi terverifikasi sebelum mulai ujian.</p>
+                        <button class="attendance-button mt-4 w-full rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-slate-950 sm:w-auto">Ambil lokasi &amp; kirim absensi</button>
+                        <p class="attendance-message mt-3 text-sm text-slate-300" role="status"></p>
+                        <a href="#core-exam-location-rules" class="mt-2 inline-block text-sm font-semibold text-cyan-300 underline">Panduan jika absensi gagal</a>
                     </form>
                 @endif
 

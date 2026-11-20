@@ -49,7 +49,7 @@ class TrialExamFlowTest extends TestCase
             ->assertSee('data-theme="light"', false)
             ->assertSeeInOrder(['Peringatan sebelum memulai ujian', 'Siapkan NIS atau NISN milik sendiri', 'Jangan tarik bilah notifikasi', 'Pelanggaran kedua', 'Saya sudah membaca dan memahami aturan'])
             ->assertSee('required aria-describedby="trial-exam-rules-title"', false)
-            ->assertDontSee('Selesaikan absensi lokasi hingga terverifikasi')
+            ->assertDontSee('Absensi lokasi sebelum ujian')
             ->assertSee('Setiap jawaban PG benar bernilai tetap 2 poin')
             ->assertSee('Nama peserta diambil otomatis dari data siswa');
 
@@ -524,6 +524,7 @@ class TrialExamFlowTest extends TestCase
 
         $this->get(route('tryout.entry', $trial))->assertOk()
             ->assertSee('Sekolah Simulasi')->assertSee($attendance)
+            ->assertSeeInOrder(['Absensi lokasi sebelum ujian', 'Waktu ujian belum berjalan saat Anda absen', 'Jika absensi gagal', 'Anda berada di lokasi ujian yang benar', 'Panduan jika absensi gagal'])
             ->assertSee('Ambil Lokasi &amp; Absen Simulasi', false)
             ->assertSee('type="submit" disabled', false);
         $this->post($start, $credentials)->assertSessionHasErrors('location');

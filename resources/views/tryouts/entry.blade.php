@@ -42,6 +42,7 @@
                         <p class="text-sm text-slate-300">Browser meminta izin lokasi untuk memeriksa posisi Anda sekali. Laporan mencatat waktu verifikasi, jarak dari lokasi ujian, dan akurasi GPS.</p>
                         <button type="button" data-location-check class="rounded-xl border border-cyan-400/30 px-4 py-3 text-sm font-semibold text-cyan-200 disabled:opacity-60">Ambil Lokasi &amp; Absen Simulasi</button>
                         <p data-location-status role="status" class="text-sm text-slate-300"></p>
+                        <a href="#trial-exam-location-rules" class="inline-block text-sm font-semibold text-cyan-300 underline">Panduan jika absensi gagal</a>
                         <noscript><p class="text-sm text-amber-200">Aktifkan JavaScript agar browser dapat memverifikasi lokasi.</p></noscript>
                     </section>
                     <script src="{{ asset('js/trial-attendance.js') }}" defer></script>
