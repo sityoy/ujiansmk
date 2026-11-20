@@ -73,9 +73,13 @@ class TrialExamAttemptService
     }
 
     /** @param array<int|string, mixed> $submittedAnswers */
-    public function submit(TrialAttempt $attempt, array $submittedAnswers = [], bool $allowLocked = false): TrialAttempt
-    {
-        return DB::transaction(function () use ($attempt, $submittedAnswers, $allowLocked): TrialAttempt {
+    public function submit(
+        TrialAttempt $attempt,
+        array $submittedAnswers = [],
+        bool $allowLocked = false,
+        bool $requireComplete = false,
+    ): TrialAttempt {
+        return DB::transaction(function () use ($attempt, $submittedAnswers, $allowLocked, $requireComplete): TrialAttempt {
             $attempt = TrialAttempt::query()->lockForUpdate()
                 ->with('trialExam.questionBank')->findOrFail($attempt->id);
 
@@ -97,12 +101,16 @@ class TrialExamAttemptService
             $questionWeight = ExamScoreCalculator::MULTIPLE_CHOICE_POINTS;
             $correctAnswers = 0;
             $responses = [];
+            $unanswered = 0;
 
             foreach ($questions as $question) {
                 $raw = array_key_exists($question->id, $submittedAnswers)
                     ? $submittedAnswers[$question->id]
                     : $saved->get($question->id)?->answer;
                 $answer = filled($raw) ? Str::upper(trim((string) $raw)) : null;
+                if ($requireComplete && ! $expired && ($answer === null || ! array_key_exists($answer, $question->options ?? []))) {
+                    $unanswered++;
+                }
                 $correct = $answer !== null
                     && hash_equals(Str::upper(trim((string) $question->correct_answer)), $answer);
                 $awarded = $correct ? $questionWeight : 0.0;
@@ -115,6 +123,10 @@ class TrialExamAttemptService
                     'points_awarded' => $awarded,
                 ];
                 $correctAnswers += $correct ? 1 : 0;
+            }
+
+            if ($unanswered > 0) {
+                throw ValidationException::withMessages(['submission' => "Masih ada {$unanswered} soal yang belum terjawab. Lengkapi semua jawaban sebelum mengumpulkan."]);
             }
 
             foreach (array_chunk($responses, 100) as $batch) {

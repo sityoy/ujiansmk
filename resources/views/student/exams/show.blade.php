@@ -10,7 +10,7 @@
     @if ($attempt->security_enabled)
         <div id="exam-security" data-state-url="{{ route('student.exams.security', $attempt) }}"
             data-event-url="{{ route('student.exams.incident', $attempt) }}"
-            data-index-url="{{ route('student.exams.index') }}" data-attempt-id="{{ $attempt->id }}"
+            data-index-url="{{ route('student.exams.result', $attempt) }}" data-attempt-id="{{ $attempt->id }}"
             data-count="{{ $attempt->violation_count }}" data-locked="0">
             <div id="security-panel" role="dialog" aria-modal="true" aria-labelledby="security-title" class="fixed inset-0 z-50 overflow-y-auto bg-slate-950/95 p-3 backdrop-blur sm:p-6">
                 <section class="mx-auto mt-3 max-w-xl rounded-3xl border border-amber-400/30 bg-slate-900 p-4 shadow-xl sm:mt-12 sm:p-6">
@@ -96,13 +96,15 @@
         @endforeach
     </div>
 
-    <form id="submit-exam" method="POST" action="{{ route('student.exams.submit', $attempt) }}" class="mt-6">
+    <form id="submit-exam" method="POST" action="{{ route('student.exams.submit', $attempt) }}" data-question-count="{{ $questions->count() }}" class="mt-6">
         @csrf
-        <button class="w-full rounded-xl bg-emerald-400 px-5 py-4 font-semibold text-slate-950">Selesai dan kumpulkan jawaban</button>
+        <x-exam-submit-confirmation />
+        <button type="submit" class="w-full rounded-xl bg-emerald-400 px-5 py-4 font-semibold text-slate-950">Selesai dan kumpulkan jawaban</button>
     </form>
         <x-exam-image-dialog />
     </fieldset>
 
+    <script src="{{ asset('js/exam-submission.js') }}?v=1"></script>
     <script>
         const csrf = document.querySelector('meta[name="csrf-token"]').content;
         // Base the countdown on server time, not the student's system clock.
@@ -115,7 +117,6 @@
         const inputs = document.querySelectorAll('[data-save-url]');
         const pending = new Map();
         let saving = null;
-        let submitting = false;
         window.examAutoSubmit = false;
 
         const flushAnswers = () => {
@@ -183,30 +184,7 @@
             }
         });
 
-        submitForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            if (submitting || window.examSecurity?.isBlocked()) return;
-            // Native confirmation may exit fullscreen on some devices. Do not count it.
-            window.examSecurity?.pause();
-            if (!confirm('Yakin ingin mengumpulkan seluruh jawaban?')) {
-                window.examSecurity?.returnToExam();
-                return;
-            }
-            submitting = true;
-            inputs.forEach((input) => { input.disabled = true; });
-            submitForm.querySelector('button').disabled = true;
-            await flushAnswers();
-            if (window.examAutoSubmit) return;
-            if (pending.size) {
-                submitting = false;
-                inputs.forEach((input) => { input.disabled = false; });
-                submitForm.querySelector('button').disabled = false;
-                window.examSecurity?.returnToExam();
-                return;
-            }
-            window.examAutoSubmit = true;
-            submitForm.submit();
-        });
+        window.bindExamSubmission({ form: submitForm, inputs, flushAnswers, pending });
 
         const updateTimer = () => {
             const clock = window.examServerClock;

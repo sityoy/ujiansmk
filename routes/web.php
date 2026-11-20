@@ -80,6 +80,7 @@ Route::middleware(['auth', 'active'])->group(function (): void {
                     ->name('attendance.store');
                 Route::post('/exams/{assignment}/start', [StudentExamController::class, 'start'])->name('exams.start');
                 Route::get('/attempts/{attempt}', [StudentExamController::class, 'show'])->name('exams.show');
+                Route::get('/attempts/{attempt}/result', [StudentExamController::class, 'result'])->name('exams.result');
                 Route::get('/attempts/{attempt}/security', [StudentExamController::class, 'securityState'])
                     ->middleware('throttle:30,1,core-security')->name('exams.security');
                 Route::put('/attempts/{attempt}/questions/{question}', [StudentExamController::class, 'answer'])

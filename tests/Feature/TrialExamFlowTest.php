@@ -143,9 +143,42 @@ class TrialExamFlowTest extends TestCase
         $this->get(route('tryout.result', [$trial, $attempt]))
             ->assertOk()
             ->assertSee('Jawaban berhasil dikumpulkan')
+            ->assertSee('Kembali ke Dashboard Siswa')->assertSee(route('dashboard'))
             ->assertDontSee('100,00')
             ->assertDontSee('1 jawaban benar');
         $this->assertSame('2.00', $attempt->fresh()->score);
+    }
+
+    public function test_trial_rejects_missing_or_invalid_answers_before_the_deadline_and_accepts_saved_answers(): void
+    {
+        [$trial, $question] = $this->makeTrial();
+        $student = Student::query()->where('nisn', '1234567890')->firstOrFail();
+        $this->actingAs($student->user)->post(route('tryout.start', $trial), ['access_code' => 'SJR-SMKBHG'])->assertSessionHasNoErrors();
+        $attempt = $trial->currentAttempts()->sole();
+        $show = route('tryout.show', [$trial, $attempt]);
+        $submit = route('tryout.submit', [$trial, $attempt]);
+        $this->from($show)->post($submit)->assertRedirect($show)->assertSessionHasErrors('submission');
+        $this->from($show)->post($submit, ['answers' => [$question->id => 'X']])->assertSessionHasErrors('submission');
+        $this->assertSame('in_progress', $attempt->fresh()->status);
+        $this->assertSame(0, $attempt->answers()->count());
+
+        $this->putJson(route('tryout.answer', [$trial, $attempt, $question]), ['answer' => 'A'])->assertOk();
+        $this->post($submit)->assertRedirect(route('tryout.result', [$trial, $attempt]));
+        $this->get(route('dashboard'))->assertRedirect(route('student.exams.index'));
+        $this->assertSame('submitted', $attempt->fresh()->status);
+    }
+
+    public function test_trial_deadline_allows_automatic_submission_with_unanswered_questions(): void
+    {
+        [$trial] = $this->makeTrial();
+        $student = Student::query()->where('nisn', '1234567890')->firstOrFail();
+        $this->actingAs($student->user)->post(route('tryout.start', $trial), ['access_code' => 'SJR-SMKBHG'])->assertSessionHasNoErrors();
+        $attempt = $trial->currentAttempts()->sole();
+
+        $this->travel(60)->minutes();
+        $this->post(route('tryout.submit', [$trial, $attempt]))->assertRedirect(route('tryout.result', [$trial, $attempt]));
+        $this->assertSame('submitted', $attempt->fresh()->status);
+        $this->assertNull($attempt->answers()->sole()->answer);
     }
 
     public function test_trial_displays_bank_order_when_started_and_resumed(): void

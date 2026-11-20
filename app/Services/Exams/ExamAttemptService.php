@@ -191,9 +191,9 @@ class ExamAttemptService
         return $saved;
     }
 
-    public function submit(ExamAttempt $attempt): ExamAttempt
+    public function submit(ExamAttempt $attempt, bool $requireComplete = false): ExamAttempt
     {
-        return DB::transaction(function () use ($attempt): ExamAttempt {
+        return DB::transaction(function () use ($attempt, $requireComplete): ExamAttempt {
             $lockedAttempt = ExamAttempt::query()->lockForUpdate()->findOrFail($attempt->id);
 
             if ($lockedAttempt->status !== AttemptStatus::InProgress) {
@@ -203,6 +203,13 @@ class ExamAttemptService
             $lockedAttempt->load(['assignment.assessmentSubject.questions', 'answers']);
             $questions = $lockedAttempt->assignment->assessmentSubject->questions;
             $answers = $lockedAttempt->answers->keyBy('exam_question_id');
+            if ($requireComplete && ! $this->isExpired($lockedAttempt)) {
+                $unanswered = $questions->filter(fn (ExamQuestion $question): bool => blank($answers->get($question->id)?->answer))->count();
+                if ($unanswered > 0) {
+                    throw ValidationException::withMessages(['submission' => "Masih ada {$unanswered} soal yang belum terjawab. Lengkapi semua jawaban sebelum mengumpulkan."]);
+                }
+            }
+
             $requiresManualGrading = $questions->contains(
                 fn (ExamQuestion $question): bool => $question->question_type->requiresManualGrading(),
             );

@@ -81,13 +81,19 @@ class StudentExamFlowTest extends TestCase
             ->putJson(route('student.exams.answer', [$attempt, $questions[0]]), ['answer' => 'A'])
             ->assertOk()
             ->assertJson(['saved' => true]);
+        $this->from(route('student.exams.show', $attempt))->post(route('student.exams.submit', $attempt))
+            ->assertRedirect(route('student.exams.show', $attempt))->assertSessionHasErrors('submission');
+        $this->assertSame(AttemptStatus::InProgress, $attempt->fresh()->status);
+
         $this->withSession(['exam_device_token' => $deviceToken])
             ->putJson(route('student.exams.answer', [$attempt, $questions[1]]), ['answer' => 'A'])
             ->assertOk();
 
         $this->withSession(['exam_device_token' => $deviceToken])
             ->post(route('student.exams.submit', $attempt))
-            ->assertRedirect(route('student.exams.index'));
+            ->assertRedirect(route('student.exams.result', $attempt));
+        $this->get(route('student.exams.result', $attempt))->assertOk()
+            ->assertSee('Kembali ke Dashboard Siswa')->assertSee(route('student.exams.index'));
 
         $this->assertSame('submitted', $attempt->refresh()->status->value);
         $this->assertSame('2.00', $attempt->score);
@@ -96,6 +102,30 @@ class StudentExamFlowTest extends TestCase
         $this->assertSame(AssignmentStatus::Completed, $assignment->refresh()->status);
         $this->assertDatabaseCount('exam_answers', 2);
         $this->assertDatabaseCount('daily_checkins', 1);
+    }
+
+    public function test_makeup_requires_written_answers_for_manual_submission_even_when_locked_but_still_expires(): void
+    {
+        [$user, $assignment, $questions] = $this->makeExam();
+        $assignment->examSession->update(['kind' => SessionKind::Makeup]);
+        $questions[1]->update(['question_type' => ExamQuestionType::Essay, 'options' => null, 'correct_answer' => null]);
+        $attempt = $this->startAttempt($assignment);
+        $show = route('student.exams.show', $attempt);
+        $submit = route('student.exams.submit', $attempt);
+        $this->actingAs($user)->withSession(['exam_device_token' => str_repeat('a', 64)]);
+
+        $this->putJson(route('student.exams.answer', [$attempt, $questions[0]]), ['answer' => 'A'])->assertOk();
+        $this->putJson(route('student.exams.answer', [$attempt, $questions[1]]), ['answer' => '   '])->assertUnprocessable();
+        $this->from($show)->post($submit)->assertSessionHasErrors('submission');
+        $attempt->update(['security_locked_at' => now(), 'violation_count' => 2]);
+        $this->get($show)->assertOk()->assertSee('Masih ada soal yang belum terjawab')->assertDontSee('data-submit-cancel', false);
+        $this->from($show)->post($submit)->assertSessionHasErrors('submission');
+
+        $this->assertSame(AttemptStatus::InProgress, $attempt->fresh()->status);
+        $this->travel(90)->minutes();
+        $this->post($submit)->assertRedirect(route('student.exams.result', $attempt));
+        $this->assertSame(AttemptStatus::Submitted, $attempt->fresh()->status);
+        $this->assertSame(1, $attempt->answers()->count());
     }
 
     public function test_core_exam_displays_formatted_text_and_keeps_legacy_angle_brackets_literal(): void
@@ -132,7 +162,8 @@ class StudentExamFlowTest extends TestCase
         $this->putJson(route('student.exams.answer', [$attempt, $question]), ['answer' => 'A'])->assertOk();
         $resumed = $this->get($route)->assertOk();
         $this->assertCoreOptions($resumed->getContent(), $question, $order->keys()->all());
-        $this->post(route('student.exams.submit', $attempt))->assertRedirect();
+        $this->putJson(route('student.exams.answer', [$attempt, $questions[1]]), ['answer' => 'A'])->assertOk();
+        $this->post(route('student.exams.submit', $attempt))->assertRedirect(route('student.exams.result', $attempt));
         $this->assertSame('2.00', $attempt->fresh()->score);
         $this->assertTrue($attempt->answers()->where('exam_question_id', $question->id)->firstOrFail()->is_correct);
         $this->assertSame(['A', 'B', 'C', 'D', 'E'], array_keys($question->fresh()->options));

@@ -108,13 +108,17 @@ class StudentExamController extends Controller
         $student->loadMissing('schoolClass');
 
         if ($attempt->status !== AttemptStatus::InProgress) {
+            if ($attempt->status === AttemptStatus::Submitted) {
+                return redirect()->route('student.exams.result', $attempt);
+            }
+
             return redirect()->route('student.exams.index')->with('status', 'Ujian tersebut sudah selesai.');
         }
 
         if ($attempts->isExpired($attempt)) {
             $attempts->submit($attempt);
 
-            return redirect()->route('student.exams.index')->with('status', 'Waktu habis. Jawaban dikumpulkan otomatis.');
+            return redirect()->route('student.exams.result', $attempt);
         }
 
         $attempt->load([
@@ -153,9 +157,26 @@ class StudentExamController extends Controller
         $student = $this->student($request);
         $this->assertAttemptOwner($attempt, $student);
         $attempts->assertDevice($attempt, $this->deviceHash($request));
-        $attempts->submit($attempt);
+        $attempts->submit($attempt, requireComplete: true);
 
-        return redirect()->route('student.exams.index')->with('status', 'Jawaban berhasil dikumpulkan.');
+        return redirect()->route('student.exams.result', $attempt);
+    }
+
+    public function result(Request $request, ExamAttempt $attempt): View|RedirectResponse
+    {
+        $student = $this->student($request);
+        $this->assertAttemptOwner($attempt, $student);
+
+        if ($attempt->status === AttemptStatus::InProgress) {
+            return redirect()->route('student.exams.show', $attempt);
+        }
+        if ($attempt->status !== AttemptStatus::Submitted) {
+            return redirect()->route('student.exams.index')->with('status', 'Ujian tersebut sudah berakhir.');
+        }
+
+        $attempt->loadMissing('assignment.assessmentSubject.subject');
+
+        return view('student.exams.result', compact('student', 'attempt'));
     }
 
     public function incident(

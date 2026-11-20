@@ -29,7 +29,7 @@
         </div>
     </div>
 
-    <form id="trial-form" method="POST" action="{{ route('tryout.submit', [$trialExam, $attempt]) }}">
+    <form id="trial-form" method="POST" action="{{ route('tryout.submit', [$trialExam, $attempt]) }}" data-question-count="{{ $questions->count() }}">
         @csrf
         <div class="exam-toolbar sticky top-0 z-10 mb-6 grid grid-cols-2 gap-4 rounded-2xl border border-white/10 bg-slate-950/95 p-4 shadow-xl lg:grid-cols-[1fr_1fr_auto_auto] lg:items-center">
             <div class="min-w-0">
@@ -83,11 +83,15 @@
                     </article>
                 @endforeach
             </div>
-            <button type="submit" class="mt-6 w-full rounded-xl bg-cyan-400 px-4 py-4 font-semibold text-slate-950">Kumpulkan jawaban</button>
+            <div class="mt-6">
+                <x-exam-submit-confirmation />
+                <button type="submit" class="w-full rounded-xl bg-cyan-400 px-4 py-4 font-semibold text-slate-950">Kumpulkan jawaban</button>
+            </div>
             <x-exam-image-dialog />
         </fieldset>
     </form>
 
+    <script src="{{ asset('js/exam-submission.js') }}?v=1"></script>
     <script>
         const csrf = document.querySelector('meta[name="csrf-token"]').content;
         const remainingAtLoad = {{ max(0, $deadline->getTimestamp() - now()->getTimestamp()) * 1000 }};
@@ -99,7 +103,6 @@
         const inputs = document.querySelectorAll('[data-save-url]');
         const pending = new Map();
         let saving = null;
-        let submitting = false;
         window.examAutoSubmit = false;
 
         const flushAnswers = () => {
@@ -149,29 +152,7 @@
         window.addEventListener('online', flushAnswers);
         window.addEventListener('examsecurity:ready', flushAnswers);
 
-        form.addEventListener('submit', async event => {
-            event.preventDefault();
-            if (submitting || window.examSecurity?.isBlocked()) return;
-            window.examSecurity?.pause();
-            if (!confirm('Yakin ingin mengumpulkan seluruh jawaban? Nilai tidak akan ditampilkan.')) {
-                window.examSecurity?.returnToExam();
-                return;
-            }
-            submitting = true;
-            inputs.forEach(input => { input.disabled = true; });
-            form.querySelector('button[type=submit]').disabled = true;
-            await flushAnswers();
-            if (window.examAutoSubmit) return;
-            if (pending.size) {
-                submitting = false;
-                inputs.forEach(input => { input.disabled = false; });
-                form.querySelector('button[type=submit]').disabled = false;
-                window.examSecurity?.returnToExam();
-                return;
-            }
-            window.examAutoSubmit = true;
-            form.submit();
-        });
+        window.bindExamSubmission({ form, inputs, flushAnswers, pending });
 
         const updateTimer = () => {
             const clock = window.examServerClock;

@@ -266,7 +266,7 @@ class TrialExamPublicController extends Controller
             'answers' => ['nullable', 'array'],
             'answers.*' => ['nullable', 'string', 'max:10'],
         ]);
-        $attempts->submit($trialAttempt, $validated['answers'] ?? []);
+        $attempts->submit($trialAttempt, $validated['answers'] ?? [], requireComplete: true);
         session()->forget($this->orderKey($trialAttempt));
 
         return redirect()->route('tryout.result', [$trialExam, $trialAttempt]);

@@ -67,7 +67,7 @@
         <div>
             <h4 class="font-semibold text-white">Kumpulkan jawaban</h4>
             <ul class="mt-2 list-disc space-y-1 pl-5">
-                <li>Periksa jawaban dan status penyimpanan. Tekan <strong>{{ $core ? 'Selesai dan kumpulkan jawaban' : 'Kumpulkan jawaban' }}</strong>, lalu konfirmasi.</li>
+                <li>Jawab semua soal dan periksa status penyimpanan. Tekan <strong>{{ $core ? 'Selesai dan kumpulkan jawaban' : 'Kumpulkan jawaban' }}</strong>, lalu pilih <strong>Kumpulkan sekarang</strong>. Pilih <strong>Batal</strong> untuk kembali ke soal.</li>
                 <li>Tunggu pesan bahwa ujian selesai sebelum menutup halaman. Jika waktu habis, sistem mengumpulkan jawaban yang sudah tersimpan.</li>
             </ul>
         </div>

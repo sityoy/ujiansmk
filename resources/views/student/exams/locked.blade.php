@@ -4,7 +4,7 @@
 @section('heading', 'Ujian sementara terkunci')
 @section('content')
     <div id="exam-security" data-state-url="{{ route('student.exams.security', $attempt) }}"
-        data-event-url="{{ route('student.exams.incident', $attempt) }}" data-index-url="{{ route('student.exams.index') }}"
+        data-event-url="{{ route('student.exams.incident', $attempt) }}" data-index-url="{{ route('student.exams.result', $attempt) }}"
         data-attempt-id="{{ $attempt->id }}" data-count="{{ $attempt->violation_count }}" data-locked="1">
         <section id="security-panel" class="rounded-3xl border border-amber-400/30 bg-slate-900 p-6">
             <p id="security-count" class="text-sm text-amber-300">Pelanggaran {{ $attempt->violation_count }}/2</p>
@@ -14,9 +14,18 @@
             <p id="security-network" aria-live="polite" class="mt-3 text-sm text-amber-300"></p>
         </section>
     </div>
-    <form action="{{ route('student.exams.submit', $attempt) }}" method="POST" class="mt-5" onsubmit="return confirm('Kumpulkan jawaban yang sudah tersimpan dan akhiri ujian?')">
-        @csrf
-        <button class="rounded-xl border border-white/20 px-4 py-3 text-sm">Akhiri dan kumpulkan jawaban tersimpan</button>
-    </form>
+    @if ($questions->every(fn ($question) => filled($answers->get($question->id)?->answer)))
+        <form id="submit-locked-exam" action="{{ route('student.exams.submit', $attempt) }}" method="POST" class="mt-5">
+            @csrf
+            <x-exam-submit-confirmation />
+            <button type="submit" class="rounded-xl border border-white/20 px-4 py-3 text-sm">Kumpulkan jawaban</button>
+        </form>
+        <script src="{{ asset('js/exam-submission.js') }}?v=1"></script>
+        <script>
+            window.bindExamSubmission({ form: document.getElementById('submit-locked-exam'), allowBlocked: true });
+        </script>
+    @else
+        <p class="mt-5 text-sm text-slate-300">Masih ada soal yang belum terjawab. Hubungi pengawas untuk melanjutkan ujian.</p>
+    @endif
     <script src="{{ asset('js/exam-security.js') }}?v=20261119-1" defer></script>
 @endsection
