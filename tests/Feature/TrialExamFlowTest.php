@@ -692,6 +692,7 @@ class TrialExamFlowTest extends TestCase
             ->assertOk()
             ->assertSee('Seorang siswa menemukan buku transaksi asli')
             ->assertSee(Storage::disk('public')->url($images->first()))
+            ->assertSee('data-exam-image-zoom-in', false)
             ->assertSee('data-exam-image aria-haspopup="dialog"', false);
     }
 

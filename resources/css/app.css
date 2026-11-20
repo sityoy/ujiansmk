@@ -199,8 +199,60 @@ html[data-theme='light'] .tryout-page .tryout-option:has(input:checked) {
     background-color: #ecfeff !important;
 }
 
-html[data-theme='light'] .tryout-page [data-exam-image-close] {
+html[data-theme='light'] [data-exam-image-close] {
     background-color: #e2e8f0;
+}
+
+#exam-image-dialog[open] {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 1rem);
+    max-height: calc(100dvh - 1rem);
+}
+
+.exam-image-viewport {
+    min-height: 0;
+    max-height: 56vh;
+    max-height: 56dvh;
+    overflow: auto;
+    overscroll-behavior: contain;
+}
+
+.exam-image-viewport [data-exam-image-preview] {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 50vh;
+    max-height: 50dvh;
+    margin-inline: auto;
+}
+
+.exam-image-viewport [data-exam-image-preview][data-enlarged] {
+    max-width: none;
+    max-height: none;
+}
+
+.exam-image-zoom-button {
+    min-height: 2.5rem;
+    border: 1px solid #64748b;
+    border-radius: .5rem;
+    padding: .375rem .625rem;
+    color: inherit;
+    font-size: .875rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.exam-image-zoom-button:disabled {
+    opacity: .5;
+    cursor: default;
+}
+
+.exam-image-zoom-button:focus-visible,
+.exam-image-viewport:focus-visible {
+    outline: 2px solid #0891b2;
+    outline-offset: -2px;
 }
 
 

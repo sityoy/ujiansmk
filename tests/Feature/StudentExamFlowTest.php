@@ -125,7 +125,9 @@ class StudentExamFlowTest extends TestCase
         $route = route('student.exams.show', $attempt);
         $this->actingAs($user)->withSession(['exam_device_token' => str_repeat('a', 64)]);
         $order = app(StudentOptionOrder::class)->forQuestion($attempt, $question);
-        $response = $this->get($route)->assertOk()->assertSeeInOrder(array_map(fn ($item) => $item->question_text, $questions));
+        $response = $this->get($route)->assertOk()
+            ->assertSee('data-exam-image-zoom-in', false)
+            ->assertSeeInOrder(array_map(fn ($item) => $item->question_text, $questions));
         $this->assertCoreOptions($response->getContent(), $question, $order->keys()->all());
         $this->putJson(route('student.exams.answer', [$attempt, $question]), ['answer' => 'A'])->assertOk();
         $resumed = $this->get($route)->assertOk();
