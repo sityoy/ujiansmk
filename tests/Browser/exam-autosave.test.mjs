@@ -1,0 +1,174 @@
+import { readFileSync } from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+import test from 'node:test';
+
+// Exercise the actual inline exam script without requiring a browser or Laravel.
+const coreTemplate = readFileSync(new URL('../../resources/views/student/exams/show.blade.php', import.meta.url), 'utf8');
+const trialTemplate = readFileSync(new URL('../../resources/views/tryouts/show.blade.php', import.meta.url), 'utf8');
+const submissionScript = readFileSync(new URL('../../public/js/exam-submission.js', import.meta.url), 'utf8');
+const examScript = template => template.match(/<script>([\s\S]*?)<\/script>/)[1]
+    .replace(/\{\{[^\n]+\}\}/g, '60000')
+    .replace(/@json\(route\([^\n]+\)\)/g, '"/incident"');
+
+function element(extra = {}) {
+    return { listeners: {}, disabled: false, hidden: true, textContent: '',
+        classList: { add() {}, remove() {} },
+        focus() { this.focused = true; },
+        addEventListener(name, listener) { this.listeners[name] = listener; }, ...extra };
+}
+
+function setup({trial = false, oldBrowser = false, written = false} = {}) {
+    const button = element();
+    const form = element({ submissions: 0, dataset: { questionCount: written ? '2' : '1' }, submit() { this.submissions++; }, querySelector: () => button });
+    const inputs = ['A', 'B', 'C'].map(value => element({ type: 'radio', value, checked: value === 'A', dataset: { saveUrl: '/answer/1' } }));
+    if (written) inputs.push(element({ tagName: 'TEXTAREA', value: '  ', dataset: { saveUrl: '/answer/2' } }));
+    const cancel = element();
+    const confirm = element();
+    const dialog = element({ querySelector: selector => selector === '[data-submit-cancel]' ? cancel : confirm,
+        setAttribute() { this.open = true; }, removeAttribute() { this.open = false; } });
+    if (!oldBrowser) {
+        dialog.showModal = () => { dialog.open = true; };
+        dialog.close = () => { dialog.open = false; };
+    }
+    const nodes = { 'trial-form': form, 'timer': element(), 'submit-exam': form, 'save-status': element(), 'exam-timer': element(),
+        'retry-save': element(), 'exam-submit-dialog': dialog, 'exam-submit-backdrop': element(), 'exam-submit-message': element() };
+    const requests = [];
+    const window = element();
+    let blocked = false;
+    window.examSecurity = { isBlocked: () => blocked };
+    let elapsed = 0;
+    let tick;
+    vm.runInNewContext(submissionScript + '\n' + examScript(trial ? trialTemplate : coreTemplate), {
+        document: { ...element(), querySelector: () => ({ content: 'csrf' }),
+            querySelectorAll: () => inputs, getElementById: id => nodes[id] },
+        window, performance: { now: () => elapsed },
+        setInterval: callback => { tick = callback; }, setTimeout, clearTimeout, AbortController: oldBrowser ? undefined : AbortController,
+        fetch: (url, options) => new Promise(resolve => requests.push({ url, options, resolve })),
+    });
+    const click = { preventDefault() {} };
+    return { inputs, nodes, form, requests, window, dialog, button, cancel,
+        open: () => form.listeners.submit(click), confirm: () => confirm.listeners.click(),
+        block() { blocked = true; window.listeners['examsecurity:blocked'](); },
+        expire() { elapsed = 60001; tick(); } };
+}
+
+const settle = () => new Promise(resolve => setImmediate(resolve));
+const ok = { ok: true, json: async () => ({ saved: true, saved_at: '10:00:00' }) };
+
+test('rapid changes serialize writes and retain the latest choice', async () => {
+    const page = setup();
+    page.inputs[0].listeners.change();
+    page.inputs[1].listeners.change();
+    page.inputs[2].listeners.change();
+    assert.equal(page.requests.length, 1);
+    page.requests[0].resolve(ok);
+    await settle();
+    assert.equal(page.requests.length, 2);
+    assert.deepEqual(JSON.parse(page.requests[1].options.body), { answer: 'C' });
+    page.requests[1].resolve(ok);
+    await settle();
+    assert.equal(page.nodes['retry-save'].hidden, true);
+});
+
+test('manual submission waits for saves and a failed save can be retried', async () => {
+    const page = setup();
+    page.inputs[0].listeners.change();
+    page.open();
+    const submission = page.confirm();
+    assert.equal(page.form.submissions, 0);
+    page.requests[0].resolve({ ok: false, json: async () => ({ message: 'Koneksi gagal' }) });
+    await submission;
+    assert.equal(page.form.submissions, 0);
+    assert.equal(page.inputs[0].disabled, false);
+    assert.equal(page.nodes['retry-save'].hidden, false);
+    const retry = page.nodes['retry-save'].listeners.click();
+    page.requests[1].resolve(ok);
+    await retry;
+    page.open();
+    await page.confirm();
+    assert.equal(page.form.submissions, 1);
+});
+
+test('deadline triggers a single automatic submission using elapsed time', () => {
+    const page = setup();
+    page.expire();
+    page.expire();
+    assert.equal(page.form.submissions, 1);
+    assert.equal(page.nodes['exam-timer'].textContent, '00:00:00');
+});
+
+for (const trial of [false, true]) {
+    test(`${trial ? 'trial' : 'core'} counts unanswered radio groups and can cancel without changing exam state`, () => {
+        const page = setup({trial, oldBrowser: trial});
+        page.inputs[0].checked = false;
+        page.open();
+        assert.match(page.nodes['exam-submit-message'].textContent, /1 soal yang belum terjawab/);
+        assert.equal(page.dialog.hidden, true);
+        page.inputs[1].checked = true;
+        page.open();
+        assert.equal(page.dialog.hidden, false);
+        assert.equal(page.cancel.focused, true);
+        page.cancel.listeners.click({ preventDefault() {} });
+        assert.equal(page.dialog.hidden, true);
+        assert.equal(page.button.focused, true);
+        assert.equal(page.inputs[1].checked, true);
+        assert.equal(page.window.examAutoSubmit, false);
+        assert.equal(page.form.submissions, 0);
+        assert.equal(page.requests.length, 0);
+    });
+
+    test(`${trial ? 'trial' : 'core'} saves answers when AbortController is unavailable`, async () => {
+        const page = setup({trial, oldBrowser: true});
+        page.inputs[0].listeners.change();
+        assert.equal(page.requests.length, 1);
+        page.requests[0].resolve(ok);
+        await settle();
+        assert.equal(page.nodes['retry-save'].hidden, true);
+        assert.ok(page.nodes['save-status'].textContent.includes('Tersimpan pukul'));
+    });
+
+    test(`${trial ? 'trial' : 'core'} does not submit twice if the deadline passes during manual saving`, async () => {
+        const page = setup({trial});
+        page.inputs[0].listeners.change();
+        page.open();
+        const submission = page.confirm();
+        page.expire();
+        assert.equal(page.form.submissions, 1);
+        page.requests[0].resolve(ok);
+        await submission;
+        assert.equal(page.form.submissions, 1);
+    });
+}
+
+test('trial keeps pending answers after a failed save and permits retry before submission', async () => {
+    const page = setup({trial: true});
+    page.inputs[0].listeners.change();
+    page.open();
+    const submission = page.confirm();
+    page.requests[0].resolve({ok:false, json: async () => ({message:'Jaringan terputus'})});
+    await submission;
+    assert.equal(page.form.submissions, 0);
+    assert.equal(page.nodes['retry-save'].hidden, false);
+    assert.equal(page.inputs[0].disabled, false);
+    const retry = page.nodes['retry-save'].listeners.click();
+    page.requests[1].resolve(ok);
+    await retry;
+    page.open();
+    await page.confirm();
+    assert.equal(page.form.submissions, 1);
+});
+
+test('a blank written answer blocks manual submission and a security warning dismisses the confirmation', async () => {
+    const page = setup({written: true});
+    page.open();
+    assert.match(page.nodes['exam-submit-message'].textContent, /1 soal yang belum terjawab/);
+    assert.equal(page.dialog.hidden, true);
+    page.inputs[3].value = '0';
+    page.open();
+    assert.equal(page.dialog.hidden, false);
+    page.block();
+    assert.equal(page.dialog.hidden, true);
+    await page.confirm();
+    assert.equal(page.form.submissions, 0);
+});
