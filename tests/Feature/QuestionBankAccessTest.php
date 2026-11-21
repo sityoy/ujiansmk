@@ -15,6 +15,7 @@ use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -180,6 +181,70 @@ class QuestionBankAccessTest extends TestCase
             ->assertSee($assigned->subject->name)
             ->assertSee($other->subject->name);
         $this->get(route('scheduling.questions.index', $other))->assertOk();
+    }
+
+    public function test_period_deadline_is_visible_and_only_staff_can_configure_it(): void
+    {
+        $this->withoutVite();
+        [$teacher, , $assigned] = $this->makeComponents();
+        $period = $assigned->assessmentPeriod;
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $update = route('question-bank.deadline.update', $period);
+        $catalog = route('question-bank.index', ['period_id' => $period->id]);
+        $input = 'core_question_deadline_at';
+        $this->travelTo(Carbon::parse('2026-08-29 14:00', 'Asia/Jakarta'));
+
+        $this->actingAs($teacher)->patch($update, [$input => '2026-08-31T15:30'])->assertForbidden();
+        $this->assertNull($period->fresh()->core_question_deadline_at);
+        $this->actingAs($committee)->get($catalog)->assertOk()->assertSee('Batas Pembuatan Soal')
+            ->assertSee($update)->assertSee('Belum ada batas waktu');
+        $this->from($catalog)->patch($update, [$input => '2026-08-31T25:30'])
+            ->assertSessionHasErrorsIn('questionDeadline', [$input]);
+        $this->from($catalog)->patch($update, [$input => '2026-08-31T15:30'])
+            ->assertRedirect($catalog)->assertSessionHasNoErrors();
+        $this->assertSame('2026-08-31T15:30:00+07:00', $period->fresh()->core_question_deadline_at->timezone('Asia/Jakarta')->toIso8601String());
+        $this->assertSame('2026-09-01', $period->fresh()->starts_on->toDateString());
+
+        $this->actingAs($teacher)->get($catalog)->assertOk()->assertSee('31/08/2026 15:30 WIB')
+            ->assertDontSee('Simpan batas');
+        $this->get(route('scheduling.questions.index', $assigned))->assertOk()->assertSee('31/08/2026 15:30 WIB');
+    }
+
+    public function test_deadline_blocks_all_question_changes_for_its_period_and_can_be_removed(): void
+    {
+        $this->withoutVite();
+        [$teacher, $otherTeacher, $assigned, $other] = $this->makeComponents();
+        $period = $assigned->assessmentPeriod;
+        $nextPeriod = $period->replicate()->fill(['code' => 'ATS-GENAP', 'name' => 'ATS Semester Genap']);
+        $nextPeriod->save();
+        $other->update(['assessment_period_id' => $nextPeriod->id]);
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $input = 'core_question_deadline_at';
+        $catalog = route('question-bank.index', ['period_id' => $period->id]);
+        $update = route('question-bank.deadline.update', $period);
+        $store = route('scheduling.questions.store', $assigned);
+        $payload = ['question_type' => 'short_answer', 'question_text' => 'Sebutkan kepanjangan HTTP.', 'points' => 3];
+
+        $this->travelTo(Carbon::parse('2026-08-31 15:29:59', 'Asia/Jakarta'));
+        $this->actingAs($committee)->from($catalog)->patch($update, [$input => '2026-08-31T15:30'])->assertSessionHasNoErrors();
+        $this->actingAs($teacher)->post($store, $payload)->assertSessionHasNoErrors();
+        $question = $assigned->questions()->sole();
+
+        $this->travel(1)->second();
+        $this->get(route('scheduling.questions.index', $assigned))->assertOk()
+            ->assertSee('Batas pembuatan soal sudah lewat')->assertSee('<fieldset disabled>', false)
+            ->assertDontSee('data-edit-toggle=', false);
+        $this->post($store, $payload)->assertSessionHasErrors('question');
+        $this->put(route('scheduling.questions.update', [$assigned, $question]), [...$payload, 'question_text' => 'Revisi soal.'])
+            ->assertSessionHasErrors('question');
+        $this->delete(route('scheduling.questions.destroy', [$assigned, $question]))->assertSessionHasErrors('question');
+        $this->get(route('scheduling.questions.export', $assigned))->assertOk()->assertDownload();
+        $this->assertSame($payload['question_text'], $assigned->questions()->sole()->question_text);
+
+        $this->actingAs($otherTeacher)->post(route('scheduling.questions.store', $other), $payload)->assertSessionHasNoErrors();
+        $this->actingAs($committee)->from($catalog)->patch($update, [$input => ''])->assertSessionHasNoErrors();
+        $this->assertNull($period->fresh()->core_question_deadline_at);
+        $this->actingAs($teacher)->delete(route('scheduling.questions.destroy', [$assigned, $question]))->assertSessionHasNoErrors();
     }
 
     public function test_deleting_questions_renumbers_remaining_questions_without_gaps(): void

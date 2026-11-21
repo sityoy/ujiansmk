@@ -244,6 +244,10 @@ Route::middleware(['auth', 'active'])->group(function (): void {
         ->middleware('role:super_admin,committee,teacher')
         ->name('question-bank.index');
 
+    Route::patch('/question-bank/periods/{assessmentPeriod}/deadline', [QuestionBankController::class, 'updateDeadline'])
+        ->middleware('role:super_admin,committee')
+        ->name('question-bank.deadline.update');
+
     Route::prefix('scheduling')
         ->middleware('role:super_admin,committee,teacher')
         ->name('scheduling.')

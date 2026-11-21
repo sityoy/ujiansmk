@@ -15,6 +15,10 @@
         <h2 class="mt-2 text-2xl font-semibold text-white">{{ $assessmentSubject->subject->name }} · Kelas {{ $gradeLevel }}</h2>
         <p class="mt-2 text-sm text-slate-400">{{ $assessmentSubject->assessmentPeriod->academicYear->name }} · {{ $questionCount }} soal · Total bobot {{ number_format($totalPoints, 2, ',', '.') }}</p>
         <p class="mt-2 text-xs text-cyan-200">Rombel {{ $rombelNames }} · Guru {{ $assessmentSubject->teacher?->name ?? "belum ditetapkan" }}</p>
+        <x-core-question-deadline :period="$assessmentSubject->assessmentPeriod" class="mt-3 text-sm" />
+        @if (auth()->user()->role !== \App\Enums\UserRole::Teacher)
+            <a href="{{ route('question-bank.index', ['period_id' => $assessmentSubject->assessment_period_id]) }}#batas-pembuatan-soal" class="mt-2 inline-block text-xs font-semibold text-violet-300">Atur batas pembuatan soal periode ini</a>
+        @endif
         <div class="mt-4"><a href="{{ route('scheduling.questions.export', $assessmentSubject) }}" class="inline-flex rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-2.5 text-sm font-semibold text-emerald-200">Ekspor PG ke Excel</a></div>
     </section>
 
@@ -25,8 +29,10 @@
                 <p class="mt-2 text-sm text-cyan-200">Khusus ATS: tersedia isian singkat dan esai. Seluruh jawaban dikoreksi manual.</p>
                 <p class="mt-2 rounded-xl border border-cyan-400/15 bg-cyan-400/[0.04] p-3 text-xs leading-5 text-slate-400">Saran 20 soal: 10 isian × 3 poin + 10 esai × 7 poin = total 100. Bobot wajib diisi dan merupakan nilai maksimal setiap soal.</p>
             @endif
-            @if ($isLocked)
+            @if ($hasAttempts)
                 <p class="mt-3 text-sm text-amber-300">Bank soal terkunci karena sudah ada siswa yang mulai ujian. Isi dan bobot soal dipertahankan untuk menjaga konsistensi nilai reguler dan susulan.</p>
+            @elseif ($isLocked)
+                <p class="mt-3 text-sm text-amber-300">Batas pembuatan soal sudah lewat. Hubungi Panitia atau Super Admin untuk mengubah batas periode.</p>
             @endif
             <fieldset @disabled($isLocked)>
             <form method="POST" action="{{ route('scheduling.questions.store', $assessmentSubject) }}" enctype="multipart/form-data" class="mt-5 space-y-3">

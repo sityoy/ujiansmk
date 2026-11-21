@@ -21,11 +21,6 @@ class CoreQuestionBankCatalog
         $catalogView = $request->query('view') === 'summary' ? 'summary' : 'banks';
         $questionStatus = in_array($request->query('question_status'), ['filled', 'empty'], true)
             ? $request->query('question_status') : null;
-        $scopeTeacher = fn ($query) => $query->when(
-            $teacherId,
-            fn ($query) => $query->where('teacher_user_id', $teacherId),
-        );
-
         $grouped = AssessmentSubject::query()
             ->with(['assessmentPeriod.academicYear', 'subject', 'schoolClass', 'teacher'])
             ->withCount([
@@ -79,7 +74,9 @@ class CoreQuestionBankCatalog
             'catalogView' => $catalogView,
             'questionStatus' => $questionStatus,
             'summary' => $summary,
-            'periods' => AssessmentPeriod::query()->with('academicYear')->whereHas('assessmentSubjects', $scopeTeacher)->orderByDesc('starts_on')->get(),
+            'periods' => AssessmentPeriod::query()->with('academicYear')
+                ->when($teacherId, fn ($query) => $query->whereHas('assessmentSubjects', fn ($subjects) => $subjects->where('teacher_user_id', $teacherId)))
+                ->orderByDesc('starts_on')->get(),
             'gradeLevels' => [10, 11, 12],
             'periodId' => $periodId,
             'gradeLevel' => $gradeLevel,

@@ -5,6 +5,10 @@
 @section('heading', 'Bank Soal Ujian Inti')
 
 @section('content')
+    @php
+        $selectedPeriod = $periods->firstWhere('id', $periodId);
+        $canManageDeadline = auth()->user()->role !== \App\Enums\UserRole::Teacher;
+    @endphp
     <section class="rounded-3xl border border-violet-400/20 bg-violet-400/[0.045] p-6">
         <p class="text-xs font-semibold uppercase tracking-[0.18em] text-violet-300">Ruang Kerja Guru</p>
         <h2 class="mt-2 text-2xl font-semibold text-white">Bank soal per guru dan tingkat</h2>
@@ -33,7 +37,7 @@
 
     <form method="GET" action="{{ route('question-bank.index') }}" class="mt-6 grid gap-3 rounded-2xl border border-white/10 bg-white/[0.025] p-4 md:grid-cols-2 xl:grid-cols-3">
         <input type="hidden" name="view" value="{{ $catalogView }}">
-        <select name="period_id" class="rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2.5 text-sm">
+        <select name="period_id" aria-label="Periode asesmen" class="rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2.5 text-sm">
             <option value="">Semua periode</option>
             @foreach ($periods as $period)
                 <option value="{{ $period->id }}" @selected($periodId === $period->id)>{{ $period->name }} · {{ $period->academicYear->name }}</option>
@@ -55,6 +59,38 @@
         <button class="rounded-xl bg-violet-400 px-4 py-2.5 text-sm font-semibold text-slate-950">Tampilkan</button>
         <a href="{{ route('question-bank.index', ['view' => $catalogView]) }}" class="rounded-xl border border-white/10 px-4 py-2.5 text-center text-sm text-slate-300">Reset</a>
     </form>
+
+    @if ($selectedPeriod)
+        <section id="batas-pembuatan-soal" aria-labelledby="question-deadline-title" class="mt-4 rounded-2xl border border-white/10 bg-white/[0.035] p-4 sm:p-5">
+            <h2 id="question-deadline-title" class="font-semibold text-white">Batas Pembuatan Soal</h2>
+            <p class="mt-1 text-sm text-slate-400">{{ $selectedPeriod->name }} · {{ $selectedPeriod->academicYear->name }}</p>
+            @if ($selectedPeriod->core_question_deadline_at)
+                <x-core-question-deadline :period="$selectedPeriod" class="mt-2 text-sm" />
+            @else
+                <p class="mt-2 text-sm text-slate-400">Belum ada batas waktu pembuatan soal untuk periode ini.</p>
+            @endif
+            @if ($canManageDeadline)
+                <form method="POST" action="{{ route('question-bank.deadline.update', $selectedPeriod) }}" class="mt-4">
+                    @csrf @method('PATCH')
+                    <div class="flex flex-wrap items-end gap-3">
+                        <label class="block text-sm text-slate-300" for="core-question-deadline">Tanggal dan jam penutupan (WIB)
+                            <input id="core-question-deadline" type="datetime-local" name="core_question_deadline_at" step="60"
+                                value="{{ old('core_question_deadline_at', $selectedPeriod->core_question_deadline_at?->timezone(\App\Models\AssessmentPeriod::CORE_QUESTION_TIMEZONE)->format('Y-m-d\TH:i')) }}"
+                                aria-describedby="core-question-deadline-help"
+                                class="mt-2 block w-full rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2.5 text-sm">
+                        </label>
+                        <button type="submit" class="rounded-xl bg-violet-400 px-4 py-2.5 text-sm font-semibold text-slate-950">Simpan batas</button>
+                    </div>
+                    @error('core_question_deadline_at', 'questionDeadline')
+                        <p role="alert" class="mt-2 text-sm text-rose-300">{{ $message }}</p>
+                    @enderror
+                    <p id="core-question-deadline-help" class="mt-2 text-xs leading-6 text-slate-400">Tambah, edit, dan hapus soal ditutup pada jam ini. Kosongkan lalu simpan untuk menghapus batas waktu.</p>
+                </form>
+            @endif
+        </section>
+    @elseif ($canManageDeadline && $periods->isNotEmpty())
+        <p class="mt-3 text-sm text-slate-400">Pilih satu periode lalu klik <strong>Tampilkan</strong> untuk mengatur batas pembuatan soal.</p>
+    @endif
 
     @if ($catalogView === 'summary')
         <section class="mt-6 rounded-3xl border border-white/10 bg-white/[0.035] p-4 sm:p-6">
@@ -86,7 +122,12 @@
                         @forelse ($components as $component)
                             <tr>
                                 <td class="px-3 py-4 text-slate-200">{{ $component->teacher?->name ?? 'Belum ditetapkan' }}</td>
-                                <td class="px-3 py-4"><p class="font-semibold text-white">{{ $component->subject->name }}</p><p class="mt-1 text-xs text-slate-400">{{ $component->assessmentPeriod->name }} · {{ $component->assessmentPeriod->academicYear->name }}</p></td>
+                                <td class="px-3 py-4"><p class="font-semibold text-white">{{ $component->subject->name }}</p><p class="mt-1 text-xs text-slate-400">{{ $component->assessmentPeriod->name }} · {{ $component->assessmentPeriod->academicYear->name }}</p>
+                                    @unless ($selectedPeriod)
+                                        @php($bankPeriod = $component->assessmentPeriod)
+                                        <x-core-question-deadline :period="$bankPeriod" class="mt-1 text-xs" />
+                                    @endunless
+                                </td>
                                 <td class="px-3 py-4 text-slate-300">Kelas {{ $component->grade_level }}<p class="mt-1 text-xs text-slate-400">{{ $component->rombel_names }}</p></td>
                                 <td class="px-3 py-4 text-center">{{ $component->pg_count }}</td><td class="px-3 py-4 text-center">{{ $component->essay_count }}</td><td class="px-3 py-4 text-center">{{ $component->short_answer_count }}</td>
                                 <td class="px-3 py-4 text-center font-semibold text-white">{{ $component->questions_count }}</td>
@@ -111,6 +152,10 @@
                     <p class="mt-1 text-sm text-slate-400">Kelas {{ $component->grade_level }} · {{ $component->assessmentPeriod->name }}</p>
                     <p class="mt-1 text-xs text-slate-500">{{ $component->assessmentPeriod->academicYear->name }} · Total bobot {{ number_format((float) ($component->questions_sum_points ?? 0), 2, ',', '.') }}</p>
                     <p class="mt-2 text-xs text-slate-400">Rombel {{ $component->rombel_names }}</p>
+                    @unless ($selectedPeriod)
+                        @php($bankPeriod = $component->assessmentPeriod)
+                        <x-core-question-deadline :period="$bankPeriod" class="mt-2 text-xs" />
+                    @endunless
                     @if (auth()->user()->role->value !== 'teacher')
                         <p class="mt-3 text-xs text-slate-500">Guru: {{ $component->teacher?->name ?? 'belum ditetapkan' }}</p>
                     @endif

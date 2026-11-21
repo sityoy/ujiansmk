@@ -20,6 +20,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -40,6 +41,28 @@ class QuestionBankController extends Controller
             ...$data,
             'components' => TablePagination::collection($data['grouped']),
         ]);
+    }
+
+    public function updateDeadline(Request $request, AssessmentPeriod $assessmentPeriod): RedirectResponse
+    {
+        $validated = $request->validateWithBag('questionDeadline', [
+            'core_question_deadline_at' => ['present', 'nullable', 'date_format:Y-m-d\TH:i'],
+        ], [
+            'core_question_deadline_at.date_format' => 'Isi tanggal dan jam batas pembuatan soal dengan benar.',
+        ]);
+        $value = $validated['core_question_deadline_at'];
+        $deadline = $value === null ? null : Carbon::createFromFormat('!Y-m-d\TH:i', $value, AssessmentPeriod::CORE_QUESTION_TIMEZONE)
+            ->setTimezone(config('app.timezone'));
+
+        DB::transaction(function () use ($assessmentPeriod, $deadline): void {
+            $period = AssessmentPeriod::query()->lockForUpdate()->findOrFail($assessmentPeriod->id);
+            $period->core_question_deadline_at = $deadline;
+            $period->save();
+        });
+
+        return back()->with('status', $deadline
+            ? 'Batas pembuatan soal untuk periode ini berhasil disimpan.'
+            : 'Batas pembuatan soal untuk periode ini berhasil dihapus.');
     }
 
     public function recap(Request $request, CoreQuestionBankCatalog $catalog): Response
@@ -107,7 +130,8 @@ class QuestionBankController extends Controller
             ->withQueryString();
         $questionCount = $assessmentSubject->questions()->count();
         $totalPoints = (float) $assessmentSubject->questions()->sum('points');
-        $isLocked = $assessmentSubject->questionBankGroup()->whereHas('assignments.attempt')->exists();
+        $hasAttempts = $assessmentSubject->questionBankGroup()->whereHas('assignments.attempt')->exists();
+        $isLocked = $hasAttempts || $assessmentSubject->assessmentPeriod->coreQuestionDeadlinePassed();
         $questionTypes = $assessmentSubject->assessmentPeriod->type === AssessmentType::ATS
             ? [ExamQuestionType::ShortAnswer, ExamQuestionType::Essay]
             : ExamQuestionType::cases();
@@ -115,7 +139,7 @@ class QuestionBankController extends Controller
 
         return view('questions.index', compact(
             'assessmentSubject', 'questions', 'questionCount', 'totalPoints',
-            'isLocked', 'questionTypes', 'gradeLevel', 'rombelNames'
+            'isLocked', 'hasAttempts', 'questionTypes', 'gradeLevel', 'rombelNames'
         ));
     }
 
@@ -414,9 +438,15 @@ class QuestionBankController extends Controller
 
     private function lockedGroup(Request $request, AssessmentSubject $component): EloquentCollection
     {
-        AssessmentPeriod::query()->lockForUpdate()->findOrFail($component->assessment_period_id);
+        $period = AssessmentPeriod::query()->lockForUpdate()->findOrFail($component->assessment_period_id);
         $current = AssessmentSubject::query()->lockForUpdate()->findOrFail($component->id);
         $this->authorizeAccess($request, $current);
+        if ($current->assessment_period_id !== $period->id) {
+            throw ValidationException::withMessages(['question' => 'Periode bank soal berubah. Muat ulang halaman dan coba lagi.']);
+        }
+        if ($period->coreQuestionDeadlinePassed()) {
+            throw ValidationException::withMessages(['question' => 'Batas pembuatan soal sudah lewat. Hubungi Panitia atau Super Admin untuk mengubah batas periode.']);
+        }
 
         return $current->questionBankGroup()->orderBy('id')->lockForUpdate()->get();
     }

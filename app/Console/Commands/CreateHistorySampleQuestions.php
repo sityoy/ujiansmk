@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Enums\AssessmentType;
 use App\Enums\ExamQuestionType;
+use App\Models\AssessmentPeriod;
 use App\Models\AssessmentSubject;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -82,7 +83,12 @@ class CreateHistorySampleQuestions extends Command
 
         $questions = $this->questions();
 
-        DB::transaction(function () use ($component, $questions): void {
+        $created = DB::transaction(function () use ($component, $questions): bool {
+            $period = AssessmentPeriod::query()->lockForUpdate()->findOrFail($component->assessment_period_id);
+            if ($period->coreQuestionDeadlinePassed()) {
+                return false;
+            }
+
             foreach ($questions as $index => $question) {
                 $component->questions()->create([
                     'question_type' => ExamQuestionType::MultipleChoice,
@@ -93,7 +99,15 @@ class CreateHistorySampleQuestions extends Command
                     'position' => $index + 1,
                 ]);
             }
+
+            return true;
         });
+
+        if (! $created) {
+            $this->error('Batas pembuatan soal untuk periode ini sudah lewat.');
+
+            return self::FAILURE;
+        }
 
         $this->info('30 soal PG Sejarah berhasil dibuat pada '.$component->subject->name.' · '.$component->schoolClass->name.'.');
         $this->line('Total bobot: 100 poin. Silakan periksa dan edit soal sebelum periode diterbitkan.');

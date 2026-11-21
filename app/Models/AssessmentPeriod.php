@@ -18,6 +18,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 ])]
 class AssessmentPeriod extends Model
 {
+    public const CORE_QUESTION_TIMEZONE = 'Asia/Jakarta';
+
     protected function casts(): array
     {
         return [
@@ -26,6 +28,7 @@ class AssessmentPeriod extends Model
             'status' => PeriodStatus::class,
             'starts_on' => 'date',
             'ends_on' => 'date',
+            'core_question_deadline_at' => 'immutable_datetime',
             'report_date' => 'date',
             'report_margin_top_mm' => 'integer',
             'report_margin_right_mm' => 'integer',
@@ -33,6 +36,11 @@ class AssessmentPeriod extends Model
             'report_margin_left_mm' => 'integer',
             'report_scale_percent' => 'integer',
         ];
+    }
+
+    public function coreQuestionDeadlinePassed(): bool
+    {
+        return $this->core_question_deadline_at?->lessThanOrEqualTo(now()) ?? false;
     }
 
     public function academicYear(): BelongsTo
