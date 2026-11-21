@@ -19,7 +19,8 @@
         .brand img { width: 64px; height: 64px; object-fit: contain; }
         h1 { margin: 0; font-size: 19px; } .brand p { margin: 4px 0 0; } .muted { color: #475569; }
         .meta { margin: 16px 0; } .totals { padding: 12px; border: 1px solid #94a3b8; background: #f1f5f9; }
-        .group { margin-top: 24px; } h2 { margin: 0; font-size: 17px; } .group > p { margin: 4px 0 12px; }
+        .group { margin-top: 24px; } h2 { margin: 0; font-size: 17px; } .group > p { margin: 4px 0; }
+        .group > .deadline { margin-bottom: 12px; }
         .table-wrap { overflow-x: auto; } table { width: 100%; border-collapse: collapse; }
         th, td { padding: 9px 10px; border: 1px solid #94a3b8; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
         th { background: #e2e8f0; font-size: 12px; } tbody tr:nth-child(even) { background: #f8fafc; }
@@ -58,6 +59,7 @@
         @forelse ($groups as $group)
             <section class="group">
                 <h2>{{ $group['title'] }}</h2><p class="muted">{{ $group['subtitle'] }}</p>
+                <p class="deadline"><strong>Batas pembuatan soal:</strong> {{ $group['deadline'] }}</p>
                 <div class="table-wrap"><table>
                     <thead><tr><th>No.</th><th>Guru penanggung jawab</th><th>Mata pelajaran</th><th>Rombel</th><th class="num">PG</th><th class="num">Esai</th><th class="num">Isian singkat</th><th class="num">Total</th><th>Status</th></tr></thead>
                     <tbody>
@@ -74,6 +76,9 @@
             </section>
         @empty
             <p>Tidak ada bank soal sesuai filter.</p>
+            @if ($emptyDeadline)
+                <p><strong>Batas pembuatan soal:</strong> {{ $emptyDeadline }}</p>
+            @endif
         @endforelse
         <p class="note">Bank bersama antarrombel dihitung satu kali. Nama guru mengikuti penugasan di Penjadwalan. Rekap ini memuat jumlah soal dan tidak memuat isi atau kunci jawaban.</p>
     </main>
@@ -81,6 +86,7 @@
         'school' => $school?->name ?? config('app.name'), 'address' => $school?->address ?? '',
         'scope' => $gradeLabel.' · '.$periodLabel, 'filter' => $filterLabel,
         'generatedAt' => $generatedAt, 'filename' => $filename, 'totals' => $totals, 'groups' => $groups,
+        'emptyDeadline' => $emptyDeadline,
     ]) !!}</script>
 </body>
 </html>

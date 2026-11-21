@@ -11,6 +11,7 @@ use App\Models\SchoolProfile;
 use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class QuestionBankRecapExportTest extends TestCase
@@ -89,6 +90,29 @@ class QuestionBankRecapExportTest extends TestCase
         $student = User::factory()->create(['role' => UserRole::Student]);
         $this->actingAs($student)->get(route('question-bank.recap'))->assertForbidden();
         $this->getJson(route('question-bank.recap', ['grade_level' => 9]))->assertForbidden();
+    }
+
+    public function test_recap_includes_each_period_deadline_in_wib_even_when_the_selected_period_has_no_results(): void
+    {
+        [$admin, , $period, $bank] = $this->fixture();
+        $otherPeriod = $period->replicate(['core_question_deadline_at']);
+        $otherPeriod->forceFill(['code' => 'UUB', 'name' => 'UUB Ganjil'])->save();
+        $otherBank = $bank->replicate();
+        $otherBank->assessment_period_id = $otherPeriod->id;
+        $otherBank->save();
+        $period->core_question_deadline_at = Carbon::parse('2026-11-28 17:30', 'Asia/Jakarta')->setTimezone(config('app.timezone'));
+        $period->save();
+
+        $this->actingAs($admin)->get(route('question-bank.recap'))->assertOk()
+            ->assertSeeInOrder(['ASAS Ganjil', 'Batas pembuatan soal:', '28/11/2026 17:30 WIB', 'UUB Ganjil', 'Belum ditetapkan'])
+            ->assertViewHas('groups', fn ($groups): bool => $groups->pluck('deadline', 'title')->all() === [
+                'Kelas 10 · ASAS Ganjil' => '28/11/2026 17:30 WIB',
+                'Kelas 10 · UUB Ganjil' => 'Belum ditetapkan',
+            ]);
+
+        $this->get(route('question-bank.recap', ['period_id' => $period->id, 'grade_level' => 12]))->assertOk()
+            ->assertSeeInOrder(['Tidak ada bank soal sesuai filter.', 'Batas pembuatan soal:', '28/11/2026 17:30 WIB'])
+            ->assertViewHas('emptyDeadline', '28/11/2026 17:30 WIB');
     }
 
     public function test_export_validates_filters_and_escapes_untrusted_names(): void

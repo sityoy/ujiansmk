@@ -132,6 +132,7 @@ function header(context, data, group, logo) {
     context.fillStyle = '#0f172a';
     y = paragraph(context, group.title, MARGIN, y, WIDTH - MARGIN * 2, 24, true);
     y = paragraph(context, group.subtitle, MARGIN, y + 4, WIDTH - MARGIN * 2, 19);
+    if (group.deadline) y = paragraph(context, `Batas pembuatan soal: ${group.deadline}`, MARGIN, y + 4, WIDTH - MARGIN * 2, 19, true);
     if (data.filter) y = paragraph(context, data.filter, MARGIN, y + 4, WIDTH - MARGIN * 2, 18);
     const t = data.totals;
     y = paragraph(context, `Total hasil filter: ${t.banks} bank · ${t.filled} sudah ada soal · ${t.empty} belum ada soal · ${t.questions} soal`, MARGIN, y + 7, WIDTH - MARGIN * 2, 18);
@@ -162,7 +163,9 @@ export async function renderPages(data, format, progress = () => {}) {
     if (!context) throw new Error('Browser belum mendukung unduhan gambar. Gunakan tombol Cetak.');
     const logo = document.getElementById('report-logo');
     if (logo?.decode) await logo.decode().catch(() => {});
-    const groups = data.groups.length ? data.groups : [{ title: data.scope, subtitle: 'Tidak ada bank soal sesuai filter.', rows: [] }];
+    const groups = data.groups.length ? data.groups : [{
+        title: data.scope, subtitle: 'Tidak ada bank soal sesuai filter.', deadline: data.emptyDeadline, rows: [],
+    }];
     const files = [];
     let number = 0;
     try {

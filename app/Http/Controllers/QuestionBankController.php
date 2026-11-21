@@ -74,17 +74,20 @@ class QuestionBankController extends Controller
             'question_status' => ['nullable', Rule::in(['filled', 'empty'])],
         ]);
         $data = $catalog->data($request);
+        $selectedPeriod = $data['periods']->firstWhere('id', $data['periodId']);
         if ($request->user()->role === UserRole::Teacher && $data['periodId']) {
-            abort_unless($data['periods']->contains('id', $data['periodId']), 403);
+            abort_unless($selectedPeriod, 403);
         }
         $groups = $data['grouped']->sortBy(fn ($bank) => sprintf('%02d|%010d|%s|%s', $bank->grade_level, $bank->assessment_period_id, $bank->subject->name, $bank->teacher?->name ?? ''))
             ->groupBy(fn ($bank) => $bank->grade_level.'|'.$bank->assessment_period_id)
             ->map(function ($banks): array {
                 $first = $banks->first();
+                $period = $first->assessmentPeriod;
 
                 return [
-                    'title' => 'Kelas '.$first->grade_level.' · '.$first->assessmentPeriod->name,
-                    'subtitle' => 'Tahun ajaran '.$first->assessmentPeriod->academicYear->name,
+                    'title' => 'Kelas '.$first->grade_level.' · '.$period->name,
+                    'subtitle' => 'Tahun ajaran '.$period->academicYear->name,
+                    'deadline' => $this->recapDeadline($period),
                     'rows' => $banks->values()->map(fn ($bank) => [
                         $bank->teacher?->name ?? 'Belum ditetapkan',
                         $bank->subject->name,
@@ -107,7 +110,8 @@ class QuestionBankController extends Controller
             'totals' => $totals,
             'school' => SchoolProfile::first(),
             'gradeLabel' => $data['gradeLevel'] ? 'Kelas '.$data['gradeLevel'] : 'Semua tingkat',
-            'periodLabel' => $data['periodId'] ? AssessmentPeriod::findOrFail($data['periodId'])->name : 'Semua periode',
+            'periodLabel' => $selectedPeriod?->name ?? 'Semua periode',
+            'emptyDeadline' => $groups->isEmpty() && $selectedPeriod ? $this->recapDeadline($selectedPeriod) : null,
             'filterLabel' => collect([
                 $data['questionStatus'] === 'filled' ? 'Sudah ada soal' : ($data['questionStatus'] === 'empty' ? 'Belum ada soal' : null),
                 $data['search'] !== '' ? 'Pencarian: '.$data['search'] : null,
@@ -115,6 +119,13 @@ class QuestionBankController extends Controller
             'generatedAt' => now()->timezone('Asia/Jakarta')->format('d/m/Y H:i').' WIB',
             'filename' => 'rekap-bank-soal-inti-'.($data['gradeLevel'] ?? 'semua-tingkat').'-'.now()->format('Ymd-His'),
         ])->header('Cache-Control', 'private, no-store')->header('X-Robots-Tag', 'noindex, nofollow');
+    }
+
+    private function recapDeadline(AssessmentPeriod $period): string
+    {
+        $deadline = $period->core_question_deadline_at?->timezone(AssessmentPeriod::CORE_QUESTION_TIMEZONE);
+
+        return $deadline ? $deadline->format('d/m/Y H:i').' WIB' : 'Belum ditetapkan';
     }
 
     public function index(Request $request, AssessmentSubject $assessmentSubject): View

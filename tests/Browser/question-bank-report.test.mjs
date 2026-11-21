@@ -60,18 +60,54 @@ test('table pagination keeps ordinary rows intact and splits an over-height row 
     assert.throws(()=>paginateRows([huge],10,20,10));
 });
 
-test('report renderer includes every grade, repeats headers and releases its canvas after exporting', async () => {
-    const operations = [];
-    const context = { fillRect(){}, drawImage(){}, strokeRect(){}, measureText: value=>({width:Array.from(String(value)).length*10}), fillText(value,x,y){operations.push({value:String(value),x,y});} };
-    const canvas = { width:0,height:0,getContext:()=>context,toBlob:callback=>callback(new Blob(['image bytes'])) };
+test('PDF and PNG pages repeat the correct period deadline and include every row', async () => {
+    const renderedPages = [];
+    let pageText = [];
+    const context = {
+        fillRect(x, y) { if (x === 0 && y === 0) pageText = []; },
+        drawImage() {},
+        strokeRect() {},
+        measureText: value => ({ width: Array.from(String(value)).length * 10 }),
+        fillText(value) { pageText.push(String(value)); },
+    };
+    const canvas = {
+        width: 0, height: 0, getContext: () => context,
+        toBlob(callback, mime) {
+            renderedPages.push({ mime, text: pageText });
+            callback(new Blob(['image bytes']));
+        },
+    };
     globalThis.document = { createElement:()=>canvas,getElementById:()=>null };
     try {
-        const data = {school:'Sekolah Contoh',address:'',scope:'Semua tingkat',filter:'',generatedAt:'16/11/2026',filename:'rekap',totals:{banks:62,filled:62,empty:0,questions:124},groups:[10,11].map(grade=>({title:`Kelas ${grade}`,subtitle:'ASAS 2026/2027',rows:Array.from({length:31},(_,i)=>[`Guru ${grade}-${i}`,'Mata pelajaran','X-1, X-2',2,0,0,2,'Sudah ada soal'])}))};
-        const files = await renderPages(data,'png');
-        assert.ok(files.length>2);
-        for (const group of data.groups) for (const row of group.rows) assert.ok(operations.some(op=>op.value===row[0]));
-        assert.equal(new Set(files.map(file=>file.name)).size,files.length);
-        assert.ok(operations.filter(op=>op.value==='Guru penanggung jawab').length>=files.length);
-        assert.equal(canvas.width,1); assert.equal(canvas.height,1);
+        const periods = [
+            { title: 'Kelas 10 · ASAS Ganjil', deadline: '28/11/2026 17:30 WIB' },
+            { title: 'Kelas 10 · UUB Ganjil', deadline: 'Belum ditetapkan' },
+        ];
+        const data = {
+            school: 'Sekolah Contoh', address: '', scope: 'Semua tingkat', filter: '', generatedAt: '16/11/2026', filename: 'rekap',
+            totals: { banks: 62, filled: 62, empty: 0, questions: 124 },
+            groups: periods.map((period, index) => ({
+                ...period, subtitle: 'Tahun ajaran 2026/2027',
+                rows: Array.from({ length: 31 }, (_, row) => [`Guru ${index}-${row}`, 'Mata pelajaran', 'X-1, X-2', 2, 0, 0, 2, 'Sudah ada soal']),
+            })),
+        };
+        for (const [format, mime] of [['pdf', 'image/jpeg'], ['png', 'image/png']]) {
+            renderedPages.length = 0;
+            const files = await renderPages(data, format);
+            assert.ok(files.length > 2);
+            assert.equal(new Set(files.map(file => file.name)).size, files.length);
+            for (const group of data.groups) {
+                const pages = renderedPages.filter(page => page.text.includes(group.title));
+                assert.ok(pages.length > 1);
+                for (const page of pages) {
+                    assert.equal(page.mime, mime);
+                    assert.deepEqual(page.text.filter(line => line.startsWith('Batas pembuatan soal:')), [`Batas pembuatan soal: ${group.deadline}`]);
+                    assert.ok(page.text.includes('Guru penanggung jawab'));
+                }
+                for (const row of group.rows) assert.ok(pages.some(page => page.text.includes(row[0])));
+            }
+            assert.equal(canvas.width, 1);
+            assert.equal(canvas.height, 1);
+        }
     } finally { delete globalThis.document; }
 });
