@@ -21,6 +21,7 @@
         .body { padding: 11px 12px; font-size: 10px; }
         .name { margin-bottom: 8px; font-size: 14px; font-weight: 700; }
         .identity { display: grid; grid-template-columns: 66px 8px minmax(0, 1fr); margin: 3px 0; }
+        @include('tryouts.partials.card-account-style')
         .exam-list { margin-top: 9px; display: grid; gap: 7px; }
         .exam { padding: 8px; border: 1px solid #cbd5e1; border-radius: 7px; background: #f8fafc; }
         .exam-head { display: flex; justify-content: space-between; gap: 8px; font-size: 10px; font-weight: 700; }
@@ -57,6 +58,7 @@
                     <div class="identity"><span>Tahun ajaran</span><span>:</span><span>{{ $student->schoolClass->academicYear->name }}</span></div>
                     <div class="identity"><span>NIS</span><span>:</span><span>{{ $student->student_number }}</span></div>
                     <div class="identity"><span>NISN</span><span>:</span><span>{{ $student->nisn ?? '—' }}</span></div>
+                    <x-trial-card-account :student="$student" />
 
                     <div class="exam-list">
                         @foreach ($studentTrials as $trialExam)
@@ -73,7 +75,7 @@
                         @endforeach
                     </div>
 
-                    <div class="note">Masuk menggunakan NIS atau NISN di atas. Nama peserta diambil otomatis dari data sekolah. Gunakan tautan dan kode sesuai mapel yang akan dikerjakan. Nilai Uji Coba tidak ditampilkan.</div>
+                    <div class="note">Pada tautan langsung ujian, isi NIS atau NISN dan kode sesuai mapel. Nilai Uji Coba tidak ditampilkan.</div>
                 </div>
             </section>
         @empty

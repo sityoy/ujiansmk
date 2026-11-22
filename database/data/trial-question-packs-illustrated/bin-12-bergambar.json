@@ -1,0 +1,273 @@
+{
+  "code": "BIN",
+  "subject": "Bahasa Indonesia",
+  "grade": 12,
+  "name": "Try Out Bahasa Indonesia 12 - Bergambar",
+  "questions": [
+    {
+      "question": "Kalimat pembuka surat lamaran pekerjaan yang paling tepat adalah ...",
+      "options": {
+        "A": "Kalian sebaiknya cepat menerima saya.",
+        "B": "Aku mau kerja di tempat kamu.",
+        "C": "Pokoknya saya harus diterima di sini.",
+        "D": "Saya tidak tahu ada lowongan atau tidak, terserah saja.",
+        "E": "Berdasarkan informasi lowongan pada laman perusahaan, saya mengajukan lamaran sebagai staf administrasi."
+      },
+      "answer": "E",
+      "explanation": "Pembukaan menyebut sumber lowongan dan jabatan dengan bahasa resmi.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Dokumen yang berisi ringkasan pendidikan, pengalaman, dan keterampilan pelamar adalah ...",
+      "options": {
+        "A": "nota dinas",
+        "B": "surat kuasa",
+        "C": "surat jalan",
+        "D": "berita acara",
+        "E": "daftar riwayat hidup"
+      },
+      "answer": "E",
+      "explanation": "Daftar riwayat hidup merangkum profil dan kualifikasi pelamar.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Berkas yang harus disertakan sesuai pengumuman adalah …",
+      "image": "bin-12-lowongan.png",
+      "options": {
+        "A": "Daftar riwayat hidup dan contoh rekap",
+        "B": "Ijazah dan sertifikat bahasa asing",
+        "C": "Surat izin orang tua dan daftar nilai",
+        "D": "Surat rekomendasi dan foto kegiatan",
+        "E": "Contoh presentasi dan kartu perpustakaan"
+      },
+      "answer": "A",
+      "explanation": "Bagian lampiran mencantumkan daftar riwayat hidup dan contoh rekap.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Teks editorial terutama berisi ...",
+      "options": {
+        "A": "petunjuk mengoperasikan mesin",
+        "B": "riwayat hidup pelamar",
+        "C": "pandangan redaksi terhadap isu aktual disertai alasan",
+        "D": "cerita rekaan tentang kerajaan",
+        "E": "jadwal kegiatan kelas"
+      },
+      "answer": "C",
+      "explanation": "Editorial menyampaikan sikap redaksi terhadap suatu isu.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Kalimat yang merupakan opini adalah ...",
+      "options": {
+        "A": "Perpustakaan dibuka pukul 07.00 menurut jadwal.",
+        "B": "Daftar hadir mencatat 32 peserta.",
+        "C": "Laporan mencatat 25 buku dipinjam pada Senin.",
+        "D": "Menurut saya, ruang baca itu paling nyaman di sekolah.",
+        "E": "Undangan mencantumkan tanggal 13 November 2026."
+      },
+      "answer": "D",
+      "explanation": "Menurut saya dan paling nyaman menunjukkan penilaian subjektif.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Dalam teks cerita sejarah, ungkapan \"tiga tahun kemudian\" berfungsi sebagai ...",
+      "options": {
+        "A": "penanda urutan waktu",
+        "B": "penanda perbandingan",
+        "C": "penanda tempat",
+        "D": "ungkapan larangan",
+        "E": "kata sapaan"
+      },
+      "answer": "A",
+      "explanation": "Ungkapan tersebut menghubungkan kejadian berdasarkan waktu.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Bacalah kutipan editorial: \"Sekolah perlu menambah tempat sampah terpilah. Saat ini, sampah organik dan plastik masih bercampur sehingga pengolahannya sulit.\" Usulan utama penulis adalah ...",
+      "options": {
+        "A": "menambah tempat sampah terpilah",
+        "B": "menutup sekolah sementara",
+        "C": "menghapus kegiatan kebersihan",
+        "D": "mencampur seluruh sampah",
+        "E": "mengurangi jumlah siswa"
+      },
+      "answer": "A",
+      "explanation": "Usulan utama dinyatakan pada kalimat pertama.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Kalimat yang menggunakan konjungsi pertentangan secara tepat adalah ...",
+      "options": {
+        "A": "Ia sakit karena tetap bekerja.",
+        "B": "Fasilitasnya terbatas, tetapi para siswa tetap bersemangat.",
+        "C": "Kami membaca buku sehingga ke perpustakaan.",
+        "D": "Ia belajar atau ujian telah selesai.",
+        "E": "Rapat dimulai meskipun setelah bel berbunyi."
+      },
+      "answer": "B",
+      "explanation": "Tetapi mempertentangkan keterbatasan fasilitas dengan semangat siswa.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Sebuah artikel menyatakan, \"Semua lulusan pasti memperoleh pekerjaan dalam sehari,\" tetapi tidak menyertakan data. Sikap pembaca yang paling tepat adalah ...",
+      "options": {
+        "A": "langsung menyebarkannya",
+        "B": "menganggapnya benar karena memakai kata pasti",
+        "C": "memeriksa bukti dan sumber sebelum mempercayai klaim itu",
+        "D": "mengubahnya menjadi iklan",
+        "E": "menolak semua informasi tentang pekerjaan"
+      },
+      "answer": "C",
+      "explanation": "Klaim umum perlu dinilai berdasarkan bukti dan sumber yang dapat dipercaya.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Bagaimana hubungan bagian data dengan usulan redaksi?",
+      "image": "bin-12-editorial.png",
+      "options": {
+        "A": "Data membuktikan tempat sampah terpilah selalu efektif.",
+        "B": "Data menjelaskan jumlah siswa yang menolak pemilahan.",
+        "C": "Data menunjukkan kebutuhan yang menjadi dasar penentuan prioritas.",
+        "D": "Data memperlihatkan seluruh kelas sudah memiliki fasilitas.",
+        "E": "Data menegaskan penambahan fasilitas harus ditunda."
+      },
+      "answer": "C",
+      "explanation": "Data menunjukkan ruang yang belum memiliki fasilitas, sehingga sifatnya mendukung prioritas usulan.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Bagian surat lamaran yang menyebut berkas seperti ijazah dan daftar riwayat hidup adalah ...",
+      "options": {
+        "A": "judul novel",
+        "B": "dialog",
+        "C": "daftar isi",
+        "D": "lampiran",
+        "E": "indeks"
+      },
+      "answer": "D",
+      "explanation": "Lampiran menunjukkan dokumen yang disertakan bersama surat.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Kalimat argumentasi yang didukung data adalah ...",
+      "options": {
+        "A": "Program itu pasti terbaik karena saya suka.",
+        "B": "Kegiatan membaca perlu diteruskan karena catatan perpustakaan menunjukkan kenaikan peminjaman selama program berlangsung.",
+        "C": "Semua orang tentu setuju tanpa bertanya.",
+        "D": "Data tidak diperlukan untuk menilai program.",
+        "E": "Menurut saya, angka selalu tidak berguna."
+      },
+      "answer": "B",
+      "explanation": "Kalimat menyertakan data yang relevan sebagai dukungan alasan.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Kata \"namun\" pada awal kalimat biasanya menunjukkan hubungan ...",
+      "options": {
+        "A": "penambahan waktu",
+        "B": "tujuan",
+        "C": "syarat",
+        "D": "pemilihan tempat",
+        "E": "pertentangan"
+      },
+      "answer": "E",
+      "explanation": "Namun menghubungkan gagasan yang berlawanan atau membatasi gagasan sebelumnya.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Kalimat paling tepat untuk menyebut kemampuan dalam lamaran adalah ...",
+      "options": {
+        "A": "Saya mampu mengolah data menggunakan aplikasi lembar kerja dan melampirkan contoh hasil pekerjaan.",
+        "B": "Saya pasti paling hebat di seluruh kota.",
+        "C": "Terima saya karena saya menyuruh.",
+        "D": "Saya tidak perlu menjelaskan kemampuan.",
+        "E": "Tidak ada orang lain yang bisa bekerja."
+      },
+      "answer": "A",
+      "explanation": "Kualifikasi dinyatakan konkret dan didukung bukti.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Lowongan mensyaratkan kemampuan mengolah data dan ketelitian. Informasi yang paling relevan ditonjolkan pelamar adalah ...",
+      "options": {
+        "A": "warna sepeda kesukaan",
+        "B": "jumlah saudara tanpa kaitan pekerjaan",
+        "C": "makanan favorit",
+        "D": "pengalaman menonton konser",
+        "E": "pengalaman memeriksa dan merekap data menggunakan lembar kerja"
+      },
+      "answer": "E",
+      "explanation": "Pengalaman tersebut langsung berkaitan dengan persyaratan jabatan.",
+      "difficulty": "sulit"
+    },
+    {
+      "question": "Editorial menyatakan, \"Penggunaan transportasi umum perlu ditingkatkan. Namun, ketepatan waktu dan keamanan layanannya harus diperbaiki.\" Sikap redaksi adalah ...",
+      "options": {
+        "A": "menolak seluruh transportasi umum",
+        "B": "mendukung penggunaan transportasi umum disertai perbaikan layanan",
+        "C": "menganggap keamanan tidak penting",
+        "D": "meminta semua kendaraan pribadi dilarang seketika",
+        "E": "menilai waktu perjalanan tidak perlu diatur"
+      },
+      "answer": "B",
+      "explanation": "Dukungan diberikan bersama syarat perbaikan layanan.",
+      "difficulty": "sulit"
+    },
+    {
+      "question": "Bacalah: \"Biaya program naik 10%, sedangkan jumlah penerima manfaat naik 30%.\" Simpulan yang paling dapat dipertanggungjawabkan adalah ...",
+      "options": {
+        "A": "program pasti gagal",
+        "B": "seluruh penerima pasti puas",
+        "C": "biaya per penerima pasti naik 30%",
+        "D": "pertumbuhan jumlah penerima lebih tinggi daripada persentase kenaikan biaya",
+        "E": "mutu layanan pasti turun"
+      },
+      "answer": "D",
+      "explanation": "Data cukup untuk membandingkan dua persentase, bukan menilai mutu atau kepuasan.",
+      "difficulty": "sulit"
+    },
+    {
+      "question": "Judul revisi yang paling sesuai dengan cakupan data adalah …",
+      "image": "bin-12-survei.png",
+      "options": {
+        "A": "Seluruh siswa SMK menolak teori.",
+        "B": "Semua kelas SMK lebih memilih praktik.",
+        "C": "Sembilan puluh persen siswa di sekolah memilih praktik.",
+        "D": "Hampir semua siswa Indonesia memilih praktik.",
+        "E": "Mayoritas responden dari satu rombel memilih praktik."
+      },
+      "answer": "E",
+      "explanation": "Delapan belas dari dua puluh responden adalah mayoritas. Sampel satu rombel tidak cukup mewakili seluruh sekolah atau Indonesia.",
+      "difficulty": "sulit"
+    },
+    {
+      "question": "Sebuah teks cerita sejarah memuat dialog tokoh yang direkonstruksi penulis. Saat memakainya sebagai sumber penelitian, pembaca sebaiknya ...",
+      "options": {
+        "A": "menganggap setiap dialog pasti kutipan asli",
+        "B": "membedakan unsur rekaan dan fakta serta memeriksa sumber sejarah pendukung",
+        "C": "mengabaikan seluruh dokumen lain",
+        "D": "mengubah dialog menjadi arsip resmi",
+        "E": "menyimpulkan semua tokoh khayalan"
+      },
+      "answer": "B",
+      "explanation": "Teks sastra sejarah dapat memuat rekonstruksi yang harus dibedakan dari bukti sejarah.",
+      "difficulty": "sulit"
+    },
+    {
+      "question": "Sebuah lamaran memakai sapaan resmi, tetapi ditutup dengan \"Makasih ya, cepat kabarin aku.\" Perbaikan yang paling tepat adalah ...",
+      "options": {
+        "A": "menghapus identitas pelamar",
+        "B": "menambah lebih banyak bahasa percakapan",
+        "C": "mengubah seluruh surat menjadi cerita",
+        "D": "menggunakan penutup resmi dan santun agar ragam bahasa surat konsisten",
+        "E": "mengganti tanggal dengan emotikon"
+      },
+      "answer": "D",
+      "explanation": "Surat lamaran memerlukan konsistensi ragam bahasa resmi.",
+      "difficulty": "sulit"
+    }
+  ],
+  "id": "bin-12-bergambar",
+  "manual_only": true
+}

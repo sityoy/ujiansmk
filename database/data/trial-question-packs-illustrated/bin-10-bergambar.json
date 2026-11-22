@@ -1,0 +1,273 @@
+{
+  "code": "BIN",
+  "subject": "Bahasa Indonesia",
+  "grade": 10,
+  "name": "Try Out Bahasa Indonesia 10 - Bergambar",
+  "questions": [
+    {
+      "question": "Tujuan utama teks laporan hasil observasi adalah ...",
+      "options": {
+        "A": "membujuk pembaca membeli barang",
+        "B": "memberi perintah tanpa penjelasan",
+        "C": "mengisahkan pengalaman khayalan",
+        "D": "menyampaikan lelucon pribadi",
+        "E": "melaporkan objek berdasarkan pengamatan secara objektif"
+      },
+      "answer": "E",
+      "explanation": "Laporan hasil observasi menyajikan hasil pengamatan objektif.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Bacalah kalimat berikut: \"Mangrove adalah tumbuhan yang hidup di kawasan pesisir berlumpur.\" Kalimat tersebut termasuk ...",
+      "options": {
+        "A": "penutup surat",
+        "B": "kalimat definisi",
+        "C": "dialog anekdot",
+        "D": "kalimat perintah",
+        "E": "kalimat seru"
+      },
+      "answer": "B",
+      "explanation": "Kalimat itu menjelaskan pengertian umum mangrove.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Apa ajakan utama pada poster?",
+      "image": "bin-10-poster.png",
+      "options": {
+        "A": "Membeli air minum di kantin",
+        "B": "Membawa botol minum isi ulang setiap hari",
+        "C": "Membawa gelas plastik dari rumah",
+        "D": "Menjual botol minum di sekolah",
+        "E": "Memindahkan stasiun air minum"
+      },
+      "answer": "B",
+      "explanation": "Judul poster berisi ajakan membawa tumbler, sedangkan isi poster menerangkan manfaatnya.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Tujuan kritik dalam teks anekdot biasanya disampaikan melalui ...",
+      "options": {
+        "A": "daftar pustaka",
+        "B": "rumus hitungan",
+        "C": "laporan keuangan",
+        "D": "humor atau kejadian menggelitik",
+        "E": "petunjuk perakitan"
+      },
+      "answer": "D",
+      "explanation": "Anekdot dapat menyampaikan kritik sosial melalui kelucuan.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Kalimat \"Daun-daun menari tertiup angin\" menggunakan majas ...",
+      "options": {
+        "A": "antitesis",
+        "B": "litotes",
+        "C": "ironi",
+        "D": "metonimia",
+        "E": "personifikasi"
+      },
+      "answer": "E",
+      "explanation": "Benda bukan manusia diberi perilaku manusia, yaitu menari.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Kata penghubung yang menyatakan sebab terdapat pada kalimat ...",
+      "options": {
+        "A": "Rina membaca lalu mencatat.",
+        "B": "Pilih buku atau majalah.",
+        "C": "Doni rajin, tetapi sering terlambat.",
+        "D": "Pertandingan ditunda karena hujan deras.",
+        "E": "Ia tetap hadir meskipun sakit."
+      },
+      "answer": "D",
+      "explanation": "Karena menghubungkan peristiwa dengan penyebabnya.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Perhatikan paragraf: \"Perpustakaan sekolah menyediakan banyak sumber belajar. Di sana terdapat buku pelajaran, ensiklopedia, dan majalah pendidikan. Siswa juga dapat mengakses buku digital.\" Gagasan utamanya adalah ...",
+      "options": {
+        "A": "buku digital menggantikan semua buku",
+        "B": "perpustakaan menyediakan beragam sumber belajar",
+        "C": "siswa hanya membaca majalah",
+        "D": "ensiklopedia sulit ditemukan",
+        "E": "perpustakaan tidak memiliki buku pelajaran"
+      },
+      "answer": "B",
+      "explanation": "Kalimat pertama memuat gagasan umum yang dijelaskan kalimat berikutnya.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Kalimat yang paling efektif adalah ...",
+      "options": {
+        "A": "Para siswa-siswa berkumpul di aula.",
+        "B": "Siswa berkumpul di aula.",
+        "C": "Bagi siswa dimohon agar supaya berkumpul.",
+        "D": "Semua para siswa berkumpul bersama-sama.",
+        "E": "Siswa-siswa semuanya saling berkumpul bersama."
+      },
+      "answer": "B",
+      "explanation": "Kalimat tersebut jelas dan tidak memakai penanda jamak atau unsur lain secara berlebihan.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Dalam negosiasi, usulan yang baik seharusnya ...",
+      "options": {
+        "A": "menawarkan penyelesaian yang dapat dipertimbangkan kedua pihak",
+        "B": "mengabaikan kebutuhan pihak lain",
+        "C": "menggunakan ancaman sejak awal",
+        "D": "memaksa pihak lain menerima semua tuntutan",
+        "E": "menolak seluruh kemungkinan kompromi"
+      },
+      "answer": "A",
+      "explanation": "Negosiasi mencari kesepakatan yang dapat diterima pihak-pihak terkait.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Kalimat laporan observasi yang paling sesuai dengan grafik adalah …",
+      "image": "bin-10-perpustakaan.png",
+      "options": {
+        "A": "Kunjungan selalu naik dari Senin sampai Jumat.",
+        "B": "Hari Kamis menjadi hari tersibuk karena ada lomba.",
+        "C": "Selasa dan Jumat memiliki jumlah pengunjung yang sama.",
+        "D": "Jumlah pengunjung tertinggi tercatat pada Rabu, yaitu 45 orang.",
+        "E": "Peminjaman buku meningkat paling banyak pada Rabu."
+      },
+      "answer": "D",
+      "explanation": "Grafik menyajikan jumlah pengunjung. Nilai tertinggi ialah 45 pada Rabu, sedangkan data peminjaman dan penyebabnya tidak disajikan.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Kalimat yang paling objektif untuk laporan observasi adalah ...",
+      "options": {
+        "A": "Taman itu pasti paling indah sedunia.",
+        "B": "Semua orang tentu menyukai taman ini.",
+        "C": "Menurut saya, taman itu membosankan.",
+        "D": "Tidak ada taman yang menandinginya.",
+        "E": "Taman sekolah memiliki 12 pohon mangga."
+      },
+      "answer": "E",
+      "explanation": "Jumlah pohon merupakan hasil pengamatan yang dapat diperiksa.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Kalimat \"Tanaman itu memiliki daun berbentuk oval dengan tepi bergerigi\" merupakan ...",
+      "options": {
+        "A": "kalimat tanya",
+        "B": "kalimat perintah",
+        "C": "kalimat deskripsi",
+        "D": "kalimat larangan",
+        "E": "ungkapan sapaan"
+      },
+      "answer": "C",
+      "explanation": "Kalimat tersebut menggambarkan ciri fisik objek.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Dalam negosiasi harga, penjual menawarkan Rp100.000 dan pembeli mengajukan Rp90.000 disertai alasan. Tuturan pembeli merupakan ...",
+      "options": {
+        "A": "salam pembuka",
+        "B": "penutup pertemuan",
+        "C": "ucapan terima kasih",
+        "D": "pernyataan identitas",
+        "E": "penawaran"
+      },
+      "answer": "E",
+      "explanation": "Pembeli mengajukan harga alternatif dalam proses tawar-menawar.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Bacalah: \"Buku digital mudah dibawa. Ratusan judul dapat disimpan pada satu perangkat.\" Kalimat kedua berfungsi ...",
+      "options": {
+        "A": "menolak kalimat pertama",
+        "B": "mengganti topik menjadi olahraga",
+        "C": "menjelaskan alasan buku digital mudah dibawa",
+        "D": "menutup surat lamaran",
+        "E": "memperkenalkan tokoh cerita"
+      },
+      "answer": "C",
+      "explanation": "Kalimat kedua memberi penjelasan yang mendukung kalimat pertama.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Laporan menyatakan, \"Dari 30 tanaman yang diamati, 24 tumbuh baik pada tanah lembap.\" Simpulan yang paling sesuai adalah ...",
+      "options": {
+        "A": "semua tanaman di dunia membutuhkan tanah yang sama",
+        "B": "tanah kering selalu mematikan tanaman",
+        "C": "keenam tanaman lainnya pasti mati",
+        "D": "sebagian besar tanaman dalam pengamatan tumbuh baik pada tanah lembap",
+        "E": "kelembapan adalah satu-satunya faktor pertumbuhan"
+      },
+      "answer": "D",
+      "explanation": "Data hanya mendukung kesimpulan tentang mayoritas tanaman yang diamati.",
+      "difficulty": "sulit"
+    },
+    {
+      "question": "Bacalah dialog: Petugas berkata, \"Kami melayani dengan cepat.\" Warga menjawab, \"Benar, saya hanya menunggu tiga jam untuk satu stempel.\" Kritik utama dalam dialog itu adalah ...",
+      "options": {
+        "A": "harga stempel terlalu murah",
+        "B": "warga tidak suka surat",
+        "C": "pelayanan lambat bertentangan dengan klaim petugas",
+        "D": "ruang tunggu terlalu luas",
+        "E": "petugas datang terlalu pagi"
+      },
+      "answer": "C",
+      "explanation": "Jawaban warga menyindir ketidaksesuaian antara klaim dan kenyataan.",
+      "difficulty": "sulit"
+    },
+    {
+      "question": "Penjual menolak harga terlalu rendah karena biaya produksi tinggi. Respons pembeli yang paling mendukung tercapainya kesepakatan adalah ...",
+      "options": {
+        "A": "memaksa penjual menerima harga apa pun",
+        "B": "menghina barang penjual",
+        "C": "mengajukan harga yang lebih wajar dan menanyakan kemungkinan diskon jumlah pembelian",
+        "D": "menolak mendengar alasan",
+        "E": "mengancam membatalkan izin toko"
+      },
+      "answer": "C",
+      "explanation": "Penawaran beralasan membuka ruang kompromi yang saling mempertimbangkan kebutuhan.",
+      "difficulty": "sulit"
+    },
+    {
+      "question": "Laporan menyebut program memilah sampah berhasil karena berat sampah pekan kedua lebih rendah. Revisi simpulan yang paling cermat adalah …",
+      "image": "bin-10-audit-sampah.png",
+      "options": {
+        "A": "Program gagal karena 18 kg masih terlalu banyak.",
+        "B": "Program menurunkan berat sampah 12 kg per hari.",
+        "C": "Bandingkan berat sampah per hari tatap muka sebelum menilai dampak program.",
+        "D": "Data pekan kedua membuktikan setiap siswa mengurangi sampah.",
+        "E": "Cukup bandingkan total mingguan karena berat dicatat dengan satuan yang sama."
+      },
+      "answer": "C",
+      "explanation": "Jumlah hari tatap muka berbeda. Kedua pekan sama-sama menghasilkan rata-rata 6 kg per hari, sehingga total mingguan saja tidak mendukung klaim keberhasilan.",
+      "difficulty": "sulit"
+    },
+    {
+      "question": "Kalimat \"Para siswa-siswa semuanya wajib harus membawa kartu\" paling efektif diperbaiki menjadi ...",
+      "options": {
+        "A": "Siswa wajib membawa kartu.",
+        "B": "Para siswa-siswa wajib membawa semua kartu.",
+        "C": "Semua para siswa wajib harus membawa kartu.",
+        "D": "Siswa semuanya wajib harus membawa kartu.",
+        "E": "Para siswa-siswa semuanya membawa kartu."
+      },
+      "answer": "A",
+      "explanation": "Penanda jamak dan kewajiban yang berlebihan dihilangkan tanpa mengubah makna utama.",
+      "difficulty": "sulit"
+    },
+    {
+      "question": "Sebuah teks observasi menyebut jumlah tempat sampah, jenisnya, dan lokasinya. Penulis ingin menambahkan \"Sekolah kami paling bersih di kota\" tanpa data pembanding. Tindakan penyuntingan yang tepat adalah ...",
+      "options": {
+        "A": "mengganti klaim dengan keterangan terukur atau melengkapinya dengan data pembanding",
+        "B": "menghapus seluruh hasil observasi",
+        "C": "menambahkan klaim itu sebagai fakta",
+        "D": "mengulang klaim dalam setiap paragraf",
+        "E": "mengubah angka agar mendukung klaim"
+      },
+      "answer": "A",
+      "explanation": "Klaim perbandingan memerlukan bukti; laporan sebaiknya memakai data terukur.",
+      "difficulty": "sulit"
+    }
+  ],
+  "id": "bin-10-bergambar",
+  "manual_only": true
+}

@@ -256,12 +256,12 @@ class TrialExamController extends Controller
         ])->header('Cache-Control', 'private, no-store');
     }
 
-    public function cards(TrialExam $trialExam): View
+    public function cards(TrialExam $trialExam): Response
     {
         $trialExam->load('questionBank.subject');
         abort_if($trialExam->questionBank->archived_at !== null, 404);
         $students = Student::query()
-            ->with('schoolClass.academicYear')
+            ->with(['schoolClass.academicYear', 'user' => fn ($users) => $users->where('role', UserRole::Student)->where('is_active', true)])
             ->where('is_active', true)
             ->whereHas('schoolClass', fn ($query) => $query
                 ->where('grade_level', $trialExam->questionBank->grade_level)
@@ -276,14 +276,14 @@ class TrialExamController extends Controller
             ->orderBy('full_name')
             ->get();
 
-        return view('tryouts.cards', [
+        return response()->view('tryouts.cards', [
             'school' => SchoolProfile::query()->first(),
             'trialExam' => $trialExam,
             'students' => $students,
-        ]);
+        ])->header('Cache-Control', 'private, no-store')->header('X-Robots-Tag', 'noindex, nofollow');
     }
 
-    public function allCards(): View
+    public function allCards(): Response
     {
         $trialExams = TrialExam::query()
             ->whereHas('questionBank', fn ($query) => $query->whereNull('archived_at'))
@@ -302,7 +302,7 @@ class TrialExamController extends Controller
             ->values();
 
         $students = Student::query()
-            ->with('schoolClass.academicYear')
+            ->with(['schoolClass.academicYear', 'user' => fn ($users) => $users->where('role', UserRole::Student)->where('is_active', true)])
             ->where('is_active', true)
             ->whereHas('schoolClass', fn ($query) => $query
                 ->whereIn('grade_level', $gradeLevels)
@@ -317,12 +317,12 @@ class TrialExamController extends Controller
             ->orderBy('full_name')
             ->get();
 
-        return view('tryouts.all-cards', [
+        return response()->view('tryouts.all-cards', [
             'school' => SchoolProfile::query()->first(),
             'trialExams' => $trialExams,
             'trialsByGrade' => $trialExams->groupBy('questionBank.grade_level'),
             'students' => $students,
-        ]);
+        ])->header('Cache-Control', 'private, no-store')->header('X-Robots-Tag', 'noindex, nofollow');
     }
 
     public function store(Request $request): RedirectResponse

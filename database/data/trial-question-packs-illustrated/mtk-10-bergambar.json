@@ -1,0 +1,273 @@
+{
+  "code": "MTK",
+  "subject": "Matematika",
+  "grade": 10,
+  "name": "Try Out Matematika 10 - Bergambar",
+  "questions": [
+    {
+      "question": "Nilai dari 2³ × 2² adalah ...",
+      "options": {
+        "A": "16",
+        "B": "24",
+        "C": "128",
+        "D": "64",
+        "E": "32"
+      },
+      "answer": "E",
+      "explanation": "Aturan pangkat: 2³×2² = 2⁵ = 32.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Jika 3x − 5 = 16, nilai x adalah ...",
+      "options": {
+        "A": "5",
+        "B": "6",
+        "C": "8",
+        "D": "9",
+        "E": "7"
+      },
+      "answer": "E",
+      "explanation": "3x = 21, sehingga x = 7.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Berapakah nilai keluaran y pada diagram?",
+      "image": "mtk-10-fungsi.png",
+      "options": {
+        "A": "8",
+        "B": "9",
+        "C": "10",
+        "D": "12",
+        "E": "14"
+      },
+      "answer": "C",
+      "explanation": "Substitusi x = 4 memberi y = 3 × 4 − 2 = 10.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Jika f(x) = 2x + 1, nilai f(3) adalah ...",
+      "options": {
+        "A": "3",
+        "B": "5",
+        "C": "7",
+        "D": "6",
+        "E": "9"
+      },
+      "answer": "C",
+      "explanation": "f(3) = 2×3+1 = 7.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Diketahui x + y = 7 dan x − y = 1. Pasangan (x, y) adalah ...",
+      "options": {
+        "A": "(4, 3)",
+        "B": "(3, 4)",
+        "C": "(5, 2)",
+        "D": "(2, 5)",
+        "E": "(6, 1)"
+      },
+      "answer": "A",
+      "explanation": "Menjumlahkan persamaan memberi 2x=8, sehingga x=4 dan y=3.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Akar-akar persamaan x² − 5x + 6 = 0 adalah ...",
+      "options": {
+        "A": "1 dan 6",
+        "B": "−2 dan −3",
+        "C": "0 dan 5",
+        "D": "−1 dan −6",
+        "E": "2 dan 3"
+      },
+      "answer": "E",
+      "explanation": "Faktorisasi (x−2)(x−3)=0.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Nilai log₂ 32 adalah ...",
+      "options": {
+        "A": "5",
+        "B": "3",
+        "C": "4",
+        "D": "6",
+        "E": "2"
+      },
+      "answer": "A",
+      "explanation": "Karena 2⁵ = 32, maka log₂32 = 5.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Jika 3^(x+1) = 81, nilai x adalah ...",
+      "options": {
+        "A": "1",
+        "B": "4",
+        "C": "2",
+        "D": "5",
+        "E": "3"
+      },
+      "answer": "E",
+      "explanation": "81=3⁴, sehingga x+1=4 dan x=3.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Persamaan garis yang melalui titik (0, 2) dan (3, 8) adalah ...",
+      "options": {
+        "A": "y = x + 2",
+        "B": "y = 3x + 2",
+        "C": "y = 2x + 2",
+        "D": "y = 2x − 2",
+        "E": "y = 2x + 3"
+      },
+      "answer": "C",
+      "explanation": "Gradien (8−2)/(3−0)=2 dan titik potong sumbu y adalah 2.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Berapakah nilai y pada garis tersebut ketika x = 7?",
+      "image": "mtk-10-grafik.png",
+      "options": {
+        "A": "7",
+        "B": "8",
+        "C": "9",
+        "D": "10",
+        "E": "12"
+      },
+      "answer": "C",
+      "explanation": "Gradien garis adalah (6 − 2)/(4 − 0) = 1 dan nilai potong sumbu y adalah 2. Maka y = 7 + 2 = 9.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Segitiga siku-siku mempunyai sisi di depan sudut θ sepanjang 3 cm dan sisi miring 5 cm. Nilai sin θ adalah ...",
+      "options": {
+        "A": "3/4",
+        "B": "3/5",
+        "C": "4/5",
+        "D": "5/3",
+        "E": "4/3"
+      },
+      "answer": "B",
+      "explanation": "Sinus adalah sisi depan dibagi sisi miring, yaitu 3/5.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Harga 2 buku dan 1 pena adalah Rp11.000. Harga 1 buku dan 2 pena adalah Rp10.000. Harga satu buku adalah ...",
+      "options": {
+        "A": "Rp2.000",
+        "B": "Rp4.000",
+        "C": "Rp5.000",
+        "D": "Rp6.000",
+        "E": "Rp3.000"
+      },
+      "answer": "B",
+      "explanation": "Dari 2b+p=11.000 dan b+2p=10.000 diperoleh b=4.000.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Penyelesaian persamaan x² − 9 = 0 adalah ...",
+      "options": {
+        "A": "x = 3 saja",
+        "B": "x = 0 atau x = 9",
+        "C": "x = −9 atau x = 9",
+        "D": "x = −3 atau x = 3",
+        "E": "x = −3 saja"
+      },
+      "answer": "D",
+      "explanation": "x²=9 memiliki akar positif dan negatif, yaitu ±3.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Segitiga siku-siku memiliki sisi depan sudut θ = 6 cm dan sisi samping sudut θ = 8 cm. Nilai tan θ adalah ...",
+      "options": {
+        "A": "4/3",
+        "B": "3/5",
+        "C": "3/4",
+        "D": "4/5",
+        "E": "5/3"
+      },
+      "answer": "C",
+      "explanation": "Tangen = sisi depan/sisi samping = 6/8 = 3/4.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Himpunan penyelesaian |2x − 3| = 5 adalah ...",
+      "options": {
+        "A": "{1, 4}",
+        "B": "{−4, 1}",
+        "C": "{−1, 4}",
+        "D": "{−1, −4}",
+        "E": "{1, 5}"
+      },
+      "answer": "C",
+      "explanation": "2x−3=5 atau 2x−3=−5, sehingga x=4 atau x=−1.",
+      "difficulty": "sulit"
+    },
+    {
+      "question": "Dua bilangan berjumlah 12 dan hasil kalinya 35. Selisih bilangan terbesar dan terkecil adalah ...",
+      "options": {
+        "A": "1",
+        "B": "2",
+        "C": "3",
+        "D": "5",
+        "E": "7"
+      },
+      "answer": "B",
+      "explanation": "Kedua bilangan adalah 5 dan 7, sehingga selisihnya 2.",
+      "difficulty": "sulit"
+    },
+    {
+      "question": "Sebuah persegi panjang memiliki keliling 28 cm. Luas maksimum yang dapat dimiliki adalah ...",
+      "options": {
+        "A": "28 cm²",
+        "B": "42 cm²",
+        "C": "48 cm²",
+        "D": "49 cm²",
+        "E": "56 cm²"
+      },
+      "answer": "D",
+      "explanation": "Jika panjang+lebar=14, luas maksimum terjadi saat keduanya 7, yaitu 49.",
+      "difficulty": "sulit"
+    },
+    {
+      "question": "Berapa meter pagar yang diperlukan untuk mengelilingi kebun satu kali?",
+      "image": "mtk-10-kebun.png",
+      "options": {
+        "A": "24 m",
+        "B": "26 m",
+        "C": "28 m",
+        "D": "30 m",
+        "E": "32 m"
+      },
+      "answer": "E",
+      "explanation": "x(x + 4) = 48 menghasilkan x = 6 atau −8. Lebar positif 6 m dan panjang 10 m, sehingga kelilingnya 2(6 + 10) = 32 m.",
+      "difficulty": "sulit"
+    },
+    {
+      "question": "Sebuah tangga 10 m bersandar pada tembok dan membentuk sudut 60° terhadap tanah. Ketinggian ujung tangga dari tanah adalah ...",
+      "options": {
+        "A": "5 m",
+        "B": "10√3 m",
+        "C": "5√2 m",
+        "D": "5√3 m",
+        "E": "10 m"
+      },
+      "answer": "D",
+      "explanation": "Tinggi=10 sin60°=10×√3/2=5√3.",
+      "difficulty": "sulit"
+    },
+    {
+      "question": "Persamaan x² − (k + 2)x + 9 = 0 mempunyai dua akar real yang sama. Semua nilai k yang memenuhi adalah ...",
+      "options": {
+        "A": "−6 dan 6",
+        "B": "4 saja",
+        "C": "−4 dan 8",
+        "D": "−8 dan 4",
+        "E": "−8 saja"
+      },
+      "answer": "D",
+      "explanation": "Diskriminan nol: (k+2)²−36=0, sehingga k+2=±6 dan k=4 atau −8.",
+      "difficulty": "sulit"
+    }
+  ],
+  "id": "mtk-10-bergambar",
+  "manual_only": true
+}

@@ -149,6 +149,36 @@ class TrialExamFlowTest extends TestCase
         $this->assertSame('2.00', $attempt->fresh()->score);
     }
 
+    public function test_trial_cards_print_the_actual_student_login_and_only_available_passwords(): void
+    {
+        [$trial] = $this->makeTrial();
+        $student = Student::query()->where('nisn', '1234567890')->firstOrFail();
+        $user = $student->user;
+        $user->username = $student->student_number;
+        $user->setStudentPassword('Simulasi-Contoh');
+        $user->save();
+        $cards = [route('tryouts.cards', $trial), route('tryouts.cards.all')];
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+
+        foreach ($cards as $url) {
+            $this->actingAs($committee)->get($url)->assertOk()
+                ->assertHeader('Cache-Control', 'no-store, private')
+                ->assertHeader('X-Robots-Tag', 'noindex, nofollow')
+                ->assertSeeInOrder(['Username (NIS)', $student->student_number, 'Password', 'Simulasi-Contoh', 'halaman login CBT'])
+                ->assertSee(route('login'));
+            $this->actingAs($user)->get($url)->assertForbidden();
+        }
+
+        $user->update(['username' => $student->nisn, 'password' => $student->nisn]);
+        $this->actingAs($committee)->get($cards[0])->assertOk()
+            ->assertSeeInOrder(['Username (NISN)', $student->nisn, 'Password', $student->nisn])
+            ->assertDontSee('Simulasi-Contoh');
+
+        $user->update(['password' => 'Tidak-tersedia-di-kartu']);
+        $this->get($cards[1])->assertOk()
+            ->assertSee('Konfirmasi ke panitia')->assertDontSee('Tidak-tersedia-di-kartu')->assertDontSee('Simulasi-Contoh');
+    }
+
     public function test_trial_rejects_missing_or_invalid_answers_before_the_deadline_and_accepts_saved_answers(): void
     {
         [$trial, $question] = $this->makeTrial();

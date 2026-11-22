@@ -17,8 +17,12 @@ class TrialQuestionPack
     {
         $sets = json_decode(file_get_contents(database_path('data/trial-question-pack.json')), true, 512, JSON_THROW_ON_ERROR);
         $optional = json_decode(file_get_contents(database_path('data/trial-question-pack-optional.json')), true, 512, JSON_THROW_ON_ERROR);
+        $illustrated = array_map(
+            fn (string $path) => json_decode(file_get_contents($path), true, 512, JSON_THROW_ON_ERROR),
+            glob(database_path('data/trial-question-packs-illustrated/*.json')) ?: [],
+        );
 
-        return array_values(array_filter([...$sets, ...$optional], fn ($set) => $grade === null || $set['grade'] === $grade));
+        return array_values(array_filter([...$sets, ...$optional, ...$illustrated], fn ($set) => $grade === null || $set['grade'] === $grade));
     }
 
     /** Only metadata is exposed to the picker; answers stay on the server. */

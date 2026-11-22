@@ -21,6 +21,7 @@
         .body { padding: 11px 12px; font-size: 10.5px; }
         .name { margin-bottom: 8px; font-size: 14px; font-weight: 700; }
         .row { display: grid; grid-template-columns: 76px 8px minmax(0, 1fr); margin: 4px 0; }
+        @include('tryouts.partials.card-account-style')
         .exam { margin-top: 9px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 7px; background: #f8fafc; }
         .access { margin-top: 8px; padding: 8px; border: 1px dashed #0891b2; border-radius: 7px; background: #ecfeff; }
         .url { overflow-wrap: anywhere; font-size: 8.5px; }
@@ -51,6 +52,7 @@
                     <div class="row"><span>Tahun ajaran</span><span>:</span><span>{{ $student->schoolClass->academicYear->name }}</span></div>
                     <div class="row"><span>NIS</span><span>:</span><span>{{ $student->student_number }}</span></div>
                     <div class="row"><span>NISN</span><span>:</span><span>{{ $student->nisn ?? '—' }}</span></div>
+                    <x-trial-card-account :student="$student" />
                     <div class="exam">
                         <div class="row"><span>Ujian</span><span>:</span><strong>{{ $trialExam->title }}</strong></div>
                         <div class="row"><span>Mapel</span><span>:</span><span>{{ $trialExam->questionBank->subject->name }}</span></div>
@@ -60,7 +62,7 @@
                         <div class="row"><span>Kode</span><span>:</span><strong class="code">{{ $trialExam->access_code }}</strong></div>
                         <div class="row"><span>Tautan</span><span>:</span><span class="url">{{ route('tryout.entry', $trialExam) }}</span></div>
                     </div>
-                    <div class="note">Masuk menggunakan NIS atau NISN di atas. Nama peserta diambil otomatis dari data sekolah. Nilai Uji Coba tidak ditampilkan kepada peserta.</div>
+                    <div class="note">Pada tautan langsung ujian, isi NIS atau NISN dan kode ujian. Nilai Uji Coba tidak ditampilkan kepada peserta.</div>
                 </div>
             </section>
         @empty

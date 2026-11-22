@@ -6,6 +6,7 @@ use App\Models\Subject;
 use App\Models\TrialQuestionBank;
 use App\Services\Exams\TrialQuestionPack;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class TrialSampleQuestionsCommandTest extends TestCase
@@ -115,6 +116,34 @@ class TrialSampleQuestionsCommandTest extends TestCase
         $this->artisan('trial-questions:sample', ['--pack' => 'sjr-12'])->assertFailed();
         $this->artisan('trial-questions:sample', ['--pack' => 'bin-10', '--all' => true])->assertFailed();
         $this->assertDatabaseCount('trial_question_banks', 0);
+    }
+
+    public function test_illustrated_language_and_math_packs_import_images_across_all_difficulty_levels(): void
+    {
+        $disk = Storage::fake('public');
+        $packs = app(TrialQuestionPack::class);
+        foreach ([10, 11, 12] as $grade) {
+            foreach (['bin', 'mtk'] as $subject) {
+                $key = $subject.'-'.$grade.'-bergambar';
+                $pack = collect($packs->sets($grade))->firstWhere('id', $key);
+                $this->assertTrue($pack['manual_only']);
+                $this->assertSame(['mudah', 'sedang', 'sulit'], collect($pack['questions'])->whereNotNull('image')->pluck('difficulty')->all());
+
+                $this->artisan('trial-questions:sample', ['--pack' => $key])->assertSuccessful();
+                $bank = TrialQuestionBank::query()->where('source_pack_key', $key)->sole();
+                $questions = $bank->questions()->get();
+                $this->assertSame(range(1, 20), $questions->pluck('position')->all());
+                foreach ($questions->whereNotNull('question_image_path') as $question) {
+                    $disk->assertExists($question->question_image_path);
+                    $this->assertArrayHasKey($question->correct_answer, $question->options);
+                }
+                $this->assertSame([3, 10, 18], $questions->whereNotNull('question_image_path')->pluck('position')->all());
+            }
+        }
+
+        $this->assertDatabaseCount('trial_question_banks', 6);
+        $this->assertDatabaseCount('trial_questions', 120);
+        $this->assertCount(18, $disk->allFiles());
     }
 
     public function test_catalog_covers_every_school_subject_and_scheduled_grade(): void
