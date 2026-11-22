@@ -13,7 +13,12 @@
         <h2 class="mt-2 text-2xl font-semibold text-white">{{ $bank->name }}</h2>
         <p class="mt-2 text-sm text-slate-400">{{ $questionCount }} soal · Tidak tercampur dengan bank Ujian Inti</p>
         <p class="mt-2 text-xs text-cyan-200">Setiap jawaban PG benar bernilai tetap 2 poin. Nilai PG maksimal 100.</p>
-        <div class="mt-4"><a href="{{ route('trial-question-banks.questions.export', $bank) }}" class="inline-flex rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-2.5 text-sm font-semibold text-emerald-200">Ekspor PG ke Excel</a></div>
+        <div class="mt-4 flex flex-wrap gap-2">
+            <a href="{{ route('trial-question-banks.questions.export', $bank) }}" class="inline-flex rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-2.5 text-sm font-semibold text-emerald-200">Ekspor PG ke Excel</a>
+            @if ($bank->source_pack_key && ! $bank->archived_at)
+                <x-trial-pack-cancel :bank="$bank" />
+            @endif
+        </div>
         @if ($isLocked)<p class="mt-3 text-sm text-amber-300">{{ $bank->archived_at ? 'Bank sudah dihapus dari daftar aktif. Pulihkan sebelum mengelola soal.' : 'Bank terkunci karena sudah ada peserta yang memulai uji coba.' }}</p>@endif
     </section>
 

@@ -560,10 +560,16 @@ class TrialExamFlowTest extends TestCase
         $this->assertTrue($trial->fresh()->is_active);
         $this->post(route('trial-question-banks.import-pack'), ['pack_key' => 'bin-10'])->assertRedirect(route('trial-question-banks.questions.index', $bank));
         $this->assertDatabaseCount('trial_questions', 21);
-        $this->get(route('trial-question-banks.index', ['pack_grade_level' => 10]))->assertOk()->assertSee('Buka soal')->assertDontSee('Paket latihan 100 soal');
+        $this->get(route('trial-question-banks.index', ['pack_grade_level' => 10]))->assertOk()
+            ->assertSee('Buka soal')->assertSee('Batalkan penambahan')->assertDontSee('Paket latihan 100 soal');
+        $this->get(route('trial-question-banks.questions.index', $bank))->assertOk()->assertSee('Batalkan penambahan');
         $this->delete(route('trial-question-banks.destroy', $bank))->assertSessionHasNoErrors();
         $this->post(route('trial-question-banks.import-pack'), ['pack_key' => 'bin-10'])->assertRedirect(route('trial-question-banks.index', ['archived' => 1]));
         $this->assertNotNull($bank->fresh()->archived_at);
+        $this->assertDatabaseCount('trial_questions', 21);
+        $this->get(route('trial-question-banks.index'))->assertOk()->assertSee('Pulihkan paket')->assertDontSee('Batalkan penambahan');
+        $this->patch(route('trial-question-banks.restore', $bank))->assertSessionHasNoErrors();
+        $this->assertNull($bank->fresh()->archived_at);
         $this->assertDatabaseCount('trial_questions', 21);
     }
 
@@ -645,6 +651,26 @@ class TrialExamFlowTest extends TestCase
         $this->get(route('tryouts.index'))->assertOk()->assertViewHas('banks', fn ($banks) => $banks->contains($bank));
     }
 
+    public function test_configuration_can_be_deleted_without_reset_when_students_have_only_checked_in(): void
+    {
+        [$trial, $question] = $this->makeTrial();
+        $student = Student::query()->sole();
+        $trial->checkins()->create([
+            'student_id' => $student->id, 'class_name' => 'X-1',
+            'distance_meters' => 5, 'accuracy_meters' => 12, 'verified_at' => now(),
+        ]);
+        $this->assertDatabaseCount('trial_attempts', 0);
+        $delete = route('tryouts.destroy', $trial);
+        $this->actingAs($student->user)->delete($delete)->assertForbidden();
+        $this->actingAs(User::factory()->create(['role' => UserRole::Committee]));
+        $this->get(route('tryouts.index'))->assertOk()->assertSee('Hapus konfigurasi');
+        $this->delete($delete)->assertSessionHasNoErrors();
+        $this->get(route('tryout.entry', $trial))->assertNotFound();
+        $this->assertDatabaseCount('trial_checkins', 0);
+        $this->assertModelExists($question);
+        $this->assertModelExists($student);
+    }
+
     public function test_trial_location_settings_and_printed_attendance_are_separate_from_core(): void
     {
         [$trial] = $this->makeTrial();
@@ -675,7 +701,6 @@ class TrialExamFlowTest extends TestCase
         ]);
         $this->put(route('tryouts.update', $trial), [...$changes, 'trial_location_id' => null])
             ->assertSessionHasErrors('trial_location_id');
-        $this->delete(route('tryouts.destroy', $trial))->assertSessionHasErrors('trial_exam');
         $this->actingAs(User::factory()->create(['role' => UserRole::Proctor]))->get($report)->assertOk()
             ->assertSee('Laporan Absensi Simulasi')->assertSee('1 hadir terverifikasi · 0 belum absen')
             ->assertSee('Peserta Uji Coba')->assertSee('5 m / ±12 m')->assertSee('Cetak / Simpan PDF')

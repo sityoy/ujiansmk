@@ -39,6 +39,7 @@ class ExamFlyerTest extends TestCase
         $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
         $this->actingAs($admin)->get(route('exam-flyers.core', ['assessment_period_id' => $period->id]))
             ->assertOk()->assertSee('Asesmen Sumatif Akhir Semester Ganjil')->assertSee('TAHUN AJARAN 2025/2026')
+            ->assertSee('FLYER ASESMEN')->assertSee('Cek koneksi internet dan sinyal di HP Anda sebelum mulai.')
             ->assertSee('SMK ISLAM BAHAGIA')->assertDontSee('SMP Islam Bahagia')->assertSee('AAS Ganjil')->assertSee('images/logo-ypmi-bahagia.jpeg')
             ->assertSee(route('login'))->assertDontSee('2026/2027')->assertDontSee('Kode uji coba')
             ->assertDontSee('YPMI BAHAGIA')->assertHeader('Cache-Control', 'no-store, private');
@@ -59,6 +60,7 @@ class ExamFlyerTest extends TestCase
         $committee = User::factory()->create(['role' => UserRole::Committee]);
         $this->actingAs($committee)->get(route('exam-flyers.trial', $trial))
             ->assertOk()->assertSee('Simulasi Asesmen Sumatif Akhir Semester Ganjil')->assertSee('TAHUN AJARAN 2026/2027')
+            ->assertSee('FLYER SIMULASI UJIAN')->assertSee('Cek koneksi internet dan sinyal di HP Anda sebelum mulai.')
             ->assertSee('Uji Coba Bahasa Indonesia')->assertSee('Bahasa Indonesia · Kelas 10')
             ->assertSee('BIN-COBA')->assertSee('60 menit')->assertSee(route('tryout.entry', $trial))
             ->assertSee('03/09/2026 22:00 – 04/09/2026 01:00 WIB')->assertSee('Kampus Simulasi')->assertSee('lokasi simulasi')
@@ -85,7 +87,8 @@ class ExamFlyerTest extends TestCase
         $this->get(route('exam-flyers.core', ['assessment_period_id' => $period->id]))->assertOk()
             ->assertSee('Jadwal per mapel dan rombel')->assertSee('03/09/2026 07:30 – 08:45 WIB')
             ->assertSee('05/09/2026 10:00 – 11:15 WIB')->assertDontSee('08/09/2026 09:00');
-        $this->get(route('operations.index'))->assertOk()->assertSee(route('exam-flyers.core-session', $regular));
+        $this->get(route('operations.index'))->assertOk()->assertSee(route('exam-flyers.core-session', $regular))
+            ->assertSee('Cetak Flyer Asesmen')->assertSee('Pilih Flyer Simulasi Ujian')->assertDontSee('Cetak flyer peringatan');
         $this->get(route('exam-flyers.core-session', $makeup))->assertOk()
             ->assertSee('Matematika · XI-3')->assertSee('Susulan')->assertSee('75 menit')->assertSee('Gedung Utama · Lab 1')
             ->assertSee('05/09/2026 10:00 – 11:15 WIB')->assertDontSee('03/09/2026 07:30')
@@ -111,13 +114,13 @@ class ExamFlyerTest extends TestCase
         $this->get(route('exam-flyers.core', ['assessment_period_id' => 999999]))->assertSessionHasErrors('assessment_period_id');
     }
 
-    public function test_warning_flyer_matches_the_selected_year_and_security_rules(): void
+    public function test_legacy_warning_link_uses_the_assessment_flyer_for_the_selected_period(): void
     {
         $year = $this->year('2026/2027', true);
         $period = $this->makeRoomPeriod($year->id, 'AAS');
         $principal = User::factory()->create(['role' => UserRole::Principal]);
         $this->actingAs($principal)->get(route('exam-flyers.warnings', ['assessment_period_id' => $period->id]))
-            ->assertOk()->assertSee('SMK ISLAM BAHAGIA')->assertSee('Peringatan & Tata Tertib Ujian')
+            ->assertOk()->assertSee('SMK ISLAM BAHAGIA')->assertSee('FLYER ASESMEN')->assertSee('Peringatan pelanggaran')
             ->assertSee('Asesmen Sumatif Akhir Semester Ganjil')->assertSee('TAHUN AJARAN 2026/2027')
             ->assertSee('Pelanggaran pertama: peringatan. Kedua: ujian terkunci.')
             ->assertSee('Waktu ujian tetap berjalan saat terkunci.')->assertSee('maksimal 2 kali')

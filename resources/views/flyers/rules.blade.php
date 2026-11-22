@@ -3,7 +3,8 @@
     <div class="rule-grid">
         <div class="rule">
             <h3>Sebelum mulai</h3>
-            <p>{{ $warning ? 'Siapkan kartu peserta dan perangkat.' : ($trial ? 'Siapkan NIS atau NISN milik sendiri dan kode uji coba.' : 'Siapkan kartu peserta dan masuk dengan akun siswa.') }} Periksa jadwal, mata pelajaran, baterai, dan koneksi. Aktifkan <strong>Jangan Ganggu</strong> dan tutup aplikasi mengambang.</p>
+            <p>{{ $trial ? 'Siapkan NIS atau NISN milik sendiri dan kode uji coba.' : 'Siapkan kartu peserta dan masuk dengan akun siswa.' }} Periksa jadwal, mata pelajaran, dan baterai. Aktifkan <strong>Jangan Ganggu</strong> dan tutup aplikasi mengambang.</p>
+            <p><strong>Cek koneksi internet dan sinyal di HP Anda sebelum mulai.</strong> Pastikan Wi-Fi atau data seluler stabil.</p>
             @if ($locationRequired)
                 <p>Aktifkan lokasi dan izinkan akses GPS di {{ $trial ? 'lokasi simulasi' : 'lokasi ujian' }}. Pastikan absensi terverifikasi sebelum mulai.</p>
             @endif

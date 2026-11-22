@@ -52,34 +52,30 @@
     </style>
 </head>
 <body>
-    <div class="toolbar"><span>Flyer {{ $kind }} · {{ $period->academicYear->name }}</span><button type="button" onclick="window.print()">Cetak / Simpan PDF</button></div>
+    <div class="toolbar"><span>{{ $trial ? 'Flyer Simulasi Ujian' : 'Flyer Asesmen' }} · {{ $period->academicYear->name }}</span><button type="button" onclick="window.print()">Cetak / Simpan PDF</button></div>
     <main class="flyer">
         <header class="brand">
             <img class="logo" src="{{ asset('images/logo-ypmi-bahagia.jpeg') }}" alt="Logo YPMI Bahagia" width="64" height="64">
             <div class="school">{{ $schoolName }}</div>
         </header>
-        <p class="eyebrow">INFORMASI PESERTA</p>
+        <p class="eyebrow">{{ $trial ? 'FLYER SIMULASI UJIAN' : 'FLYER ASESMEN' }}</p>
         <h1>{{ $kind }}</h1>
         <div class="year">TAHUN AJARAN {{ $period->academicYear->name }}</div>
         <p class="subtitle">{{ $subtitle }}</p>
-        @if ($warning)
+        @if ($draft)<p class="draft">Draf jadwal. Tunggu jadwal resmi dari panitia.</p>@endif
+        <section class="details">
             <h2>{{ $headline }}</h2>
-        @else
-            @if ($draft)<p class="draft">Draf jadwal. Tunggu jadwal resmi dari panitia.</p>@endif
-            <section class="details">
-                <h2>{{ $headline }}</h2>
-                @if ($headline !== $period->name)
-                    <div><p class="label">Periode ujian</p><p class="value">{{ $period->name }}</p></div>
-                @endif
-                @foreach ($details as [$label, $value])
-                    <div><p class="label">{{ $label }}</p><p class="value">{{ $value }}</p></div>
-                @endforeach
-            </section>
-            <section class="access">
-                @if ($code !== null)<div><p class="label">Kode uji coba</p><p class="code">{{ $code }}</p></div>@endif
-                <div><p class="label">{{ $trial ? 'Tautan uji coba' : 'Tautan masuk peserta' }}</p><a class="url" href="{{ $entryUrl }}">{{ $entryUrl }}</a></div>
-            </section>
-        @endif
+            @if ($headline !== $period->name)
+                <div><p class="label">Periode ujian</p><p class="value">{{ $period->name }}</p></div>
+            @endif
+            @foreach ($details as [$label, $value])
+                <div><p class="label">{{ $label }}</p><p class="value">{{ $value }}</p></div>
+            @endforeach
+        </section>
+        <section class="access">
+            @if ($trial)<div><p class="label">Kode uji coba</p><p class="code">{{ $code }}</p></div>@endif
+            <div><p class="label">{{ $trial ? 'Tautan uji coba' : 'Tautan masuk peserta' }}</p><a class="url" href="{{ $entryUrl }}">{{ $entryUrl }}</a></div>
+        </section>
         @include('flyers.rules')
     </main>
     @if ($schedule->isNotEmpty())

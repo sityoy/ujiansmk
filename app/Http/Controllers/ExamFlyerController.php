@@ -83,18 +83,6 @@ class ExamFlyerController extends Controller
         ]);
     }
 
-    public function warnings(Request $request): Response
-    {
-        $validated = $request->validate(['assessment_period_id' => ['required', 'integer', 'exists:assessment_periods,id']]);
-        $period = AssessmentPeriod::with('academicYear')->findOrFail($validated['assessment_period_id']);
-
-        return $this->render([
-            'kind' => 'Peringatan & Tata Tertib Ujian', 'period' => $period,
-            'headline' => $this->assessmentTitle($period), 'subtitle' => 'Gunakan jadwal mapel yang dibagikan panitia.',
-            'warning' => true, 'locationRequired' => false,
-        ]);
-    }
-
     private function assessmentTitle(AssessmentPeriod $period): string
     {
         $semester = $period->semester === Semester::Odd ? 'Ganjil' : 'Genap';
@@ -110,7 +98,7 @@ class ExamFlyerController extends Controller
     private function render(array $data): Response
     {
         return response()->view('flyers.exam', [
-            'trial' => false, 'warning' => false, 'locationRequired' => true,
+            'trial' => false, 'locationRequired' => true,
             'draft' => false, 'schedule' => collect(), ...$data,
             'resetLimit' => ExamResetAllowance::LIMIT, 'schoolName' => 'SMK ISLAM BAHAGIA',
         ])

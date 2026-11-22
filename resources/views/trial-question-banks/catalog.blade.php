@@ -41,11 +41,17 @@
                         <p class="mt-2 flex-1 text-xs leading-5 text-slate-400">Mapel sekolah terdaftar. Isi 20 soal untuk pilihan ini belum disiapkan.</p>
                         <button type="button" disabled class="mt-4 rounded-xl border border-white/10 px-3 py-2.5 text-sm text-slate-500">Soal belum tersedia</button>
                     @elseif ($pack['bank']?->archived_at)
-                        <p class="mt-2 flex-1 text-xs text-amber-300">Pernah ditambahkan, lalu dihapus.</p>
-                        <a href="{{ route('trial-question-banks.index', ['archived' => 1, 'q' => $pack['bank']->name]) }}" class="mt-4 rounded-xl border border-amber-400/20 px-3 py-2.5 text-center text-sm text-amber-200">Lihat untuk dipulihkan</a>
+                        <p class="mt-2 flex-1 text-xs text-amber-300">Paket ada di arsip.</p>
+                        <form method="POST" action="{{ route('trial-question-banks.restore', $pack['bank']) }}" class="mt-4">
+                            @csrf @method('PATCH')
+                            <button type="submit" class="w-full rounded-xl border border-amber-400/20 px-3 py-2.5 text-sm text-amber-200">Pulihkan paket</button>
+                        </form>
                     @elseif ($pack['bank'])
                         <p class="mt-2 flex-1 text-xs text-emerald-300">Sudah ditambahkan · {{ $pack['bank']->questions_count }} soal</p>
-                        <a href="{{ route('trial-question-banks.questions.index', $pack['bank']) }}" class="mt-4 rounded-xl border border-emerald-400/20 px-3 py-2.5 text-center text-sm text-emerald-200">Buka soal</a>
+                        <div class="mt-4 flex flex-wrap gap-2">
+                            <a href="{{ route('trial-question-banks.questions.index', $pack['bank']) }}" class="rounded-xl border border-emerald-400/20 px-3 py-2.5 text-center text-sm text-emerald-200">Buka soal</a>
+                            <x-trial-pack-cancel :bank="$pack['bank']" />
+                        </div>
                     @else
                         <p class="mt-2 flex-1 text-xs text-slate-400">20 soal · Mudah → sedang → sulit</p>
                         <form method="POST" action="{{ route('trial-question-banks.import-pack') }}" class="mt-4">

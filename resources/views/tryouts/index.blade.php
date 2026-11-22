@@ -77,17 +77,15 @@
                             @endif
                             @unless ($trial->questionBank->archived_at)
                             <a href="{{ route('tryouts.cards', $trial) }}" target="_blank" class="rounded-xl bg-cyan-400/10 px-3 py-2 text-xs font-semibold text-cyan-200">Cetak kartu</a>
-                            <a href="{{ route('exam-flyers.trial', $trial) }}" target="_blank" rel="noopener" class="rounded-xl bg-emerald-400/10 px-3 py-2 text-xs font-semibold text-emerald-200">Cetak flyer</a>
+                            <a href="{{ route('exam-flyers.trial', $trial) }}" target="_blank" rel="noopener" class="rounded-xl bg-emerald-400/10 px-3 py-2 text-xs font-semibold text-emerald-200">Cetak Flyer Simulasi</a>
                             @endunless
                             @if ($trial->questionBank->archived_at)<span class="text-xs text-amber-300">Bank dihapus · riwayat tersimpan</span>@else
                             <form method="POST" action="{{ route('tryouts.toggle', $trial) }}">@csrf @method('PATCH')<button class="rounded-xl border border-white/10 px-3 py-2 text-xs text-cyan-200">{{ $trial->is_active ? 'Nonaktifkan' : 'Aktifkan' }}</button></form>
                             @endif
                             @if ($trial->attempts_count > 0)
-                                <span class="self-center text-xs text-slate-400">Reset peserta untuk menghapus konfigurasi.</span>
-                            @elseif ($trial->checkins_exists && ! $trial->has_attempt_history)
-                                <span class="self-center text-xs text-slate-400">Konfigurasi memiliki absensi. Gunakan Nonaktifkan untuk menyimpannya.</span>
+                                <span class="self-center text-xs text-slate-400">Reset hanya peserta yang sudah mulai.</span>
                             @else
-                                <form method="POST" action="{{ route('tryouts.destroy', $trial) }}" onsubmit="return confirm(@js($trial->has_attempt_history ? 'Hapus konfigurasi simulasi beserta absensi dan riwayat peserta yang direset? Bank soal tetap tersimpan.' : 'Hapus konfigurasi simulasi ini? Bank soal tetap tersimpan.'))">
+                                <form method="POST" action="{{ route('tryouts.destroy', $trial) }}" onsubmit="return confirm('Hapus konfigurasi simulasi? Absensi dan riwayat pengerjaan yang ada ikut dihapus. Bank soal tetap tersimpan.')">
                                     @csrf @method('DELETE')
                                     <button class="rounded-xl border border-rose-400/20 px-3 py-2 text-xs text-rose-300">Hapus konfigurasi</button>
                                 </form>

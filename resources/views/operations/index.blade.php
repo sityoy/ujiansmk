@@ -35,8 +35,8 @@
         <form method="GET" action="{{ route('exam-flyers.core') }}" target="_blank" class="mb-6 grid gap-3 rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.04] p-4 sm:grid-cols-[1fr_auto]">
             <x-assessment-period-select :periods="$flyerPeriods" :required="true" label="Flyer asesmen · pilih periode dan tahun ajaran" />
             <div class="flex flex-wrap items-end gap-2">
-                <button class="rounded-xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950">Cetak flyer asesmen</button>
-                <button formaction="{{ route('exam-flyers.warnings') }}" class="rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-slate-950">Cetak flyer peringatan</button>
+                <button class="rounded-xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950">Cetak Flyer Asesmen</button>
+                <a href="#pemantauan-uji-coba" class="rounded-xl border border-violet-400/30 px-4 py-3 text-sm font-semibold text-violet-200">Pilih Flyer Simulasi Ujian</a>
             </div>
         </form>
     @endif

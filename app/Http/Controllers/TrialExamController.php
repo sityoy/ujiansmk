@@ -36,7 +36,6 @@ class TrialExamController extends Controller
             'trialExams' => TrialExam::query()
                 ->with(['questionBank.subject', 'assessmentSubject.assessmentPeriod.academicYear', 'location'])
                 ->withCount('currentAttempts as attempts_count')
-                ->withExists(['attempts as has_attempt_history', 'checkins'])
                 ->latest()
                 ->paginateForDisplay(),
             'trialLocations' => TrialLocation::query()->orderBy('name')->get(),
@@ -514,12 +513,7 @@ class TrialExamController extends Controller
             $exam = TrialExam::query()->lockForUpdate()->findOrFail($trialExam->id);
             if ($exam->currentAttempts()->exists()) {
                 throw ValidationException::withMessages([
-                    'trial_exam' => 'Masih ada peserta yang belum direset. Pilih Reset & ulangi pada daftar peserta sebelum menghapus konfigurasi.',
-                ]);
-            }
-            if ($exam->checkins()->exists() && ! $exam->attempts()->exists()) {
-                throw ValidationException::withMessages([
-                    'trial_exam' => 'Ujian memiliki absensi dan belum ada pengerjaan yang direset. Nonaktifkan ujian untuk menyimpan absensi.',
+                    'trial_exam' => 'Masih ada pengerjaan peserta yang belum direset. Gunakan Reset & ulangi pada peserta yang sudah mulai sebelum menghapus konfigurasi.',
                 ]);
             }
 
