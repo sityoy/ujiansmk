@@ -86,6 +86,9 @@
                     <div class="mt-4 flex flex-wrap gap-2">
                         @foreach ($session->scheduleMembers as $member)
                             <a href="{{ route('operations.sessions.show', $member) }}" class="inline-flex rounded-lg border border-cyan-400/30 px-3 py-2 text-xs font-semibold text-cyan-300">Peserta {{ $member->assessmentSubject->schoolClass->name }} · {{ $member->assignments_count }}</a>
+                            @if (in_array(auth()->user()->role->value, ['super_admin', 'committee', 'principal'], true))
+                                <a href="{{ route('exam-flyers.core-session', $member) }}" target="_blank" rel="noopener" class="inline-flex rounded-lg border border-emerald-400/30 px-3 py-2 text-xs font-semibold text-emerald-300">Flyer {{ $member->assessmentSubject->schoolClass->name }}</a>
+                            @endif
                         @endforeach
                     </div>
                 </div>

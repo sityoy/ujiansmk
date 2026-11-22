@@ -10,86 +10,93 @@
         body { margin: 0; background: #dce5df; font-family: Arial, sans-serif; color: #10233c; }
         .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 24px; background: #10233c; color: white; }
         button { padding: 10px 18px; border: 0; border-radius: 8px; background: #d7f5c9; color: #123c2e; font-weight: bold; cursor: pointer; }
-        .flyer { position: relative; width: min(210mm, 100%); min-height: 297mm; margin: 20px auto; padding: 13mm 15mm 12mm; overflow: hidden; background: #fffcf5; border-top: 9mm solid #126348; border-bottom: 7mm solid #126348; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-        .brand { display: flex; align-items: center; gap: 18px; padding-bottom: 18px; border-bottom: 2px solid #d6ba6b; }
-        .logo { width: 94px; height: 94px; flex-shrink: 0; object-fit: contain; background: white; }
+        .flyer { width: min(210mm, 100%); margin: 20px auto; padding: 9mm 12mm 8mm; background: #fffcf5; border-top: 6mm solid #126348; border-bottom: 5mm solid #126348; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+        .brand { display: flex; align-items: center; gap: 16px; padding-bottom: 12px; border-bottom: 2px solid #d6ba6b; }
+        .logo { width: 64px; height: 64px; flex-shrink: 0; object-fit: contain; background: white; }
         .school { font-size: 21px; font-weight: 800; line-height: 1.25; overflow-wrap: anywhere; }
-        .foundation { margin-top: 8px; color: #43795b; font-size: 11px; letter-spacing: 2px; font-weight: bold; }
-        .eyebrow { margin: 28px 0 9px; color: #126348; font-size: 12px; font-weight: bold; letter-spacing: 2px; }
-        h1 { margin: 0; font-size: 48px; line-height: 1.08; letter-spacing: -1px; text-transform: uppercase; }
-        .warning-page h1 { font-size: 35px; line-height: 1.15; }
-        .warning-list { display: grid; gap: 12px; margin: 20px 0; }
-        .warning-rule { display: flex; align-items: flex-start; gap: 12px; padding: 12px; border: 1px solid #d9dfcf; border-radius: 12px; background: #f0f5e9; font-size: 14px; line-height: 1.45; }
-        .warning-rule p { margin: 0; }
-        .warning-note { padding: 15px 18px; border-radius: 12px; background: #10233c; color: white; font-size: 14px; line-height: 1.5; }
-        .warning-note p { margin: 0; }
-        .warning-note p + p { margin-top: 9px; }
-        .year { display: inline-block; margin: 17px 0 0; padding: 11px 19px; border-radius: 24px; background: #126348; color: white; font-size: 17px; font-weight: bold; }
-        .subtitle { margin: 15px 0 20px; color: #436151; font-size: 16px; font-weight: bold; }
-        h2 { margin: 0 0 15px; font-size: 21px; line-height: 1.25; overflow-wrap: anywhere; }
-        .details { padding: 20px; border: 1px solid #d9dfcf; border-radius: 15px; background: #f0f5e9; }
-        .detail + .detail { margin-top: 12px; }
+        .eyebrow { margin: 15px 0 6px; color: #126348; font-size: 11px; font-weight: bold; letter-spacing: 1px; }
+        h1 { margin: 0; font-size: 34px; line-height: 1.1; text-transform: uppercase; overflow-wrap: anywhere; }
+        .year { display: inline-block; margin: 10px 0 0; padding: 7px 13px; border-radius: 20px; background: #126348; color: white; font-size: 13px; font-weight: bold; }
+        .subtitle { margin: 9px 0 12px; color: #436151; font-size: 13px; font-weight: bold; }
+        h2 { margin: 0 0 8px; font-size: 18px; line-height: 1.2; overflow-wrap: anywhere; }
+        .details { display: flex; flex-wrap: wrap; row-gap: 8px; padding: 12px; border: 1px solid #d9dfcf; border-radius: 12px; background: #f0f5e9; }
+        .details h2 { width: 100%; margin: 0; }
+        .details > div { width: 50%; min-width: 0; padding-right: 8px; }
+        .draft { margin: 0 0 8px; color: #853c16; font-size: 13px; font-weight: bold; }
         .label { margin: 0 0 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #436151; }
-        .value { margin: 0; font-size: 15px; line-height: 1.35; overflow-wrap: anywhere; }
-        .access { margin: 17px 0; padding: 17px 20px; border-radius: 15px; background: #10233c; color: white; }
+        .value { margin: 0; font-size: 13px; line-height: 1.35; overflow-wrap: anywhere; }
+        .access { display: flex; flex-wrap: wrap; gap: 9px 20px; margin: 10px 0; padding: 10px 12px; border-radius: 12px; background: #10233c; color: white; }
+        .access div { min-width: 0; }
         .access .label { color: #bae4b6; }
-        .code { margin: 3px 0 12px; font-size: 23px; letter-spacing: 1px; }
-        .url { color: white; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
-        .checklist { display: grid; gap: 11px; margin: 20px 0; }
-        .step { display: flex; gap: 12px; align-items: center; font-size: 13px; line-height: 1.4; }
-        .number { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: #126348; color: white; font-weight: bold; flex-shrink: 0; }
-        .footer { margin-top: 22px; padding-top: 14px; border-top: 1px solid #d6ba6b; color: #126348; font-size: 15px; font-weight: bold; text-align: center; }
-        @media (max-width: 600px) { .flyer { margin: 0; padding: 25px; } h1 { font-size: 37px; } .school { font-size: 18px; } .logo { width: 74px; height: 74px; } }
-        @media print { body { background: white; } .toolbar { display: none; } .flyer { width: 210mm; margin: 0; } .brand,.details,.access,.step { break-inside: avoid; } }
+        .code { margin: 0; font-size: 15px; letter-spacing: 1px; }
+        .url { color: white; font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+        .rules { margin: 12px 0 10px; }
+        .rule-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+        .rule { padding: 9px 10px; border: 1px solid #d9dfcf; border-radius: 10px; background: #f0f5e9; font-size: 12px; line-height: 1.42; }
+        .rule h3 { margin: 0 0 4px; color: #126348; font-size: 13px; }
+        .rule p, .warning-note p { margin: 0; }
+        .rule p + p, .warning-note p + p { margin-top: 5px; }
+        .warning-note { padding: 10px 12px; border: 1px solid #dcb470; border-radius: 10px; background: #fff1d9; color: #622d17; font-size: 12px; line-height: 1.42; }
+        .warning-note h2 { font-size: 15px; margin-bottom: 5px; }
+        .schedule-heading { margin: 0 0 10px; }
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; line-height: 1.35; }
+        th, td { padding: 7px; text-align: left; vertical-align: top; border: 1px solid #c6cec1; }
+        th { background: #f0f5e9; }
+        @media screen and (max-width: 600px) { .flyer { margin: 0; padding: 19px; } h1 { font-size: 26px; } .school { font-size: 18px; } .details > div { width: 100%; } .rule-grid { grid-template-columns: 1fr; } }
+        @media print {
+            body { background: white; } .toolbar { display: none; } .flyer { width: 210mm; margin: 0; }
+            .brand, .details, .access, .rule, .warning-note, tr { break-inside: avoid; }
+            .schedule { break-before: page; } thead { display: table-header-group; } .table-wrap { overflow: visible; }
+        }
     </style>
 </head>
 <body>
     <div class="toolbar"><span>Flyer {{ $kind }} · {{ $period->academicYear->name }}</span><button type="button" onclick="window.print()">Cetak / Simpan PDF</button></div>
-    <main class="flyer {{ !empty($warning) ? 'warning-page' : '' }}">
+    <main class="flyer">
         <header class="brand">
-            <img class="logo" src="{{ asset('images/logo-ypmi-bahagia.jpeg') }}" alt="Logo YPMI Bahagia" width="94" height="94">
+            <img class="logo" src="{{ asset('images/logo-ypmi-bahagia.jpeg') }}" alt="Logo YPMI Bahagia" width="64" height="64">
             <div class="school">{{ $schoolName }}</div>
         </header>
         <p class="eyebrow">INFORMASI PESERTA</p>
         <h1>{{ $kind }}</h1>
         <div class="year">TAHUN AJARAN {{ $period->academicYear->name }}</div>
         <p class="subtitle">{{ $subtitle }}</p>
-        @if (!empty($warning))
+        @if ($warning)
             <h2>{{ $headline }}</h2>
-            <section class="warning-list">
-                @foreach ([
-                    'Siapkan kartu peserta dan perangkat.',
-                    'Aktifkan Jangan Ganggu dan tutup aplikasi mengambang sebelum masuk.',
-                    'Jangan berpindah aplikasi/tab atau keluar layar penuh.',
-                    'Jangan memakai split screen, menyalin, atau bekerja sama.',
-                    'Pelanggaran pertama: peringatan. Kedua: ujian terkunci.',
-                    'Jika terkendala, segera hubungi pengawas.',
-                ] as $rule)
-                    <div class="warning-rule"><span class="number">{{ $loop->iteration }}</span><p>{{ $rule }}</p></div>
+        @else
+            @if ($draft)<p class="draft">Draf jadwal. Tunggu jadwal resmi dari panitia.</p>@endif
+            <section class="details">
+                <h2>{{ $headline }}</h2>
+                @if ($headline !== $period->name)
+                    <div><p class="label">Periode ujian</p><p class="value">{{ $period->name }}</p></div>
+                @endif
+                @foreach ($details as [$label, $value])
+                    <div><p class="label">{{ $label }}</p><p class="value">{{ $value }}</p></div>
                 @endforeach
             </section>
-            <section class="warning-note">
-                <p><strong>Waktu ujian tetap berjalan saat terkunci.</strong></p>
-                <p>Reset hanya oleh petugas berwenang, maksimal {{ $resetLimit }} kali per peserta pada ujian yang sama. Jatah ini berlaku bersama untuk seluruh petugas, termasuk izin lanjut dan mengulang ujian.</p>
+            <section class="access">
+                @if ($code !== null)<div><p class="label">Kode uji coba</p><p class="code">{{ $code }}</p></div>@endif
+                <div><p class="label">{{ $trial ? 'Tautan uji coba' : 'Tautan masuk peserta' }}</p><a class="url" href="{{ $entryUrl }}">{{ $entryUrl }}</a></div>
             </section>
-            <footer class="footer">Jujur · Tertib · Bertanggung Jawab</footer>
-        @else
-        <section class="details">
-            <h2>{{ $headline }}</h2>
-            <div class="detail"><p class="label">Periode ujian</p><p class="value">{{ $period->name }}</p></div>
-            @foreach ($details as [$label, $value])<div class="detail"><p class="label">{{ $label }}</p><p class="value">{{ $value }}</p></div>@endforeach
-        </section>
-        <section class="access">
-            @if ($code !== null)<p class="label">Kode uji coba</p><p class="code">{{ $code }}</p>@endif
-            <p class="label">{{ $code !== null ? 'Tautan uji coba' : 'Tautan masuk peserta' }}</p><a class="url" href="{{ $entryUrl }}">{{ $entryUrl }}</a>
-        </section>
-        <section class="checklist">
-            <div class="step"><span class="number">1</span><span>{{ $code !== null ? 'Gunakan NIS/NISN dan kode uji coba yang tertera.' : 'Siapkan perangkat dan kartu peserta ujian.' }}</span></div>
-            <div class="step"><span class="number">2</span><span>Aktifkan Jangan Ganggu dan tutup aplikasi mengambang sebelum masuk.</span></div>
-            <div class="step"><span class="number">3</span><span>Ikuti jadwal dan arahan panitia. Kerjakan dengan jujur dan tertib.</span></div>
-        </section>
-        <footer class="footer">{{ $code !== null ? 'Berlatih · Mengenal Sistem · Lebih Siap' : 'Jujur · Tertib · Percaya Diri' }}</footer>
         @endif
+        @include('flyers.rules')
     </main>
+    @if ($schedule->isNotEmpty())
+        <section class="flyer schedule" aria-labelledby="schedule-title">
+            <h2 id="schedule-title">Jadwal per mapel dan rombel</h2>
+            <p class="subtitle schedule-heading">{{ $period->name }} · {{ $period->academicYear->name }}</p>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th scope="col">Mata pelajaran dan rombel</th><th scope="col">Sesi</th><th scope="col">Tanggal dan waktu</th><th scope="col">Lokasi dan ruangan</th></tr></thead>
+                    <tbody>
+                        @foreach ($schedule as $row)
+                            <tr>@foreach ($row as $value)<td>{{ $value }}</td>@endforeach</tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    @endif
 </body>
 </html>

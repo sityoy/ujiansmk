@@ -15,6 +15,9 @@
     @endphp
     <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
         <a href="{{ route('operations.index') }}" class="text-sm text-cyan-300">← Pelaksanaan ujian</a>
+        @if (in_array(auth()->user()->role->value, ['super_admin', 'committee', 'principal'], true))
+            <a href="{{ route('exam-flyers.core-session', $session) }}" target="_blank" rel="noopener" class="rounded-xl border border-emerald-400/30 px-4 py-2 text-sm text-emerald-300">Cetak flyer sesi</a>
+        @endif
         <a href="{{ request()->fullUrl() }}" class="rounded-xl border border-white/10 px-4 py-2 text-sm text-slate-300">Muat ulang data</a>
     </div>
     @if ($relatedSessions->count() > 1)

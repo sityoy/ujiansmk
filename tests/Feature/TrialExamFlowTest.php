@@ -614,6 +614,37 @@ class TrialExamFlowTest extends TestCase
         $this->assertDatabaseCount('trial_attempts', 1);
     }
 
+    public function test_configuration_is_removable_after_participant_restart_and_questions_can_be_reused(): void
+    {
+        [$trial, $question] = $this->makeTrial();
+        $student = Student::query()->sole();
+        $this->post(route('tryout.start', $trial), [
+            'participant_identifier' => $student->student_number, 'access_code' => $trial->access_code,
+        ])->assertSessionHasNoErrors();
+        $attempt = $trial->currentAttempts()->sole();
+        $delete = route('tryouts.destroy', $trial);
+        app(TrialExamAttemptService::class)->saveAnswer($attempt, $question, 'A');
+        $trial->checkins()->create([
+            'student_id' => $student->id, 'class_name' => 'X-1',
+            'distance_meters' => 5, 'accuracy_meters' => 12, 'verified_at' => now(),
+        ]);
+
+        $this->actingAs(User::factory()->create(['role' => UserRole::Committee]));
+        $this->get(route('tryouts.index'))->assertOk()->assertDontSee('Hapus konfigurasi');
+        $this->delete($delete)->assertSessionHasErrors('trial_exam');
+        $this->post(route('tryouts.attempts.restart', [$trial, $attempt]))->assertSessionHasNoErrors();
+        $this->get(route('tryouts.index'))->assertOk()->assertSee('Hapus konfigurasi');
+        $bank = $trial->questionBank;
+        $this->delete($delete)->assertSessionHasNoErrors();
+        $this->get(route('tryout.entry', $trial))->assertNotFound();
+        $this->assertDatabaseCount('trial_attempts', 0);
+        $this->assertDatabaseCount('trial_checkins', 0);
+        $this->assertDatabaseCount('trial_responses', 0);
+        $this->assertDatabaseCount('trial_security_incidents', 0);
+        $this->assertSame($question->id, $bank->questions()->sole()->id);
+        $this->get(route('tryouts.index'))->assertOk()->assertViewHas('banks', fn ($banks) => $banks->contains($bank));
+    }
+
     public function test_trial_location_settings_and_printed_attendance_are_separate_from_core(): void
     {
         [$trial] = $this->makeTrial();

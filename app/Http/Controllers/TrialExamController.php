@@ -36,6 +36,7 @@ class TrialExamController extends Controller
             'trialExams' => TrialExam::query()
                 ->with(['questionBank.subject', 'assessmentSubject.assessmentPeriod.academicYear', 'location'])
                 ->withCount('currentAttempts as attempts_count')
+                ->withExists(['attempts as has_attempt_history', 'checkins'])
                 ->latest()
                 ->paginateForDisplay(),
             'trialLocations' => TrialLocation::query()->orderBy('name')->get(),
@@ -511,16 +512,22 @@ class TrialExamController extends Controller
         DB::transaction(function () use ($trialExam): void {
             TrialQuestionBank::query()->lockForUpdate()->findOrFail($trialExam->trial_question_bank_id);
             $exam = TrialExam::query()->lockForUpdate()->findOrFail($trialExam->id);
-            if ($exam->attempts()->exists() || $exam->checkins()->exists()) {
+            if ($exam->currentAttempts()->exists()) {
                 throw ValidationException::withMessages([
-                    'trial_exam' => 'Ujian sudah memiliki riwayat pengerjaan atau absensi. Nonaktifkan ujian untuk menyimpan riwayat.',
+                    'trial_exam' => 'Masih ada peserta yang belum direset. Pilih Reset & ulangi pada daftar peserta sebelum menghapus konfigurasi.',
+                ]);
+            }
+            if ($exam->checkins()->exists() && ! $exam->attempts()->exists()) {
+                throw ValidationException::withMessages([
+                    'trial_exam' => 'Ujian memiliki absensi dan belum ada pengerjaan yang direset. Nonaktifkan ujian untuk menyimpan absensi.',
                 ]);
             }
 
+            $exam->checkins()->delete();
             $exam->delete();
         }, 3);
 
-        return back()->with('status', 'Ujian uji coba dihapus.');
+        return back()->with('status', 'Konfigurasi ujian uji coba dihapus. Bank soal dapat digunakan kembali.');
     }
 
     public function attendanceReport(TrialExam $trialExam): Response

@@ -82,7 +82,16 @@
                             @if ($trial->questionBank->archived_at)<span class="text-xs text-amber-300">Bank dihapus · riwayat tersimpan</span>@else
                             <form method="POST" action="{{ route('tryouts.toggle', $trial) }}">@csrf @method('PATCH')<button class="rounded-xl border border-white/10 px-3 py-2 text-xs text-cyan-200">{{ $trial->is_active ? 'Nonaktifkan' : 'Aktifkan' }}</button></form>
                             @endif
-                            <form method="POST" action="{{ route('tryouts.destroy', $trial) }}" onsubmit="return confirm('Hapus ujian uji coba ini?')">@csrf @method('DELETE')<button class="rounded-xl border border-rose-400/20 px-3 py-2 text-xs text-rose-300">Hapus</button></form>
+                            @if ($trial->attempts_count > 0)
+                                <span class="self-center text-xs text-slate-400">Reset peserta untuk menghapus konfigurasi.</span>
+                            @elseif ($trial->checkins_exists && ! $trial->has_attempt_history)
+                                <span class="self-center text-xs text-slate-400">Konfigurasi memiliki absensi. Gunakan Nonaktifkan untuk menyimpannya.</span>
+                            @else
+                                <form method="POST" action="{{ route('tryouts.destroy', $trial) }}" onsubmit="return confirm(@js($trial->has_attempt_history ? 'Hapus konfigurasi simulasi beserta absensi dan riwayat peserta yang direset? Bank soal tetap tersimpan.' : 'Hapus konfigurasi simulasi ini? Bank soal tetap tersimpan.'))">
+                                    @csrf @method('DELETE')
+                                    <button class="rounded-xl border border-rose-400/20 px-3 py-2 text-xs text-rose-300">Hapus konfigurasi</button>
+                                </form>
+                            @endif
                         </div>
                     </div>
                     <div class="mt-4 grid gap-3 lg:grid-cols-[1fr_auto]">
