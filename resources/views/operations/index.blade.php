@@ -112,6 +112,7 @@
                 @endif
                 @if (in_array(auth()->user()->role->value, ['super_admin', 'committee', 'principal'], true) && $trialExams->total() > 0)
                     <a href="{{ route('tryouts.links') }}" class="inline-flex rounded-xl border border-violet-400/30 px-4 py-2 text-sm font-semibold text-violet-200">Cetak / Salin Tautan per Kelas</a>
+                    <a href="{{ route('exam-flyers.trials') }}" target="_blank" rel="noopener" class="inline-flex rounded-xl border border-emerald-400/30 px-4 py-2 text-sm font-semibold text-emerald-300">Cetak Flyer Semua Simulasi</a>
                 @endif
             </div>
         </div>

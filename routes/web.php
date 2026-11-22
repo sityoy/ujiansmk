@@ -303,6 +303,7 @@ Route::middleware(['auth', 'active'])->group(function (): void {
         Route::get('/exam-flyers/core', [ExamFlyerController::class, 'core'])->name('exam-flyers.core');
         Route::get('/exam-flyers/core/sessions/{examSession}', [ExamFlyerController::class, 'coreSession'])->name('exam-flyers.core-session');
         Route::get('/exam-flyers/warnings', [ExamFlyerController::class, 'core'])->name('exam-flyers.warnings');
+        Route::get('/exam-flyers/trials', [ExamFlyerController::class, 'trials'])->name('exam-flyers.trials');
         Route::get('/exam-flyers/trials/{trialExam}', [ExamFlyerController::class, 'trial'])->name('exam-flyers.trial');
     });
 

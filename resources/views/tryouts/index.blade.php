@@ -14,10 +14,13 @@
     @if ($trialExams->total() > 0)
         <div class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.04] px-5 py-4">
             <div>
-                <p class="text-sm font-semibold text-white">Kartu gabungan seluruh Ujian Uji Coba</p>
-                <p class="mt-1 text-xs leading-5 text-slate-400">Satu kartu per siswa berisi seluruh tautan dan kode Uji Coba yang sesuai dengan tingkat kelasnya.</p>
+                <p class="text-sm font-semibold text-white">Cetak untuk seluruh simulasi</p>
+                <p class="mt-1 text-xs leading-5 text-slate-400">Satu kartu per siswa sesuai tingkat kelas, atau satu flyer per simulasi.</p>
             </div>
-            <a href="{{ route('tryouts.cards.all') }}" target="_blank" class="rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950">Cetak kartu semua link</a>
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ route('tryouts.cards.all') }}" target="_blank" class="rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950">Cetak kartu semua link</a>
+                <a href="{{ route('exam-flyers.trials') }}" target="_blank" rel="noopener" class="rounded-xl bg-emerald-400 px-4 py-2.5 text-sm font-semibold text-slate-950">Cetak Flyer Semua Simulasi</a>
+            </div>
         </div>
     @endif
 

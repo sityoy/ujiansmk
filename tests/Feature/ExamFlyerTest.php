@@ -70,6 +70,62 @@ class ExamFlyerTest extends TestCase
         $this->get(route('exam-flyers.trial', $trial))->assertOk()->assertSee('Sampai 04/09/2026 01:00 WIB')->assertDontSee('absensi GPS');
     }
 
+    public function test_group_print_includes_all_simulations_across_grades_and_periods_without_pagination(): void
+    {
+        $year = $this->year('2026/2027', true);
+        $asas = $this->makeRoomPeriod($year->id, 'AAS');
+        $ats = $this->makeRoomPeriod($year->id);
+        $classX = SchoolClass::create(['academic_year_id' => $year->id, 'name' => 'X-1', 'grade_level' => 10]);
+        $classXI = SchoolClass::create(['academic_year_id' => $year->id, 'name' => 'XI-1', 'grade_level' => 11]);
+        $trials = collect(range(1, 13))->map(function (int $number) use ($classX, $classXI, $asas, $ats): TrialExam {
+            $class = $number <= 10 ? $classX : $classXI;
+            $period = $number <= 10 ? $asas : $ats;
+            $subject = Subject::create(['code' => 'MAP-'.$number, 'name' => sprintf('Mapel %02d', $number)]);
+            $component = AssessmentSubject::create(['assessment_period_id' => $period->id, 'school_class_id' => $class->id, 'subject_id' => $subject->id]);
+            $bank = TrialQuestionBank::create(['name' => $subject->name, 'grade_level' => $class->grade_level, 'subject_id' => $subject->id]);
+            if ($number === 13) {
+                $bank->forceFill(['archived_at' => now()])->save();
+            }
+
+            return TrialExam::create([
+                'assessment_subject_id' => $component->id, 'trial_question_bank_id' => $bank->id,
+                'title' => 'Simulasi '.$subject->name, 'slug' => 'simulasi-'.$number, 'access_code' => 'COBA-'.$number,
+                'duration_minutes' => 60, 'is_active' => $number !== 12,
+                'starts_at' => $this->wib(sprintf('2026-09-%02d 08:00', $number)),
+            ]);
+        });
+        $bulk = route('exam-flyers.trials');
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $response = $this->actingAs($committee)->get(route('exam-flyers.trials', ['page' => 2, 'per_page' => 1]))
+            ->assertOk()->assertHeader('Cache-Control', 'no-store, private')
+            ->assertSee('Flyer Semua Simulasi Ujian · 12 ujian')->assertDontSee('COBA-13');
+
+        $document = new \DOMDocument;
+        @$document->loadHTML('<?xml encoding="UTF-8">'.$response->getContent());
+        $xpath = new \DOMXPath($document);
+        $pages = $xpath->query('//article[@class="flyer"]');
+        $this->assertCount(12, $pages);
+        foreach ($pages as $index => $page) {
+            $exam = $trials[$index];
+            $this->assertStringContainsString($exam->title, $page->textContent);
+            $this->assertStringContainsString($exam->access_code, $page->textContent);
+            $this->assertStringContainsString($exam->starts_at->timezone('Asia/Jakarta')->format('d/m/Y H:i').' WIB', $page->textContent);
+            $this->assertSame(route('tryout.entry', $exam), $xpath->query('.//a[@class="url"]', $page)->item(0)->getAttribute('href'));
+            $this->assertSame(1, $xpath->query('//*[@id="rules-title-'.($index + 1).'"]')->length);
+        }
+        $this->assertStringContainsString('Simulasi nonaktif.', $pages->item(11)->textContent);
+        $this->get(route('tryouts.index'))->assertOk()->assertSee($bulk);
+        $this->get(route('operations.index'))->assertOk()->assertSee($bulk);
+        $this->actingAs(User::factory()->create(['role' => UserRole::Teacher]))->get($bulk)->assertForbidden();
+    }
+
+    public function test_group_print_shows_an_empty_state_without_a_print_button(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => UserRole::Principal]))
+            ->get(route('exam-flyers.trials'))->assertOk()->assertSee('Belum ada simulasi yang bisa dicetak.')
+            ->assertDontSee('Cetak / Simpan PDF');
+    }
+
     public function test_core_flyer_uses_published_schedule_and_each_session_can_be_printed_separately(): void
     {
         $year = $this->year('2026/2027', true);

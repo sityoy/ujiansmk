@@ -1,5 +1,5 @@
-<section class="rules" aria-labelledby="rules-title">
-    <h2 id="rules-title">Tata tertib peserta</h2>
+<section class="rules" aria-labelledby="rules-title-{{ $pageNumber }}">
+    <h2 id="rules-title-{{ $pageNumber }}">Tata tertib peserta</h2>
     <div class="rule-grid">
         <div class="rule">
             <h3>Sebelum mulai</h3>
@@ -24,8 +24,8 @@
         </div>
     </div>
 </section>
-<section class="warning-note" aria-labelledby="warning-title">
-    <h2 id="warning-title">Peringatan pelanggaran</h2>
+<section class="warning-note" aria-labelledby="warning-title-{{ $pageNumber }}">
+    <h2 id="warning-title-{{ $pageNumber }}">Peringatan pelanggaran</h2>
     <p><strong>Pelanggaran pertama: peringatan. Kedua: ujian terkunci.</strong> Panggil pengawas jika ujian terkunci. Waktu ujian tetap berjalan saat terkunci.</p>
     <p>{{ $trial ? 'Reset pelanggaran hanya oleh petugas berwenang, maksimal '.$resetLimit.' kali per percobaan.' : 'Reset pelanggaran atau izin lanjut ditangani petugas berwenang, maksimal '.$resetLimit.' kali sesuai jatah sistem.' }}</p>
 </section>
