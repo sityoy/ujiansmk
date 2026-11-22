@@ -636,8 +636,10 @@ class TrialExamFlowTest extends TestCase
         ]);
 
         $this->actingAs(User::factory()->create(['role' => UserRole::Committee]));
-        $this->get(route('tryouts.index'))->assertOk()->assertDontSee('Hapus konfigurasi');
-        $this->delete($delete)->assertSessionHasErrors('trial_exam');
+        $this->get(route('tryouts.index'))->assertOk()->assertSee('Hapus konfigurasi');
+        $this->delete($delete)->assertSessionHasErrors(['trial_exam' => 'Masih ada peserta yang sedang mengerjakan. Tunggu sampai mereka mengumpulkan jawaban atau waktu pengerjaannya habis, lalu hapus konfigurasi.']);
+        $this->assertModelExists($trial);
+        $this->assertDatabaseCount('trial_responses', 1);
         $this->post(route('tryouts.attempts.restart', [$trial, $attempt]))->assertSessionHasNoErrors();
         $this->get(route('tryouts.index'))->assertOk()->assertSee('Hapus konfigurasi');
         $bank = $trial->questionBank;
@@ -669,6 +671,40 @@ class TrialExamFlowTest extends TestCase
         $this->assertDatabaseCount('trial_checkins', 0);
         $this->assertModelExists($question);
         $this->assertModelExists($student);
+    }
+
+    public function test_configuration_with_submitted_attempt_can_be_deleted_without_reset(): void
+    {
+        [$trial, $question] = $this->makeTrial();
+        $student = Student::query()->sole();
+        $this->actingAs($student->user)->post(route('tryout.start', $trial), ['access_code' => $trial->access_code])->assertSessionHasNoErrors();
+        $attempt = $trial->currentAttempts()->sole();
+        $this->post(route('tryout.submit', [$trial, $attempt]), ['answers' => [$question->id => 'A']])->assertSessionHasNoErrors();
+        $this->assertSame('submitted', $attempt->fresh()->status);
+
+        $this->actingAs(User::factory()->create(['role' => UserRole::Committee]));
+        $this->get(route('tryouts.index'))->assertOk()->assertSee('Hapus konfigurasi');
+        $this->delete(route('tryouts.destroy', $trial))->assertSessionHasNoErrors();
+        $this->assertModelMissing($trial);
+        $this->assertModelMissing($attempt);
+        $this->assertDatabaseCount('trial_responses', 0);
+        $this->assertModelExists($question);
+    }
+
+    public function test_configuration_with_expired_attempt_can_be_deleted_without_reset(): void
+    {
+        [$trial, $question] = $this->makeTrial();
+        $student = Student::query()->sole();
+        $this->actingAs($student->user)->post(route('tryout.start', $trial), ['access_code' => $trial->access_code])->assertSessionHasNoErrors();
+        $attempt = $trial->currentAttempts()->sole();
+        $this->travel($attempt->duration_minutes)->minutes();
+        $this->assertSame('in_progress', $attempt->fresh()->status);
+
+        $this->actingAs(User::factory()->create(['role' => UserRole::Committee]));
+        $this->delete(route('tryouts.destroy', $trial))->assertSessionHasNoErrors();
+        $this->assertModelMissing($trial);
+        $this->assertModelMissing($attempt);
+        $this->assertModelExists($question);
     }
 
     public function test_trial_location_settings_and_printed_attendance_are_separate_from_core(): void

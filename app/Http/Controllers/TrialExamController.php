@@ -506,14 +506,17 @@ class TrialExamController extends Controller
         return back()->with('status', $trialExam->is_active ? 'Ujian uji coba diaktifkan.' : 'Ujian uji coba dinonaktifkan.');
     }
 
-    public function destroy(TrialExam $trialExam): RedirectResponse
+    public function destroy(TrialExam $trialExam, TrialExamAttemptService $attempts): RedirectResponse
     {
-        DB::transaction(function () use ($trialExam): void {
+        DB::transaction(function () use ($trialExam, $attempts): void {
             TrialQuestionBank::query()->lockForUpdate()->findOrFail($trialExam->trial_question_bank_id);
             $exam = TrialExam::query()->lockForUpdate()->findOrFail($trialExam->id);
-            if ($exam->currentAttempts()->exists()) {
+            $hasRunningAttempt = $exam->attempts()->where('status', 'in_progress')
+                ->lockForUpdate()->lazyById(100)
+                ->contains(fn (TrialAttempt $attempt): bool => ! $attempts->isExpired($attempt->setRelation('trialExam', $exam)));
+            if ($hasRunningAttempt) {
                 throw ValidationException::withMessages([
-                    'trial_exam' => 'Masih ada pengerjaan peserta yang belum direset. Gunakan Reset & ulangi pada peserta yang sudah mulai sebelum menghapus konfigurasi.',
+                    'trial_exam' => 'Masih ada peserta yang sedang mengerjakan. Tunggu sampai mereka mengumpulkan jawaban atau waktu pengerjaannya habis, lalu hapus konfigurasi.',
                 ]);
             }
 
