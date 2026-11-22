@@ -49,7 +49,7 @@
                 <div class="body">
                     <div class="name">{{ $student->full_name }}</div>
                     <div class="row"><span>Kelas</span><span>:</span><strong>{{ $student->schoolClass->name }}</strong></div>
-                    <div class="row"><span>Tahun ajaran</span><span>:</span><span>{{ $student->schoolClass->academicYear->name }}</span></div>
+                    <div class="row"><span>Tahun Ajaran</span><span>:</span><span>{{ $student->schoolClass->academicYear->name }}</span></div>
                     <div class="row"><span>NIS</span><span>:</span><span>{{ $student->student_number }}</span></div>
                     <div class="row"><span>NISN</span><span>:</span><span>{{ $student->nisn ?? '—' }}</span></div>
                     <x-trial-card-account :student="$student" />
