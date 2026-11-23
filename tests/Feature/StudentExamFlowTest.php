@@ -68,6 +68,7 @@ class StudentExamFlowTest extends TestCase
             ->assertSessionHasNoErrors();
 
         $this->get(route('student.exams.index'))->assertOk()
+            ->assertSee('data-state="success"', false)->assertSee('Lokasi terverifikasi.')
             ->assertSeeInOrder(['Peringatan sebelum memulai ujian', 'Absensi lokasi sebelum ujian', 'Waktu ujian belum berjalan saat Anda absen', 'Jika absensi gagal', 'Cara mengaktifkan Jangan Ganggu di HP', 'Baca kembali peringatan ujian', 'Saya sudah membaca dan memahami aturan'])
             ->assertSee('required aria-describedby="core-exam-rules-title"', false);
 
@@ -388,8 +389,32 @@ class StudentExamFlowTest extends TestCase
         $this->assertStringContainsString('Absensi dibuka pukul', $reason ?? '');
         $this->actingAs($user)->get(route('student.exams.index'))->assertOk();
         $assignment->update(['status' => AssignmentStatus::Cancelled]);
-        $this->post(route('student.attendance.store', $assignment))->assertSessionHasErrors('attendance');
+        $this->post(route('student.attendance.store', $assignment))->assertSessionHasErrors('attendance', null, 'attendance');
         $this->assertDatabaseCount('daily_checkins', 0);
+    }
+
+    public function test_core_location_failure_and_verified_attendance_before_start_have_distinct_statuses(): void
+    {
+        [$user, $assignment] = $this->makeExam();
+        $assignment->examSession->update([
+            'starts_at' => now()->addMinutes(20), 'ends_at' => now()->addHour(),
+            'kind' => SessionKind::Makeup,
+        ]);
+        $index = route('student.exams.index');
+        $store = route('student.attendance.store', $assignment);
+        $start = route('student.exams.start', $assignment);
+        $this->actingAs($user)->get($index)->assertOk()->assertSee('data-state="pending"', false);
+        $coords = ['latitude' => -6.2000000, 'longitude' => 106.8166660, 'accuracy_meters' => 10];
+        $anchor = $index.'#attendance-'.$assignment->id;
+        $failed = $this->from($index)->post($store, [...$coords, 'latitude' => -6.21])->assertRedirect($anchor)
+            ->assertSessionHasErrors('location', null, 'attendance')->assertSessionHas('attendance_assignment_id', $assignment->id);
+        $this->withCookie(config('session.cookie'), $failed->getCookie(config('session.cookie'))->getValue());
+        $this->get($index)->assertOk()->assertSee('data-state="error"', false)->assertSee('melewati radius')->assertDontSee($start);
+        $this->from($index)->post($store, $coords)->assertRedirect($anchor)->assertSessionHasNoErrors();
+        $this->get($index)->assertOk()->assertSee('data-state="pending"', false)->assertSee('Menunggu jadwal')
+            ->assertSee('Absensi sudah terverifikasi. Ujian dapat dimulai pukul 10:20.')->assertDontSee($start);
+        $this->travel(20)->minutes();
+        $this->get($index)->assertOk()->assertSee('data-state="success"', false)->assertSee($start);
     }
 
     public function test_rejected_attendance_cannot_be_self_verified_again(): void
@@ -399,7 +424,7 @@ class StudentExamFlowTest extends TestCase
         $checkin = $assignment->student->dailyCheckins()->firstOrFail();
         $checkin->update(['status' => CheckinStatus::Rejected]);
         $this->actingAs($user)->post(route('student.attendance.store', $assignment))
-            ->assertSessionHasErrors('attendance');
+            ->assertSessionHasErrors('attendance', null, 'attendance');
         $this->assertSame(CheckinStatus::Rejected, $checkin->fresh()->status);
     }
 

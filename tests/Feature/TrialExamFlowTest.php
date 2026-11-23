@@ -784,7 +784,8 @@ class TrialExamFlowTest extends TestCase
             ->assertJsonValidationErrors('location');
         $this->assertDatabaseCount('trial_checkins', 0);
 
-        $this->postJson($attendance, $inside)->assertOk()->assertJsonPath('message', 'Absensi simulasi terverifikasi. Anda bisa mulai ujian.');
+        $this->postJson($attendance, $inside)->assertOk()->assertJsonPath('verified', true)
+            ->assertJsonPath('message', 'Absensi simulasi terverifikasi. Anda bisa mulai ujian.');
         $this->postJson($attendance, $inside)->assertOk();
         $this->assertDatabaseCount('trial_checkins', 1);
         $this->assertDatabaseCount('daily_checkins', 0);

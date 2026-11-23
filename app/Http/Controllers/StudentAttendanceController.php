@@ -22,8 +22,30 @@ class StudentAttendanceController extends Controller
         $student = $request->user()->student ?: abort(403);
         abort_unless($assignment->student_id === $student->id, 403);
         $assignment->load('examSession.campus');
-        $session = $assignment->examSession;
 
+        try {
+            $this->verifyAttendance($request, $assignment, $checkins);
+        } catch (ValidationException $error) {
+            if ($request->expectsJson()) {
+                throw $error;
+            }
+
+            return $this->backToAssignment($assignment)->withErrors($error->errors(), 'attendance')
+                ->with('attendance_assignment_id', $assignment->id);
+        }
+
+        return $this->backToAssignment($assignment);
+    }
+
+    private function backToAssignment(ExamAssignment $assignment): RedirectResponse
+    {
+        return redirect()->to(route('student.exams.index').'#attendance-'.$assignment->id);
+    }
+
+    private function verifyAttendance(Request $request, ExamAssignment $assignment, DailyCheckinService $checkins): void
+    {
+        $student = $request->user()->student;
+        $session = $assignment->examSession;
         $existing = DailyCheckin::query()
             ->where('student_id', $student->id)
             ->whereDate('attendance_date', now()->toDateString())
@@ -40,7 +62,7 @@ class StudentAttendanceController extends Controller
                 ]);
             }
 
-            return back()->with('status', 'Absensi lokasi hari ini sudah terverifikasi dan tidak dibuat ulang.');
+            return;
         }
 
         $validated = $request->validate([
@@ -57,7 +79,5 @@ class StudentAttendanceController extends Controller
             (float) $validated['accuracy_meters'],
             CheckinMethod::Location,
         );
-
-        return back()->with('status', 'Absensi lokasi berhasil diverifikasi. Ujian dapat dimulai sesuai jadwal.');
     }
 }

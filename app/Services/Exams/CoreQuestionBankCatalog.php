@@ -63,6 +63,7 @@ class CoreQuestionBankCatalog
             'empty' => $grouped->where('questions_count', 0)->count(),
             'questions' => (int) $grouped->sum('questions_count'),
         ];
+        $allStatuses = $grouped;
         $grouped = $grouped->filter(fn (AssessmentSubject $component): bool => match ($questionStatus) {
             'filled' => $component->questions_count > 0,
             'empty' => (int) $component->questions_count === 0,
@@ -71,6 +72,7 @@ class CoreQuestionBankCatalog
 
         return [
             'grouped' => $grouped,
+            'allStatuses' => $allStatuses,
             'catalogView' => $catalogView,
             'questionStatus' => $questionStatus,
             'summary' => $summary,

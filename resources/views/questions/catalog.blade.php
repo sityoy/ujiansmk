@@ -96,6 +96,36 @@
         <section class="mt-6 rounded-3xl border border-white/10 bg-white/[0.035] p-4 sm:p-6">
             <h2 class="text-lg font-semibold text-white">Rekap Pembuatan Soal</h2>
             <p class="mt-2 text-xs leading-6 text-slate-400">Jumlah soal per mapel, tingkat, periode, dan guru penanggung jawab. Klik Lihat soal untuk membuka bank terkait.</p>
+            <details class="mt-4 rounded-xl border border-white/10 p-4">
+                <summary class="cursor-pointer text-sm font-semibold text-violet-300">Teks untuk WhatsApp</summary>
+                <p class="mt-2 text-xs leading-6 text-slate-400">Kedua teks mengikuti periode, tingkat, dan pencarian. Salin teks yang diperlukan, lalu tempel ke WhatsApp.</p>
+                <div class="mt-3 grid gap-4 lg:grid-cols-2">
+                    @foreach ($shareMessages as $status => $share)
+                        <section data-question-share class="space-y-2">
+                            <label for="question-share-{{ $status }}" class="block text-sm font-semibold text-white">{{ $share['label'] }}</label>
+                            <textarea id="question-share-{{ $status }}" readonly rows="7" class="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-sm text-slate-200">{{ $share['text'] }}</textarea>
+                            <button type="button" data-copy-share class="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-violet-300">Salin teks</button>
+                            <p data-copy-result role="status" class="text-xs text-slate-400"></p>
+                        </section>
+                    @endforeach
+                </div>
+            </details>
+            <script>
+                document.querySelectorAll('[data-question-share]').forEach(group => {
+                    const text = group.querySelector('textarea');
+                    const result = group.querySelector('[data-copy-result]');
+                    group.querySelector('[data-copy-share]').addEventListener('click', async () => {
+                        try {
+                            await navigator.clipboard.writeText(text.value);
+                            result.textContent = 'Teks disalin. Tempel ke WhatsApp.';
+                        } catch {
+                            text.focus();
+                            text.select();
+                            result.textContent = 'Teks dipilih. Gunakan menu Salin atau tekan Ctrl+C.';
+                        }
+                    });
+                });
+            </script>
             <form method="GET" action="{{ route('question-bank.recap') }}" target="_blank" class="mt-4 flex flex-wrap items-end gap-3 rounded-xl border border-white/10 p-4">
                 <input type="hidden" name="period_id" value="{{ $periodId }}">
                 <input type="hidden" name="q" value="{{ $search }}">

@@ -214,6 +214,70 @@ html[data-theme='light'] .exam-toolbar {
     box-shadow: 0 14px 35px rgb(15 23 42 / 0.12);
 }
 
+.attendance-feedback {
+    border: 1px solid;
+    border-radius: .75rem;
+    padding: .75rem 1rem;
+    font-size: .875rem;
+    line-height: 1.5;
+}
+
+.attendance-feedback strong { display: none; }
+.attendance-feedback p { margin-top: .25rem; }
+
+.attendance-feedback[data-state='pending'] [data-attendance-label='pending'],
+.attendance-feedback[data-state='checking'] [data-attendance-label='checking'],
+.attendance-feedback[data-state='success'] [data-attendance-label='success'],
+.attendance-feedback[data-state='error'] [data-attendance-label='error'] { display: block; }
+
+.attendance-feedback:is([data-state='pending'], [data-state='checking']) {
+    color: #fde68a;
+    background: #30240f;
+    border-color: #a16207;
+}
+
+.attendance-feedback[data-state='success'] {
+    color: #a7f3d0;
+    background: #092d22;
+    border-color: #059669;
+}
+
+.attendance-feedback[data-state='error'] {
+    color: #fecdd3;
+    background: #3c1522;
+    border-color: #e11d48;
+}
+
+html[data-theme='light'] .attendance-feedback:is([data-state='pending'], [data-state='checking']) {
+    color: #78350f;
+    background: #fffbeb;
+    border-color: #d97706;
+}
+
+html[data-theme='light'] .attendance-feedback[data-state='success'] {
+    color: #064e3b;
+    background: #ecfdf5;
+    border-color: #059669;
+}
+
+html[data-theme='light'] .attendance-feedback[data-state='error'] {
+    color: #881337;
+    background: #fff1f2;
+    border-color: #e11d48;
+}
+
+.attendance-start {
+    color: white;
+    background: #047857;
+}
+
+.attendance-start:hover:not(:disabled) { background: #065f46; }
+.attendance-start:disabled {
+    color: #f1f5f9;
+    background: #475569;
+    cursor: not-allowed;
+}
+
 .tryout-page [data-theme-toggle] {
     flex-shrink: 0;
 }

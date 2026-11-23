@@ -85,7 +85,10 @@ class TrialExamPublicController extends Controller
 
         $request->session()->put('trial_checkin.'.$trialExam->id, $checkin->id);
 
-        return response()->json(['message' => 'Absensi simulasi terverifikasi. Anda bisa mulai ujian.'])->header('Cache-Control', 'no-store');
+        return response()->json([
+            'verified' => true,
+            'message' => 'Absensi simulasi terverifikasi. Anda bisa mulai ujian.',
+        ])->header('Cache-Control', 'no-store');
     }
 
     /** @return array{Student, string} */

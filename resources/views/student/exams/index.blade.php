@@ -67,10 +67,14 @@
                 $attendanceReason = app(\App\Services\Attendance\AttendanceAvailability::class)->reason($assignment, $checkin);
                 $canAttend = $attendanceReason === null;
                 $hasCheckin = $checkin?->status->value === 'verified' && $checkin->campus_id === $session->campus_id;
+                $attendanceError = (int) session('attendance_assignment_id') === (int) $assignment->id
+                    ? $errors->getBag('attendance')->first() : '';
+                $checkinProblem = $checkin?->status->value === 'rejected'
+                    || ($checkin?->status->value === 'verified' && ! $hasCheckin);
                 $pgCount = $assignment->assessmentSubject->questions
                     ->filter(fn ($question) => $question->question_type->value === 'multiple_choice')->count();
             @endphp
-            <article class="rounded-3xl border border-white/10 bg-white/[0.035] p-6">
+            <article id="attendance-{{ $assignment->id }}" class="scroll-mt-24 rounded-3xl border border-white/10 bg-white/[0.035] p-6">
                 <div class="flex flex-wrap items-start justify-between gap-4">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-300">{{ $assignment->assessmentSubject->assessmentPeriod->name }}</p>
@@ -82,17 +86,20 @@
                 </div>
 
                 @if (! $hasCheckin && $canAttend && ! $attempt)
-                    <form method="POST" action="{{ route('student.attendance.store', $assignment) }}" class="attendance-form mt-5 rounded-2xl border border-amber-400/20 bg-amber-400/[0.045] p-4">
+                    <form method="POST" action="{{ route('student.attendance.store', $assignment) }}" data-core-attendance class="mt-5 rounded-2xl border border-amber-400/20 bg-amber-400/[0.045] p-4">
                         @csrf
                         <input type="hidden" name="latitude">
                         <input type="hidden" name="longitude">
                         <input type="hidden" name="accuracy_meters">
                         <p class="text-sm font-semibold text-amber-200">Absensi lokasi ujian</p>
                         <p class="mt-2 text-sm leading-6 text-slate-300">Izinkan lokasi presisi saat browser meminta izin. Tunggu sampai absensi terverifikasi sebelum mulai ujian.</p>
-                        <button class="attendance-button mt-4 w-full rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-slate-950 sm:w-auto">Ambil lokasi &amp; kirim absensi</button>
-                        <p class="attendance-message mt-3 text-sm text-slate-300" role="status"></p>
+                        <button type="submit" data-location-check class="mt-4 w-full rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-slate-950 disabled:opacity-60 sm:w-auto">Ambil lokasi &amp; kirim absensi</button>
+                        <x-attendance-feedback :state="$attendanceError !== '' ? 'error' : 'pending'"
+                            :message="$attendanceError ?: 'Ambil lokasi untuk memverifikasi absensi sebelum memulai ujian.'" class="mt-3" />
                         <a href="#core-exam-location-rules" class="mt-2 inline-block text-sm font-semibold text-cyan-300 underline">Panduan jika absensi gagal</a>
                     </form>
+                @elseif ($attendanceError !== '')
+                    <x-attendance-feedback state="error" :message="$attendanceError" class="mt-5" />
                 @endif
 
                 <div class="mt-5 flex flex-wrap items-center gap-3">
@@ -105,10 +112,14 @@
                     @elseif ($attempt?->status->value === 'terminated')
                         <span class="text-sm text-rose-300">Ujian dihentikan. Hubungi pengawas.</span>
                     @elseif ($attendanceReason)
-                        <span class="text-sm text-amber-300">{{ $attendanceReason }}</span>
+                        @if ($attendanceError === '')
+                            <x-attendance-feedback :state="$checkinProblem ? 'error' : 'pending'"
+                                :title="$checkinProblem ? null : 'Belum bisa mulai'" :message="$attendanceReason" class="w-full" />
+                        @endif
                     @elseif ($isOpen && $hasCheckin)
                         <form method="POST" action="{{ route('student.exams.start', $assignment) }}" onsubmit="return confirm('Mulai ujian sekarang? Waktu akan langsung berjalan.')" class="w-full space-y-3">
                             @csrf
+                            <x-attendance-feedback state="success" message="Lokasi terverifikasi. Centang pernyataan kesiapan, lalu pilih Mulai ujian." />
                             @if ($pgCount > 0)
                                 <p class="text-sm text-slate-300">Setiap jawaban PG benar bernilai tetap 2 poin. Nilai PG maksimal 100.</p>
                             @endif
@@ -117,14 +128,13 @@
                                 <input type="checkbox" required aria-describedby="core-exam-rules-title" class="mt-1.5 shrink-0">
                                 <span>Saya sudah membaca dan memahami aturan serta siap memulai ujian.</span>
                             </label>
-                            <button class="rounded-xl bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950">Mulai ujian</button>
+                            <button type="submit" class="attendance-start rounded-xl px-5 py-3 text-sm font-semibold">Mulai ujian</button>
                         </form>
-                    @elseif (now()->lt($session->starts_at->copy()->subMinutes(60)))
-                        <span class="text-sm text-amber-300">Absensi dibuka pukul {{ $session->starts_at->copy()->subMinutes(60)->format('H:i') }} (60 menit sebelum ujian).</span>
+                    @elseif ($hasCheckin && ! $isOpen)
+                        <x-attendance-feedback state="pending" title="Menunggu jadwal"
+                            :message="'Absensi sudah terverifikasi. Ujian dapat dimulai pukul '.$session->starts_at->format('H:i').'.'" class="w-full" />
                     @elseif (! $isOpen)
                         <span class="text-sm text-slate-500">Ujian dimulai pukul {{ $session->starts_at->format('H:i') }}. Absensi dapat diselesaikan terlebih dahulu.</span>
-                    @else
-                        <span class="text-sm text-amber-300">Selesaikan absensi terlebih dahulu.</span>
                     @endif
                 </div>
             </article>
@@ -133,33 +143,5 @@
         @endforelse
     </section>
 
-    <script>
-        document.querySelectorAll('.attendance-form').forEach((form) => {
-            form.addEventListener('submit', (event) => {
-                if (form.dataset.located === 'yes') return;
-                event.preventDefault();
-                const button = form.querySelector('.attendance-button');
-                const message = form.querySelector('.attendance-message');
-
-                if (!navigator.geolocation) {
-                    message.textContent = 'Perangkat tidak mendukung pembacaan lokasi.';
-                    return;
-                }
-
-                button.disabled = true;
-                button.textContent = 'Membaca lokasi...';
-                navigator.geolocation.getCurrentPosition((position) => {
-                    form.latitude.value = position.coords.latitude;
-                    form.longitude.value = position.coords.longitude;
-                    form.accuracy_meters.value = position.coords.accuracy;
-                    form.dataset.located = 'yes';
-                    form.submit();
-                }, (error) => {
-                    button.disabled = false;
-                    button.textContent = 'Ambil lokasi & kirim absensi';
-                    message.textContent = 'Lokasi gagal dibaca: ' + error.message;
-                }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
-            });
-        });
-    </script>
+    <script src="{{ asset('js/exam-attendance.js') }}?v=1" defer></script>
 @endsection

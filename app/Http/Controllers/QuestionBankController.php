@@ -40,6 +40,7 @@ class QuestionBankController extends Controller
         return view('questions.catalog', [
             ...$data,
             'components' => TablePagination::collection($data['grouped']),
+            'shareMessages' => $data['catalogView'] === 'summary' ? $this->shareMessages($data) : [],
         ]);
     }
 
@@ -126,6 +127,52 @@ class QuestionBankController extends Controller
         $deadline = $period->core_question_deadline_at?->timezone(AssessmentPeriod::CORE_QUESTION_TIMEZONE);
 
         return $deadline ? $deadline->format('d/m/Y H:i').' WIB' : 'Belum ditetapkan';
+    }
+
+    private function shareMessages(array $data): array
+    {
+        $selectedPeriod = $data['periods']->firstWhere('id', $data['periodId']);
+        $scope = collect([
+            $selectedPeriod ? $selectedPeriod->name.' · '.$selectedPeriod->academicYear->name : 'Semua periode',
+            $data['gradeLevel'] ? 'Kelas '.$data['gradeLevel'] : 'Semua tingkat',
+            $data['search'] !== '' ? 'Pencarian: '.$data['search'] : null,
+        ])->filter()->join(' · ');
+        $banks = $data['allStatuses']
+            ->sortBy(fn ($bank) => sprintf('%02d|%s|%s', $bank->grade_level, $bank->subject->name, $bank->teacher?->name ?? ''))
+            ->groupBy(fn ($bank) => $bank->questions_count > 0 ? 'filled' : 'empty');
+
+        $messages = [];
+        foreach (['filled' => 'Sudah Membuat Soal', 'empty' => 'Belum Membuat Soal'] as $status => $label) {
+            $matching = $banks->get($status, collect());
+            $lines = ['*Rekap Pembuatan Soal Ujian Inti*', $scope, '', "*{$label}*"];
+            if ($matching->isEmpty()) {
+                $lines[] = 'Tidak ada bank pada daftar ini.';
+            }
+
+            foreach ($matching->groupBy('assessment_period_id') as $periodBanks) {
+                $period = $periodBanks->first()->assessmentPeriod;
+                $lines[] = '';
+                if (! $selectedPeriod) {
+                    $lines[] = "*{$period->name} · {$period->academicYear->name}*";
+                }
+                if ($period->core_question_deadline_at) {
+                    $lines[] = 'Batas pembuatan soal: '.$this->recapDeadline($period);
+                }
+                foreach ($periodBanks->values() as $index => $bank) {
+                    $teacher = $bank->teacher?->name ?? 'Guru belum ditetapkan';
+                    $total = (int) $bank->questions_count;
+                    $lines[] = ($index + 1).". {$bank->subject->name} — Kelas {$bank->grade_level} ({$bank->rombel_names})";
+                    $lines[] = "    {$teacher} · {$total} soal";
+                }
+            }
+            if ($matching->isNotEmpty()) {
+                $lines[] = '';
+                $lines[] = $status === 'filled' ? 'Terima kasih, Bapak/Ibu.' : 'Mohon Bapak/Ibu mulai mengisi soal sesuai jadwal yang ditetapkan. Terima kasih.';
+            }
+            $messages[$status] = ['label' => $label, 'text' => implode("\n", $lines)];
+        }
+
+        return $messages;
     }
 
     public function index(Request $request, AssessmentSubject $assessmentSubject): View

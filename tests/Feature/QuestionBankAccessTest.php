@@ -385,6 +385,7 @@ class QuestionBankAccessTest extends TestCase
         $committee = User::factory()->create(['role' => UserRole::Committee]);
         $this->actingAs($committee)->get(route('question-bank.index', ['view' => 'summary']))->assertOk()
             ->assertSee('Rekap Pembuatan Soal')->assertSee($teacher->name)->assertSee('X-1, X-2')
+            ->assertSee('Teks untuk WhatsApp')->assertSee('Sudah Membuat Soal')->assertSee('Belum Membuat Soal')
             ->assertViewHas('summary', ['banks' => 2, 'filled' => 1, 'empty' => 1, 'questions' => 3])
             ->assertViewHas('components', function ($banks) use ($assigned): bool {
                 $bank = $banks->firstWhere('subject_id', $assigned->subject_id);
@@ -393,6 +394,15 @@ class QuestionBankAccessTest extends TestCase
                     && $bank->pg_count === 1 && $bank->essay_count === 1 && $bank->short_answer_count === 1;
             });
         $this->get(route('question-bank.index', ['view' => 'summary', 'question_status' => 'filled']))->assertOk()
+            ->assertViewHas('shareMessages', function (array $messages) use ($assigned, $other, $teacher): bool {
+                $filled = $messages['filled']['text'];
+                $empty = $messages['empty']['text'];
+
+                return substr_count($filled, $assigned->subject->name) === 1
+                    && str_contains($filled, 'X-1, X-2') && str_contains($filled, $teacher->name.' · 3 soal')
+                    && ! str_contains($filled, $other->subject->name)
+                    && str_contains($empty, $other->subject->name) && ! str_contains($empty, $assigned->subject->name);
+            })
             ->assertViewHas('components', fn ($banks): bool => $banks->total() === 1 && $banks->first()->subject_id === $assigned->subject_id);
         $this->get(route('question-bank.index', ['view' => 'summary', 'question_status' => 'empty']))->assertOk()
             ->assertViewHas('components', fn ($banks): bool => $banks->total() === 1 && $banks->first()->id === $other->id);
@@ -431,6 +441,8 @@ class QuestionBankAccessTest extends TestCase
         }
         $this->actingAs($teacher)->get(route('question-bank.index', ['view' => 'summary', 'question_status' => 'filled', 'page' => 2]))
             ->assertOk()->assertViewHas('summary', ['banks' => 14, 'filled' => 13, 'empty' => 1, 'questions' => 13])
+            ->assertViewHas('shareMessages', fn (array $messages): bool => substr_count($messages['filled']['text'], 'Mapel Tambahan') === 13
+                && str_contains($messages['empty']['text'], $assigned->subject->name))
             ->assertViewHas('components', fn ($banks): bool => $banks->total() === 13 && $banks->count() === 3)
             ->assertSee('view=summary', false)->assertSee('question_status=filled', false);
     }
