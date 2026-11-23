@@ -163,6 +163,7 @@ class QuestionBankController extends Controller
                     $total = (int) $bank->questions_count;
                     $lines[] = ($index + 1).". {$bank->subject->name} — Kelas {$bank->grade_level} ({$bank->rombel_names})";
                     $lines[] = "    {$teacher} · {$total} soal";
+                    $lines[] = sprintf('    PG %d · Isian Singkat %d · Esai %d', $bank->pg_count, $bank->short_answer_count, $bank->essay_count);
                 }
             }
             if ($matching->isNotEmpty()) {

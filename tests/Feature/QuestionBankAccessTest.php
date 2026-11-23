@@ -372,7 +372,12 @@ class QuestionBankAccessTest extends TestCase
     {
         $this->withoutVite();
         [$teacher, , $assigned, $other] = $this->makeComponents();
-        foreach ([ExamQuestionType::MultipleChoice, ExamQuestionType::Essay, ExamQuestionType::ShortAnswer] as $position => $type) {
+        $types = [
+            ExamQuestionType::MultipleChoice, ExamQuestionType::MultipleChoice,
+            ExamQuestionType::ShortAnswer, ExamQuestionType::ShortAnswer, ExamQuestionType::ShortAnswer,
+            ExamQuestionType::Essay,
+        ];
+        foreach ($types as $position => $type) {
             $assigned->questions()->create(['question_text' => 'Soal '.$position, 'question_type' => $type, 'points' => 2, 'position' => $position + 1]);
         }
         $class = SchoolClass::create(['academic_year_id' => $assigned->schoolClass->academic_year_id, 'name' => 'X-2', 'grade_level' => 10]);
@@ -386,12 +391,12 @@ class QuestionBankAccessTest extends TestCase
         $this->actingAs($committee)->get(route('question-bank.index', ['view' => 'summary']))->assertOk()
             ->assertSee('Rekap Pembuatan Soal')->assertSee($teacher->name)->assertSee('X-1, X-2')
             ->assertSee('Teks untuk WhatsApp')->assertSee('Sudah Membuat Soal')->assertSee('Belum Membuat Soal')
-            ->assertViewHas('summary', ['banks' => 2, 'filled' => 1, 'empty' => 1, 'questions' => 3])
+            ->assertViewHas('summary', ['banks' => 2, 'filled' => 1, 'empty' => 1, 'questions' => 6])
             ->assertViewHas('components', function ($banks) use ($assigned): bool {
                 $bank = $banks->firstWhere('subject_id', $assigned->subject_id);
 
-                return $banks->total() === 2 && $bank->questions_count === 3
-                    && $bank->pg_count === 1 && $bank->essay_count === 1 && $bank->short_answer_count === 1;
+                return $banks->total() === 2 && $bank->questions_count === 6
+                    && $bank->pg_count === 2 && $bank->essay_count === 1 && $bank->short_answer_count === 3;
             });
         $this->get(route('question-bank.index', ['view' => 'summary', 'question_status' => 'filled']))->assertOk()
             ->assertViewHas('shareMessages', function (array $messages) use ($assigned, $other, $teacher): bool {
@@ -399,16 +404,18 @@ class QuestionBankAccessTest extends TestCase
                 $empty = $messages['empty']['text'];
 
                 return substr_count($filled, $assigned->subject->name) === 1
-                    && str_contains($filled, 'X-1, X-2') && str_contains($filled, $teacher->name.' · 3 soal')
+                    && str_contains($filled, 'X-1, X-2') && str_contains($filled, $teacher->name.' · 6 soal')
+                    && str_contains($filled, 'PG 2 · Isian Singkat 3 · Esai 1')
                     && ! str_contains($filled, $other->subject->name)
-                    && str_contains($empty, $other->subject->name) && ! str_contains($empty, $assigned->subject->name);
+                    && str_contains($empty, $other->subject->name) && ! str_contains($empty, $assigned->subject->name)
+                    && str_contains($empty, 'PG 0 · Isian Singkat 0 · Esai 0');
             })
             ->assertViewHas('components', fn ($banks): bool => $banks->total() === 1 && $banks->first()->subject_id === $assigned->subject_id);
         $this->get(route('question-bank.index', ['view' => 'summary', 'question_status' => 'empty']))->assertOk()
             ->assertViewHas('components', fn ($banks): bool => $banks->total() === 1 && $banks->first()->id === $other->id);
         $this->actingAs($teacher)->get(route('question-bank.index', ['view' => 'summary']))->assertOk()
             ->assertDontSee($other->subject->name)
-            ->assertViewHas('summary', ['banks' => 1, 'filled' => 1, 'empty' => 0, 'questions' => 3]);
+            ->assertViewHas('summary', ['banks' => 1, 'filled' => 1, 'empty' => 0, 'questions' => 6]);
     }
 
     public function test_recap_filters_period_grade_and_teacher_without_leaking_other_teachers(): void
