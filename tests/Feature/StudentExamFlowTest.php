@@ -114,6 +114,10 @@ class StudentExamFlowTest extends TestCase
         $submit = route('student.exams.submit', $attempt);
         $this->actingAs($user)->withSession(['exam_device_token' => str_repeat('a', 64)]);
 
+        $this->get($show)->assertOk()->assertSeeInOrder([
+            'data-exam-section="multiple_choice"', 'Lanjut ke Esai', 'data-exam-section="essay"',
+        ], false)->assertDontSee('data-exam-section="short_answer"', false);
+
         $this->putJson(route('student.exams.answer', [$attempt, $questions[0]]), ['answer' => 'A'])->assertOk();
         $this->putJson(route('student.exams.answer', [$attempt, $questions[1]]), ['answer' => '   '])->assertUnprocessable();
         $this->from($show)->post($submit)->assertSessionHasErrors('submission');
@@ -126,6 +130,34 @@ class StudentExamFlowTest extends TestCase
         $this->post($submit)->assertRedirect(route('student.exams.result', $attempt));
         $this->assertSame(AttemptStatus::Submitted, $attempt->fresh()->status);
         $this->assertSame(1, $attempt->answers()->count());
+    }
+
+    public function test_core_exam_groups_all_question_types_and_keeps_bank_order_within_each_section(): void
+    {
+        [$user, $assignment, $questions] = $this->makeExam();
+        $questions[1]->update(['question_text' => 'PG posisi kedua', 'position' => 4]);
+        $questions[0]->update(['question_text' => 'PG posisi pertama', 'position' => 2]);
+        $assignment->assessmentSubject->questions()->create([
+            'question_type' => ExamQuestionType::Essay,
+            'question_text' => 'Uraikan jawaban untuk esai.',
+            'points' => 5, 'position' => 1,
+        ]);
+        $assignment->assessmentSubject->questions()->create([
+            'question_type' => ExamQuestionType::ShortAnswer,
+            'question_text' => 'Tulis jawaban singkat.',
+            'points' => 3, 'position' => 3,
+        ]);
+        $attempt = $this->startAttempt($assignment);
+
+        $this->actingAs($user)->withSession(['exam_device_token' => str_repeat('a', 64)])
+            ->get(route('student.exams.show', $attempt))->assertOk()
+            ->assertSeeInOrder([
+                'data-exam-section="multiple_choice"', 'Soal 1 dari 4', 'PG posisi pertama',
+                'Soal 2 dari 4', 'PG posisi kedua', 'Lanjut ke Isian Singkat',
+                'data-exam-section="short_answer"', 'Soal 3 dari 4', 'Tulis jawaban singkat.', 'Lanjut ke Esai',
+                'data-exam-section="essay"', 'Soal 4 dari 4', 'Uraikan jawaban untuk esai.',
+                'Selesai dan kumpulkan jawaban',
+            ], false);
     }
 
     public function test_core_exam_displays_formatted_text_and_keeps_legacy_angle_brackets_literal(): void
@@ -597,6 +629,10 @@ class StudentExamFlowTest extends TestCase
         $assignment->assessmentSubject->update(['teacher_user_id' => $teacher->id]);
         $assignment = $assignment->fresh();
         $attempt = $this->startAttempt($assignment);
+        $this->actingAs($student)->withSession(['exam_device_token' => str_repeat('a', 64)])
+            ->get(route('student.exams.show', $attempt))->assertOk()
+            ->assertSeeInOrder(['data-exam-section="short_answer"', 'Lanjut ke Esai', 'data-exam-section="essay"'], false)
+            ->assertDontSee('data-exam-section="multiple_choice"', false);
         $attempts = app(ExamAttemptService::class);
         $attempts->saveAnswer($attempt, $short, 'Hypertext Transfer Protocol');
         $attempts->saveAnswer($attempt, $essay, 'Klien mengirim permintaan dan server memberikan respons.');

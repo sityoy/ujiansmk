@@ -18,11 +18,34 @@ function element(extra = {}) {
         addEventListener(name, listener) { this.listeners[name] = listener; }, ...extra };
 }
 
-function setup({trial = false, oldBrowser = false, written = false} = {}) {
+function setup({trial = false, oldBrowser = false, written = false, grouped = false, essayOnlyAfterPg = false, resumed = false} = {}) {
     const button = element();
-    const form = element({ submissions: 0, dataset: { questionCount: written ? '2' : '1' }, submit() { this.submissions++; }, querySelector: () => button });
+    const form = element({ hidden: false, submissions: 0, dataset: { questionCount: written ? '2' : '1' }, submit() { this.submissions++; }, querySelector: () => button });
     const inputs = ['A', 'B', 'C'].map(value => element({ type: 'radio', value, checked: value === 'A', dataset: { saveUrl: '/answer/1' } }));
-    if (written) inputs.push(element({ tagName: 'TEXTAREA', value: '  ', dataset: { saveUrl: '/answer/2' } }));
+    const sections = [];
+    if (grouped) {
+        inputs[0].checked = resumed;
+        const short = element({ tagName: 'TEXTAREA', value: resumed ? 'Jawaban tersimpan' : '  ', dataset: { saveUrl: '/answer/2' } });
+        const essay = element({ tagName: 'TEXTAREA', value: '', dataset: { saveUrl: '/answer/3' } });
+        const groups = essayOnlyAfterPg ? [inputs.slice(), [essay]] : [inputs.slice(), [short], [essay]];
+        form.dataset.questionCount = String(groups.length);
+        sections.push(...groups.map((group, index) => {
+            const controls = {
+                '[data-exam-section-message]': element(),
+                '[data-exam-section-back]': index > 0 ? element() : null,
+                '[data-exam-section-next]': index < groups.length - 1 ? element() : null,
+                '[data-exam-section-heading]': element({ getBoundingClientRect: () => ({ top: 150 }) }),
+            };
+            return element({
+                dataset: { questionCount: '1' },
+                querySelector: selector => controls[selector],
+                querySelectorAll: () => group,
+            });
+        }));
+        inputs.push(...groups.slice(1).flat());
+    } else if (written) {
+        inputs.push(element({ tagName: 'TEXTAREA', value: '  ', dataset: { saveUrl: '/answer/2' } }));
+    }
     const cancel = element();
     const confirm = element();
     const dialog = element({ querySelector: selector => selector === '[data-submit-cancel]' ? cancel : confirm,
@@ -34,20 +57,21 @@ function setup({trial = false, oldBrowser = false, written = false} = {}) {
     const nodes = { 'trial-form': form, 'timer': element(), 'submit-exam': form, 'save-status': element(), 'exam-timer': element(),
         'retry-save': element(), 'exam-submit-dialog': dialog, 'exam-submit-backdrop': element(), 'exam-submit-message': element() };
     const requests = [];
-    const window = element();
+    const window = element({ scrollY: 0, scrollTo() {} });
     let blocked = false;
     window.examSecurity = { isBlocked: () => blocked };
     let elapsed = 0;
     let tick;
     vm.runInNewContext(submissionScript + '\n' + examScript(trial ? trialTemplate : coreTemplate), {
-        document: { ...element(), querySelector: () => ({ content: 'csrf' }),
-            querySelectorAll: () => inputs, getElementById: id => nodes[id] },
+        document: { ...element(),
+            querySelector: selector => selector === '.exam-toolbar' ? { getBoundingClientRect: () => ({ height: 80 }) } : { content: 'csrf' },
+            querySelectorAll: selector => selector === '[data-exam-section]' ? sections : inputs, getElementById: id => nodes[id] },
         window, performance: { now: () => elapsed },
         setInterval: callback => { tick = callback; }, setTimeout, clearTimeout, AbortController: oldBrowser ? undefined : AbortController,
         fetch: (url, options) => new Promise(resolve => requests.push({ url, options, resolve })),
     });
     const click = { preventDefault() {} };
-    return { inputs, nodes, form, requests, window, dialog, button, cancel,
+    return { inputs, nodes, form, requests, window, dialog, button, cancel, sections,
         open: () => form.listeners.submit(click), confirm: () => confirm.listeners.click(),
         block() { blocked = true; window.listeners['examsecurity:blocked'](); },
         expire() { elapsed = 60001; tick(); } };
@@ -55,6 +79,63 @@ function setup({trial = false, oldBrowser = false, written = false} = {}) {
 
 const settle = () => new Promise(resolve => setImmediate(resolve));
 const ok = { ok: true, json: async () => ({ saved: true, saved_at: '10:00:00' }) };
+
+test('core proceeds from multiple choice to short answers to essay after saving each section', async () => {
+    const page = setup({grouped: true});
+    const [pg, short, essay] = page.sections;
+    const show = () => page.sections.map(section => !section.hidden);
+    const pgNext = pg.querySelector('[data-exam-section-next]');
+    assert.deepEqual(show(), [true, false, false]);
+    assert.equal(page.form.hidden, true);
+
+    await pgNext.listeners.click();
+    assert.match(pg.querySelector('[data-exam-section-message]').textContent, /1 soal/);
+    assert.deepEqual(show(), [true, false, false]);
+
+    page.inputs[0].checked = true;
+    page.inputs[0].listeners.change();
+    const failedNext = pgNext.listeners.click();
+    page.requests.at(-1).resolve({ ok: false, json: async () => ({ message: 'Koneksi gagal' }) });
+    await failedNext;
+    assert.deepEqual(show(), [true, false, false]);
+    assert.match(pg.querySelector('[data-exam-section-message]').textContent, /belum tersimpan/);
+
+    const pgSaved = pgNext.listeners.click();
+    page.requests.at(-1).resolve(ok);
+    await pgSaved;
+    assert.deepEqual(show(), [false, true, false]);
+    assert.equal(short.querySelector('[data-exam-section-heading]').focused, true);
+
+    const next = short.querySelector('[data-exam-section-next]');
+    await next.listeners.click();
+    assert.deepEqual(show(), [false, true, false]);
+    page.inputs[3].value = 'Jawaban singkat';
+    page.inputs[3].listeners.change();
+    const shortSaved = next.listeners.click();
+    page.requests.at(-1).resolve(ok);
+    await shortSaved;
+    assert.deepEqual(show(), [false, false, true]);
+    assert.equal(page.form.hidden, false);
+
+    essay.querySelector('[data-exam-section-back]').listeners.click();
+    assert.deepEqual(show(), [false, true, false]);
+    assert.equal(page.inputs[3].value, 'Jawaban singkat');
+    assert.equal(page.form.hidden, true);
+});
+
+test('a core exam can go directly from multiple choice to essay when there is no short-answer section', async () => {
+    const page = setup({grouped: true, essayOnlyAfterPg: true});
+    page.inputs[0].checked = true;
+    await page.sections[0].querySelector('[data-exam-section-next]').listeners.click();
+    assert.equal(page.sections[1].hidden, false);
+    assert.equal(page.form.hidden, false);
+});
+
+test('a resumed exam opens the first section with unanswered questions', () => {
+    const page = setup({grouped: true, resumed: true});
+    assert.deepEqual(page.sections.map(section => !section.hidden), [false, false, true]);
+    assert.equal(page.inputs[3].value, 'Jawaban tersimpan');
+});
 
 test('rapid changes serialize writes and retain the latest choice', async () => {
     const page = setup();
@@ -91,7 +172,8 @@ test('manual submission waits for saves and a failed save can be retried', async
 });
 
 test('deadline triggers a single automatic submission using elapsed time', () => {
-    const page = setup();
+    const page = setup({grouped: true});
+    assert.equal(page.form.hidden, true);
     page.expire();
     page.expire();
     assert.equal(page.form.submissions, 1);

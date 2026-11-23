@@ -251,6 +251,8 @@ class TrialExamFlowTest extends TestCase
         $attempt = TrialAttempt::query()->firstOrFail();
         $showRoute = route('tryout.show', [$trial, $attempt]);
         $this->get($showRoute)->assertOk()->assertSeeInOrder($show)
+            ->assertSee('Pilihan Ganda')
+            ->assertDontSee('data-exam-section-next', false)
             ->assertSessionMissing('trial_question_order_'.$attempt->id);
 
         $this->post(route('tryout.start', $trial), ['access_code' => 'SJR-SMKBHG'])

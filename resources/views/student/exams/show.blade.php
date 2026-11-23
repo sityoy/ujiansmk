@@ -60,51 +60,74 @@
     </section>
 
     <fieldset id="exam-content" @disabled($attempt->security_enabled) @if($attempt->security_enabled) hidden @endif>
-    <div class="mt-6 space-y-4">
-        @foreach ($questions as $question)
-            <article class="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
-                <p class="text-xs font-semibold text-cyan-300">Soal {{ $loop->iteration }} dari {{ $questions->count() }}</p>
-                <x-question-prompt :question="$question" :multiple-choice="$question->question_type->value === 'multiple_choice'" class="mt-3" />
-                @if ($question->question_type->value === 'multiple_choice')
-                    <div class="mt-4 grid gap-2">
-                        @foreach ($optionOrder->forQuestion($attempt, $question) as $key => $option)
-                            @php($displayKey = chr(65 + $loop->index))
-                            @php($optionPath = $question->option_file_paths[$key] ?? null)
-                            <div class="rounded-xl border border-white/10 text-sm text-slate-300 transition hover:border-cyan-400/30 hover:bg-cyan-400/5">
-                                <label class="flex cursor-pointer items-start gap-3 px-4 py-3">
-                                    <input type="radio" name="question_{{ $question->id }}" value="{{ $key }}"
-                                        data-save-url="{{ route('student.exams.answer', [$attempt, $question]) }}"
-                                        @checked($answers->get($question->id)?->answer === $key) class="mt-1">
-                                    <strong class="text-cyan-300">{{ $displayKey }}.</strong>
-                                    <x-question-text :text="$option" :format="$question->text_format" />
-                                </label>
-                                @if ($optionPath)
-                                    <x-exam-option-attachment :path="$optionPath" :label="$displayKey" />
-                                @endif
+        @php($number = 0)
+        @foreach ($questionSections as $section)
+            @php($type = $section['type'])
+            <section data-exam-section="{{ $type->value }}" data-question-count="{{ $section['questions']->count() }}"
+                aria-labelledby="exam-section-{{ $type->value }}" class="mt-6 space-y-4">
+                <h2 id="exam-section-{{ $type->value }}" tabindex="-1" class="text-lg font-semibold text-white" data-exam-section-heading>
+                    {{ $type->label() }} <span class="text-sm font-normal text-slate-400">· Bagian {{ $loop->iteration }} dari {{ $loop->count }}</span>
+                </h2>
+                @foreach ($section['questions'] as $question)
+                    <article class="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+                        <p class="text-xs font-semibold text-cyan-300">Soal {{ ++$number }} dari {{ $questions->count() }}</p>
+                        <x-question-prompt :question="$question" :multiple-choice="$type->value === 'multiple_choice'" class="mt-3" />
+                        @if ($type->value === 'multiple_choice')
+                            <div class="mt-4 grid gap-2">
+                                @foreach ($optionOrder->forQuestion($attempt, $question) as $key => $option)
+                                    @php($displayKey = chr(65 + $loop->index))
+                                    @php($optionPath = $question->option_file_paths[$key] ?? null)
+                                    <div class="rounded-xl border border-white/10 text-sm text-slate-300 transition hover:border-cyan-400/30 hover:bg-cyan-400/5">
+                                        <label class="flex cursor-pointer items-start gap-3 px-4 py-3">
+                                            <input type="radio" name="question_{{ $question->id }}" value="{{ $key }}"
+                                                data-save-url="{{ route('student.exams.answer', [$attempt, $question]) }}"
+                                                @checked($answers->get($question->id)?->answer === $key) class="mt-1">
+                                            <strong class="text-cyan-300">{{ $displayKey }}.</strong>
+                                            <x-question-text :text="$option" :format="$question->text_format" />
+                                        </label>
+                                        @if ($optionPath)
+                                            <x-exam-option-attachment :path="$optionPath" :label="$displayKey" />
+                                        @endif
+                                    </div>
+                                @endforeach
                             </div>
-                        @endforeach
+                        @else
+                            <label class="mt-4 block text-xs text-slate-400">
+                                {{ $type->value === 'short_answer' ? 'Jawaban singkat' : 'Jawaban esai' }} · dikoreksi manual oleh guru
+                                <textarea name="question_{{ $question->id }}" rows="{{ $type->value === 'essay' ? 8 : 3 }}" maxlength="10000"
+                                    data-save-url="{{ route('student.exams.answer', [$attempt, $question]) }}"
+                                    class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm leading-6 text-white outline-none focus:border-cyan-400">{{ $answers->get($question->id)?->answer }}</textarea>
+                            </label>
+                        @endif
+                    </article>
+                @endforeach
+                @if (! $loop->first || ! $loop->last)
+                    <div class="flex flex-wrap gap-3">
+                        @unless ($loop->first)
+                            <button type="button" data-exam-section-back class="rounded-xl border border-white/20 px-4 py-3 text-sm font-semibold">Bagian sebelumnya</button>
+                        @endunless
+                        @unless ($loop->last)
+                            <button type="button" data-exam-section-next class="rounded-xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950">
+                                Lanjut ke {{ $questionSections[$loop->index + 1]['type']->label() }}
+                            </button>
+                        @endunless
                     </div>
-                @else
-                    <label class="mt-4 block text-xs text-slate-400">
-                        {{ $question->question_type->value === 'short_answer' ? 'Jawaban singkat' : 'Jawaban esai' }} · dikoreksi manual oleh guru
-                        <textarea name="question_{{ $question->id }}" rows="{{ $question->question_type->value === 'essay' ? 8 : 3 }}" maxlength="10000"
-                            data-save-url="{{ route('student.exams.answer', [$attempt, $question]) }}"
-                            class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm leading-6 text-white outline-none focus:border-cyan-400">{{ $answers->get($question->id)?->answer }}</textarea>
-                    </label>
+                    @unless ($loop->last)
+                        <p data-exam-section-message role="status" class="text-sm text-rose-300" hidden></p>
+                    @endunless
                 @endif
-            </article>
+            </section>
         @endforeach
-    </div>
 
-    <form id="submit-exam" method="POST" action="{{ route('student.exams.submit', $attempt) }}" data-question-count="{{ $questions->count() }}" class="mt-6">
-        @csrf
-        <x-exam-submit-confirmation />
-        <button type="submit" class="w-full rounded-xl bg-emerald-400 px-5 py-4 font-semibold text-slate-950">Selesai dan kumpulkan jawaban</button>
-    </form>
+        <form id="submit-exam" method="POST" action="{{ route('student.exams.submit', $attempt) }}" data-question-count="{{ $questions->count() }}" class="mt-6">
+            @csrf
+            <x-exam-submit-confirmation />
+            <button type="submit" class="w-full rounded-xl bg-emerald-400 px-5 py-4 font-semibold text-slate-950">Selesai dan kumpulkan jawaban</button>
+        </form>
         <x-exam-image-dialog />
     </fieldset>
 
-    <script src="{{ asset('js/exam-submission.js') }}?v=1"></script>
+    <script src="{{ asset('js/exam-submission.js') }}?v=2"></script>
     <script>
         const csrf = document.querySelector('meta[name="csrf-token"]').content;
         // Base the countdown on server time, not the student's system clock.
@@ -184,6 +207,10 @@
             }
         });
 
+        window.bindExamSections({
+            sections: [...document.querySelectorAll('[data-exam-section]')], submitForm, flushAnswers, pending,
+            toolbar: document.querySelector('.exam-toolbar'),
+        });
         window.bindExamSubmission({ form: submitForm, inputs, flushAnswers, pending });
 
         const updateTimer = () => {

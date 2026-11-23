@@ -1,3 +1,74 @@
+function countUnansweredExamQuestions(inputs, questionCount) {
+    const answered = new Set();
+    inputs.forEach(input => {
+        if (input.type === 'radio' ? input.checked : input.value.trim() !== '') {
+            answered.add(input.dataset.saveUrl);
+        }
+    });
+
+    return questionCount - answered.size;
+}
+
+window.bindExamSections = ({ sections, submitForm, flushAnswers, pending, toolbar }) => {
+    if (sections.length < 2) return;
+
+    const countUnanswered = section => countUnansweredExamQuestions(
+        section.querySelectorAll('[data-save-url]'),
+        Number(section.dataset.questionCount),
+    );
+    const firstUnfinished = sections.findIndex(section => countUnanswered(section) > 0);
+    let active = firstUnfinished === -1 ? sections.length - 1 : firstUnfinished;
+    const blocked = () => window.examAutoSubmit || window.examSecurity?.isBlocked();
+
+    const showSection = (index, focus = false) => {
+        active = index;
+        sections.forEach((section, position) => { section.hidden = position !== index; });
+        submitForm.hidden = index !== sections.length - 1;
+        if (!focus) return;
+
+        const heading = sections[index].querySelector('[data-exam-section-heading]');
+        heading.focus({ preventScroll: true });
+        const top = window.scrollY + heading.getBoundingClientRect().top - toolbar.getBoundingClientRect().height - 24;
+        window.scrollTo(0, Math.max(0, top));
+    };
+
+    sections.forEach((section, index) => {
+        const back = section.querySelector('[data-exam-section-back]');
+        const next = section.querySelector('[data-exam-section-next]');
+        const message = section.querySelector('[data-exam-section-message]');
+        back?.addEventListener('click', () => {
+            if (!blocked()) showSection(index - 1, true);
+        });
+        next?.addEventListener('click', async () => {
+            if (blocked()) return;
+            const unanswered = countUnanswered(section);
+            if (unanswered > 0) {
+                message.textContent = `Masih ada ${unanswered} soal yang belum dijawab di bagian ini.`;
+                message.hidden = false;
+                return;
+            }
+
+            message.hidden = true;
+            next.disabled = true;
+            try {
+                await flushAnswers();
+                if (blocked() || index !== active) return;
+                if (pending.size) {
+                    message.textContent = 'Ada jawaban yang belum tersimpan. Periksa koneksi, lalu coba lanjut lagi.';
+                    message.hidden = false;
+                    return;
+                }
+
+                showSection(index + 1, true);
+            } finally {
+                next.disabled = false;
+            }
+        });
+    });
+
+    showSection(active);
+};
+
 window.bindExamSubmission = ({ form, inputs = [], flushAnswers, pending, allowBlocked = false }) => {
     const dialog = document.getElementById('exam-submit-dialog');
     const backdrop = document.getElementById('exam-submit-backdrop');
@@ -35,13 +106,7 @@ window.bindExamSubmission = ({ form, inputs = [], flushAnswers, pending, allowBl
         event.preventDefault();
         if (!canSubmit() || !dialog.hidden) return;
 
-        const answered = new Set();
-        inputs.forEach(input => {
-            if (input.type === 'radio' ? input.checked : input.value.trim() !== '') {
-                answered.add(input.dataset.saveUrl);
-            }
-        });
-        const unanswered = questionCount - answered.size;
+        const unanswered = countUnansweredExamQuestions(inputs, questionCount);
         if (unanswered > 0) {
             showMessage(`Masih ada ${unanswered} soal yang belum terjawab. Lengkapi semua jawaban sebelum mengumpulkan.`);
             return;

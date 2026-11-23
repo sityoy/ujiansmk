@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\AttemptStatus;
 use App\Enums\CheckinStatus;
+use App\Enums\ExamQuestionType;
 use App\Models\DailyCheckin;
 use App\Models\ExamAssignment;
 use App\Models\ExamAttempt;
@@ -128,10 +129,20 @@ class StudentExamController extends Controller
             'answers',
         ]);
 
+        $questions = $attempt->assignment->assessmentSubject->questions;
+        $questionsByType = $questions->groupBy(fn (ExamQuestion $question) => $question->question_type->value);
+        $questionSections = [];
+        foreach (ExamQuestionType::cases() as $type) {
+            if ($questionsByType->has($type->value)) {
+                $questionSections[] = ['type' => $type, 'questions' => $questionsByType->get($type->value)];
+            }
+        }
+
         return view($attempt->security_locked_at ? 'student.exams.locked' : 'student.exams.show', [
             'student' => $student,
             'attempt' => $attempt,
-            'questions' => $attempt->assignment->assessmentSubject->questions,
+            'questions' => $questions,
+            'questionSections' => $questionSections,
             'answers' => $attempt->answers->keyBy('exam_question_id'),
             'deadline' => $attempts->deadline($attempt),
         ]);

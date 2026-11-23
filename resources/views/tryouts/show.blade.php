@@ -54,6 +54,7 @@
         </div>
 
         <fieldset id="exam-content" disabled hidden>
+            <h2 class="mb-4 text-lg font-semibold text-white">Pilihan Ganda</h2>
             <div class="space-y-5">
                 @foreach ($questions as $question)
                     <article class="rounded-3xl border border-white/10 bg-white/[0.035] p-6">
