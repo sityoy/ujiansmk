@@ -108,7 +108,10 @@ class StudentExamFlowTest extends TestCase
     {
         [$user, $assignment, $questions] = $this->makeExam();
         $assignment->examSession->update(['kind' => SessionKind::Makeup]);
-        $questions[1]->update(['question_type' => ExamQuestionType::Essay, 'options' => null, 'correct_answer' => null]);
+        $questions[1]->update([
+            'question_type' => ExamQuestionType::Essay, 'options' => null, 'correct_answer' => null,
+            'question_image_path' => 'exam-questions/gambar-susulan.png',
+        ]);
         $attempt = $this->startAttempt($assignment);
         $show = route('student.exams.show', $attempt);
         $submit = route('student.exams.submit', $attempt);
@@ -116,7 +119,9 @@ class StudentExamFlowTest extends TestCase
 
         $this->get($show)->assertOk()->assertSeeInOrder([
             'data-exam-section="multiple_choice"', 'Lanjut ke Esai', 'data-exam-section="essay"',
-        ], false)->assertDontSee('data-exam-section="short_answer"', false);
+        ], false)->assertDontSee('data-exam-section="short_answer"', false)
+            ->assertSee('gambar-susulan.png')->assertSee('data-exam-image aria-haspopup="dialog"', false)
+            ->assertSee('data-exam-image-zoom-in', false)->assertSee('data-exam-image-zoom-out', false);
 
         $this->putJson(route('student.exams.answer', [$attempt, $questions[0]]), ['answer' => 'A'])->assertOk();
         $this->putJson(route('student.exams.answer', [$attempt, $questions[1]]), ['answer' => '   '])->assertUnprocessable();
@@ -402,13 +407,20 @@ class StudentExamFlowTest extends TestCase
     {
         [$user, $assignment] = $this->makeExam();
         $attempt = $this->startAttempt($assignment);
-        $this->actingAs($user)->withSession(['exam_device_token' => str_repeat('a', 64)])
+        $response = $this->actingAs($user)->withSession(['exam_device_token' => str_repeat('a', 64)])
             ->get(route('student.exams.show', $attempt))->assertOk()
             ->assertSee('Coba simpan lagi')->assertSee('remainingAtLoad', false)
+            ->assertSee('data-theme="light"', false)->assertSee('Mengikuti sistem')
             ->assertSee('Waktu sedang berjalan, termasuk saat peringatan muncul atau ujian terkunci.')
+            ->assertSee('tombol Perbesar atau Perkecil')
             ->assertSee('Konfirmasi kesiapan perangkat')
             ->assertSee('Peserta Uji')->assertSee('S-001')->assertSee('IX-2')
             ->assertSee('Informatika')->assertSee('data-theme-toggle', false);
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="UTF-8">'.$response->getContent());
+        $xpath = new \DOMXPath($dom);
+        $this->assertCount(3, $xpath->query('//*[@id="security-panel"]//button[@data-theme-choice]'));
+        $this->assertCount(2, $xpath->query('//*[@id="exam-content"]//dialog[@id="exam-image-dialog"]//button[@data-exam-image-zoom-in or @data-exam-image-zoom-out]'));
     }
 
     public function test_second_security_event_locks_answers_and_hides_questions_after_reload(): void

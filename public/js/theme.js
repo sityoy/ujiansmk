@@ -1,24 +1,24 @@
 (() => {
     const key = 'ujiansmk-theme';
     const root = document.documentElement;
-    const fallback = root.dataset.theme === 'light' ? 'light' : 'dark';
+    const defaultTheme = 'light';
     const system = window.matchMedia?.('(prefers-color-scheme: dark)');
     const labels = { system: 'Sistem', light: 'Terang', dark: 'Gelap' };
     const valid = value => Object.prototype.hasOwnProperty.call(labels, value);
-    let preferred = 'system';
+    let preferred = defaultTheme;
 
     const readPreference = () => {
         try {
             const value = localStorage.getItem(key);
-            return valid(value) ? value : 'system';
+            return valid(value) ? value : defaultTheme;
         } catch (_) {
-            return 'system';
+            return defaultTheme;
         }
     };
 
     const apply = value => {
         preferred = value;
-        root.dataset.theme = value === 'system' ? (system ? (system.matches ? 'dark' : 'light') : fallback) : value;
+        root.dataset.theme = value === 'system' ? (system?.matches ? 'dark' : defaultTheme) : value;
         document.querySelectorAll('[data-theme-label]').forEach(label => { label.textContent = labels[value]; });
         document.querySelectorAll('[data-theme-choice]').forEach(button => {
             button.setAttribute('aria-pressed', String(button.dataset.themeChoice === value));

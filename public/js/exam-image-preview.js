@@ -159,6 +159,10 @@
     zoomIn.addEventListener('click', () => changeZoom(currentScale + zoomStep));
     zoomReset.addEventListener('click', () => changeZoom(fitScale));
     dialog.addEventListener('close', clearPreview);
+    // Older Safari versions also expose pinch gestures outside of touch-action.
+    for (const type of ['gesturestart', 'gesturechange']) {
+        dialog.addEventListener(type, event => { if (event.cancelable) event.preventDefault(); });
+    }
     dialog.addEventListener('keydown', event => {
         if (nativeDialog) return;
         if (event.key === 'Escape') {

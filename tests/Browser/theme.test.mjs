@@ -40,10 +40,15 @@ function setup(stored = null, matches = true) {
     };
 }
 
-test('manual light and dark are independent of the phone, and System follows the phone again', () => {
+test('first visit uses Light even when the phone is dark and only System follows phone changes', () => {
     const page = setup();
-    assert.equal(page.root.dataset.theme, 'dark');
-    assert.equal(page.labels[0].textContent, 'Sistem');
+    assert.equal(page.root.dataset.theme, 'light');
+    assert.equal(page.labels[0].textContent, 'Terang');
+    assert.equal(page.choices[1]['aria-pressed'], 'true');
+    assert.equal(page.stored(), null);
+    page.changeSystem(false);
+    page.changeSystem(true);
+    assert.equal(page.root.dataset.theme, 'light');
     page.select(1);
     assert.equal(page.root.dataset.theme, 'light');
     assert.equal(page.stored(), 'light');
@@ -71,5 +76,13 @@ test('existing theme settings are retained and changes from another tab are appl
     assert.equal(page.root.dataset.theme, 'dark');
     page.changeStorage(null);
     assert.equal(page.root.dataset.theme, 'light');
-    assert.equal(page.labels[0].textContent, 'Sistem');
+    assert.equal(page.labels[0].textContent, 'Terang');
+});
+
+test('System remains the selected preference after navigation and can be overridden', () => {
+    const page = setup('system');
+    assert.equal(page.root.dataset.theme, 'dark');
+    assert.equal(page.labels[1].textContent, 'Sistem');
+    page.select(1);
+    assert.equal(setup(page.stored()).root.dataset.theme, 'light');
 });

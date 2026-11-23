@@ -7,7 +7,7 @@
 
     <title>Masuk — {{ $schoolProfile?->name ?? 'Sistem Ujian Sekolah' }}</title>
 
-    <script src="{{ asset('js/theme.js') }}?v=1"></script>
+    <script src="{{ asset('js/theme.js') }}?v=2"></script>
     @fonts
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>

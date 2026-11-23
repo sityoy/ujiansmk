@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="light">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,7 +7,7 @@
 
     <title>@yield('title', 'Dashboard') — {{ $schoolProfile?->name ?? 'Sistem Ujian Sekolah' }}</title>
 
-    <script src="{{ asset('js/theme.js') }}?v=1"></script>
+    <script src="{{ asset('js/theme.js') }}?v=2"></script>
     @fonts
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script>

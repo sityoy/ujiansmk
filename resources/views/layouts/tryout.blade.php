@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Ujian Uji Coba') — Sistem Ujian Sekolah</title>
-    <script src="{{ asset('js/theme.js') }}?v=1"></script>
+    <script src="{{ asset('js/theme.js') }}?v=2"></script>
     @fonts
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>

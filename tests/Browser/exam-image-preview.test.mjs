@@ -157,6 +157,23 @@ test('the fallback viewer allows keyboard access to zoom and retains Escape to c
     assert.equal(page.dialog.hidden, true);
 });
 
+test('Safari pinch gestures inside the open image viewer are cancelled while its zoom controls remain usable', () => {
+    const page = setup();
+    page.open();
+    page.preview.fire('load');
+    const cancelled = [];
+    for (const name of ['gesturestart', 'gesturechange']) {
+        page.dialog.fire(name, {cancelable: true, preventDefault: () => cancelled.push(name)});
+    }
+    assert.deepEqual(cancelled, ['gesturestart', 'gesturechange']);
+    page.zoomIn.fire('click');
+    assert.equal(page.scale.textContent, '150%');
+    page.zoomOut.fire('click');
+    assert.equal(page.scale.textContent, '100%');
+    page.close.fire('click');
+    assert.equal(page.dialog.hidden, true);
+});
+
 test('a bank previews a selected image, opens it in the shared viewer and clears the preview on replacement', () => {
     const page = setup(true, true);
     const image = element({ alt: 'Gambar soal' });

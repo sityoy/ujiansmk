@@ -7,8 +7,8 @@
             class="rounded-lg bg-slate-700 px-4 py-2 text-sm font-semibold text-white">Tutup</button>
     </div>
     <div class="flex shrink-0 flex-wrap items-center gap-2 border-t border-white/10 px-4 py-2" role="group" aria-label="Zoom gambar">
-        <button type="button" data-exam-image-zoom-out disabled class="exam-image-zoom-button">Perkecil</button>
         <button type="button" data-exam-image-zoom-in disabled class="exam-image-zoom-button">Perbesar</button>
+        <button type="button" data-exam-image-zoom-out disabled class="exam-image-zoom-button">Perkecil</button>
         <button type="button" data-exam-image-zoom-reset disabled class="exam-image-zoom-button">Pas ke layar</button>
         <output data-exam-image-scale aria-label="Skala gambar" class="text-xs font-semibold text-slate-300">100%</output>
     </div>
@@ -19,4 +19,4 @@
     </div>
 </dialog>
 
-<script src="{{ asset('js/exam-image-preview.js') }}?v=20261123-1" defer></script>
+<script src="{{ asset('js/exam-image-preview.js') }}?v=20261123-2" defer></script>

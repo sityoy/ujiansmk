@@ -73,7 +73,8 @@ class TrialExamFlowTest extends TestCase
             ->assertSee('Peserta Uji Coba')
             ->assertSee('1234567890')
             ->assertSee('Sejarah')
-            ->assertSee('data-theme-toggle', false);
+            ->assertSee('data-theme-toggle', false)->assertSee('Mengikuti sistem')
+            ->assertSee('tombol Perbesar atau Perkecil');
 
         $this->postJson(route('tryout.incident', [$trial, $attempt]), [
             'event_id' => (string) Str::uuid(),
@@ -1028,7 +1029,7 @@ class TrialExamFlowTest extends TestCase
             ->assertOk()
             ->assertSee('Seorang siswa menemukan buku transaksi asli')
             ->assertSee(Storage::disk('public')->url($images->first()))
-            ->assertSee('data-exam-image-zoom-in', false)
+            ->assertSee('data-exam-image-zoom-in', false)->assertSee('data-exam-image-zoom-out', false)
             ->assertSee('data-exam-image aria-haspopup="dialog"', false);
     }
 
