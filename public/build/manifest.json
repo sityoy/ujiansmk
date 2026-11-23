@@ -1,4 +1,21 @@
 {
+  "_preload-helper-B6JZccWF.js": {
+    "file": "assets/preload-helper-B6JZccWF.js",
+    "name": "preload-helper"
+  },
+  "_rolldown-runtime-hePW80VL.js": {
+    "file": "assets/rolldown-runtime-hePW80VL.js",
+    "name": "rolldown-runtime"
+  },
+  "node_modules/html2canvas/dist/html2canvas.js": {
+    "file": "assets/html2canvas-DCcDvdvP.js",
+    "name": "html2canvas",
+    "src": "node_modules/html2canvas/dist/html2canvas.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "_rolldown-runtime-hePW80VL.js"
+    ]
+  },
   "resources/css/app.css": {
     "file": "assets/app-BOZii3Zb.css",
     "name": "app",
@@ -9,24 +26,50 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-TkZIhaDk.js",
+    "file": "assets/app-DTJZNTUh.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
+    "imports": [
+      "_preload-helper-B6JZccWF.js"
+    ],
     "dynamicImports": [
       "resources/js/question-editor.js"
     ]
   },
+  "resources/js/print-document.js": {
+    "file": "assets/print-document-Cg1d1fpR.js",
+    "name": "print-document",
+    "src": "resources/js/print-document.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "_rolldown-runtime-hePW80VL.js",
+      "_preload-helper-B6JZccWF.js",
+      "resources/js/question-bank-report.js"
+    ],
+    "dynamicImports": [
+      "node_modules/html2canvas/dist/html2canvas.js"
+    ]
+  },
   "resources/js/question-bank-report.js": {
-    "file": "assets/question-bank-report-D3aWZvNE.js",
+    "file": "assets/question-bank-report-DMCC9pdx.js",
     "name": "question-bank-report",
     "src": "resources/js/question-bank-report.js",
-    "isEntry": true
+    "isEntry": true,
+    "imports": [
+      "_preload-helper-B6JZccWF.js"
+    ],
+    "dynamicImports": [
+      "resources/js/print-document.js"
+    ]
   },
   "resources/js/question-editor.js": {
-    "file": "assets/question-editor-Dc9c8fsJ.js",
+    "file": "assets/question-editor-BuxqfRez.js",
     "name": "question-editor",
     "src": "resources/js/question-editor.js",
-    "isDynamicEntry": true
+    "isDynamicEntry": true,
+    "imports": [
+      "_rolldown-runtime-hePW80VL.js"
+    ]
   }
 }
