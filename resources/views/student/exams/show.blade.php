@@ -55,6 +55,7 @@
             <p class="mt-1 text-xs text-amber-300">Jangan menutup halaman ujian</p>
             @if ($attempt->security_enabled)<p id="security-count" class="mt-1 text-xs text-rose-300">Pelanggaran {{ $attempt->violation_count }}/2</p>@endif
         </div>
+        <x-exam-text-size />
     </div>
 
     <section class="rounded-3xl border border-white/10 bg-white/[0.035] p-6">
@@ -82,7 +83,7 @@
                                     @php($displayKey = chr(65 + $loop->index))
                                     @php($optionPath = $question->option_file_paths[$key] ?? null)
                                     <div class="rounded-xl border border-white/10 text-sm text-slate-300 transition hover:border-cyan-400/30 hover:bg-cyan-400/5">
-                                        <label class="flex cursor-pointer items-start gap-3 px-4 py-3">
+                                        <label class="exam-choice-label flex cursor-pointer items-start gap-3 px-4 py-3">
                                             <input type="radio" name="question_{{ $question->id }}" value="{{ $key }}"
                                                 data-save-url="{{ route('student.exams.answer', [$attempt, $question]) }}"
                                                 @checked($answers->get($question->id)?->answer === $key) class="mt-1">
@@ -100,7 +101,7 @@
                                 {{ $type->value === 'short_answer' ? 'Jawaban singkat' : 'Jawaban esai' }} · dikoreksi manual oleh guru
                                 <textarea name="question_{{ $question->id }}" rows="{{ $type->value === 'essay' ? 8 : 3 }}" maxlength="10000"
                                     data-save-url="{{ route('student.exams.answer', [$attempt, $question]) }}"
-                                    class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm leading-6 text-white outline-none focus:border-cyan-400">{{ $answers->get($question->id)?->answer }}</textarea>
+                                    class="exam-written-answer mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none focus:border-cyan-400">{{ $answers->get($question->id)?->answer }}</textarea>
                             </label>
                         @endif
                     </article>

@@ -214,6 +214,53 @@ html[data-theme='light'] .exam-toolbar {
     box-shadow: 0 14px 35px rgb(15 23 42 / 0.12);
 }
 
+.exam-text-controls {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+    padding-top: .625rem;
+    border-top: 1px solid #475569;
+    color: #e2e8f0;
+    font-size: .8125rem;
+}
+
+.exam-text-label { font-weight: 600; }
+
+.exam-text-controls button {
+    min-height: 2.75rem;
+    padding: .375rem .625rem;
+    border: 1px solid #64748b;
+    border-radius: .5rem;
+    background: #1e293b;
+    color: #f8fafc;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.exam-text-controls button:hover:not(:disabled) { border-color: #22d3ee; }
+.exam-text-controls button:focus-visible { outline: 2px solid #0891b2; outline-offset: 2px; }
+.exam-text-controls button:disabled { opacity: .5; cursor: default; }
+.exam-text-controls output { font-variant-numeric: tabular-nums; }
+
+html[data-theme='light'] .exam-text-controls { color: #1e293b; border-color: #cbd5e1; }
+html[data-theme='light'] .exam-text-controls button { color: #0f172a; background: #fff; }
+
+#exam-content {
+    min-inline-size: 0;
+    --exam-reading-size: calc(1rem * var(--exam-text-scale, 1));
+}
+
+#exam-content :is(.question-rich-text, .exam-choice-label, .exam-written-answer) {
+    font-size: var(--exam-reading-size);
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+}
+
+/* Keep written-answer fields readable without focus zoom on mobile Safari. */
+#exam-content .exam-written-answer { font-size: max(1rem, var(--exam-reading-size)); }
+
 .attendance-feedback {
     border: 1px solid;
     border-radius: .75rem;

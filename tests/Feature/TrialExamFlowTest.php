@@ -74,6 +74,8 @@ class TrialExamFlowTest extends TestCase
             ->assertSee('1234567890')
             ->assertSee('Sejarah')
             ->assertSee('data-theme-toggle', false)->assertSee('Mengikuti sistem')
+            ->assertSee('data-exam-text-controls', false)->assertSee('exam-choice-label', false)
+            ->assertSee('Perbesar teks soal dan jawaban')->assertSee('Perkecil teks soal dan jawaban')
             ->assertSee('Perbesar / Perkecil gambar di bawah gambar tersebut.');
 
         $this->postJson(route('tryout.incident', [$trial, $attempt]), [

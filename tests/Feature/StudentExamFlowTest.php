@@ -122,7 +122,8 @@ class StudentExamFlowTest extends TestCase
             'data-exam-section="multiple_choice"', 'Lanjut ke Esai', 'data-exam-section="essay"',
         ], false)->assertDontSee('data-exam-section="short_answer"', false)
             ->assertSeeInOrder(['gambar-susulan.png', 'class="exam-image-action"', 'Perbesar / Perkecil gambar'], false)
-            ->assertSee('data-exam-image-zoom-in', false)->assertSee('data-exam-image-zoom-out', false);
+            ->assertSee('data-exam-image-zoom-in', false)->assertSee('data-exam-image-zoom-out', false)
+            ->assertSee('data-exam-text-controls', false)->assertSee('exam-written-answer', false);
 
         $this->putJson(route('student.exams.answer', [$attempt, $questions[0]]), ['answer' => 'A'])->assertOk();
         $this->putJson(route('student.exams.answer', [$attempt, $questions[1]]), ['answer' => '   '])->assertUnprocessable();
@@ -446,6 +447,7 @@ class StudentExamFlowTest extends TestCase
         $xpath = new \DOMXPath($dom);
         $this->assertCount(3, $xpath->query('//*[@id="security-panel"]//button[@data-theme-choice]'));
         $this->assertCount(2, $xpath->query('//*[@id="exam-content"]//dialog[@id="exam-image-dialog"]//button[@data-exam-image-zoom-in or @data-exam-image-zoom-out]'));
+        $this->assertCount(3, $xpath->query('//*[@data-exam-text-controls]//button[@type="button"]'));
     }
 
     public function test_second_security_event_locks_answers_and_hides_questions_after_reload(): void
