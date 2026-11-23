@@ -101,21 +101,7 @@
                         @endif
                     </article>
                 @endforeach
-                @if (! $loop->first || ! $loop->last)
-                    <div class="flex flex-wrap gap-3">
-                        @unless ($loop->first)
-                            <button type="button" data-exam-section-back class="rounded-xl border border-white/20 px-4 py-3 text-sm font-semibold">Bagian sebelumnya</button>
-                        @endunless
-                        @unless ($loop->last)
-                            <button type="button" data-exam-section-next class="rounded-xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950">
-                                Lanjut ke {{ $questionSections[$loop->index + 1]['type']->label() }}
-                            </button>
-                        @endunless
-                    </div>
-                    @unless ($loop->last)
-                        <p data-exam-section-message role="status" class="text-sm text-rose-300" hidden></p>
-                    @endunless
-                @endif
+                @include('components.exam-section-navigation')
             </section>
         @endforeach
 
@@ -127,7 +113,7 @@
         <x-exam-image-dialog />
     </fieldset>
 
-    <script src="{{ asset('js/exam-submission.js') }}?v=2"></script>
+    <script src="{{ asset('js/exam-submission.js') }}?v=3"></script>
     <script>
         const csrf = document.querySelector('meta[name="csrf-token"]').content;
         // Base the countdown on server time, not the student's system clock.
@@ -208,7 +194,7 @@
         });
 
         window.bindExamSections({
-            sections: [...document.querySelectorAll('[data-exam-section]')], submitForm, flushAnswers, pending,
+            sections: [...document.querySelectorAll('[data-exam-section]')], submitPanel: submitForm, flushAnswers, pending,
             toolbar: document.querySelector('.exam-toolbar'),
         });
         window.bindExamSubmission({ form: submitForm, inputs, flushAnswers, pending });

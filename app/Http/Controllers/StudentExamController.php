@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Enums\AttemptStatus;
 use App\Enums\CheckinStatus;
-use App\Enums\ExamQuestionType;
 use App\Models\DailyCheckin;
 use App\Models\ExamAssignment;
 use App\Models\ExamAttempt;
@@ -14,6 +13,7 @@ use App\Models\TrialAttempt;
 use App\Models\TrialExam;
 use App\Services\Exams\ExamAttemptService;
 use App\Services\Exams\ExamSecurityService;
+use App\Services\Exams\StudentQuestionSections;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -130,19 +130,12 @@ class StudentExamController extends Controller
         ]);
 
         $questions = $attempt->assignment->assessmentSubject->questions;
-        $questionsByType = $questions->groupBy(fn (ExamQuestion $question) => $question->question_type->value);
-        $questionSections = [];
-        foreach (ExamQuestionType::cases() as $type) {
-            if ($questionsByType->has($type->value)) {
-                $questionSections[] = ['type' => $type, 'questions' => $questionsByType->get($type->value)];
-            }
-        }
 
         return view($attempt->security_locked_at ? 'student.exams.locked' : 'student.exams.show', [
             'student' => $student,
             'attempt' => $attempt,
             'questions' => $questions,
-            'questionSections' => $questionSections,
+            'questionSections' => StudentQuestionSections::fromQuestions($questions),
             'answers' => $attempt->answers->keyBy('exam_question_id'),
             'deadline' => $attempts->deadline($attempt),
         ]);

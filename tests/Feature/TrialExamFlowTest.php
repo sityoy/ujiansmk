@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Enums\AssessmentType;
+use App\Enums\ExamQuestionType;
+use App\Enums\GradingStatus;
 use App\Enums\PeriodStatus;
 use App\Enums\Semester;
 use App\Enums\UserRole;
@@ -209,6 +211,88 @@ class TrialExamFlowTest extends TestCase
         $this->post(route('tryout.submit', [$trial, $attempt]))->assertRedirect(route('tryout.result', [$trial, $attempt]));
         $this->assertSame('submitted', $attempt->fresh()->status);
         $this->assertNull($attempt->answers()->sole()->answer);
+    }
+
+    public function test_trial_bank_essay_works_alongside_legacy_pg_and_can_be_graded_by_the_assigned_teacher(): void
+    {
+        [$trial, $pg] = $this->makeTrial();
+        $bank = $trial->questionBank;
+        $student = Student::query()->where('nisn', '1234567890')->firstOrFail();
+        $admin = User::factory()->create(['role' => UserRole::Committee]);
+        $teacher = User::factory()->create(['role' => UserRole::Teacher]);
+        $trial->assessmentSubject->update(['teacher_user_id' => $teacher->id]);
+        $store = route('trial-question-banks.questions.store', $bank);
+        $this->actingAs($admin)->post($store, [
+            'question_type' => 'essay', 'question_text' => 'Jelaskan proses terjadinya hujan.', 'points' => 5,
+        ])->assertSessionHasNoErrors();
+        $essay = $bank->questions()->where('question_type', 'essay')->sole();
+        $this->assertSame(ExamQuestionType::MultipleChoice, $pg->fresh()->question_type);
+        $this->assertNull($essay->options);
+        $this->assertNull($essay->correct_answer);
+        $this->put(route('trial-question-banks.questions.update', [$bank, $essay]), [
+            'question_type' => 'essay', 'question_text' => 'Jelaskan proses terjadinya hujan.', 'points' => 10,
+        ])->assertSessionHasNoErrors();
+        $this->get(route('trial-question-banks.questions.index', $bank))->assertOk()->assertSee('Esai · 10 poin');
+
+        $this->actingAs($student->user)->post(route('tryout.start', $trial), ['access_code' => $trial->access_code])->assertRedirect();
+        $attempt = $trial->currentAttempts()->sole();
+        $show = route('tryout.show', [$trial, $attempt]);
+        $submit = route('tryout.submit', [$trial, $attempt]);
+        $grade = route('tryouts.attempts.grade.edit', [$trial, $attempt]);
+        $update = route('tryouts.attempts.grade.update', [$trial, $attempt]);
+        $this->get($show)->assertOk()->assertSeeInOrder([
+            'data-exam-section="multiple_choice"', 'Lanjut ke Esai', 'data-exam-section="essay"',
+            'Jelaskan proses terjadinya hujan.', 'Jawaban esai',
+        ], false);
+        $this->putJson(route('tryout.answer', [$trial, $attempt, $pg]), ['answer' => 'A'])->assertOk();
+        $this->from($show)->post($submit)->assertSessionHasErrors('submission');
+        $answer = "Air menguap, lalu uap air mengembun.\nTetes air jatuh sebagai hujan.";
+        $this->putJson(route('tryout.answer', [$trial, $attempt, $essay]), ['answer' => $answer])->assertOk();
+        $this->get($show)->assertOk()->assertSee($answer);
+        $this->post($submit)->assertRedirect(route('tryout.result', [$trial, $attempt]));
+        $this->assertSame(GradingStatus::Pending, $attempt->fresh()->grading_status);
+        $this->assertNull($attempt->fresh()->score);
+        $this->assertSame(1, $attempt->fresh()->multiple_choice_questions);
+        $this->get($grade)->assertForbidden();
+        $this->get(route('tryout.result', [$trial, $attempt]))->assertOk()->assertDontSee($answer);
+
+        $this->actingAs($admin)->get(route('tryouts.scores.print', $trial))->assertOk()
+            ->assertSee('Menunggu koreksi')->assertSee('1 / 1');
+        $this->actingAs(User::factory()->create(['role' => UserRole::Teacher]))->get($grade)->assertForbidden();
+        $this->actingAs($teacher)->get(route('tryouts.participants', $trial))->assertOk()->assertSee($grade);
+        $this->get($grade)->assertOk()->assertSee($answer);
+        $this->from($grade)->put($update, ['scores' => [$essay->id => 11]])->assertSessionHasErrors('scores.'.$essay->id);
+        $this->assertNull($attempt->fresh()->score);
+        $this->put($update, ['scores' => [$essay->id => 8]])->assertRedirect(route('tryouts.participants', $trial));
+        $this->assertSame(GradingStatus::Graded, $attempt->fresh()->grading_status);
+        $this->assertSame('41.00', $attempt->fresh()->score);
+        $this->actingAs($admin)->get(route('tryouts.scores.print', $trial))->assertOk()->assertSee('41,00');
+    }
+
+    public function test_trial_can_use_only_essays_and_grade_a_blank_expired_response(): void
+    {
+        [$trial, $question] = $this->makeTrial();
+        $question->update([
+            'question_type' => ExamQuestionType::Essay,
+            'options' => null,
+            'correct_answer' => null,
+            'points' => 5,
+        ]);
+        $student = Student::query()->where('nisn', '1234567890')->firstOrFail();
+        $this->actingAs($student->user)->post(route('tryout.start', $trial), ['access_code' => $trial->access_code])->assertRedirect();
+        $attempt = $trial->currentAttempts()->sole();
+        $this->get(route('tryout.show', [$trial, $attempt]))->assertOk()
+            ->assertSee('data-exam-section="essay"', false)->assertDontSee('data-exam-section="multiple_choice"', false);
+        $this->travel(60)->minutes();
+        $this->post(route('tryout.submit', [$trial, $attempt]))->assertRedirect(route('tryout.result', [$trial, $attempt]));
+        $this->assertNull($attempt->answers()->sole()->answer);
+        $this->assertSame(GradingStatus::Pending, $attempt->fresh()->grading_status);
+        $admin = User::factory()->create(['role' => UserRole::Committee]);
+        $this->actingAs($admin)->get(route('tryouts.attempts.grade.edit', [$trial, $attempt]))
+            ->assertOk()->assertSee('Belum dijawab');
+        $this->put(route('tryouts.attempts.grade.update', [$trial, $attempt]), ['scores' => [$question->id => 0]])
+            ->assertSessionHasNoErrors();
+        $this->assertSame('0.00', $attempt->fresh()->score);
     }
 
     public function test_trial_displays_bank_order_when_started_and_resumed(): void

@@ -210,6 +210,11 @@ Route::middleware(['auth', 'active'])->group(function (): void {
     Route::post('/tryouts/{trialExam}/attempts/{trialAttempt}/reset-violations', [TrialExamController::class, 'resetViolations'])
         ->middleware('role:super_admin,committee,principal')->name('tryouts.attempts.reset-violations');
 
+    Route::middleware('role:super_admin,committee,principal,teacher')->group(function (): void {
+        Route::get('/tryouts/{trialExam}/attempts/{trialAttempt}/grade', [TrialExamController::class, 'editGrade'])->name('tryouts.attempts.grade.edit');
+        Route::put('/tryouts/{trialExam}/attempts/{trialAttempt}/grade', [TrialExamController::class, 'updateGrade'])->name('tryouts.attempts.grade.update');
+    });
+
     Route::get('/tryouts/{trialExam}/progress', [TrialExamController::class, 'progress'])
         ->middleware('role:super_admin,committee,teacher,proctor,principal')
         ->name('tryouts.progress');

@@ -9,7 +9,7 @@ function countUnansweredExamQuestions(inputs, questionCount) {
     return questionCount - answered.size;
 }
 
-window.bindExamSections = ({ sections, submitForm, flushAnswers, pending, toolbar }) => {
+window.bindExamSections = ({ sections, submitPanel, flushAnswers, pending, toolbar }) => {
     if (sections.length < 2) return;
 
     const countUnanswered = section => countUnansweredExamQuestions(
@@ -23,7 +23,7 @@ window.bindExamSections = ({ sections, submitForm, flushAnswers, pending, toolba
     const showSection = (index, focus = false) => {
         active = index;
         sections.forEach((section, position) => { section.hidden = position !== index; });
-        submitForm.hidden = index !== sections.length - 1;
+        submitPanel.hidden = index !== sections.length - 1;
         if (!focus) return;
 
         const heading = sections[index].querySelector('[data-exam-section-heading]');

@@ -93,6 +93,12 @@
                             <td class="px-5 py-4"><span data-trial-status class="rounded-full px-2.5 py-1 text-xs {{ !$attempt ? 'bg-slate-400/10 text-slate-300' : ($locked ? 'bg-rose-400/10 text-rose-200' : ($attempt->status === 'submitted' ? 'bg-emerald-400/10 text-emerald-200' : 'bg-amber-400/10 text-amber-200')) }}">{{ $status }}</span></td>
                             <td class="px-5 py-4 text-slate-300"><p data-trial-violations>{{ $attempt ? $attempt->violation_count.'/2' : '—' }} @if($attempt)<span class="text-xs text-slate-500">({{ $attempt->security_incidents_count }} catatan)</span>@endif</p>@if($attempt)<x-exam-incident-history :incidents="$attempt->securityIncidents" />@endif</td>
                             <td class="min-w-64 px-5 py-4">
+                                @if ($canGrade)
+                                    @php($gradeUrl = $attempt?->status === 'submitted' && in_array($attempt->grading_status?->value, ['pending', 'graded'], true)
+                                        ? route('tryouts.attempts.grade.edit', [$trialExam, $attempt]) : null)
+                                    <a data-trial-grade @if ($gradeUrl) href="{{ $gradeUrl }}" @else hidden @endif
+                                        class="mb-2 inline-flex rounded-lg border border-cyan-400/30 px-3 py-2 text-xs font-semibold text-cyan-300">Koreksi Esai</a>
+                                @endif
                                 @if ($canRestart)
                                     <form method="POST" action="{{ $attempt ? route('tryouts.attempts.restart', [$trialExam, $attempt]) : '' }}"
                                         data-trial-restart @if (! $attempt) hidden @endif class="mb-2"
@@ -166,6 +172,11 @@
                             if (restart) {
                                 restart.hidden = !participant.restart_url;
                                 if (participant.restart_url) restart.action = participant.restart_url;
+                            }
+                            const grade = row.querySelector('[data-trial-grade]');
+                            if (grade) {
+                                grade.hidden = !participant.grade_url;
+                                if (participant.grade_url) grade.href = participant.grade_url;
                             }
                             const resets = row.querySelector('[data-reset-used]');
                             if (resets) resets.textContent = 'Pemulihan terpakai ' + participant.reset_used + '/2 · jatah bersama seluruh petugas';

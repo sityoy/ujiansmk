@@ -31,7 +31,7 @@
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Buat tautan baru</p>
                 <h2 class="mt-2 text-xl font-semibold">Ujian tanpa akun siswa</h2>
-                <p class="mt-2 text-sm leading-6 text-slate-400">Peserta membuka tautan khusus, memasukkan NIS/NISN dan kode bersama, lalu mengerjakan soal PG.</p>
+                <p class="mt-2 text-sm leading-6 text-slate-400">Peserta membuka tautan khusus, memasukkan NIS/NISN dan kode bersama, lalu mengerjakan soal yang dipilih dari bank.</p>
             </div>
             <label class="block text-sm text-slate-300">Bank soal uji coba
                 <select name="trial_question_bank_id" required class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3">

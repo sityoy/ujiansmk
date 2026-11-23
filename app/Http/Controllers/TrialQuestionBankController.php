@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ExamQuestionType;
 use App\Enums\UserRole;
 use App\Models\AssessmentSubject;
 use App\Models\Subject;
@@ -124,12 +125,10 @@ class TrialQuestionBankController extends Controller
         Request $request,
         TrialQuestionBank $trialQuestionBank,
         StudentSpreadsheetService $spreadsheet,
-        ExamScoreCalculator $scores,
     ): BinaryFileResponse {
         $this->authorizeBank($request, $trialQuestionBank);
         $trialQuestionBank->load('subject');
         $questions = $trialQuestionBank->questions()->get();
-        $weight = $scores->multipleChoiceWeight($questions->count());
         $rows = $questions->values()->map(fn (TrialQuestion $question, int $index): array => [
             $index + 1,
             $this->questionText->plainText($question->question_text, $question->text_format),
@@ -139,17 +138,18 @@ class TrialQuestionBankController extends Controller
             $this->questionText->plainText($question->options['D'] ?? '', $question->text_format),
             $this->questionText->plainText($question->options['E'] ?? '', $question->text_format),
             $question->correct_answer,
-            number_format($weight, 4, '.', ''),
+            number_format((float) $question->points, 4, '.', ''),
             $question->question_image_path ? Storage::url($question->question_image_path) : '',
             $this->questionText->plainText($question->statement, $question->text_format),
+            $question->question_type->label(),
         ])->all();
 
         $path = $spreadsheet->createWorkbook(
-            ['No', 'Pertanyaan', 'Pilihan A', 'Pilihan B', 'Pilihan C', 'Pilihan D', 'Pilihan E', 'Kunci', 'Bobot PG', 'Gambar', 'Pernyataan'],
+            ['No', 'Pertanyaan', 'Pilihan A', 'Pilihan B', 'Pilihan C', 'Pilihan D', 'Pilihan E', 'Kunci', 'Bobot', 'Gambar', 'Pernyataan', 'Jenis Soal'],
             $rows,
-            'PG Uji Coba',
+            'Soal Uji Coba',
         );
-        $filename = 'bank-soal-pg-uji-coba-'.Str::slug($trialQuestionBank->subject->name)
+        $filename = 'bank-soal-uji-coba-'.Str::slug($trialQuestionBank->subject->name)
             .'-kelas-'.$trialQuestionBank->grade_level
             .'-'.now()->format('Y-m-d-His').'.xlsx';
 
@@ -166,7 +166,8 @@ class TrialQuestionBankController extends Controller
         DB::transaction(function () use ($request, $trialQuestionBank, $validated): void {
             $this->assertEditable($trialQuestionBank);
             $position = (int) $trialQuestionBank->questions()->lockForUpdate()->max('position') + 1;
-            $optionFilePaths = $this->storeOptionFiles($request, 'trial-options');
+            $optionFilePaths = $validated['question_type'] === ExamQuestionType::MultipleChoice->value
+                ? $this->storeOptionFiles($request, 'trial-options') : [];
             $trialQuestionBank->questions()->create([
                 ...$this->attributes($validated),
                 'question_image_path' => $request->file('question_image')?->store('trial-questions', 'public'),
@@ -191,11 +192,8 @@ class TrialQuestionBankController extends Controller
             $this->assertEditable($trialQuestionBank);
             $attributes = $this->attributes($validated);
             $oldOptionPaths = $question->option_file_paths ?? [];
-            $attributes['option_file_paths'] = $this->mergeOptionFiles(
-                $request,
-                $oldOptionPaths,
-                'trial-options',
-            ) ?: null;
+            $attributes['option_file_paths'] = $validated['question_type'] === ExamQuestionType::MultipleChoice->value
+                ? ($this->mergeOptionFiles($request, $oldOptionPaths, 'trial-options') ?: null) : null;
             if ($request->hasFile('question_image')) {
                 $oldImage = $question->question_image_path;
                 $attributes['question_image_path'] = $request->file('question_image')->store('trial-questions', 'public');
@@ -286,22 +284,25 @@ class TrialQuestionBankController extends Controller
 
     private function validateQuestion(Request $request): array
     {
+        $request->mergeIfMissing(['question_type' => ExamQuestionType::MultipleChoice->value]);
         $validated = $request->validate([
+            'question_type' => ['required', Rule::in([ExamQuestionType::MultipleChoice->value, ExamQuestionType::Essay->value])],
+            'points' => ['exclude_unless:question_type,essay', 'required', 'numeric', 'between:0.01,1000', 'decimal:0,2'],
             'text_format' => ['nullable', Rule::in(['plain', 'html'])],
             'question_text' => ['required', 'string', 'max:20000'],
             'statement' => ['nullable', 'string', 'max:20000'],
-            'option_a' => ['required', 'string', 'max:20000'],
-            'option_b' => ['required', 'string', 'max:20000'],
-            'option_c' => ['required', 'string', 'max:20000'],
-            'option_d' => ['required', 'string', 'max:20000'],
-            'option_e' => ['required', 'string', 'max:20000'],
-            'correct_answer' => ['required', Rule::in(['A', 'B', 'C', 'D', 'E'])],
+            'option_a' => ['exclude_unless:question_type,multiple_choice', 'required', 'string', 'max:20000'],
+            'option_b' => ['exclude_unless:question_type,multiple_choice', 'required', 'string', 'max:20000'],
+            'option_c' => ['exclude_unless:question_type,multiple_choice', 'required', 'string', 'max:20000'],
+            'option_d' => ['exclude_unless:question_type,multiple_choice', 'required', 'string', 'max:20000'],
+            'option_e' => ['exclude_unless:question_type,multiple_choice', 'required', 'string', 'max:20000'],
+            'correct_answer' => ['exclude_unless:question_type,multiple_choice', 'required', Rule::in(['A', 'B', 'C', 'D', 'E'])],
             'question_image' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
-            'option_file_a' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
-            'option_file_b' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
-            'option_file_c' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
-            'option_file_d' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
-            'option_file_e' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
+            'option_file_a' => ['exclude_unless:question_type,multiple_choice', 'nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
+            'option_file_b' => ['exclude_unless:question_type,multiple_choice', 'nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
+            'option_file_c' => ['exclude_unless:question_type,multiple_choice', 'nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
+            'option_file_d' => ['exclude_unless:question_type,multiple_choice', 'nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
+            'option_file_e' => ['exclude_unless:question_type,multiple_choice', 'nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
         ]);
 
         return $this->questionText->normalize($validated);
@@ -309,19 +310,22 @@ class TrialQuestionBankController extends Controller
 
     private function attributes(array $validated): array
     {
+        $multipleChoice = $validated['question_type'] === ExamQuestionType::MultipleChoice->value;
+
         return [
+            'question_type' => $validated['question_type'],
             'question_text' => trim($validated['question_text']),
             'text_format' => $validated['text_format'],
             'statement' => $validated['statement'] ?? null,
-            'options' => [
+            'options' => $multipleChoice ? [
                 'A' => trim($validated['option_a']),
                 'B' => trim($validated['option_b']),
                 'C' => trim($validated['option_c']),
                 'D' => trim($validated['option_d']),
                 'E' => trim($validated['option_e']),
-            ],
-            'correct_answer' => $validated['correct_answer'],
-            'points' => ExamScoreCalculator::MULTIPLE_CHOICE_POINTS,
+            ] : null,
+            'correct_answer' => $validated['correct_answer'] ?? null,
+            'points' => $multipleChoice ? ExamScoreCalculator::MULTIPLE_CHOICE_POINTS : $validated['points'],
         ];
     }
 

@@ -75,7 +75,7 @@
     <div class="mt-6 grid gap-6 xl:grid-cols-[360px_1fr]">
         <form method="POST" action="{{ route('trial-question-banks.store') }}" class="space-y-4 rounded-3xl border border-white/10 bg-white/[0.035] p-6">
             @csrf
-            <div><h2 class="text-lg font-semibold text-white">Buat bank uji coba</h2><p class="mt-1 text-xs text-slate-500">Soal yang didukung: pilihan ganda A–E.</p></div>
+            <div><h2 class="text-lg font-semibold text-white">Buat bank uji coba</h2><p class="mt-1 text-xs text-slate-500">Mendukung Pilihan Ganda A–E dan Esai.</p></div>
             <label class="block text-sm text-slate-300">Nama bank
                 <input name="name" value="{{ old('name') }}" required placeholder="Latihan Sejarah Semester Ganjil" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3">
             </label>

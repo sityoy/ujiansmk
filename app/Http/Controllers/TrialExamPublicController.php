@@ -10,6 +10,7 @@ use App\Models\TrialLocation;
 use App\Models\TrialQuestion;
 use App\Models\TrialQuestionBank;
 use App\Services\Attendance\Geofence;
+use App\Services\Exams\StudentQuestionSections;
 use App\Services\Exams\TrialExamAttemptService;
 use App\Services\Exams\TrialExamSecurityService;
 use Illuminate\Http\JsonResponse;
@@ -27,10 +28,15 @@ class TrialExamPublicController extends Controller
     {
         $trialExam->load(['questionBank.subject', 'location']);
 
+        $counts = $trialExam->questionBank->questions()->reorder()
+            ->selectRaw('question_type, count(*) as total')->groupBy('question_type')->pluck('total', 'question_type');
+
         return view('tryouts.entry', [
             'trialExam' => $trialExam,
             'available' => $trialExam->isAvailable(),
-            'questionCount' => $trialExam->questionBank->questions()->count(),
+            'questionCount' => $counts->sum(),
+            'pgCount' => (int) $counts->get('multiple_choice', 0),
+            'essayCount' => (int) $counts->get('essay', 0),
         ]);
     }
 
@@ -236,6 +242,7 @@ class TrialExamPublicController extends Controller
             'trialExam' => $trialExam,
             'attempt' => $trialAttempt,
             'questions' => $questions,
+            'questionSections' => StudentQuestionSections::fromQuestions($questions),
             'answers' => $trialAttempt->answers->keyBy('trial_question_id'),
             'deadline' => $attempts->deadline($trialAttempt),
         ]);
@@ -249,8 +256,8 @@ class TrialExamPublicController extends Controller
         TrialExamAttemptService $attempts,
     ): JsonResponse {
         $this->authorizeAttempt($trialExam, $trialAttempt);
-        $validated = $request->validate(['answer' => ['required', 'string', 'max:10']]);
-        $attempts->saveAnswer($trialAttempt, $question, $validated['answer']);
+        $validated = $request->validate(['answer' => ['present', 'nullable', 'string', 'max:10000']]);
+        $attempts->saveAnswer($trialAttempt, $question, $validated['answer'] ?? '');
 
         return response()->json(['saved' => true, 'saved_at' => now()->format('H:i:s')]);
     }
@@ -264,7 +271,7 @@ class TrialExamPublicController extends Controller
         $this->authorizeAttempt($trialExam, $trialAttempt);
         $validated = $request->validate([
             'answers' => ['nullable', 'array'],
-            'answers.*' => ['nullable', 'string', 'max:10'],
+            'answers.*' => ['nullable', 'string', 'max:10000'],
         ]);
         $attempts->submit($trialAttempt, $validated['answers'] ?? [], requireComplete: true);
         session()->forget($this->orderKey($trialAttempt));

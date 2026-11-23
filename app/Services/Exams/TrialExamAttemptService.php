@@ -2,6 +2,7 @@
 
 namespace App\Services\Exams;
 
+use App\Enums\GradingStatus;
 use App\Models\TrialAnswer;
 use App\Models\TrialAttempt;
 use App\Models\TrialExam;
@@ -10,6 +11,7 @@ use App\Models\TrialQuestionBank;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -64,9 +66,14 @@ class TrialExamAttemptService
                 404
             );
 
+            $normalized = $this->normalizeAnswer($question, $answer);
+            if ($normalized === null && ! $question->question_type->requiresManualGrading()) {
+                throw ValidationException::withMessages(['answer' => 'Pilihan jawaban tidak tersedia.']);
+            }
+
             TrialAnswer::updateOrCreate(
                 ['trial_attempt_id' => $attempt->id, 'trial_question_id' => $question->id],
-                ['answer' => Str::upper(trim($answer))]
+                ['answer' => $normalized],
             );
             $attempt->update(['last_seen_at' => now()]);
         });
@@ -97,8 +104,7 @@ class TrialExamAttemptService
 
             $questions = $attempt->trialExam->questionBank->questions()->orderBy('position')->get();
             $saved = $attempt->answers()->get()->keyBy('trial_question_id');
-            $questionCount = $questions->count();
-            $questionWeight = ExamScoreCalculator::MULTIPLE_CHOICE_POINTS;
+            $pgCount = 0;
             $correctAnswers = 0;
             $responses = [];
             $unanswered = 0;
@@ -107,13 +113,14 @@ class TrialExamAttemptService
                 $raw = array_key_exists($question->id, $submittedAnswers)
                     ? $submittedAnswers[$question->id]
                     : $saved->get($question->id)?->answer;
-                $answer = filled($raw) ? Str::upper(trim((string) $raw)) : null;
-                if ($requireComplete && ! $expired && ($answer === null || ! array_key_exists($answer, $question->options ?? []))) {
+                $answer = $this->normalizeAnswer($question, $raw);
+                if ($requireComplete && ! $expired && $answer === null) {
                     $unanswered++;
                 }
-                $correct = $answer !== null
-                    && hash_equals(Str::upper(trim((string) $question->correct_answer)), $answer);
-                $awarded = $correct ? $questionWeight : 0.0;
+                $manual = $question->question_type->requiresManualGrading();
+                $pgCount += $manual ? 0 : 1;
+                $correct = $manual ? null : ($answer !== null && $answer === $question->correct_answer);
+                $awarded = $manual ? null : ($correct ? ExamScoreCalculator::MULTIPLE_CHOICE_POINTS : 0.0);
 
                 $responses[] = [
                     'trial_attempt_id' => $attempt->id,
@@ -133,17 +140,58 @@ class TrialExamAttemptService
                 TrialAnswer::query()->upsert($batch, ['trial_attempt_id', 'trial_question_id'], ['answer', 'is_correct', 'points_awarded']);
             }
 
+            $hasManual = $pgCount < $questions->count();
             $attempt->update([
                 'status' => 'submitted',
                 'submitted_at' => now(),
                 'last_seen_at' => now(),
-                'score' => app(ExamScoreCalculator::class)->multipleChoiceScore($correctAnswers, $questionCount),
+                'score' => $hasManual ? null : app(ExamScoreCalculator::class)->multipleChoiceScore($correctAnswers, $pgCount),
+                'grading_status' => $hasManual ? GradingStatus::Pending : GradingStatus::Automatic,
                 'correct_answers' => $correctAnswers,
-                'total_questions' => $questionCount,
+                'total_questions' => $questions->count(),
+                'multiple_choice_questions' => $pgCount,
             ]);
 
             return $attempt->fresh();
         });
+    }
+
+    public function gradeEssays(TrialExam $exam, TrialAttempt $attempt, mixed $scores): void
+    {
+        DB::transaction(function () use ($exam, $attempt, $scores): void {
+            $attempt = $exam->currentAttempts()->lockForUpdate()->where('status', 'submitted')->findOrFail($attempt->id);
+            $questions = $exam->questionBank->questions()->get();
+            $essays = $questions->filter(fn (TrialQuestion $question) => $question->question_type->requiresManualGrading());
+            abort_if($essays->isEmpty(), 404);
+
+            $rules = ['scores' => ['required', 'array']];
+            foreach ($essays as $essay) {
+                $rules['scores.'.$essay->id] = ['required', 'numeric', 'decimal:0,2', 'min:0', 'max:'.$essay->points];
+            }
+            $validated = Validator::make(['scores' => $scores], $rules)->validate();
+            $answers = $attempt->answers()->get()->keyBy('trial_question_id');
+            foreach ($essays as $essay) {
+                $answer = $answers->get($essay->id);
+                $answer->update(['points_awarded' => $validated['scores'][$essay->id]]);
+            }
+
+            $attempt->update([
+                'score' => app(ExamScoreCalculator::class)->score($questions, $answers),
+                'grading_status' => GradingStatus::Graded,
+            ]);
+        }, 3);
+    }
+
+    private function normalizeAnswer(TrialQuestion $question, ?string $answer): ?string
+    {
+        $answer = trim($answer ?? '');
+        if ($question->question_type->requiresManualGrading()) {
+            return $answer === '' ? null : $answer;
+        }
+
+        $key = Str::upper($answer);
+
+        return array_key_exists($key, $question->options ?? []) ? $key : null;
     }
 
     private function assertWritable(TrialAttempt $attempt): void

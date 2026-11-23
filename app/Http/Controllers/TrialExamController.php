@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\GradingStatus;
 use App\Enums\UserRole;
 use App\Models\AssessmentSubject;
 use App\Models\SchoolProfile;
@@ -87,6 +88,7 @@ class TrialExamController extends Controller
                 ->groupBy('questionBank.grade_level'),
             'canPrintScores' => $this->canPrintScores($request->user()),
             'canRestart' => $this->canRestart($request->user()),
+            'canGrade' => $this->canGrade($request->user()),
         ]);
     }
 
@@ -97,6 +99,30 @@ class TrialExamController extends Controller
             ->where('slug', $validated['exam'])->firstOrFail();
 
         return redirect()->route('tryouts.participants', $exam);
+    }
+
+    public function editGrade(Request $request, TrialExam $trialExam, TrialAttempt $trialAttempt): View
+    {
+        $this->authorizeGrading($request, $trialExam, $trialAttempt);
+        $trialExam->loadMissing('questionBank.subject');
+        $trialAttempt->load(['answers.question']);
+        $answers = $trialAttempt->answers
+            ->filter(fn ($answer) => $answer->question->question_type->requiresManualGrading())
+            ->sortBy('question.position');
+
+        return view('tryouts.grade', compact('trialExam', 'trialAttempt', 'answers'));
+    }
+
+    public function updateGrade(
+        Request $request,
+        TrialExam $trialExam,
+        TrialAttempt $trialAttempt,
+        TrialExamAttemptService $attempts,
+    ): RedirectResponse {
+        $this->authorizeGrading($request, $trialExam, $trialAttempt);
+        $attempts->gradeEssays($trialExam, $trialAttempt, $request->input('scores'));
+
+        return redirect()->route('tryouts.participants', $trialExam)->with('status', 'Nilai esai berhasil disimpan.');
     }
 
     public function progress(Request $request, TrialExam $trialExam): JsonResponse
@@ -114,9 +140,10 @@ class TrialExamController extends Controller
         $requested = isset($validated['student_ids']) ? array_flip($validated['student_ids']) : null;
 
         $canRestart = $this->canRestart($request->user());
+        $canGrade = $this->canGrade($request->user());
         $participants = $rows
             ->filter(fn (array $row): bool => $requested === null || isset($requested[$row['student']->id]))
-            ->mapWithKeys(function (array $row) use ($canRestart, $trialExam): array {
+            ->mapWithKeys(function (array $row) use ($canRestart, $canGrade, $trialExam): array {
                 $attempt = $row['attempt'];
 
                 return [(string) $row['student']->id => [
@@ -127,6 +154,7 @@ class TrialExamController extends Controller
                     'reset_used' => (int) ($attempt?->security_reset_count ?? 0),
                     'incidents' => $attempt?->security_incidents_count,
                     ...($canRestart ? ['restart_url' => $attempt ? route('tryouts.attempts.restart', [$trialExam, $attempt]) : null] : []),
+                    ...($canGrade ? ['grade_url' => $this->hasEssaysToGrade($attempt) ? route('tryouts.attempts.grade.edit', [$trialExam, $attempt]) : null] : []),
                 ]];
             });
 
@@ -633,6 +661,24 @@ class TrialExamController extends Controller
     private function canRestart(User $user): bool
     {
         return in_array($user->role, [UserRole::SuperAdmin, UserRole::Committee, UserRole::Principal], true);
+    }
+
+    private function canGrade(User $user): bool
+    {
+        return $this->canRestart($user) || $user->role === UserRole::Teacher;
+    }
+
+    private function hasEssaysToGrade(?TrialAttempt $attempt): bool
+    {
+        return $attempt?->status === 'submitted'
+            && in_array($attempt->grading_status, [GradingStatus::Pending, GradingStatus::Graded], true);
+    }
+
+    private function authorizeGrading(Request $request, TrialExam $exam, TrialAttempt $attempt): void
+    {
+        abort_unless($this->canGrade($request->user()), 403);
+        $this->authorizeMonitor($request, $exam);
+        abort_unless($attempt->trial_exam_id === $exam->id && $this->hasEssaysToGrade($attempt), 404);
     }
 
     private function authorizeMonitor(Request $request, TrialExam $trialExam): void

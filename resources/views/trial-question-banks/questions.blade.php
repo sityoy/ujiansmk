@@ -14,7 +14,7 @@
         <p class="mt-2 text-sm text-slate-400">{{ $questionCount }} soal · Tidak tercampur dengan bank Ujian Inti</p>
         <p class="mt-2 text-xs text-cyan-200">Setiap jawaban PG benar bernilai tetap 2 poin. Nilai PG maksimal 100.</p>
         <div class="mt-4 flex flex-wrap gap-2">
-            <a href="{{ route('trial-question-banks.questions.export', $bank) }}" class="inline-flex rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-2.5 text-sm font-semibold text-emerald-200">Ekspor PG ke Excel</a>
+            <a href="{{ route('trial-question-banks.questions.export', $bank) }}" class="inline-flex rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-2.5 text-sm font-semibold text-emerald-200">Ekspor soal ke Excel</a>
             @if ($bank->source_pack_key && ! $bank->archived_at)
                 <x-trial-pack-cancel :bank="$bank" />
             @endif
@@ -24,24 +24,28 @@
 
     <div class="mt-6 grid gap-6 xl:grid-cols-[420px_1fr]">
         <section class="rounded-3xl border border-white/10 bg-white/[0.035] p-6">
-            <h2 class="text-xl font-semibold text-white">Tambah soal PG</h2>
-            <p class="mt-2 text-xs leading-5 text-slate-500">Pilihan A sampai E. File soal dan setiap pilihan bersifat opsional; soal Bahasa Arab disarankan menggunakan gambar.</p>
+            <h2 class="text-xl font-semibold text-white">Tambah soal</h2>
+            <p class="mt-2 text-xs leading-5 text-slate-500">Pilihan Ganda dinilai otomatis. Esai dinilai manual sesuai bobot yang diisi.</p>
             <fieldset @disabled($isLocked)>
-                <form method="POST" action="{{ route('trial-question-banks.questions.store', $bank) }}" enctype="multipart/form-data" class="mt-5 space-y-3">
+                <form method="POST" action="{{ route('trial-question-banks.questions.store', $bank) }}" enctype="multipart/form-data" data-trial-question-form class="mt-5 space-y-3">
                     @csrf
+                    @include('trial-question-banks.question-type', ['question' => null])
                     <x-question-prompt-fields />
-                    @foreach (['A','B','C','D','E'] as $option)
-                        <div class="grid grid-cols-[36px_1fr] items-start gap-2">
-                            <span class="mt-1 grid size-9 place-items-center rounded-lg bg-slate-900 text-xs font-semibold text-cyan-300">{{ $option }}</span>
-                            <div class="space-y-2">
-                                <x-question-text-editor name="option_{{ strtolower($option) }}" :value="old('option_'.strtolower($option))"
-                                    :format="old('text_format', 'plain')" label="Pilihan {{ $option }}" :show-label="false" :rows="2" :limit="2000" required placeholder="Pilihan {{ $option }}" />
-                                <x-question-file-input :name="'option_file_'.strtolower($option)" :label="'Lampiran pilihan '.$option" :alt="'Gambar pilihan '.$option" :show-label="false" class="w-full rounded-lg border border-dashed border-white/10 bg-slate-950/50 px-3 py-2 text-xs text-slate-500" />
+                    <div data-trial-choice-fields class="space-y-3">
+                        @foreach (['A','B','C','D','E'] as $option)
+                            <div class="grid grid-cols-[36px_1fr] items-start gap-2">
+                                <span class="mt-1 grid size-9 place-items-center rounded-lg bg-slate-900 text-xs font-semibold text-cyan-300">{{ $option }}</span>
+                                <div class="space-y-2">
+                                    <x-question-text-editor name="option_{{ strtolower($option) }}" :value="old('option_'.strtolower($option))"
+                                        :format="old('text_format', 'plain')" label="Pilihan {{ $option }}" :show-label="false" :rows="2" :limit="2000" required placeholder="Pilihan {{ $option }}" />
+                                    <x-question-file-input :name="'option_file_'.strtolower($option)" :label="'Lampiran pilihan '.$option" :alt="'Gambar pilihan '.$option" :show-label="false" class="w-full rounded-lg border border-dashed border-white/10 bg-slate-950/50 px-3 py-2 text-xs text-slate-500" />
+                                </div>
                             </div>
-                        </div>
-                    @endforeach
-                    <select name="correct_answer" required class="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm"><option value="">Jawaban benar</option>@foreach (['A','B','C','D','E'] as $option)<option value="{{ $option }}" @selected(old('correct_answer') === $option)>Pilihan {{ $option }}</option>@endforeach</select>
-                    <div class="rounded-xl border border-cyan-400/15 bg-cyan-400/[0.04] p-3 text-sm text-cyan-100">Bobot PG otomatis: <strong>2 poin</strong></div>
+                        @endforeach
+                        <select name="correct_answer" required class="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm"><option value="">Jawaban benar</option>@foreach (['A','B','C','D','E'] as $option)<option value="{{ $option }}" @selected(old('correct_answer') === $option)>Pilihan {{ $option }}</option>@endforeach</select>
+                        <div class="rounded-xl border border-cyan-400/15 bg-cyan-400/[0.04] p-3 text-sm text-cyan-100">Bobot PG otomatis: <strong>2 poin</strong></div>
+                    </div>
+                    @include('trial-question-banks.essay-points', ['question' => null])
                     <button class="w-full rounded-xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950">Simpan soal</button>
                 </form>
             </fieldset>
@@ -52,7 +56,7 @@
                 <article class="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
                     <div class="flex items-start justify-between gap-4">
                         <div>
-                            <p class="text-xs font-semibold text-cyan-300">Soal {{ $question->position }} · 2 poin</p>
+                            <p class="text-xs font-semibold text-cyan-300">Soal {{ $question->position }} · {{ $question->question_type->label() }} · {{ (float) $question->points }} poin</p>
                             <x-question-prompt :question="$question" class="mt-2" />
                         </div>
                         @unless ($isLocked)<div class="flex shrink-0 gap-3"><button type="button" data-edit-toggle="trial-edit-{{ $question->id }}" class="text-xs text-cyan-300">Edit</button><form method="POST" action="{{ route('trial-question-banks.questions.destroy', [$bank, $question]) }}" onsubmit="return confirm('Hapus soal ini?')">@csrf @method('DELETE')<button class="text-xs text-rose-300">Hapus</button></form></div>@endunless
@@ -67,17 +71,21 @@
                         @endforeach
                     </div>
                     @unless ($isLocked)
-                        <form id="trial-edit-{{ $question->id }}" method="POST" action="{{ route('trial-question-banks.questions.update', [$bank, $question]) }}" enctype="multipart/form-data" class="mt-5 hidden space-y-3 border-t border-white/10 pt-5">
+                        <form id="trial-edit-{{ $question->id }}" method="POST" action="{{ route('trial-question-banks.questions.update', [$bank, $question]) }}" enctype="multipart/form-data" data-trial-question-form class="mt-5 hidden space-y-3 border-t border-white/10 pt-5">
                             @csrf @method('PUT')
+                            @include('trial-question-banks.question-type')
                             <x-question-prompt-fields :question="$question" />
-                            @foreach (['A','B','C','D','E'] as $option)
-                                <div class="space-y-2 rounded-xl border border-white/10 p-3">
-                                    <x-question-text-editor name="option_{{ strtolower($option) }}" :value="$question->options[$option] ?? ''"
-                                        :format="$question->text_format" label="Pilihan {{ $option }}" :show-label="false" :rows="2" :limit="2000" required placeholder="Pilihan {{ $option }}" />
-                                    <x-question-file-input :name="'option_file_'.strtolower($option)" :label="'Lampiran pilihan '.$option" :alt="'Gambar pilihan '.$option" :path="$question->option_file_paths[$option] ?? null" :show-label="false" class="w-full text-xs text-slate-500" />
-                                </div>
-                            @endforeach
-                            <select name="correct_answer" required class="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm">@foreach (['A','B','C','D','E'] as $option)<option value="{{ $option }}" @selected($question->correct_answer === $option)>Jawaban {{ $option }}</option>@endforeach</select>
+                            <div data-trial-choice-fields class="space-y-3">
+                                @foreach (['A','B','C','D','E'] as $option)
+                                    <div class="space-y-2 rounded-xl border border-white/10 p-3">
+                                        <x-question-text-editor name="option_{{ strtolower($option) }}" :value="$question->options[$option] ?? ''"
+                                            :format="$question->text_format" label="Pilihan {{ $option }}" :show-label="false" :rows="2" :limit="2000" required placeholder="Pilihan {{ $option }}" />
+                                        <x-question-file-input :name="'option_file_'.strtolower($option)" :label="'Lampiran pilihan '.$option" :alt="'Gambar pilihan '.$option" :path="$question->option_file_paths[$option] ?? null" :show-label="false" class="w-full text-xs text-slate-500" />
+                                    </div>
+                                @endforeach
+                                <select name="correct_answer" required class="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm">@foreach (['A','B','C','D','E'] as $option)<option value="{{ $option }}" @selected($question->correct_answer === $option)>Jawaban {{ $option }}</option>@endforeach</select>
+                            </div>
+                            @include('trial-question-banks.essay-points')
                             <div class="flex gap-2"><button class="rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950">Simpan perubahan</button><button type="button" data-edit-toggle="trial-edit-{{ $question->id }}" class="rounded-xl border border-white/10 px-4 py-2.5 text-sm">Batal</button></div>
                         </form>
                     @endunless
@@ -89,5 +97,26 @@
     </div>
     <div class="mt-6 rounded-2xl border border-white/10 p-4">{{ $questions->links() }}</div>
     <x-exam-image-dialog />
-    <script>document.querySelectorAll('[data-edit-toggle]').forEach((button) => button.addEventListener('click', () => document.getElementById(button.dataset.editToggle)?.classList.toggle('hidden')));</script>
+    <script>
+        document.querySelectorAll('[data-trial-question-form]').forEach(form => {
+            const type = form.elements.question_type;
+            const choices = form.querySelector('[data-trial-choice-fields]');
+            const points = form.querySelector('[data-trial-essay-points]');
+            const toggleFields = () => {
+                const essay = type.value === 'essay';
+                choices.hidden = essay;
+                choices.querySelectorAll('input, textarea, select').forEach(field => {
+                    field.disabled = essay;
+                    if (field.matches('[data-question-editor]')) field.dataset.editorRequired = String(!essay);
+                });
+                points.hidden = !essay;
+                points.querySelector('input').disabled = !essay;
+            };
+            type.addEventListener('change', toggleFields);
+            toggleFields();
+        });
+        document.querySelectorAll('[data-edit-toggle]').forEach(button => {
+            button.addEventListener('click', () => document.getElementById(button.dataset.editToggle)?.classList.toggle('hidden'));
+        });
+    </script>
 @endsection

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\GradingStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'trial_exam_id', 'student_id', 'participant_name', 'participant_identifier', 'session_token_hash',
-    'status', 'duration_minutes', 'started_at', 'submitted_at', 'score', 'correct_answers', 'total_questions',
+    'status', 'duration_minutes', 'started_at', 'submitted_at', 'score', 'grading_status', 'correct_answers', 'total_questions', 'multiple_choice_questions',
     'violation_count', 'security_locked_at', 'security_lock_version', 'last_seen_at',
     'ip_address', 'user_agent',
 ])]
@@ -24,6 +25,8 @@ class TrialAttempt extends Model
             'started_at' => 'datetime',
             'submitted_at' => 'datetime',
             'score' => 'decimal:2',
+            'grading_status' => GradingStatus::class,
+            'multiple_choice_questions' => 'integer',
             'correct_answers' => 'integer',
             'total_questions' => 'integer',
             'violation_count' => 'integer',

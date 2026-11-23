@@ -67,7 +67,7 @@
                             <th scope="col">Nama peserta</th>
                             <th scope="col">Kelas</th>
                             <th scope="col">Status</th>
-                            <th class="number" scope="col">Benar / Soal</th>
+                            <th class="number" scope="col">PG benar / total</th>
                             <th class="number" scope="col">Nilai</th>
                             <th scope="col">Waktu selesai</th>
                         </tr></thead>
@@ -78,6 +78,8 @@
                                     $student = $row['student'];
                                     $attempt = $row['attempt'];
                                     $finished = $row['status'] === 'submitted';
+                                    $pgCount = $attempt?->multiple_choice_questions ?? $attempt?->total_questions;
+                                    $pendingGrade = $finished && $attempt->grading_status?->value === 'pending';
                                     $previousAttempts = $row['previousAttempts'];
                                     $hasCurrentHistory = $attempt && ($attempt->violation_count > 0 || $attempt->securityIncidents->isNotEmpty());
                                     $hasHistory = $hasCurrentHistory || $previousAttempts->isNotEmpty();
@@ -94,8 +96,8 @@
                                     <td>{{ $row['name'] }}</td>
                                     <td>{{ $student?->schoolClass?->name ?? '—' }}</td>
                                     <td>{{ $labels[$row['status']] }}</td>
-                                    <td class="number">{{ $finished ? $attempt->correct_answers.' / '.$attempt->total_questions : '—' }}</td>
-                                    <td class="number">{{ $finished && $attempt->score !== null ? number_format((float) $attempt->score, 2, ',', '.') : '—' }}</td>
+                                    <td class="number">{{ $finished && $pgCount > 0 ? $attempt->correct_answers.' / '.$pgCount : '—' }}</td>
+                                    <td class="number">{{ $pendingGrade ? 'Menunggu koreksi' : ($finished && $attempt->score !== null ? number_format((float) $attempt->score, 2, ',', '.') : '—') }}</td>
                                     <td>{{ $finished ? ($attempt->submitted_at?->format('d/m/Y H:i') ?? '—') : '—' }}</td>
                                 </tr>
                                 @if ($hasHistory)

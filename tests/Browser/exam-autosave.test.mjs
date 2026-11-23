@@ -48,6 +48,7 @@ function setup({trial = false, oldBrowser = false, written = false, grouped = fa
     }
     const cancel = element();
     const confirm = element();
+    const trialSubmitPanel = element({ hidden: false });
     const dialog = element({ querySelector: selector => selector === '[data-submit-cancel]' ? cancel : confirm,
         setAttribute() { this.open = true; }, removeAttribute() { this.open = false; } });
     if (!oldBrowser) {
@@ -55,7 +56,8 @@ function setup({trial = false, oldBrowser = false, written = false, grouped = fa
         dialog.close = () => { dialog.open = false; };
     }
     const nodes = { 'trial-form': form, 'timer': element(), 'submit-exam': form, 'save-status': element(), 'exam-timer': element(),
-        'retry-save': element(), 'exam-submit-dialog': dialog, 'exam-submit-backdrop': element(), 'exam-submit-message': element() };
+        'retry-save': element(), 'exam-submit-dialog': dialog, 'exam-submit-backdrop': element(), 'exam-submit-message': element(),
+        'trial-submit-panel': trialSubmitPanel };
     const requests = [];
     const window = element({ scrollY: 0, scrollTo() {} });
     let blocked = false;
@@ -135,6 +137,28 @@ test('a resumed exam opens the first section with unanswered questions', () => {
     const page = setup({grouped: true, resumed: true});
     assert.deepEqual(page.sections.map(section => !section.hidden), [false, false, true]);
     assert.equal(page.inputs[3].value, 'Jawaban tersimpan');
+});
+
+test('trial moves to essay while keeping the exam form and timer visible and saves the written answer', async () => {
+    const page = setup({trial: true, grouped: true, essayOnlyAfterPg: true});
+    const [pg, essay] = page.sections;
+    assert.equal(page.nodes['trial-submit-panel'].hidden, true);
+    assert.equal(page.form.hidden, false);
+    page.inputs[0].checked = true;
+    await pg.querySelector('[data-exam-section-next]').listeners.click();
+    assert.equal(essay.hidden, false);
+    assert.equal(page.nodes['trial-submit-panel'].hidden, false);
+
+    const text = page.inputs[3];
+    text.value = 'Jawaban Esai\nBaris Kedua';
+    text.listeners.input();
+    page.open();
+    const submitted = page.confirm();
+    assert.equal(page.form.submissions, 0);
+    assert.deepEqual(JSON.parse(page.requests[0].options.body), { answer: text.value });
+    page.requests[0].resolve(ok);
+    await submitted;
+    assert.equal(page.form.submissions, 1);
 });
 
 test('rapid changes serialize writes and retain the latest choice', async () => {
