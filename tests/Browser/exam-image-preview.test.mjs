@@ -46,10 +46,13 @@ function setup(nativeDialog = true, authoring = false) {
             '[data-exam-image-zoom-reset]': zoomReset,
             '[data-exam-image-scale]': scale,
         })[selector],
-        querySelectorAll: () => [close, zoomOut, zoomIn, zoomReset, viewport].filter(control => !control.disabled),
+        querySelectorAll: () => [close, zoomIn, zoomOut, zoomReset, viewport].filter(control => !control.disabled),
     });
     if (nativeDialog) {
-        dialog.showModal = () => dialog.setAttribute('open', '');
+        dialog.showModal = () => {
+            if (nativeDialog === 'throws') throw new Error('Native modal unavailable');
+            dialog.setAttribute('open', '');
+        };
         dialog.close = () => dialog.removeAttribute('open');
     }
     const revoked = [];
@@ -109,14 +112,11 @@ test('without native dialog, the close button clears the preview and its backdro
     assert.equal(page.dialog.hidden, true);
 });
 
-test('zoom scales only the loaded image, keeps the view scrollable, and resets between previews', () => {
+test('the exam opens enlarged, allows immediate zoom out and resets between previews', () => {
     const page = setup();
     page.open();
     assert.equal(page.zoomIn.disabled, true);
     page.preview.fire('load');
-    assert.equal(page.scale.textContent, '100%');
-
-    page.zoomIn.fire('click');
     assert.equal(page.preview.style.width, '360px');
     assert.equal(page.preview.hasAttribute('data-enlarged'), true);
     assert.equal(page.scale.textContent, '150%');
@@ -127,6 +127,8 @@ test('zoom scales only the loaded image, keeps the view scrollable, and resets b
     assert.equal(page.preview.style.width, '480px');
     page.zoomOut.fire('click');
     assert.equal(page.scale.textContent, '150%');
+    page.zoomOut.fire('click');
+    assert.equal(page.scale.textContent, '100%');
 
     for (let index = 0; index < 5; index++) page.zoomIn.fire('click');
     assert.equal(page.scale.textContent, '300%');
@@ -147,8 +149,9 @@ test('zoom scales only the loaded image, keeps the view scrollable, and resets b
 });
 
 test('the fallback viewer allows keyboard access to zoom and retains Escape to close', () => {
-    const page = setup(false);
+    const page = setup('throws');
     page.open();
+    assert.equal(page.backdrop.hidden, false);
     page.preview.fire('load');
     page.doc.activeElement = page.close;
     page.dialog.fire('keydown', {key: 'Tab', preventDefault() {}});
@@ -167,9 +170,9 @@ test('Safari pinch gestures inside the open image viewer are cancelled while its
     }
     assert.deepEqual(cancelled, ['gesturestart', 'gesturechange']);
     page.zoomIn.fire('click');
-    assert.equal(page.scale.textContent, '150%');
+    assert.equal(page.scale.textContent, '200%');
     page.zoomOut.fire('click');
-    assert.equal(page.scale.textContent, '100%');
+    assert.equal(page.scale.textContent, '150%');
     page.close.fire('click');
     assert.equal(page.dialog.hidden, true);
 });

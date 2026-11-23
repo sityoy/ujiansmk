@@ -51,7 +51,7 @@
                 <li>Izinkan dan pertahankan <strong>layar penuh</strong> jika didukung. Jangan berpindah tab atau aplikasi, memakai layar terbagi, mengunci layar, atau menekan tombol Kembali dan Home.</li>
                 <li>Jangan tarik bilah notifikasi atau panel pengaturan cepat. Gulir soal dengan satu jari dari area isi halaman. Jangan mencubit layar atau memakai zoom browser.</li>
                 <li>Jangan muat ulang halaman, ambil tangkapan layar, rekam layar, cetak, salin, atau tempel isi soal dan jawaban. Gunakan alat bantu hanya jika diizinkan pengawas.</li>
-                <li>Ketuk gambar soal, lalu gunakan <strong>Perbesar</strong> atau <strong>Perkecil</strong> di penampil gambar. Geser gambar dengan satu jari untuk melihat bagian lain, lalu pilih <strong>Tutup</strong> untuk kembali ke soal.</li>
+                <li>Pilih <strong>Perbesar / Perkecil gambar</strong> di bawah gambar soal atau pilihan jawaban. Atur ukurannya di penampil gambar dan pilih <strong>Tutup</strong> untuk kembali ke soal.</li>
             </ul>
         </div>
 

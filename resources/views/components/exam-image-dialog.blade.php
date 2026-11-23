@@ -6,11 +6,11 @@
         <button type="button" data-exam-image-close autofocus
             class="rounded-lg bg-slate-700 px-4 py-2 text-sm font-semibold text-white">Tutup</button>
     </div>
-    <div class="flex shrink-0 flex-wrap items-center gap-2 border-t border-white/10 px-4 py-2" role="group" aria-label="Zoom gambar">
-        <button type="button" data-exam-image-zoom-in disabled class="exam-image-zoom-button">Perbesar</button>
-        <button type="button" data-exam-image-zoom-out disabled class="exam-image-zoom-button">Perkecil</button>
+    <div class="flex shrink-0 flex-wrap items-center gap-2 border-t border-white/10 px-4 py-2" role="group" aria-label="Atur ukuran gambar">
+        <button type="button" data-exam-image-zoom-in disabled class="exam-image-zoom-button"><span aria-hidden="true">+</span> Perbesar</button>
+        <button type="button" data-exam-image-zoom-out disabled class="exam-image-zoom-button"><span aria-hidden="true">−</span> Perkecil</button>
         <button type="button" data-exam-image-zoom-reset disabled class="exam-image-zoom-button">Pas ke layar</button>
-        <output data-exam-image-scale aria-label="Skala gambar" class="text-xs font-semibold text-slate-300">100%</output>
+        <output data-exam-image-scale aria-label="Skala gambar" aria-live="polite" class="text-xs font-semibold text-slate-300">100%</output>
     </div>
     <p class="px-4 pb-2 text-xs text-slate-300">Gunakan Perbesar atau Perkecil. Geser gambar dengan satu jari untuk melihat bagian lain.</p>
     <div class="exam-image-viewport bg-white p-3" data-exam-image-viewport tabindex="0" role="region" aria-label="Gambar soal yang dapat digeser">
@@ -19,4 +19,4 @@
     </div>
 </dialog>
 
-<script src="{{ asset('js/exam-image-preview.js') }}?v=20261123-2" defer></script>
+<script src="{{ asset('js/exam-image-preview.js') }}?v=20261123-3" defer></script>

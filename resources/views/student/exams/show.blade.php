@@ -20,7 +20,7 @@
                     </div>
                     <h2 id="security-title" class="mt-4 text-2xl font-semibold">Siap masuk mode ujian?</h2>
                     <p id="security-message" aria-live="polite" class="mt-4 text-sm leading-7 text-slate-300">Tetap di halaman ujian dan gunakan layar penuh jika didukung. Jangan berpindah aplikasi atau tab, menarik bilah notifikasi, maupun mengubah zoom browser.</p>
-                    <p class="mt-3 text-sm leading-6 text-slate-300">Ketuk gambar soal, lalu gunakan tombol Perbesar atau Perkecil untuk menyesuaikan ukurannya.</p>
+                    <p class="mt-3 text-sm leading-6 text-slate-300">Jika ada gambar soal atau pilihan jawaban, ketuk Perbesar / Perkecil gambar di bawah gambar tersebut.</p>
                     <p class="mt-3 text-sm leading-6 text-amber-200">Waktu sedang berjalan, termasuk saat peringatan muncul atau ujian terkunci. Jika ada masalah, panggil pengawas dan biarkan ujian tetap terbuka.</p>
                     @php($pgCount = $questions->filter(fn ($question) => $question->question_type->value === 'multiple_choice')->count())
                     @if ($pgCount > 0)<p class="mt-3 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.06] p-3 text-sm text-cyan-100">Setiap jawaban PG benar bernilai tetap <strong>2 poin</strong>. Nilai PG maksimal 100.</p>@endif

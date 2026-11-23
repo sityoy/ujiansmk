@@ -14,7 +14,6 @@
     const zoomReset = dialog.querySelector('[data-exam-image-zoom-reset]');
     const scale = dialog.querySelector('[data-exam-image-scale]');
     const title = document.getElementById('exam-image-title');
-    const nativeDialog = typeof dialog.showModal === 'function';
     const fitScale = 100;
     const maxScale = 300;
     const zoomStep = 50;
@@ -22,6 +21,7 @@
     let loaded = false;
     let currentScale = fitScale;
     let fittedWidth = 0;
+    let nativeOpen = false;
 
     const updateZoomControls = () => {
         zoomOut.disabled = !loaded || currentScale === fitScale;
@@ -79,7 +79,7 @@
 
     const dismiss = () => {
         if (!dialog.hasAttribute('open')) return;
-        if (nativeDialog) {
+        if (nativeOpen) {
             dialog.close();
         } else {
             dialog.removeAttribute('open');
@@ -102,9 +102,14 @@
         loaded = false;
         fitImage();
         dialog.hidden = false;
-        if (nativeDialog) {
-            dialog.showModal();
-        } else {
+        nativeOpen = false;
+        if (typeof dialog.showModal === 'function') {
+            try {
+                dialog.showModal();
+                nativeOpen = true;
+            } catch (_) { /* Some embedded browsers cannot open a native modal. */ }
+        }
+        if (!nativeOpen) {
             backdrop.hidden = false;
             dialog.setAttribute('open', '');
             close.focus();
@@ -164,7 +169,7 @@
         dialog.addEventListener(type, event => { if (event.cancelable) event.preventDefault(); });
     }
     dialog.addEventListener('keydown', event => {
-        if (nativeDialog) return;
+        if (nativeOpen) return;
         if (event.key === 'Escape') {
             event.preventDefault();
             dismiss();
@@ -181,6 +186,7 @@
     preview.addEventListener('load', () => {
         if (!dialog.hasAttribute('open')) return;
         loaded = true;
+        if (content) changeZoom(fitScale + zoomStep);
         updateZoomControls();
     });
     preview.addEventListener('error', () => {

@@ -127,7 +127,7 @@ class QuestionBankAccessTest extends TestCase
             ->assertOk()
             ->assertSee('Soal Bahasa Arab')
             ->assertSee('data-question-file-preview', false)->assertSee('data-exam-image-zoom-in', false)
-            ->assertSee('aria-label="Lihat Gambar soal '.$question->position.'"', false)
+            ->assertSee('aria-label="Perbesar atau perkecil Gambar soal '.$question->position.'"', false)
             ->assertSeeInOrder([$question->statement, Storage::url($question->question_image_path), $question->question_text, 'Pilihan E']);
     }
 

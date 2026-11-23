@@ -121,7 +121,7 @@ class StudentExamFlowTest extends TestCase
         $this->get($show)->assertOk()->assertSeeInOrder([
             'data-exam-section="multiple_choice"', 'Lanjut ke Esai', 'data-exam-section="essay"',
         ], false)->assertDontSee('data-exam-section="short_answer"', false)
-            ->assertSee('gambar-susulan.png')->assertSee('data-exam-image aria-haspopup="dialog"', false)
+            ->assertSeeInOrder(['gambar-susulan.png', 'class="exam-image-action"', 'Perbesar / Perkecil gambar'], false)
             ->assertSee('data-exam-image-zoom-in', false)->assertSee('data-exam-image-zoom-out', false);
 
         $this->putJson(route('student.exams.answer', [$attempt, $questions[0]]), ['answer' => 'A'])->assertOk();
@@ -437,7 +437,7 @@ class StudentExamFlowTest extends TestCase
             ->assertSee('Coba simpan lagi')->assertSee('remainingAtLoad', false)
             ->assertSee('data-theme="light"', false)->assertSee('Mengikuti sistem')
             ->assertSee('Waktu sedang berjalan, termasuk saat peringatan muncul atau ujian terkunci.')
-            ->assertSee('tombol Perbesar atau Perkecil')
+            ->assertSee('Perbesar / Perkecil gambar di bawah gambar tersebut.')
             ->assertSee('Konfirmasi kesiapan perangkat')
             ->assertSee('Peserta Uji')->assertSee('S-001')->assertSee('IX-2')
             ->assertSee('Informatika')->assertSee('data-theme-toggle', false);

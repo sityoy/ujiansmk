@@ -74,7 +74,7 @@ class TrialExamFlowTest extends TestCase
             ->assertSee('1234567890')
             ->assertSee('Sejarah')
             ->assertSee('data-theme-toggle', false)->assertSee('Mengikuti sistem')
-            ->assertSee('tombol Perbesar atau Perkecil');
+            ->assertSee('Perbesar / Perkecil gambar di bawah gambar tersebut.');
 
         $this->postJson(route('tryout.incident', [$trial, $attempt]), [
             'event_id' => (string) Str::uuid(),
@@ -1003,7 +1003,7 @@ class TrialExamFlowTest extends TestCase
         }
         $this->get(route('trial-question-banks.questions.index', $bank))->assertOk()
             ->assertSee('data-question-file-preview', false)->assertSee('data-exam-image-zoom-out', false)
-            ->assertSee('aria-label="Lihat Gambar soal 4"', false);
+            ->assertSee('aria-label="Perbesar atau perkecil Gambar soal 4"', false);
         $this->assertSame(1, $existingTrial->questionBank->questions()->count());
 
         $this->post(route('trial-question-banks.import-pack'), ['pack_key' => 'sjr-10-campuran'])
@@ -1031,7 +1031,7 @@ class TrialExamFlowTest extends TestCase
             ->assertSee('Seorang siswa menemukan buku transaksi asli')
             ->assertSee(Storage::disk('public')->url($images->first()))
             ->assertSee('data-exam-image-zoom-in', false)->assertSee('data-exam-image-zoom-out', false)
-            ->assertSee('data-exam-image aria-haspopup="dialog"', false);
+            ->assertSeeInOrder(['data-exam-image aria-haspopup="dialog"', 'class="exam-image-action"', 'Perbesar / Perkecil gambar'], false);
     }
 
     public function test_picker_lists_actual_school_subjects_and_filters_by_grade_and_subject(): void
