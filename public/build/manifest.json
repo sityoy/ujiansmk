@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-D09i-5ul.css",
+    "file": "assets/app-B6yDvrAI.css",
     "name": "app",
     "names": [
       "app.css"
@@ -18,7 +18,7 @@
     ]
   },
   "resources/js/question-bank-report.js": {
-    "file": "assets/question-bank-report-D5mGq7SN.js",
+    "file": "assets/question-bank-report-D3aWZvNE.js",
     "name": "question-bank-report",
     "src": "resources/js/question-bank-report.js",
     "isEntry": true
