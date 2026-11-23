@@ -13,10 +13,12 @@
 @layer base {
     :root {
         color-scheme: dark;
+        color-scheme: only dark;
     }
 
     :root[data-theme='light'] {
         color-scheme: light;
+        color-scheme: only light;
     }
 
     body {
@@ -28,6 +30,8 @@
         color: white;
     }
 }
+
+.theme-picker { position: relative; flex-shrink: 0; }
 
 [data-theme-toggle] {
     display: inline-flex;
@@ -42,8 +46,42 @@
     background: rgb(255 255 255 / 0.05);
     font-size: 0.75rem;
     font-weight: 600;
+    list-style: none;
+    cursor: pointer;
     transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
 }
+
+[data-theme-toggle]::-webkit-details-marker { display: none; }
+[data-theme-toggle]::after { content: '▾'; }
+
+.theme-options {
+    position: absolute;
+    z-index: 55;
+    inset-inline-end: 0;
+    top: calc(100% + .4rem);
+    min-width: 8.5rem;
+    padding: .3rem;
+    border: 1px solid #475569;
+    border-radius: .75rem;
+    background: #0f172a;
+    color: #f1f5f9;
+    box-shadow: 0 .5rem 1.5rem rgb(2 6 23 / .25);
+}
+
+.theme-options button {
+    display: block;
+    width: 100%;
+    padding: .45rem .7rem;
+    border-radius: .45rem;
+    text-align: start;
+    font-size: .8rem;
+    cursor: pointer;
+}
+
+.theme-options button:is(:hover, [aria-pressed='true']) { background: #164e63; }
+.theme-picker :is(summary, button):focus-visible { outline: 2px solid #0891b2; outline-offset: 2px; }
+html[data-theme='light'] .theme-options { color: #0f172a; background: white; border-color: #cbd5e1; }
+html[data-theme='light'] .theme-options button:is(:hover, [aria-pressed='true']) { background: #cffafe; }
 
 [data-theme-toggle]:hover {
     border-color: rgb(34 211 238 / 0.45);
@@ -216,6 +254,7 @@ html[data-theme='light'] [data-exam-image-close] {
     max-height: 56dvh;
     overflow: auto;
     overscroll-behavior: contain;
+    touch-action: pan-x pan-y;
 }
 
 .exam-image-viewport [data-exam-image-preview] {

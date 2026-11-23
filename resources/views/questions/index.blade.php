@@ -50,7 +50,7 @@
                             <div class="space-y-2">
                                 <x-question-text-editor name="option_{{ strtolower($option) }}" :value="old('option_'.strtolower($option))"
                                     :format="old('text_format', 'plain')" label="Pilihan {{ $option }}" :show-label="false" :rows="2" :limit="2000" required placeholder="Pilihan {{ $option }}" />
-                                <input type="file" name="option_file_{{ strtolower($option) }}" accept="image/jpeg,image/png,image/webp,application/pdf" class="w-full rounded-lg border border-dashed border-white/10 bg-slate-950/50 px-3 py-2 text-xs text-slate-500 file:mr-2 file:rounded file:border-0 file:bg-violet-400/20 file:px-2 file:py-1 file:text-violet-200">
+                                <x-question-file-input :name="'option_file_'.strtolower($option)" :label="'Lampiran pilihan '.$option" :alt="'Gambar pilihan '.$option" :show-label="false" class="w-full rounded-lg border border-dashed border-white/10 bg-slate-950/50 px-3 py-2 text-xs text-slate-500 file:mr-2 file:rounded file:border-0 file:bg-violet-400/20 file:px-2 file:py-1 file:text-violet-200" />
                                 <p class="text-[0.7rem] text-slate-500">Lampiran pilihan {{ $option }} (opsional: gambar/PDF, maks. 5 MB)</p>
                             </div>
                         </div>
@@ -94,7 +94,7 @@
                                 <div class="rounded-xl border px-3 py-2 text-xs {{ $key === $question->correct_answer ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200' : 'border-white/10 text-slate-400' }}">
                                     <div class="flex items-start gap-2"><span class="shrink-0 font-semibold">{{ $key }}.</span><x-question-text :text="$option" :format="$question->text_format" /></div>
                                     @if ($question->option_file_paths[$key] ?? null)
-                                        <a href="{{ Storage::url($question->option_file_paths[$key]) }}" target="_blank" class="mt-2 block font-semibold text-cyan-300">Buka lampiran pilihan {{ $key }}</a>
+                                        <x-question-attachment :path="$question->option_file_paths[$key]" :alt="'lampiran pilihan '.$key" class="mt-2" />
                                     @endif
                                 </div>
                             @endforeach
@@ -120,8 +120,7 @@
                                         <div class="space-y-2">
                                             <x-question-text-editor name="option_{{ strtolower($option) }}" :value="$question->options[$option] ?? ''"
                                                 :format="$question->text_format" label="Pilihan {{ $option }}" :show-label="false" :rows="2" :limit="2000" required placeholder="Pilihan {{ $option }}" />
-                                            <input type="file" name="option_file_{{ strtolower($option) }}" accept="image/jpeg,image/png,image/webp,application/pdf" class="w-full rounded-lg border border-dashed border-white/10 bg-slate-950/50 px-3 py-2 text-xs text-slate-500">
-                                            @if ($question->option_file_paths[$option] ?? null)<a href="{{ Storage::url($question->option_file_paths[$option]) }}" target="_blank" class="text-xs text-cyan-300">Lihat lampiran {{ $option }}</a>@endif
+                                            <x-question-file-input :name="'option_file_'.strtolower($option)" :label="'Lampiran pilihan '.$option" :alt="'Gambar pilihan '.$option" :path="$question->option_file_paths[$option] ?? null" :show-label="false" class="w-full rounded-lg border border-dashed border-white/10 bg-slate-950/50 px-3 py-2 text-xs text-slate-500" />
                                         </div>
                                     </div>
                                 @endforeach
@@ -154,6 +153,7 @@
             {{ $questions->links() }}
         </div>
 
+    <x-exam-image-dialog />
     <script>
         const questionType = document.getElementById('question-type');
         const choiceFields = document.getElementById('multiple-choice-fields');

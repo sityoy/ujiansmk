@@ -36,7 +36,7 @@
                             <div class="space-y-2">
                                 <x-question-text-editor name="option_{{ strtolower($option) }}" :value="old('option_'.strtolower($option))"
                                     :format="old('text_format', 'plain')" label="Pilihan {{ $option }}" :show-label="false" :rows="2" :limit="2000" required placeholder="Pilihan {{ $option }}" />
-                                <input type="file" name="option_file_{{ strtolower($option) }}" accept="image/jpeg,image/png,image/webp,application/pdf" class="w-full rounded-lg border border-dashed border-white/10 bg-slate-950/50 px-3 py-2 text-xs text-slate-500">
+                                <x-question-file-input :name="'option_file_'.strtolower($option)" :label="'Lampiran pilihan '.$option" :alt="'Gambar pilihan '.$option" :show-label="false" class="w-full rounded-lg border border-dashed border-white/10 bg-slate-950/50 px-3 py-2 text-xs text-slate-500" />
                             </div>
                         </div>
                     @endforeach
@@ -60,7 +60,9 @@
                     <div class="mt-4 grid gap-2 sm:grid-cols-2">
                         @foreach (collect($question->options)->sortKeys() as $key => $option)
                             <div class="rounded-xl border px-3 py-2 text-xs {{ $key === $question->correct_answer ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200' : 'border-white/10 text-slate-400' }}"><div class="flex items-start gap-2"><strong class="shrink-0">{{ $key }}.</strong><x-question-text :text="$option" :format="$question->text_format" /></div>
-                                @if($question->option_file_paths[$key] ?? null)<a href="{{ Storage::url($question->option_file_paths[$key]) }}" target="_blank" class="mt-2 block font-semibold text-cyan-300">Buka lampiran {{ $key }}</a>@endif
+                                @if ($question->option_file_paths[$key] ?? null)
+                                    <x-question-attachment :path="$question->option_file_paths[$key]" :alt="'lampiran pilihan '.$key" class="mt-2" />
+                                @endif
                             </div>
                         @endforeach
                     </div>
@@ -72,8 +74,7 @@
                                 <div class="space-y-2 rounded-xl border border-white/10 p-3">
                                     <x-question-text-editor name="option_{{ strtolower($option) }}" :value="$question->options[$option] ?? ''"
                                         :format="$question->text_format" label="Pilihan {{ $option }}" :show-label="false" :rows="2" :limit="2000" required placeholder="Pilihan {{ $option }}" />
-                                    <input type="file" name="option_file_{{ strtolower($option) }}" accept="image/jpeg,image/png,image/webp,application/pdf" class="w-full text-xs text-slate-500">
-                                    @if($question->option_file_paths[$option] ?? null)<a href="{{ Storage::url($question->option_file_paths[$option]) }}" target="_blank" class="text-xs text-cyan-300">Lihat lampiran {{ $option }}</a>@endif
+                                    <x-question-file-input :name="'option_file_'.strtolower($option)" :label="'Lampiran pilihan '.$option" :alt="'Gambar pilihan '.$option" :path="$question->option_file_paths[$option] ?? null" :show-label="false" class="w-full text-xs text-slate-500" />
                                 </div>
                             @endforeach
                             <select name="correct_answer" required class="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm">@foreach (['A','B','C','D','E'] as $option)<option value="{{ $option }}" @selected($question->correct_answer === $option)>Jawaban {{ $option }}</option>@endforeach</select>
@@ -87,5 +88,6 @@
         </section>
     </div>
     <div class="mt-6 rounded-2xl border border-white/10 p-4">{{ $questions->links() }}</div>
+    <x-exam-image-dialog />
     <script>document.querySelectorAll('[data-edit-toggle]').forEach((button) => button.addEventListener('click', () => document.getElementById(button.dataset.editToggle)?.classList.toggle('hidden')));</script>
 @endsection

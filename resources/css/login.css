@@ -84,7 +84,6 @@
     justify-items: center;
     min-width: 0;
     padding: clamp(1.5rem, 5vw, 4rem);
-    color-scheme: light;
     background: #fff;
     color: #152539;
 }
@@ -210,6 +209,13 @@
     font-size: .8rem;
     line-height: 1.5;
 }
+
+html[data-theme='dark'] .login-form-panel { background: #101b2e; color: #f1f5f9; }
+html[data-theme='dark'] .login-form-panel :is(.login-instructions, .login-remember, .login-footer, [data-password-toggle]) { color: #b6c6d9; }
+html[data-theme='dark'] .login-field label { color: #e2e8f0; }
+html[data-theme='dark'] .login-field input { border-color: #526478; background: #17263a; color: #f1f5f9; }
+html[data-theme='dark'] .login-field input::placeholder { color: #a9bacf; }
+html[data-theme='dark'] .login-footer { border-color: #34445a; }
 
 @media (max-width: 767px) {
     .login-card {

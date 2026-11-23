@@ -12,10 +12,11 @@
         <button type="button" data-exam-image-zoom-reset disabled class="exam-image-zoom-button">Pas ke layar</button>
         <output data-exam-image-scale aria-label="Skala gambar" class="text-xs font-semibold text-slate-300">100%</output>
     </div>
+    <p class="px-4 pb-2 text-xs text-slate-300">Gunakan Perbesar atau Perkecil. Geser gambar dengan satu jari untuk melihat bagian lain.</p>
     <div class="exam-image-viewport bg-white p-3" data-exam-image-viewport tabindex="0" role="region" aria-label="Gambar soal yang dapat digeser">
         <img data-exam-image-preview alt="" draggable="false">
         <p data-exam-image-error hidden class="p-4 text-sm text-slate-800">Gambar gagal dimuat. Tutup dan coba lagi.</p>
     </div>
 </dialog>
 
-<script src="{{ asset('js/exam-image-preview.js') }}?v=20261121-1" defer></script>
+<script src="{{ asset('js/exam-image-preview.js') }}?v=20261123-1" defer></script>

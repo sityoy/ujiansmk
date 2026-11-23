@@ -7,19 +7,16 @@
 
     <title>@yield('title', 'Dashboard') — {{ $schoolProfile?->name ?? 'Sistem Ujian Sekolah' }}</title>
 
+    <script src="{{ asset('js/theme.js') }}?v=1"></script>
     @fonts
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script>
         (() => {
             try {
-                const savedTheme = localStorage.getItem('ujiansmk-theme');
-                document.documentElement.dataset.theme = savedTheme === 'light' ? 'light' : 'dark';
                 if (localStorage.getItem('ujiansmk-sidebar-collapsed') === '1') {
                     document.documentElement.classList.add('sidebar-collapsed');
                 }
-            } catch (error) {
-                document.documentElement.dataset.theme = 'dark';
-            }
+            } catch (_) { /* Keep the sidebar usable when storage is unavailable. */ }
         })();
     </script>
 </head>
@@ -143,10 +140,7 @@
                         </div>
                     </div>
                     <div class="flex shrink-0 items-center gap-2 md:gap-3">
-                        <button type="button" data-theme-toggle>
-                            <span data-theme-icon aria-hidden="true">☀</span>
-                            <span data-theme-label class="hidden md:inline">Terang</span>
-                        </button>
+                        <x-theme-picker />
                         <div class="hidden text-right sm:block">
                             <p class="max-w-40 truncate text-sm font-medium text-white">{{ auth()->user()->name }}</p>
                             <p class="text-xs text-slate-400">{{ auth()->user()->role->label() }}</p>

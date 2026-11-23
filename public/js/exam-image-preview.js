@@ -3,6 +3,7 @@
     if (!dialog) return;
 
     const content = document.getElementById('exam-content');
+    const root = content ?? document;
     const backdrop = document.getElementById('exam-image-backdrop');
     const close = dialog.querySelector('[data-exam-image-close]');
     const preview = dialog.querySelector('[data-exam-image-preview]');
@@ -72,7 +73,7 @@
         loaded = false;
         fitImage();
         preview.removeAttribute('src');
-        if (!content.hidden && !window.examSecurity?.isBlocked()) trigger?.focus({ preventScroll: true });
+        if (!content?.hidden && !window.examSecurity?.isBlocked()) trigger?.focus({ preventScroll: true });
         trigger = null;
     };
 
@@ -86,12 +87,14 @@
         clearPreview();
     };
 
-    content.addEventListener('click', event => {
+    root.addEventListener('click', event => {
         const clicked = event.target.closest('[data-exam-image]');
-        if (!clicked || trigger || content.hidden || window.examSecurity?.isBlocked()) return;
+        if (!clicked || trigger || content?.hidden || window.examSecurity?.isBlocked()) return;
 
+        const image = clicked.querySelector('img');
+        const source = image.src || image.currentSrc;
+        if (!source) return;
         trigger = clicked;
-        const image = trigger.querySelector('img');
         title.textContent = image.alt;
         preview.alt = image.alt;
         preview.hidden = false;
@@ -106,8 +109,50 @@
             dialog.setAttribute('open', '');
             close.focus();
         }
-        preview.src = image.currentSrc || image.src;
+        preview.src = source;
     });
+
+    if (!content && window.URL?.createObjectURL) {
+        const previews = new Map();
+        const clearUpload = input => {
+            const previous = previews.get(input);
+            if (!previous) return;
+            previous.panel.hidden = true;
+            previous.image.removeAttribute('src');
+            window.URL.revokeObjectURL(previous.url);
+            previews.delete(input);
+        };
+
+        document.addEventListener('change', event => {
+            const input = event.target;
+            if (input.type !== 'file') return;
+            const field = input.closest('[data-question-file]');
+            if (!field) return;
+
+            clearUpload(input);
+            const file = input.files?.[0];
+            if (!file) return;
+            const isImage = file.type
+                ? /^image\/(jpeg|png|webp)$/i.test(file.type)
+                : /\.(jpe?g|png|webp)$/i.test(file.name);
+            if (!isImage) return;
+
+            const panel = field.querySelector('[data-question-file-preview]');
+            const image = panel.querySelector('img');
+            const url = window.URL.createObjectURL(file);
+            previews.set(input, { panel, image, url });
+            image.src = url;
+            panel.hidden = false;
+        });
+        document.addEventListener('reset', event => {
+            for (const input of previews.keys()) {
+                if (input.form === event.target) clearUpload(input);
+            }
+        });
+        window.addEventListener('pagehide', event => {
+            if (!event.persisted) previews.forEach(({ url }) => window.URL.revokeObjectURL(url));
+        });
+    }
 
     close.addEventListener('click', dismiss);
     zoomOut.addEventListener('click', () => changeZoom(currentScale - zoomStep));

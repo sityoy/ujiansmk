@@ -5,12 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Ganti Password — {{ $schoolProfile?->name ?? 'Sistem Ujian Sekolah' }}</title>
+    <script src="{{ asset('js/theme.js') }}?v=1"></script>
     @fonts
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-slate-950 text-slate-100 antialiased">
     <main class="grid min-h-screen place-items-center px-5 py-10">
         <section class="w-full max-w-lg rounded-3xl border border-cyan-400/20 bg-white/[0.045] p-7 shadow-2xl shadow-cyan-950/30 sm:p-9">
+            <div class="mb-4 flex justify-end"><x-theme-picker /></div>
             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Keamanan akun</p>
             <h1 class="mt-3 text-3xl font-semibold text-white">Buat password pribadi</h1>
             <p class="mt-3 text-sm leading-6 text-slate-400">

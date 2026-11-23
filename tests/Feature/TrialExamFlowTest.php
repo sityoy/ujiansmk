@@ -821,6 +821,9 @@ class TrialExamFlowTest extends TestCase
         foreach ($images as $path) {
             Storage::disk('public')->assertExists($path);
         }
+        $this->get(route('trial-question-banks.questions.index', $bank))->assertOk()
+            ->assertSee('data-question-file-preview', false)->assertSee('data-exam-image-zoom-out', false)
+            ->assertSee('aria-label="Lihat Gambar soal 4"', false);
         $this->assertSame(1, $existingTrial->questionBank->questions()->count());
 
         $this->post(route('trial-question-banks.import-pack'), ['pack_key' => 'sjr-10-campuran'])

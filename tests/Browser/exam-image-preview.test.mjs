@@ -20,7 +20,7 @@ function element(properties = {}) {
     };
 }
 
-function setup(nativeDialog = true) {
+function setup(nativeDialog = true, authoring = false) {
     const content = element();
     const close = element();
     const preview = element({clientWidth: 240, style: {removeProperty(name) { delete this[name]; }}});
@@ -52,18 +52,22 @@ function setup(nativeDialog = true) {
         dialog.showModal = () => dialog.setAttribute('open', '');
         dialog.close = () => dialog.removeAttribute('open');
     }
-    const win = element({ examSecurity: { isBlocked: () => content.hidden } });
-    const doc = { getElementById: id => ({
+    const revoked = [];
+    const win = element(authoring ? { URL: {
+        createObjectURL: file => 'blob:'+file.name,
+        revokeObjectURL: url => revoked.push(url),
+    }} : { examSecurity: { isBlocked: () => content.hidden } });
+    const doc = element({ getElementById: id => ({
         'exam-image-dialog': dialog,
         'exam-image-backdrop': backdrop,
-        'exam-content': content,
+        'exam-content': authoring ? null : content,
         'exam-image-title': title,
-    })[id] };
+    })[id] });
     vm.runInNewContext(script, { document: doc, window: win });
 
-    const open = () => content.fire('click', { target: { closest: () => trigger } });
+    const open = (selected = trigger) => (authoring ? doc : content).fire('click', { target: { closest: () => selected } });
     return { open, content, dialog, close, preview, backdrop, error, title, trigger, win, doc,
-        viewport, zoomIn, zoomOut, zoomReset, scale };
+        viewport, zoomIn, zoomOut, zoomReset, scale, revoked };
 }
 
 test('preview uses the displayed attachment and closes inside the exam', () => {
@@ -151,4 +155,32 @@ test('the fallback viewer allows keyboard access to zoom and retains Escape to c
     assert.equal(page.zoomIn.focused, true);
     page.dialog.fire('keydown', {key: 'Escape', preventDefault() {}});
     assert.equal(page.dialog.hidden, true);
+});
+
+test('a bank previews a selected image, opens it in the shared viewer and clears the preview on replacement', () => {
+    const page = setup(true, true);
+    const image = element({ alt: 'Gambar soal' });
+    const panel = element({ hidden: true, querySelector: () => image });
+    const input = { type: 'file', files: [{ name: 'soal.png', type: 'image/png' }], closest: () => ({ querySelector: () => panel }), form: {} };
+    const select = () => page.doc.fire('change', { target: input });
+    select();
+    assert.equal(panel.hidden, false);
+    page.open({ querySelector: () => image, focus() {} });
+    assert.equal(page.preview.src, 'blob:soal.png');
+    page.preview.fire('load');
+    page.zoomIn.fire('click');
+    assert.equal(page.scale.textContent, '150%');
+    page.close.fire('click');
+
+    input.files = [{ name: 'pengganti.webp', type: '' }];
+    select();
+    assert.equal(image.src, 'blob:pengganti.webp');
+    assert.deepEqual(page.revoked, ['blob:soal.png']);
+    input.files = [{ name: 'lampiran.pdf', type: 'application/pdf' }];
+    select();
+    assert.equal(panel.hidden, true);
+    assert.equal(image.src, undefined);
+    assert.deepEqual(page.revoked, ['blob:soal.png', 'blob:pengganti.webp']);
+    page.open();
+    assert.equal(page.preview.src, '/storage/a.png');
 });

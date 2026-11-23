@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="light">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,6 +7,7 @@
 
     <title>Masuk — {{ $schoolProfile?->name ?? 'Sistem Ujian Sekolah' }}</title>
 
+    <script src="{{ asset('js/theme.js') }}?v=1"></script>
     @fonts
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -37,6 +38,7 @@
 
             <section class="login-form-panel" aria-labelledby="login-title">
                 <div class="login-form-content">
+                    <div class="mb-4 flex justify-end"><x-theme-picker /></div>
                     <h1 id="login-title">Masuk ke sistem</h1>
                     <p class="login-instructions">Gunakan akun yang diberikan oleh administrator atau panitia ujian.</p>
 

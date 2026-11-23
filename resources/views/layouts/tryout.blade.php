@@ -5,18 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Ujian Uji Coba') — Sistem Ujian Sekolah</title>
-    <script>
-        (() => {
-            try {
-                const savedTheme = localStorage.getItem('ujiansmk-theme');
-                if (savedTheme === 'light' || savedTheme === 'dark') {
-                    document.documentElement.dataset.theme = savedTheme;
-                }
-            } catch (error) {
-                // Keep the default theme if browser storage is unavailable.
-            }
-        })();
-    </script>
+    <script src="{{ asset('js/theme.js') }}?v=1"></script>
     @fonts
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -27,7 +16,7 @@
                 <span class="grid size-10 shrink-0 place-items-center rounded-2xl bg-cyan-400 font-bold text-slate-950">U</span>
                 <div class="min-w-0"><p class="truncate font-semibold">Ujian Uji Coba</p><p class="text-xs text-slate-400">Sistem Ujian Sekolah</p></div>
             </div>
-            <x-tryout-theme-toggle />
+            <x-theme-picker />
         </div>
     </header>
     <main class="mx-auto max-w-5xl px-5 py-8">@yield('content')</main>

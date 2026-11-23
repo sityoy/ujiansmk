@@ -64,7 +64,7 @@
         @foreach ($questions as $question)
             <article class="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
                 <p class="text-xs font-semibold text-cyan-300">Soal {{ $loop->iteration }} dari {{ $questions->count() }}</p>
-                <x-question-prompt :question="$question" image-preview :multiple-choice="$question->question_type->value === 'multiple_choice'" class="mt-3" />
+                <x-question-prompt :question="$question" :multiple-choice="$question->question_type->value === 'multiple_choice'" class="mt-3" />
                 @if ($question->question_type->value === 'multiple_choice')
                     <div class="mt-4 grid gap-2">
                         @foreach ($optionOrder->forQuestion($attempt, $question) as $key => $option)

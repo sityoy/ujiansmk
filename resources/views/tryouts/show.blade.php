@@ -16,7 +16,7 @@
             <section class="mx-auto mt-3 max-w-xl rounded-3xl border border-amber-400/30 bg-slate-900 p-4 shadow-xl sm:mt-12 sm:p-6">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <p class="text-xs font-semibold uppercase tracking-widest text-amber-300">Pengawasan uji coba · batas 2 pelanggaran</p>
-                    <x-tryout-theme-toggle />
+                    <x-theme-picker />
                 </div>
                 <h2 id="security-title" class="mt-4 text-2xl font-semibold">Siap masuk mode ujian?</h2>
                 <p id="security-message" aria-live="polite" class="mt-4 text-sm leading-7 text-slate-300">Pengamanan sama dengan Ujian Inti. Tetap di halaman ujian dan gunakan layar penuh jika didukung. Jangan berpindah aplikasi atau tab, menarik bilah notifikasi, maupun mengubah zoom browser. Untuk melihat detail gambar soal, ketuk gambar dan gunakan tombol Perbesar.</p>
@@ -59,7 +59,7 @@
                     <article class="rounded-3xl border border-white/10 bg-white/[0.035] p-6">
                         <div class="flex gap-4"><span class="grid size-9 shrink-0 place-items-center rounded-xl bg-cyan-400/10 font-semibold text-cyan-300">{{ $loop->iteration }}</span>
                             <div class="min-w-0 flex-1">
-                                <x-question-prompt :question="$question" image-preview />
+                                <x-question-prompt :question="$question" />
                                 <div class="mt-5 grid gap-3">
                                     @foreach ($optionOrder->forQuestion($attempt, $question) as $key => $option)
                                         @php($displayKey = chr(65 + $loop->index))
