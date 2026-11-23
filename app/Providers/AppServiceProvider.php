@@ -2,13 +2,17 @@
 
 namespace App\Providers;
 
+use App\Enums\UserRole;
 use App\Models\SchoolProfile;
+use App\Models\TrialQuestionBank;
+use App\Models\User;
 use App\Services\Exams\QuestionText;
 use App\Support\TablePagination;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
@@ -25,6 +29,15 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        Gate::define('author-trial-questions', function (User $user): bool {
+            return match ($user->role) {
+                UserRole::SuperAdmin, UserRole::Committee => true,
+                UserRole::Teacher => TrialQuestionBank::query()->where('teacher_user_id', $user->id)
+                    ->whereNull('archived_at')->exists(),
+                default => false,
+            };
+        });
+
         RateLimiter::for('school-login', function (Request $request): array {
             $input = $request->input('login');
             $login = is_string($input) ? Str::lower(trim(substr($input, 0, 255))) : '';

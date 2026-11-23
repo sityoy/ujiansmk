@@ -10,9 +10,18 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable(['subject_id', 'teacher_user_id', 'grade_level', 'name', 'source_pack_key'])]
 class TrialQuestionBank extends Model
 {
+    public const QUESTION_TIMEZONE = 'Asia/Jakarta';
+
     protected function casts(): array
     {
-        return ['grade_level' => 'integer', 'archived_at' => 'datetime'];
+        return ['grade_level' => 'integer', 'archived_at' => 'datetime', 'question_deadline_at' => 'datetime'];
+    }
+
+    public function questionDeadlineLabel(): ?string
+    {
+        $deadline = $this->question_deadline_at?->timezone(self::QUESTION_TIMEZONE);
+
+        return $deadline ? $deadline->format('d/m/Y H:i').' WIB' : null;
     }
 
     public function subject(): BelongsTo

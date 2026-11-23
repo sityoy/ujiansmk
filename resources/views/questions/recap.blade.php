@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Rekap Bank Soal Inti · {{ $gradeLabel }}</title>
+    <title>Rekap {{ $reportKind ?? "Bank Soal Inti" }} · {{ $gradeLabel }}</title>
     @vite('resources/js/question-bank-report.js')
     <style>
         * { box-sizing: border-box; }
@@ -24,7 +24,7 @@
         .table-wrap { overflow-x: auto; } table { width: 100%; border-collapse: collapse; }
         th, td { padding: 9px 10px; border: 1px solid #94a3b8; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
         th { background: #e2e8f0; font-size: 12px; } tbody tr:nth-child(even) { background: #f8fafc; }
-        .num { text-align: center; } .status { font-size: 11px; } .note { margin-top: 24px; font-size: 11px; color: #475569; }
+        .num { text-align: center; } .detail { white-space: pre-line; } .status { font-size: 11px; } .note { margin-top: 24px; font-size: 11px; color: #475569; }
         @page { size: A4 landscape; margin: 12mm; }
         @media print {
             body { background: white; font-size: 10px; } .tools { display: none; }
@@ -40,16 +40,16 @@
             <button type="button" class="primary" data-download-report="pdf">Unduh PDF</button>
             <button type="button" data-download-report="png">Unduh gambar PNG</button>
             <button type="button" onclick="window.print()">Cetak</button>
-            <a class="back" href="{{ route('question-bank.index', array_merge(request()->only(['period_id', 'grade_level', 'q', 'question_status']), ['view' => 'summary'])) }}">Kembali ke rekap</a>
+            <a class="back" href="{{ $backUrl ?? route('question-bank.index', array_merge(request()->only(['period_id', 'grade_level', 'q', 'question_status']), ['view' => 'summary'])) }}">Kembali ke rekap</a>
         </div>
-        <p>Unduhan memuat seluruh data sesuai filter, dikelompokkan per tingkat dan periode. Gambar yang terdiri dari beberapa halaman diunduh dalam satu file ZIP.</p>
+        <p>Unduhan memuat seluruh data sesuai filter, dikelompokkan {{ $groupingLabel ?? 'per tingkat dan periode' }}. Gambar yang terdiri dari beberapa halaman diunduh dalam satu file ZIP.</p>
         <p id="report-status" role="status" aria-live="polite"></p>
         <noscript><p>Aktifkan JavaScript untuk mengunduh PDF atau PNG. Tombol Cetak tetap dapat digunakan melalui menu cetak browser.</p></noscript>
     </div>
     <main class="sheet">
         <header class="brand">
             <img id="report-logo" src="{{ asset('images/logo-ypmi-bahagia.jpeg') }}" alt="Logo sekolah">
-            <div><h1>{{ $school?->name ?? config('app.name') }}</h1><p><strong>REKAP PEMBUATAN SOAL · BANK SOAL INTI</strong></p><p class="muted">{{ $school?->address }}</p></div>
+            <div><h1>{{ $school?->name ?? config('app.name') }}</h1><p><strong>REKAP PEMBUATAN SOAL · {{ mb_strtoupper($reportKind ?? 'Bank Soal Inti') }}</strong></p><p class="muted">{{ $school?->address }}</p></div>
         </header>
         <div class="meta"><strong>{{ $gradeLabel }} · {{ $periodLabel }}</strong>
             @if ($filterLabel)<p>{{ $filterLabel }}</p>@endif
@@ -59,13 +59,15 @@
         @forelse ($groups as $group)
             <section class="group">
                 <h2>{{ $group['title'] }}</h2><p class="muted">{{ $group['subtitle'] }}</p>
-                <p class="deadline"><strong>Batas pembuatan soal:</strong> {{ $group['deadline'] }}</p>
+                @if (isset($group['deadline']))
+                    <p class="deadline"><strong>Batas pembuatan soal:</strong> {{ $group['deadline'] }}</p>
+                @endif
                 <div class="table-wrap"><table>
-                    <thead><tr><th>No.</th><th>Guru penanggung jawab</th><th>Mata pelajaran</th><th>Rombel</th><th class="num">PG</th><th class="num">Esai</th><th class="num">Isian singkat</th><th class="num">Total</th><th>Status</th></tr></thead>
+                    <thead><tr><th>No.</th><th>Guru penanggung jawab</th><th>Mata pelajaran</th><th>{{ $detailColumn ?? 'Rombel' }}</th><th class="num">PG</th><th class="num">Esai</th><th class="num">Isian singkat</th><th class="num">Total</th><th>Status</th></tr></thead>
                     <tbody>
                         @foreach ($group['rows'] as $row)
                             <tr><td class="num">{{ $loop->iteration }}</td>
-                                @foreach ($row as $index => $value)<td class="{{ $index >= 3 && $index <= 6 ? 'num' : '' }} {{ $index === 7 ? 'status' : '' }}">{{ $value }}</td>@endforeach
+                                @foreach ($row as $index => $value)<td class="{{ $index >= 3 && $index <= 6 ? 'num' : '' }} {{ $index === 7 ? 'status' : ($index === 2 ? 'detail' : '') }}">{{ $value }}</td>@endforeach
                             </tr>
                         @endforeach
                     </tbody>
@@ -80,13 +82,14 @@
                 <p><strong>Batas pembuatan soal:</strong> {{ $emptyDeadline }}</p>
             @endif
         @endforelse
-        <p class="note">Bank bersama antarrombel dihitung satu kali. Nama guru mengikuti penugasan di Penjadwalan. Rekap ini memuat jumlah soal dan tidak memuat isi atau kunci jawaban.</p>
+        <p class="note">{{ $note ?? 'Bank bersama antarrombel dihitung satu kali. Nama guru mengikuti penugasan di Penjadwalan. Rekap ini memuat jumlah soal dan tidak memuat isi atau kunci jawaban.' }}</p>
     </main>
     <script type="application/json" id="question-bank-report-data">{!! \Illuminate\Support\Js::encode([
         'school' => $school?->name ?? config('app.name'), 'address' => $school?->address ?? '',
         'scope' => $gradeLabel.' · '.$periodLabel, 'filter' => $filterLabel,
         'generatedAt' => $generatedAt, 'filename' => $filename, 'totals' => $totals, 'groups' => $groups,
         'emptyDeadline' => $emptyDeadline,
+        'reportKind' => $reportKind ?? null, 'detailColumn' => $detailColumn ?? null,
     ]) !!}</script>
 </body>
 </html>

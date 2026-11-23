@@ -5,17 +5,23 @@ namespace App\Http\Controllers;
 use App\Enums\ExamQuestionType;
 use App\Enums\UserRole;
 use App\Models\AssessmentSubject;
+use App\Models\SchoolProfile;
 use App\Models\Subject;
 use App\Models\TrialQuestion;
 use App\Models\TrialQuestionBank;
+use App\Models\User;
 use App\Services\Exams\ExamScoreCalculator;
 use App\Services\Exams\QuestionText;
 use App\Services\Exams\TrialQuestionBankArchive;
+use App\Services\Exams\TrialQuestionBankCatalog;
 use App\Services\Exams\TrialQuestionPack;
 use App\Services\Students\StudentSpreadsheetService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -28,47 +34,74 @@ class TrialQuestionBankController extends Controller
 {
     public function __construct(private readonly QuestionText $questionText) {}
 
-    public function index(Request $request, TrialQuestionPack $pack): View
+    public function index(Request $request, TrialQuestionPack $pack, TrialQuestionBankCatalog $catalog): View
     {
-        $gradeLevel = in_array($request->integer('grade_level'), [10, 11, 12], true)
-            ? $request->integer('grade_level')
-            : null;
-        $search = trim((string) $request->query('q'));
-        $archived = $request->boolean('archived');
+        $data = $catalog->data($request);
+        $catalogView = $request->query('view') === 'summary' ? 'summary' : 'banks';
         $packGrade = in_array($request->integer('pack_grade_level', 10), [10, 11, 12], true)
             ? $request->integer('pack_grade_level', 10) : null;
         $packSearch = trim((string) $request->query('pack_search'));
-        $teacherId = $request->user()->role === UserRole::Teacher ? $request->user()->id : null;
+        $canManageBanks = $request->user()->role !== UserRole::Teacher;
+        $banks = $data['query']->latest('id')->paginateForDisplay()->withQueryString();
+        unset($data['query']);
 
-        return view('trial-question-banks.catalog', [
-            'banks' => TrialQuestionBank::query()
-                ->with(['subject', 'teacher'])
-                ->withCount(['questions', 'trialExams'])
-                ->when($archived, fn ($query) => $query->whereNotNull('archived_at'), fn ($query) => $query->whereNull('archived_at'))
-                ->when($teacherId, fn ($query) => $query->where('teacher_user_id', $teacherId))
-                ->when($gradeLevel, fn ($query) => $query->where('grade_level', $gradeLevel))
-                ->when($search, fn ($query) => $query
-                    ->where(fn ($query) => $query->where('name', 'like', '%'.$search.'%')
-                        ->orWhereHas('subject', fn ($query) => $query
-                            ->where('name', 'like', '%'.$search.'%')
-                            ->orWhere('code', 'like', '%'.$search.'%'))))
-                ->latest()
-                ->paginateForDisplay()
-                ->withQueryString(),
-            'subjects' => Subject::query()
-                ->where('is_active', true)
-                ->whereHas('assessmentSubjects', fn ($query) => $query
-                    ->when($teacherId, fn ($query) => $query->where('teacher_user_id', $teacherId)))
-                ->orderBy('name')
-                ->get(),
+        return view('trial-question-banks.catalog', $data + [
+            'banks' => $banks,
+            'catalogView' => $catalogView,
+            'canManageBanks' => $canManageBanks,
+            'subjects' => $canManageBanks ? Subject::query()->where('is_active', true)
+                ->whereHas('assessmentSubjects')->orderBy('name')->get() : collect(),
             'gradeLevels' => [10, 11, 12],
-            'gradeLevel' => $gradeLevel,
-            'search' => $search,
-            'archived' => $archived,
-            'packs' => $pack->menu($packGrade, $packSearch),
+            'packs' => $canManageBanks && $catalogView === 'banks' ? $pack->menu($packGrade, $packSearch) : [],
             'packGrade' => $packGrade,
             'packSearch' => $packSearch,
         ]);
+    }
+
+    public function recap(Request $request, TrialQuestionBankCatalog $catalog): Response
+    {
+        $data = $catalog->data($request);
+        $banks = $data['query']->orderBy('grade_level')->orderBy('name')->orderBy('id')->get();
+        $groups = $banks->groupBy('grade_level')->map(fn ($byGrade, $grade) => [
+            'title' => 'Kelas '.$grade,
+            'subtitle' => $data['archived'] ? 'Bank soal uji coba diarsipkan' : 'Bank soal uji coba aktif',
+            'rows' => $byGrade->values()->map(fn (TrialQuestionBank $bank) => [
+                $bank->teacher?->name ?? 'Belum ditetapkan',
+                $bank->subject->name,
+                $bank->name."\nBatas: ".($bank->questionDeadlineLabel() ?? 'Belum ditetapkan'),
+                (int) $bank->pg_count, (int) $bank->essay_count, (int) $bank->short_answer_count,
+                (int) $bank->questions_count,
+                $bank->questions_count > 0 ? 'Sudah ada soal' : 'Belum ada soal',
+            ])->all(),
+        ])->values();
+        $filled = $banks->where('questions_count', '>', 0)->count();
+
+        return response()->view('questions.recap', [
+            'reportKind' => 'Bank Soal Uji Coba',
+            'detailColumn' => 'Bank / batas pembuatan',
+            'backUrl' => route('trial-question-banks.index', $request->only(['grade_level', 'q', 'question_status', 'archived']) + ['view' => 'summary']),
+            'groupingLabel' => 'per tingkat',
+            'note' => 'Setiap bank uji coba dihitung satu kali. Rekap ini memuat jumlah soal dan tidak memuat isi atau kunci jawaban.',
+            'groups' => $groups,
+            'totals' => [
+                'banks' => $banks->count(), 'filled' => $filled, 'empty' => $banks->count() - $filled,
+                'questions' => (int) $banks->sum('questions_count'),
+            ],
+            'school' => SchoolProfile::first(),
+            'gradeLabel' => $data['gradeLevel'] ? 'Kelas '.$data['gradeLevel'] : 'Semua tingkat',
+            'periodLabel' => $data['archived'] ? 'Bank diarsipkan' : 'Bank aktif',
+            'emptyDeadline' => null,
+            'filterLabel' => collect([
+                match ($data['questionStatus']) {
+                    'filled' => 'Sudah ada soal',
+                    'empty' => 'Belum ada soal',
+                    default => null,
+                },
+                $data['search'] !== '' ? 'Pencarian: '.$data['search'] : null,
+            ])->filter()->join(' · '),
+            'generatedAt' => now()->timezone(TrialQuestionBank::QUESTION_TIMEZONE)->format('d/m/Y H:i').' WIB',
+            'filename' => 'rekap-bank-soal-uji-coba-'.($data['gradeLevel'] ?? 'semua-tingkat').'-'.now()->format('Ymd-His'),
+        ])->header('Cache-Control', 'private, no-store')->header('X-Robots-Tag', 'noindex, nofollow');
     }
 
     public function store(Request $request): RedirectResponse
@@ -104,21 +137,61 @@ class TrialQuestionBankController extends Controller
         ]);
 
         return redirect()->route('trial-question-banks.questions.index', $bank)
-            ->with('status', 'Bank soal uji coba dibuat. Silakan tambahkan soal pilihan ganda.');
+            ->with('status', 'Bank soal uji coba dibuat. Silakan tambahkan soal.');
     }
 
     public function questions(Request $request, TrialQuestionBank $trialQuestionBank): View
     {
         $this->authorizeBank($request, $trialQuestionBank);
         $trialQuestionBank->load(['subject', 'teacher']);
+        $lockedReason = $this->lockedReason($trialQuestionBank);
 
         return view('trial-question-banks.questions', [
             'bank' => $trialQuestionBank,
             'questions' => $trialQuestionBank->questions()->paginateForDisplay()->withQueryString(),
             'questionCount' => $trialQuestionBank->questions()->count(),
             'totalPoints' => (float) $trialQuestionBank->questions()->sum('points'),
-            'isLocked' => $this->isLocked($trialQuestionBank),
+            'isLocked' => $lockedReason !== null,
+            'lockedReason' => $lockedReason,
+            'teachers' => $request->user()->role !== UserRole::Teacher
+                ? User::query()->where('role', UserRole::Teacher)->whereIn('id', $this->eligibleTeachers($trialQuestionBank))
+                    ->orderBy('name')->get() : collect(),
         ]);
+    }
+
+    public function updateSettings(Request $request, TrialQuestionBank $trialQuestionBank): RedirectResponse
+    {
+        $validated = $request->validate([
+            'question_deadline_at' => ['sometimes', 'nullable', 'date_format:Y-m-d\TH:i'],
+            'teacher_user_id' => ['sometimes', 'nullable', 'integer'],
+        ]);
+        DB::transaction(function () use ($trialQuestionBank, $validated): void {
+            $bank = TrialQuestionBank::query()->lockForUpdate()->findOrFail($trialQuestionBank->id);
+            if (array_key_exists('teacher_user_id', $validated)) {
+                $teacherId = $validated['teacher_user_id'];
+                if ($teacherId !== null && ! User::query()->whereKey($teacherId)->where('role', UserRole::Teacher)
+                    ->whereIn('id', $this->eligibleTeachers($bank))->exists()) {
+                    throw ValidationException::withMessages(['teacher_user_id' => 'Pilih guru yang ditugaskan pada mata pelajaran dan tingkat bank ini.']);
+                }
+                $bank->teacher_user_id = $teacherId;
+            }
+            if (array_key_exists('question_deadline_at', $validated)) {
+                $value = $validated['question_deadline_at'];
+                $bank->question_deadline_at = $value === null ? null : Carbon::createFromFormat(
+                    '!Y-m-d\TH:i', $value, TrialQuestionBank::QUESTION_TIMEZONE,
+                )->setTimezone(config('app.timezone'));
+            }
+            $bank->save();
+        });
+
+        return back()->with('status', 'Pengaturan bank soal uji coba berhasil disimpan.');
+    }
+
+    private function eligibleTeachers(TrialQuestionBank $bank): Builder
+    {
+        return AssessmentSubject::query()->where('subject_id', $bank->subject_id)
+            ->whereHas('schoolClass', fn ($classes) => $classes->where('grade_level', $bank->grade_level))
+            ->whereNotNull('teacher_user_id')->select('teacher_user_id');
     }
 
     public function export(
@@ -164,7 +237,7 @@ class TrialQuestionBankController extends Controller
         $validated = $this->validateQuestion($request);
 
         DB::transaction(function () use ($request, $trialQuestionBank, $validated): void {
-            $this->assertEditable($trialQuestionBank);
+            $this->assertEditable($request, $trialQuestionBank);
             $position = (int) $trialQuestionBank->questions()->lockForUpdate()->max('position') + 1;
             $optionFilePaths = $validated['question_type'] === ExamQuestionType::MultipleChoice->value
                 ? $this->storeOptionFiles($request, 'trial-options') : [];
@@ -189,7 +262,7 @@ class TrialQuestionBankController extends Controller
         $validated = $this->validateQuestion($request);
 
         DB::transaction(function () use ($request, $trialQuestionBank, $question, $validated): void {
-            $this->assertEditable($trialQuestionBank);
+            $this->assertEditable($request, $trialQuestionBank);
             $attributes = $this->attributes($validated);
             $oldOptionPaths = $question->option_file_paths ?? [];
             $attributes['option_file_paths'] = $validated['question_type'] === ExamQuestionType::MultipleChoice->value
@@ -226,8 +299,8 @@ class TrialQuestionBankController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($trialQuestionBank, $question): void {
-                $this->assertEditable($trialQuestionBank);
+            DB::transaction(function () use ($request, $trialQuestionBank, $question): void {
+                $this->assertEditable($request, $trialQuestionBank);
                 $imagePath = $question->question_image_path;
                 $optionPaths = $question->option_file_paths ?? [];
                 $question->delete();
@@ -286,8 +359,8 @@ class TrialQuestionBankController extends Controller
     {
         $request->mergeIfMissing(['question_type' => ExamQuestionType::MultipleChoice->value]);
         $validated = $request->validate([
-            'question_type' => ['required', Rule::in([ExamQuestionType::MultipleChoice->value, ExamQuestionType::Essay->value])],
-            'points' => ['exclude_unless:question_type,essay', 'required', 'numeric', 'between:0.01,1000', 'decimal:0,2'],
+            'question_type' => ['required', Rule::enum(ExamQuestionType::class)],
+            'points' => ['exclude_if:question_type,multiple_choice', 'required', 'numeric', 'between:0.01,1000', 'decimal:0,2'],
             'text_format' => ['nullable', Rule::in(['plain', 'html'])],
             'question_text' => ['required', 'string', 'max:20000'],
             'statement' => ['nullable', 'string', 'max:20000'],
@@ -361,22 +434,31 @@ class TrialQuestionBankController extends Controller
     private function authorizeBank(Request $request, TrialQuestionBank $bank): void
     {
         if ($request->user()->role === UserRole::Teacher) {
-            abort_unless($bank->teacher_user_id === $request->user()->id, 403);
+            abort_unless($bank->teacher_user_id === $request->user()->id && $bank->archived_at === null, 403);
         }
     }
 
-    private function isLocked(TrialQuestionBank $bank): bool
+    private function lockedReason(TrialQuestionBank $bank): ?string
     {
-        return $bank->archived_at !== null || $bank->trialExams()->whereHas('attempts')->exists();
+        if ($bank->archived_at !== null) {
+            return 'Bank sudah diarsipkan. Pulihkan sebelum mengelola soal.';
+        }
+        if ($bank->trialExams()->whereHas('attempts')->exists()) {
+            return 'Bank terkunci karena sudah ada peserta yang memulai uji coba.';
+        }
+        if ($bank->question_deadline_at?->lte(now())) {
+            return 'Batas pembuatan soal sudah lewat. Hubungi Panitia atau Super Admin untuk mengubah batas bank ini.';
+        }
+
+        return null;
     }
 
-    private function assertEditable(TrialQuestionBank $bank): void
+    private function assertEditable(Request $request, TrialQuestionBank $bank): void
     {
         $bank = TrialQuestionBank::query()->lockForUpdate()->findOrFail($bank->id);
-        if ($this->isLocked($bank)) {
-            throw ValidationException::withMessages([
-                'question' => 'Bank soal terkunci karena sudah dihapus dari daftar aktif atau sudah memiliki peserta ujian.',
-            ]);
+        $this->authorizeBank($request, $bank);
+        if ($reason = $this->lockedReason($bank)) {
+            throw ValidationException::withMessages(['question' => $reason]);
         }
     }
 }

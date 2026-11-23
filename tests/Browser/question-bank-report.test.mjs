@@ -109,5 +109,22 @@ test('PDF and PNG pages repeat the correct period deadline and include every row
             assert.equal(canvas.width, 1);
             assert.equal(canvas.height, 1);
         }
+        renderedPages.length = 0;
+        await renderPages({
+            ...data,
+            reportKind: 'Bank Soal Uji Coba',
+            detailColumn: 'Bank',
+            totals: { banks: 1, filled: 1, empty: 0, questions: 3 },
+            groups: [{
+                title: 'Kelas 10', subtitle: 'Bank aktif',
+                rows: [['Bu Nia', 'Sejarah', 'Bank simulasi\nBatas: 28/11/2026 17:30 WIB', 1, 1, 1, 3, 'Sudah ada soal']],
+            }],
+        }, 'png');
+        const trialReport = renderedPages[0].text;
+        assert.ok(trialReport.includes('REKAP PEMBUATAN SOAL · BANK SOAL UJI COBA'));
+        assert.ok(trialReport.includes('Bank'));
+        assert.ok(trialReport.includes('Bank simulasi'));
+        assert.ok(trialReport.join(' ').includes('Batas: 28/11/2026 17:30 WIB'));
+        assert.ok(!trialReport.includes('Rombel'));
     } finally { delete globalThis.document; }
 });

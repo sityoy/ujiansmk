@@ -156,23 +156,23 @@ class TrialExamAttemptService
         });
     }
 
-    public function gradeEssays(TrialExam $exam, TrialAttempt $attempt, mixed $scores): void
+    public function gradeWrittenAnswers(TrialExam $exam, TrialAttempt $attempt, mixed $scores): void
     {
         DB::transaction(function () use ($exam, $attempt, $scores): void {
             $attempt = $exam->currentAttempts()->lockForUpdate()->where('status', 'submitted')->findOrFail($attempt->id);
             $questions = $exam->questionBank->questions()->get();
-            $essays = $questions->filter(fn (TrialQuestion $question) => $question->question_type->requiresManualGrading());
-            abort_if($essays->isEmpty(), 404);
+            $manualQuestions = $questions->filter(fn (TrialQuestion $question) => $question->question_type->requiresManualGrading());
+            abort_if($manualQuestions->isEmpty(), 404);
 
             $rules = ['scores' => ['required', 'array']];
-            foreach ($essays as $essay) {
-                $rules['scores.'.$essay->id] = ['required', 'numeric', 'decimal:0,2', 'min:0', 'max:'.$essay->points];
+            foreach ($manualQuestions as $question) {
+                $rules['scores.'.$question->id] = ['required', 'numeric', 'decimal:0,2', 'min:0', 'max:'.$question->points];
             }
             $validated = Validator::make(['scores' => $scores], $rules)->validate();
             $answers = $attempt->answers()->get()->keyBy('trial_question_id');
-            foreach ($essays as $essay) {
-                $answer = $answers->get($essay->id);
-                $answer->update(['points_awarded' => $validated['scores'][$essay->id]]);
+            foreach ($manualQuestions as $question) {
+                $answer = $answers->get($question->id);
+                $answer->update(['points_awarded' => $validated['scores'][$question->id]]);
             }
 
             $attempt->update([

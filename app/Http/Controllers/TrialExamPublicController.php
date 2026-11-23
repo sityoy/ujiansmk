@@ -36,6 +36,7 @@ class TrialExamPublicController extends Controller
             'available' => $trialExam->isAvailable(),
             'questionCount' => $counts->sum(),
             'pgCount' => (int) $counts->get('multiple_choice', 0),
+            'shortCount' => (int) $counts->get('short_answer', 0),
             'essayCount' => (int) $counts->get('essay', 0),
         ]);
     }
@@ -190,7 +191,7 @@ class TrialExamPublicController extends Controller
 
         $questionCount = $trialExam->questionBank->questions()->count();
         if ($questionCount === 0) {
-            throw ValidationException::withMessages(['access_code' => 'Bank soal pilihan ganda belum tersedia.']);
+            throw ValidationException::withMessages(['access_code' => 'Bank soal uji coba belum tersedia.']);
         }
 
         $token = Str::random(64);

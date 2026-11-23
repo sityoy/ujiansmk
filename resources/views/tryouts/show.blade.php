@@ -90,8 +90,8 @@
                                         </div>
                                     @else
                                         <label class="mt-4 block text-xs text-slate-400">
-                                            Jawaban esai · dikoreksi manual
-                                            <textarea name="answers[{{ $question->id }}]" rows="6" maxlength="10000"
+                                            {{ $type->value === 'short_answer' ? 'Jawaban singkat' : 'Jawaban esai' }} · dikoreksi manual
+                                            <textarea name="answers[{{ $question->id }}]" rows="{{ $type->value === 'short_answer' ? 3 : 8 }}" maxlength="10000"
                                                 data-save-url="{{ route('tryout.answer', [$trialExam, $attempt, $question]) }}"
                                                 class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm leading-6 text-white outline-none focus:border-cyan-400">{{ $answers->get($question->id)?->answer }}</textarea>
                                         </label>

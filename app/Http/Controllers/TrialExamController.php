@@ -120,9 +120,9 @@ class TrialExamController extends Controller
         TrialExamAttemptService $attempts,
     ): RedirectResponse {
         $this->authorizeGrading($request, $trialExam, $trialAttempt);
-        $attempts->gradeEssays($trialExam, $trialAttempt, $request->input('scores'));
+        $attempts->gradeWrittenAnswers($trialExam, $trialAttempt, $request->input('scores'));
 
-        return redirect()->route('tryouts.participants', $trialExam)->with('status', 'Nilai esai berhasil disimpan.');
+        return redirect()->route('tryouts.participants', $trialExam)->with('status', 'Nilai jawaban berhasil disimpan.');
     }
 
     public function progress(Request $request, TrialExam $trialExam): JsonResponse
@@ -154,7 +154,7 @@ class TrialExamController extends Controller
                     'reset_used' => (int) ($attempt?->security_reset_count ?? 0),
                     'incidents' => $attempt?->security_incidents_count,
                     ...($canRestart ? ['restart_url' => $attempt ? route('tryouts.attempts.restart', [$trialExam, $attempt]) : null] : []),
-                    ...($canGrade ? ['grade_url' => $this->hasEssaysToGrade($attempt) ? route('tryouts.attempts.grade.edit', [$trialExam, $attempt]) : null] : []),
+                    ...($canGrade ? ['grade_url' => $this->hasWrittenAnswersToGrade($attempt) ? route('tryouts.attempts.grade.edit', [$trialExam, $attempt]) : null] : []),
                 ]];
             });
 
@@ -668,7 +668,7 @@ class TrialExamController extends Controller
         return $this->canRestart($user) || $user->role === UserRole::Teacher;
     }
 
-    private function hasEssaysToGrade(?TrialAttempt $attempt): bool
+    private function hasWrittenAnswersToGrade(?TrialAttempt $attempt): bool
     {
         return $attempt?->status === 'submitted'
             && in_array($attempt->grading_status, [GradingStatus::Pending, GradingStatus::Graded], true);
@@ -678,7 +678,7 @@ class TrialExamController extends Controller
     {
         abort_unless($this->canGrade($request->user()), 403);
         $this->authorizeMonitor($request, $exam);
-        abort_unless($attempt->trial_exam_id === $exam->id && $this->hasEssaysToGrade($attempt), 404);
+        abort_unless($attempt->trial_exam_id === $exam->id && $this->hasWrittenAnswersToGrade($attempt), 404);
     }
 
     private function authorizeMonitor(Request $request, TrialExam $trialExam): void

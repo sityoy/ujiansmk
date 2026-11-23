@@ -98,7 +98,7 @@ export function paginateRows(rows, height, lineHeight = 27, padding = 14) {
         while (offset < count) {
             let capacity = Math.floor((remaining - padding * 2) / lineHeight);
             if (capacity < 1) { pages.push([]); remaining = height; capacity = Math.floor((height - padding * 2) / lineHeight); }
-            if (capacity < 1) throw new Error('Judul laporan terlalu panjang. Gunakan filter periode untuk mempersempit laporan.');
+            if (capacity < 1) throw new Error('Judul laporan terlalu panjang. Persempit laporan dengan filter yang tersedia.');
             const take = Math.min(count - offset, capacity);
             const part = { ...row, cells: row.cells.map(cell => cell.slice(offset, offset + take)), height: take * lineHeight + padding * 2 };
             part.cells[0] = [String(row.number)];
@@ -125,7 +125,7 @@ function header(context, data, group, logo) {
     if (logo?.complete && logo.naturalWidth) context.drawImage(logo, MARGIN, 45, 76, 76);
     context.fillStyle = '#0f172a';
     let y = paragraph(context, data.school, MARGIN + 100, 45, WIDTH - MARGIN * 2 - 100, 27, true);
-    y = paragraph(context, 'REKAP PEMBUATAN SOAL · BANK SOAL INTI', MARGIN + 100, y + 3, WIDTH - MARGIN * 2 - 100, 21, true);
+    y = paragraph(context, `REKAP PEMBUATAN SOAL · ${(data.reportKind ?? 'Bank Soal Inti').toUpperCase()}`, MARGIN + 100, y + 3, WIDTH - MARGIN * 2 - 100, 21, true);
     if (data.address) y = paragraph(context, data.address, MARGIN + 100, y + 2, WIDTH - MARGIN * 2 - 100, 17);
     y = Math.max(135, y + 14);
     context.fillStyle = '#334155'; context.fillRect(MARGIN, y, WIDTH - MARGIN * 2, 3); y += 20;
@@ -172,7 +172,7 @@ export async function renderPages(data, format, progress = () => {}) {
         for (const group of groups) {
             const top = header(context, data, group, logo);
             font(context, 20, true);
-            const heading = labels.map((label, i) => wrapText(context, label, columns[i] - 24));
+            const heading = labels.map((label, i) => wrapText(context, i === 3 ? (data.detailColumn ?? label) : label, columns[i] - 24));
             const headingHeight = Math.max(...heading.map(cell => cell.length)) * LINE + 28;
             font(context);
             const rows = group.rows.map((row, index) => ({ number: index + 1, cells: [index + 1, ...row].map((value, i) => wrapText(context, value, columns[i] - 24)) }));
@@ -188,7 +188,8 @@ export async function renderPages(data, format, progress = () => {}) {
                     y += row.height;
                 }
                 font(context, 15); context.fillStyle = '#475569';
-                context.fillText(`Dibuat ${data.generatedAt} · Bank bersama antarrombel dihitung satu kali. Guru mengikuti penugasan.`, MARGIN, HEIGHT - 55);
+                const footer = data.reportKind ? 'Setiap bank uji coba dihitung satu kali.' : 'Bank bersama antarrombel dihitung satu kali. Guru mengikuti penugasan.';
+                context.fillText(`Dibuat ${data.generatedAt} · ${footer}`, MARGIN, HEIGHT - 55);
                 context.fillText(`Halaman kelompok ${index + 1}/${pages.length}`, MARGIN, HEIGHT - 32);
                 const blob = await canvasBlob(canvas, format === 'pdf' ? 'image/jpeg' : 'image/png');
                 files.push({ name: `${data.filename}-halaman-${String(++number).padStart(2, '0')}.png`, bytes: new Uint8Array(await blob.arrayBuffer()), width: WIDTH, height: HEIGHT });

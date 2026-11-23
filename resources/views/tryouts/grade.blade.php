@@ -1,8 +1,8 @@
 @extends('layouts.app')
 
-@section('title', 'Koreksi Esai Uji Coba')
+@section('title', 'Koreksi Jawaban Uji Coba')
 @section('eyebrow', 'Ujian Uji Coba')
-@section('heading', 'Koreksi Esai')
+@section('heading', 'Koreksi Jawaban')
 
 @section('content')
     <div class="mx-auto max-w-3xl space-y-4">
@@ -21,7 +21,7 @@
             @foreach ($answers as $answer)
                 @php($question = $answer->question)
                 <article class="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
-                    <p class="mb-2 text-sm font-semibold text-cyan-300">Esai {{ $loop->iteration }}</p>
+                    <p class="mb-2 text-sm font-semibold text-cyan-300">{{ $question->question_type->label() }} · Soal {{ $loop->iteration }}</p>
                     <x-question-prompt :question="$question" />
                     <div class="mt-4 rounded-xl border border-white/10 bg-slate-950/50 p-4">
                         <p class="mb-2 text-xs font-semibold text-slate-400">Jawaban peserta</p>
@@ -35,7 +35,7 @@
                     </label>
                 </article>
             @endforeach
-            <button type="submit" class="rounded-xl bg-cyan-400 px-5 py-3 font-semibold text-slate-950">Simpan nilai esai</button>
+            <button type="submit" class="rounded-xl bg-cyan-400 px-5 py-3 font-semibold text-slate-950">Simpan nilai</button>
         </form>
     </div>
     <x-exam-image-dialog />

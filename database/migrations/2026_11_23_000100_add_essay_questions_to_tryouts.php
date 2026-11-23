@@ -26,8 +26,8 @@ return new class extends Migration
 
     public function down(): void
     {
-        if (DB::table('trial_questions')->where('question_type', 'essay')->exists()) {
-            throw new LogicException('Rollback is blocked while trial essay questions exist.');
+        if (DB::table('trial_questions')->where('question_type', '!=', 'multiple_choice')->exists()) {
+            throw new LogicException('Rollback is blocked while trial written questions exist.');
         }
 
         Schema::table('trial_attempts', function (Blueprint $table): void {

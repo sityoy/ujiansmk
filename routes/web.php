@@ -226,19 +226,22 @@ Route::middleware(['auth', 'active'])->group(function (): void {
         ->name('tryouts.participants');
 
     Route::prefix('trial-question-banks')
-        ->middleware('role:super_admin,committee')
+        ->middleware('can:author-trial-questions')
         ->name('trial-question-banks.')
         ->group(function (): void {
             Route::get('/', [TrialQuestionBankController::class, 'index'])->name('index');
-            Route::post('/', [TrialQuestionBankController::class, 'store'])->name('store');
-            Route::post('/import-pack', [TrialQuestionBankController::class, 'importPack'])->name('import-pack');
-            Route::patch('/{trialQuestionBank}/restore', [TrialQuestionBankController::class, 'restore'])->name('restore');
+            Route::get('/recap', [TrialQuestionBankController::class, 'recap'])->name('recap');
+            Route::patch('/{trialQuestionBank}/settings', [TrialQuestionBankController::class, 'updateSettings'])
+                ->middleware('role:super_admin,committee')->name('settings.update');
+            Route::post('/', [TrialQuestionBankController::class, 'store'])->middleware('role:super_admin,committee')->name('store');
+            Route::post('/import-pack', [TrialQuestionBankController::class, 'importPack'])->middleware('role:super_admin,committee')->name('import-pack');
+            Route::patch('/{trialQuestionBank}/restore', [TrialQuestionBankController::class, 'restore'])->middleware('role:super_admin,committee')->name('restore');
             Route::get('/{trialQuestionBank}/questions/export', [TrialQuestionBankController::class, 'export'])->name('questions.export');
             Route::get('/{trialQuestionBank}/questions', [TrialQuestionBankController::class, 'questions'])->name('questions.index');
             Route::post('/{trialQuestionBank}/questions', [TrialQuestionBankController::class, 'storeQuestion'])->name('questions.store');
             Route::put('/{trialQuestionBank}/questions/{question}', [TrialQuestionBankController::class, 'updateQuestion'])->name('questions.update');
             Route::delete('/{trialQuestionBank}/questions/{question}', [TrialQuestionBankController::class, 'destroyQuestion'])->name('questions.destroy');
-            Route::delete('/{trialQuestionBank}', [TrialQuestionBankController::class, 'destroy'])->name('destroy');
+            Route::delete('/{trialQuestionBank}', [TrialQuestionBankController::class, 'destroy'])->middleware('role:super_admin,committee')->name('destroy');
         });
 
     Route::get('/question-bank/recap', [QuestionBankController::class, 'recap'])

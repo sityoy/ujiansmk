@@ -295,6 +295,98 @@ class TrialExamFlowTest extends TestCase
         $this->assertSame('0.00', $attempt->fresh()->score);
     }
 
+    public function test_trial_uses_short_answer_between_pg_and_essay_and_grades_both_written_types(): void
+    {
+        [$trial, $pg] = $this->makeTrial();
+        $bank = $trial->questionBank;
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $store = route('trial-question-banks.questions.store', $bank);
+        $this->actingAs($committee)->post($store, [
+            'question_type' => 'essay', 'question_text' => 'Jelaskan proses terjadinya hujan.', 'points' => 7,
+        ])->assertSessionHasNoErrors();
+        $this->post($store, [
+            'question_type' => 'short_answer', 'question_text' => 'Apa nama perubahan uap air menjadi cair?',
+        ])->assertSessionHasErrors('points');
+        $this->post($store, [
+            'question_type' => 'short_answer', 'question_text' => 'Apa nama perubahan uap air menjadi cair?', 'points' => 3,
+        ])->assertSessionHasNoErrors();
+        $essay = $bank->questions()->where('question_type', 'essay')->sole();
+        $short = $bank->questions()->where('question_type', 'short_answer')->sole();
+        $this->assertNull($short->correct_answer);
+        $this->get(route('trial-question-banks.questions.index', $bank))->assertOk()
+            ->assertSee('Isian Singkat · 3 poin');
+
+        $student = Student::query()->where('nisn', '1234567890')->firstOrFail();
+        $this->actingAs($student->user)->post(route('tryout.start', $trial), ['access_code' => $trial->access_code])->assertRedirect();
+        $attempt = $trial->currentAttempts()->sole();
+        $show = route('tryout.show', [$trial, $attempt]);
+        $submit = route('tryout.submit', [$trial, $attempt]);
+        $this->get($show)->assertOk()->assertSeeInOrder([
+            'data-exam-section="multiple_choice"', 'Lanjut ke Isian Singkat',
+            'data-exam-section="short_answer"', 'Jawaban singkat', 'Lanjut ke Esai',
+            'data-exam-section="essay"', 'Jawaban esai',
+        ], false);
+        $this->putJson(route('tryout.answer', [$trial, $attempt, $short]), ['answer' => 'Kondensasi'])->assertOk();
+        $this->assertSame('Kondensasi', $attempt->answers()->sole()->answer);
+        $this->post($submit, ['answers' => [$pg->id => 'A', $essay->id => 'Uap air mengembun lalu jatuh.']])
+            ->assertRedirect(route('tryout.result', [$trial, $attempt]));
+
+        $edit = route('tryouts.attempts.grade.edit', [$trial, $attempt]);
+        $this->actingAs($committee)->get($edit)->assertOk()->assertSee('Koreksi Jawaban')
+            ->assertSee('Kondensasi')->assertSee('Uap air mengembun lalu jatuh.');
+        $this->from($edit)->put(route('tryouts.attempts.grade.update', [$trial, $attempt]), ['scores' => [$short->id => 3]])
+            ->assertSessionHasErrors('scores.'.$essay->id);
+        $this->assertSame(GradingStatus::Pending, $attempt->fresh()->grading_status);
+        $this->put(route('tryouts.attempts.grade.update', [$trial, $attempt]), ['scores' => [$short->id => 3, $essay->id => 5]])
+            ->assertSessionHasNoErrors();
+        $this->assertSame('41.00', $attempt->fresh()->score);
+    }
+
+    public function test_trial_bank_deadlines_and_recap_are_scoped_to_the_assigned_teacher(): void
+    {
+        [$trial] = $this->makeTrial();
+        $bank = $trial->questionBank;
+        $staff = User::factory()->create(['role' => UserRole::Committee]);
+        $teacher = User::factory()->create(['role' => UserRole::Teacher, 'name' => 'Guru Uji Coba']);
+        $other = User::factory()->create(['role' => UserRole::Teacher]);
+        $trial->assessmentSubject->update(['teacher_user_id' => $teacher->id]);
+        $otherBank = TrialQuestionBank::create([
+            'subject_id' => $bank->subject_id, 'grade_level' => $bank->grade_level,
+            'teacher_user_id' => $other->id, 'name' => 'Bank milik guru lain',
+        ]);
+        $settings = route('trial-question-banks.settings.update', $bank);
+        $questions = route('trial-question-banks.questions.index', $bank);
+        $store = route('trial-question-banks.questions.store', $bank);
+        $deadline = now()->subMinute()->timezone(TrialQuestionBank::QUESTION_TIMEZONE)->startOfMinute();
+        $deadlineInput = $deadline->format('Y-m-d\TH:i');
+        $deadlineLabel = $deadline->format('d/m/Y H:i').' WIB';
+
+        $this->actingAs($staff)->get($questions)->assertOk()->assertSee($teacher->name);
+        $this->from($questions)->patch($settings, ['teacher_user_id' => $other->id])->assertSessionHasErrors('teacher_user_id');
+        $this->patch($settings, ['teacher_user_id' => $teacher->id, 'question_deadline_at' => $deadlineInput])
+            ->assertSessionHasNoErrors();
+        $this->assertSame($teacher->id, $bank->fresh()->teacher_user_id);
+        $this->assertSame($deadlineLabel, $bank->fresh()->questionDeadlineLabel());
+        $this->actingAs($teacher)->get($questions)->assertOk()
+            ->assertSee($deadlineLabel)->assertSee('Batas pembuatan soal sudah lewat')->assertDontSee('Simpan batas');
+        $this->patch($settings, ['question_deadline_at' => null])->assertForbidden();
+        $this->post($store, ['question_type' => 'short_answer', 'question_text' => 'Soal singkat', 'points' => 3])
+            ->assertSessionHasErrors('question');
+        $this->get(route('trial-question-banks.questions.index', $otherBank))->assertForbidden();
+        $this->get(route('trial-question-banks.index', ['view' => 'summary']))->assertOk()
+            ->assertSee('Rekap Pembuatan Soal')->assertSee($teacher->name)->assertDontSee($otherBank->name);
+        $this->get(route('trial-question-banks.recap', ['grade_level' => $bank->grade_level, 'per_page' => 10]))
+            ->assertOk()->assertSee('REKAP PEMBUATAN SOAL · BANK SOAL UJI COBA')
+            ->assertSee($deadlineLabel)->assertSee($bank->name)->assertDontSee($otherBank->name)
+            ->assertViewHas('totals', ['banks' => 1, 'filled' => 1, 'empty' => 0, 'questions' => 1]);
+        $this->actingAs($staff)->get(route('trial-question-banks.recap', ['question_status' => 'empty']))
+            ->assertOk()->assertSee($otherBank->name)->assertDontSee($bank->name);
+        $this->patch($settings, ['question_deadline_at' => null])->assertSessionHasNoErrors();
+        $this->actingAs($teacher)->post($store, ['question_type' => 'short_answer', 'question_text' => 'Soal singkat', 'points' => 3])
+            ->assertSessionHasNoErrors();
+        $this->assertSame(2, $bank->questions()->count());
+    }
+
     public function test_trial_displays_bank_order_when_started_and_resumed(): void
     {
         [$trial] = $this->makeTrial();

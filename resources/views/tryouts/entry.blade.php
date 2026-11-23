@@ -7,8 +7,7 @@
         <section class="rounded-3xl border border-cyan-400/20 bg-cyan-400/[0.04] p-7">
             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Akses peserta</p>
             <h1 class="mt-3 text-3xl font-semibold">{{ $trialExam->title }}</h1>
-            <p class="mt-3 text-slate-400">{{ $trialExam->questionBank->subject->name }} · Kelas {{ $trialExam->questionBank->grade_level }} · {{ $trialExam->duration_minutes }} menit · {{ $questionCount }} soal
-                @if ($essayCount > 0 && $pgCount > 0) ({{ $pgCount }} PG, {{ $essayCount }} esai) @endif</p>
+            <p class="mt-3 text-slate-400">{{ $trialExam->questionBank->subject->name }} · Kelas {{ $trialExam->questionBank->grade_level }} · {{ $trialExam->duration_minutes }} menit · {{ $questionCount }} soal</p>
         </section>
 
         @if ($errors->any())<div class="mt-5 rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">{{ $errors->first() }}</div>@endif
@@ -26,8 +25,11 @@
                 @if ($pgCount > 0)
                     <p class="text-sm text-slate-300">Setiap jawaban PG benar bernilai tetap 2 poin. Nilai PG maksimal 100.</p>
                 @endif
-                @if ($essayCount > 0)
-                    <p class="text-sm text-slate-300">{{ $essayCount }} soal esai akan dikoreksi manual.</p>
+                @if ($shortCount > 0 || $essayCount > 0)
+                    <p class="text-sm text-slate-300">{{ collect([
+                        $shortCount > 0 ? $shortCount.' isian singkat' : null,
+                        $essayCount > 0 ? $essayCount.' esai' : null,
+                    ])->filter()->join(' dan ') }} akan dikoreksi manual.</p>
                 @endif
                 @if (auth()->user()?->student)
                     <div class="rounded-xl border border-cyan-400/20 bg-cyan-400/[0.05] p-4">

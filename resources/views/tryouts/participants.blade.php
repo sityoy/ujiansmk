@@ -97,7 +97,7 @@
                                     @php($gradeUrl = $attempt?->status === 'submitted' && in_array($attempt->grading_status?->value, ['pending', 'graded'], true)
                                         ? route('tryouts.attempts.grade.edit', [$trialExam, $attempt]) : null)
                                     <a data-trial-grade @if ($gradeUrl) href="{{ $gradeUrl }}" @else hidden @endif
-                                        class="mb-2 inline-flex rounded-lg border border-cyan-400/30 px-3 py-2 text-xs font-semibold text-cyan-300">Koreksi Esai</a>
+                                        class="mb-2 inline-flex rounded-lg border border-cyan-400/30 px-3 py-2 text-xs font-semibold text-cyan-300">Koreksi Jawaban</a>
                                 @endif
                                 @if ($canRestart)
                                     <form method="POST" action="{{ $attempt ? route('tryouts.attempts.restart', [$trialExam, $attempt]) : '' }}"

@@ -11,21 +11,52 @@
         <a href="{{ route('trial-question-banks.index') }}" class="text-xs text-cyan-300">← Kembali ke bank soal uji coba</a>
         <p class="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">{{ $bank->subject->name }} · Kelas {{ $bank->grade_level }}</p>
         <h2 class="mt-2 text-2xl font-semibold text-white">{{ $bank->name }}</h2>
-        <p class="mt-2 text-sm text-slate-400">{{ $questionCount }} soal · Tidak tercampur dengan bank Ujian Inti</p>
+        <p class="mt-2 text-sm text-slate-400">{{ $questionCount }} soal · Total bobot {{ number_format($totalPoints, 2, ',', '.') }}</p>
         <p class="mt-2 text-xs text-cyan-200">Setiap jawaban PG benar bernilai tetap 2 poin. Nilai PG maksimal 100.</p>
+        <p class="mt-2 text-sm text-slate-400">Guru {{ $bank->teacher?->name ?? 'belum ditetapkan' }}</p>
+        <p class="mt-2 text-sm text-slate-400">Batas pembuatan soal · {{ $bank->questionDeadlineLabel() ?? 'Belum ditetapkan' }}</p>
+        @if (auth()->user()->role !== \App\Enums\UserRole::Teacher && ! $bank->archived_at)
+            <details class="mt-4 rounded-xl border border-white/10 p-4" @if ($errors->hasAny(['question_deadline_at', 'teacher_user_id'])) open @endif>
+                <summary class="cursor-pointer text-sm font-semibold text-cyan-300">Pengaturan bank soal</summary>
+                <div class="mt-4 grid gap-4 md:grid-cols-2">
+                    <form method="POST" action="{{ route('trial-question-banks.settings.update', $bank) }}" class="space-y-3">
+                        @csrf @method('PATCH')
+                        <label class="block text-sm text-slate-300">Guru penanggung jawab
+                            <select name="teacher_user_id" class="mt-2 block w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
+                                <option value="">Belum ditetapkan</option>
+                                @foreach ($teachers as $teacher)
+                                    <option value="{{ $teacher->id }}" @selected($teacher->id == old('teacher_user_id', $bank->teacher_user_id))>{{ $teacher->name }}</option>
+                                @endforeach
+                            </select>
+                        </label>
+                        <button type="submit" class="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-cyan-300">Simpan guru</button>
+                    </form>
+                    <form method="POST" action="{{ route('trial-question-banks.settings.update', $bank) }}" class="space-y-3">
+                        @csrf @method('PATCH')
+                        <label class="block text-sm text-slate-300">Tanggal dan jam batas pembuatan soal (WIB)
+                            <input type="datetime-local" name="question_deadline_at" step="60"
+                                value="{{ old('question_deadline_at', $bank->question_deadline_at?->timezone($bank::QUESTION_TIMEZONE)->format('Y-m-d\TH:i')) }}"
+                                class="mt-2 block w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
+                        </label>
+                        <p class="text-xs text-slate-400">Kosongkan lalu simpan untuk menghapus batas waktu.</p>
+                        <button type="submit" class="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-cyan-300">Simpan batas</button>
+                    </form>
+                </div>
+            </details>
+        @endif
         <div class="mt-4 flex flex-wrap gap-2">
             <a href="{{ route('trial-question-banks.questions.export', $bank) }}" class="inline-flex rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-2.5 text-sm font-semibold text-emerald-200">Ekspor soal ke Excel</a>
-            @if ($bank->source_pack_key && ! $bank->archived_at)
+            @if ($bank->source_pack_key && ! $bank->archived_at && auth()->user()->role !== \App\Enums\UserRole::Teacher)
                 <x-trial-pack-cancel :bank="$bank" />
             @endif
         </div>
-        @if ($isLocked)<p class="mt-3 text-sm text-amber-300">{{ $bank->archived_at ? 'Bank sudah dihapus dari daftar aktif. Pulihkan sebelum mengelola soal.' : 'Bank terkunci karena sudah ada peserta yang memulai uji coba.' }}</p>@endif
+        @if ($isLocked)<p class="mt-3 text-sm text-amber-300">{{ $lockedReason }}</p>@endif
     </section>
 
     <div class="mt-6 grid gap-6 xl:grid-cols-[420px_1fr]">
         <section class="rounded-3xl border border-white/10 bg-white/[0.035] p-6">
             <h2 class="text-xl font-semibold text-white">Tambah soal</h2>
-            <p class="mt-2 text-xs leading-5 text-slate-500">Pilihan Ganda dinilai otomatis. Esai dinilai manual sesuai bobot yang diisi.</p>
+            <p class="mt-2 text-xs leading-5 text-slate-500">Pilihan Ganda dinilai otomatis. Isian Singkat dan Esai dinilai manual sesuai bobot yang diisi.</p>
             <fieldset @disabled($isLocked)>
                 <form method="POST" action="{{ route('trial-question-banks.questions.store', $bank) }}" enctype="multipart/form-data" data-trial-question-form class="mt-5 space-y-3">
                     @csrf
@@ -45,7 +76,7 @@
                         <select name="correct_answer" required class="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm"><option value="">Jawaban benar</option>@foreach (['A','B','C','D','E'] as $option)<option value="{{ $option }}" @selected(old('correct_answer') === $option)>Pilihan {{ $option }}</option>@endforeach</select>
                         <div class="rounded-xl border border-cyan-400/15 bg-cyan-400/[0.04] p-3 text-sm text-cyan-100">Bobot PG otomatis: <strong>2 poin</strong></div>
                     </div>
-                    @include('trial-question-banks.essay-points', ['question' => null])
+                    @include('trial-question-banks.manual-points', ['question' => null])
                     <button class="w-full rounded-xl bg-cyan-400 px-4 py-3 font-semibold text-slate-950">Simpan soal</button>
                 </form>
             </fieldset>
@@ -85,7 +116,7 @@
                                 @endforeach
                                 <select name="correct_answer" required class="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm">@foreach (['A','B','C','D','E'] as $option)<option value="{{ $option }}" @selected($question->correct_answer === $option)>Jawaban {{ $option }}</option>@endforeach</select>
                             </div>
-                            @include('trial-question-banks.essay-points')
+                            @include('trial-question-banks.manual-points')
                             <div class="flex gap-2"><button class="rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950">Simpan perubahan</button><button type="button" data-edit-toggle="trial-edit-{{ $question->id }}" class="rounded-xl border border-white/10 px-4 py-2.5 text-sm">Batal</button></div>
                         </form>
                     @endunless
@@ -101,16 +132,20 @@
         document.querySelectorAll('[data-trial-question-form]').forEach(form => {
             const type = form.elements.question_type;
             const choices = form.querySelector('[data-trial-choice-fields]');
-            const points = form.querySelector('[data-trial-essay-points]');
+            const points = form.querySelector('[data-trial-manual-points]');
+            const input = points.querySelector('input');
+            let pointsEdited = input.value !== '';
+            input.addEventListener('input', () => { pointsEdited = true; });
             const toggleFields = () => {
-                const essay = type.value === 'essay';
-                choices.hidden = essay;
+                const multipleChoice = type.value === 'multiple_choice';
+                choices.hidden = !multipleChoice;
                 choices.querySelectorAll('input, textarea, select').forEach(field => {
-                    field.disabled = essay;
-                    if (field.matches('[data-question-editor]')) field.dataset.editorRequired = String(!essay);
+                    field.disabled = !multipleChoice;
+                    if (field.matches('[data-question-editor]')) field.dataset.editorRequired = String(multipleChoice);
                 });
-                points.hidden = !essay;
-                points.querySelector('input').disabled = !essay;
+                points.hidden = multipleChoice;
+                input.disabled = multipleChoice;
+                if (!multipleChoice && !pointsEdited) input.value = type.value === 'short_answer' ? '3' : '7';
             };
             type.addEventListener('change', toggleFields);
             toggleFields();
