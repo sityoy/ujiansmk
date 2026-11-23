@@ -50,7 +50,7 @@
             <button type="submit">Tampilkan</button>
         </form>
         @if ($groups->isNotEmpty())
-            <button type="button" onclick="window.print()">Cetak / Simpan PDF</button>
+            <x-print-actions filename="tautan-uji-coba" :margin="14" />
         @endif
     </div>
 
@@ -64,14 +64,14 @@
         </div>
     @endif
 
-    <main>
+    <main class="report-sheet" data-print-content>
         <header>
             <p><strong>{{ $school?->name ?? config('app.name') }}</strong></p>
             <h1>Daftar Tautan Ujian Uji Coba</h1>
             <p>Masuk menggunakan NIS atau NISN dan kode akses sesuai ujian.</p>
         </header>
         @forelse ($groups as $level => $rows)
-            <section>
+            <section @unless ($loop->first) data-print-break @endunless>
                 <h2>Kelas {{ $level }}</h2>
                 <table aria-label="Tautan Ujian Uji Coba Kelas {{ $level }}">
                     <thead><tr>

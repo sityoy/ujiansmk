@@ -26,8 +26,9 @@
 <body>
     <div class="toolbar">
         <a href="{{ route('tryouts.participants', $trialExam) }}">← Pemantauan peserta</a>
-        <button type="button" onclick="window.print()">Cetak / Simpan PDF</button>
+        <x-print-actions filename="laporan-absensi-simulasi" :margin="13" />
     </div>
+    <main class="report-sheet" data-print-content>
     <header>
         <p><strong>{{ $school?->name ?? config('app.name') }}</strong></p>
         <h1>Laporan Absensi Simulasi</h1>
@@ -36,7 +37,7 @@
         <p>{{ $total }} siswa · {{ $presentCount }} hadir terverifikasi · {{ $total - $presentCount }} belum absen</p>
     </header>
     @forelse ($classes as $className => $rows)
-        <section>
+        <section @unless ($loop->first) data-print-break @endunless>
             <h2>{{ $className }}</h2>
             <div class="table-wrap">
                 <table>
@@ -69,5 +70,6 @@
     @empty
         <p>Belum ada siswa pada tingkat ini.</p>
     @endforelse
+    </main>
 </body>
 </html>

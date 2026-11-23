@@ -54,9 +54,9 @@
 <body>
     <div class="toolbar">
         <span>{{ $toolbarLabel }}</span>
-        @if ($flyers->isNotEmpty())<button type="button" onclick="window.print()">Cetak / Simpan PDF</button>@endif
+        @if ($flyers->isNotEmpty())<x-print-actions filename="flyer-ujian" :margin="0" />@endif
     </div>
-    <main>
+    <main data-print-content>
         @forelse ($flyers as $flyer)
             @include('flyers.page', [...$flyer, 'pageNumber' => $loop->iteration])
         @empty

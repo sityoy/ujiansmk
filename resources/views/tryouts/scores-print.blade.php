@@ -37,16 +37,16 @@
 <body>
     <div class="toolbar">
         <a href="{{ $singleExam ? route('tryouts.participants', $singleExam) : route('operations.index').'#pemantauan-uji-coba' }}">Kembali ke peserta</a>
-        <button type="button" onclick="window.print()">Cetak / Simpan PDF</button>
+        <x-print-actions filename="rekap-nilai-simulasi" :margin="12" landscape />
     </div>
-    <main>
+    <main class="report-sheet" data-print-content>
         @forelse ($reports as $report)
             @php
                 $trialExam = $report['exam'];
                 $rows = $report['rows'];
                 $statistics = $report['statistics'];
             @endphp
-            <section class="score-sheet">
+            <section class="score-sheet" data-print-break>
                 <header>
                     <p><strong>{{ $school?->name ?? config('app.name') }}</strong></p>
                     <h1>Rekap Nilai Simulasi Ujian</h1>

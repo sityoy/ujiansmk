@@ -1150,6 +1150,37 @@ class StudentExamFlowTest extends TestCase
         ];
     }
 
+    public function test_core_score_print_groups_many_subjects_and_keeps_all_subjects_visible(): void
+    {
+        [, $assignment] = $this->makeExam();
+        $component = $assignment->assessmentSubject;
+        foreach (range(1, 14) as $index) {
+            $subject = Subject::create(['code' => 'PRINT'.$index, 'name' => 'Mapel Cetak '.$index, 'is_active' => true]);
+            $component->replicate()->fill(['subject_id' => $subject->id])->save();
+        }
+
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $response = $this->actingAs($committee)
+            ->get(route('reports.exam-results.print', [$component->assessmentPeriod, $component->schoolClass]))
+            ->assertOk()->assertSee('data-document-download="pdf"', false)->assertSee('data-document-download="png"', false)
+            ->assertSee('data-paper-width="297"', false);
+
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="UTF-8">'.$response->getContent());
+        $xpath = new \DOMXPath($dom);
+        $tables = $xpath->query('//*[@data-print-content]//table');
+        $this->assertCount(3, $tables);
+        foreach ($tables as $table) {
+            $columns = $xpath->query('.//thead/tr/th', $table);
+            $this->assertLessThanOrEqual(12, $columns->length);
+            $this->assertStringContainsString('Nama Peserta Didik', $table->textContent);
+            $this->assertStringContainsString('Peserta Uji', $table->textContent);
+        }
+        foreach (range(1, 14) as $index) {
+            $response->assertSee('>Mapel Cetak '.$index.'</th>', false);
+        }
+    }
+
     private function makeExam(): array
     {
         $user = User::factory()->create([

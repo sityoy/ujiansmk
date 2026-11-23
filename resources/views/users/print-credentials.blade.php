@@ -71,9 +71,10 @@
             <strong>{{ $credentials->count() }} akun siap dicetak</strong>
             <small>Dibuat {{ $generatedAt->format('d/m/Y H:i') }} WIB · password hanya tampil pada halaman ini</small>
         </div>
-        <button type="button" onclick="window.print()">Cetak / Simpan PDF</button>
+        <x-print-actions filename="kartu-akun-petugas" :margin="10" />
     </div>
 
+    <div data-print-content>
     <div class="warning">
         Password akun yang tercetak telah direset menjadi password sementara. Jangan memuat ulang halaman ini.
         Pengguna wajib mengganti password ketika login pertama dan kartu harus diberikan kepada pemilik akun yang tepat.
@@ -81,7 +82,7 @@
 
     <main class="sheet">
         @foreach ($credentials as $credential)
-            <section class="card">
+            <section class="card" data-print-block>
                 <header class="head">
                     <div class="school">{{ $school?->name ?? config('app.name') }}</div>
                     <div class="title">KARTU AKUN SISTEM UJIAN SEKOLAH</div>
@@ -99,5 +100,6 @@
             </section>
         @endforeach
     </main>
+    </div>
 </body>
 </html>

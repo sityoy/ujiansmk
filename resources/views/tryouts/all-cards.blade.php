@@ -42,13 +42,13 @@
 <body>
     <div class="toolbar">
         <div>Kartu seluruh link Uji Coba · {{ $students->count() }} siswa · {{ $trialExams->count() }} tautan</div>
-        <button type="button" onclick="window.print()">Cetak / Simpan PDF</button>
+        <x-print-actions filename="kartu-seluruh-uji-coba" :margin="9" />
     </div>
 
-    <main class="sheet">
+    <main class="sheet" data-print-content>
         @forelse ($students as $student)
             @php($studentTrials = $trialsByGrade->get($student->schoolClass->grade_level, collect()))
-            <section class="card">
+            <section class="card" data-print-block>
                 <header class="head">
                     <x-school-print-heading :school="$school" title="KARTU SELURUH UJIAN UJI COBA" />
                 </header>

@@ -1196,6 +1196,9 @@ class TrialExamFlowTest extends TestCase
         $this->actingAs($reviewer);
         foreach ([route('tryouts.scores.print', $trial), route('tryouts.scores.all')] as $printUrl) {
             $this->get($printUrl)->assertOk()
+                ->assertSee('data-document-download="pdf"', false)
+                ->assertSee('data-document-download="png"', false)
+                ->assertSee('data-paper-width="297"', false)
                 ->assertSee('2,00')
                 ->assertSee('Peserta Tanpa Catatan')
                 ->assertDontSee('Riwayat pelanggaran · Peserta Tanpa Catatan')

@@ -24,8 +24,10 @@ export function buildPdf(images) {
     add(2, [`<< /Type /Pages /Count ${images.length} /Kids [${images.map((_, i) => `${3 + i * 3} 0 R`).join(' ')}] >>`]);
     images.forEach((image, index) => {
         const page = 3 + index * 3;
-        add(page, [`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 842 595] /Resources << /XObject << /Image ${page + 2} 0 R >> >> /Contents ${page + 1} 0 R >>`]);
-        const commands = 'q 842 0 0 595 0 0 cm /Image Do Q';
+        const width = image.paperWidth ?? 842;
+        const height = image.paperHeight ?? 595;
+        add(page, [`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${width} ${height}] /Resources << /XObject << /Image ${page + 2} 0 R >> >> /Contents ${page + 1} 0 R >>`]);
+        const commands = `q ${width} 0 0 ${height} 0 0 cm /Image Do Q`;
         add(page + 1, [`<< /Length ${bytes(commands).length} >>\nstream\n${commands}\nendstream`]);
         add(page + 2, [`<< /Type /XObject /Subtype /Image /Width ${image.width} /Height ${image.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${image.bytes.length} >>\nstream\n`, image.bytes, '\nendstream']);
     });
@@ -201,7 +203,7 @@ export async function renderPages(data, format, progress = () => {}) {
     return files;
 }
 
-function download(content, type, name) {
+export function download(content, type, name) {
     const url = URL.createObjectURL(new Blob([content], { type }));
     const link = document.createElement('a'); link.href = url; link.download = name;
     document.body.appendChild(link); link.click(); link.remove();
@@ -227,4 +229,11 @@ function initializeReport() {
         finally { buttons.forEach(item => { item.disabled = false; }); }
     }));
 }
-if (typeof document !== 'undefined') initializeReport();
+if (typeof document !== 'undefined') {
+    initializeReport();
+    if (document.querySelector('[data-document-actions]')) {
+        import('./print-document.js').then(module => module.initializeDownloads()).catch(() => {
+            document.querySelector('[data-document-actions] [role="status"]').textContent = 'Unduhan belum tersedia. Gunakan tombol Cetak / Simpan PDF.';
+        });
+    }
+}

@@ -52,9 +52,12 @@
     </style>
 </head>
 <body>
-    <div class="actions"><button onclick="window.print()">Cetak Rapor</button></div>
+    <div class="actions"><x-print-actions filename="rapor-ats"
+            :paper-width="$printLayout['paper_width_mm']" :paper-height="$printLayout['paper_height_mm']"
+            :margins="[$printLayout['margin_top_mm'], $printLayout['margin_right_mm'], $printLayout['margin_bottom_mm'], $printLayout['margin_left_mm']]"
+            :scale="$printLayout['scale_percent']" /></div>
 
-    <main class="sheet">
+    <main class="sheet" data-print-content>
         <header class="header">
             @if ($letterheadData)
                 <img src="{{ $letterheadData }}" alt="KOP {{ $schoolProfile?->name }}" class="letterhead">
@@ -110,13 +113,13 @@
             </tbody>
         </table>
 
-        <div class="summary">
+        <div class="summary" data-print-block>
             <div><small>Total Nilai</small><strong>{{ number_format($row['total'], 2, ',', '.') }}</strong></div>
             <div><small>Rata-rata</small><strong>{{ number_format($row['average'], 2, ',', '.') }}</strong></div>
             <div><small>Peringkat Kelas</small><strong>{{ $row['rank'] ?? '—' }}</strong></div>
         </div>
 
-        <div class="avoid-break">
+        <div class="avoid-break" data-print-block>
             <p class="section-title">B. Ekstrakurikuler</p>
             <table class="scores">
                 <thead><tr><th style="width: 36px">No.</th><th style="width: 145px">Kegiatan</th><th style="width: 90px">Predikat</th><th>Keterangan</th></tr></thead>
@@ -135,7 +138,7 @@
             </table>
         </div>
 
-        <div class="attendance-layout avoid-break">
+        <div class="attendance-layout avoid-break" data-print-block>
             <div>
                 <p class="section-title">C. Ketidakhadiran</p>
                 <table class="scores">
@@ -154,7 +157,7 @@
             <p class="note">Catatan: masih terdapat nilai mata pelajaran yang belum tersedia. Peringkat pada dokumen ini bersifat sementara.</p>
         @endunless
 
-        <div class="signature">
+        <div class="signature" data-print-block>
             <div class="signature-top">
                 <div class="signature-box">
                     <p>Orang Tua/Wali</p>

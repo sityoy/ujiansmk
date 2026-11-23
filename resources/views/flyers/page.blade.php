@@ -1,4 +1,4 @@
-<article class="flyer">
+<article class="flyer" data-print-break data-print-block>
     <header class="brand">
         <img class="logo" src="{{ asset('images/logo-ypmi-bahagia.jpeg') }}" alt="Logo YPMI Bahagia" width="64" height="64">
         <div class="school">{{ $schoolName }}</div>
@@ -24,7 +24,7 @@
     @include('flyers.rules')
 </article>
 @if ($schedule->isNotEmpty())
-    <section class="flyer schedule" aria-labelledby="schedule-title">
+    <section class="flyer schedule" data-print-break aria-labelledby="schedule-title">
         <h2 id="schedule-title">Jadwal per mapel dan rombel</h2>
         <p class="subtitle schedule-heading">{{ $period->name }} · {{ $period->academicYear->name }}</p>
         <div class="table-wrap">

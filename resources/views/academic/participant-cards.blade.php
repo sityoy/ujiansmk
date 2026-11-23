@@ -39,11 +39,11 @@
 <body>
     <div class="toolbar">
         <div>{{ $period->name }} · Kartu peserta {{ $printLabel }} · {{ $classGroups->count() }} kelas · {{ $students->count() }} siswa</div>
-        <button type="button" onclick="window.print()">Cetak / Simpan PDF</button>
+        <x-print-actions filename="kartu-peserta-ujian" :margin="10" />
     </div>
-    <main>
+    <main data-print-content>
         @forelse ($classGroups as $schoolClass)
-            <section class="class-section">
+            <section class="class-section" data-print-break>
                 <h1 class="class-heading">{{ $schoolClass->name }} · {{ $schoolClass->academicYear->name }} <small>· {{ $schoolClass->cardStudents->count() }} siswa</small></h1>
                 <div class="sheet">
                     @foreach ($schoolClass->cardStudents as $student)
@@ -51,7 +51,7 @@
                             $login = $student->user->username ?: $student->user->email;
                             $password = $student->printablePassword();
                         @endphp
-                        <section class="card">
+                        <section class="card" data-print-block>
                             <header class="head">
                                 <x-school-print-heading :school="$school" title="KARTU AKUN PESERTA UJIAN" />
                             </header>

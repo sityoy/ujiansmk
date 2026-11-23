@@ -38,11 +38,11 @@
 <body>
     <div class="toolbar">
         <div>Kartu {{ $trialExam->title }} · {{ $students->count() }} siswa kelas {{ $trialExam->questionBank->grade_level }}</div>
-        <button type="button" onclick="window.print()">Cetak / Simpan PDF</button>
+        <x-print-actions filename="kartu-uji-coba" :margin="10" />
     </div>
-    <main class="sheet">
+    <main class="sheet" data-print-content>
         @forelse ($students as $student)
-            <section class="card">
+            <section class="card" data-print-block>
                 <header class="head">
                     <x-school-print-heading :school="$school" title="KARTU PESERTA UJIAN UJI COBA" />
                 </header>
