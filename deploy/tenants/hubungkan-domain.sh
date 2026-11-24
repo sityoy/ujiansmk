@@ -14,10 +14,17 @@ work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 install -d -m 0755 "$webroot/.well-known/acme-challenge"
 apply_site() {
+    local enabled="/etc/nginx/sites-enabled/sis-cbt-sekolah.conf" linked=0
     if [[ -f "$site" ]]; then cp "$site" "$work/previous"; else rm -f "$work/previous"; fi
     install -m 0644 "$1" "$site"
-    if nginx -t >"$work/test" 2>&1 && ! grep -Fq "conflicting server name \"$domain\"" "$work/test" && systemctl reload nginx; then return; fi
+    if nginx -T >"$work/active" 2>"$work/test" && ! grep -Fxq "$marker" "$work/active" &&
+        [[ -d /etc/nginx/sites-enabled && ! -e "$enabled" && ! -L "$enabled" ]]; then
+        ln -s "$site" "$enabled"
+        linked=1
+    fi
+    if nginx -T >"$work/active" 2>"$work/test" && grep -Fxq "$marker" "$work/active" && ! grep -Fq "conflicting server name \"$domain\"" "$work/test" && systemctl reload nginx; then return; fi
     cat "$work/test" >&2
+    if (( linked )); then rm -- "$enabled"; fi
     if [[ -f "$work/previous" ]]; then install -m 0644 "$work/previous" "$site"; else rm -f "$site"; fi
     echo "Pemasangan dibatalkan. Periksa blok server_name $domain pada konfigurasi aktif." >&2
     return 1
@@ -50,5 +57,32 @@ fi
 http_site 'return 301 https://cbt-sekolah.sityoyitsolutions.com$request_uri;' >"$work/https"
 sed "s|__CERT_DIR__|$cert_dir|g" shared-nginx.conf >>"$work/https"
 apply_site "$work/https"
-curl -fsS --resolve "$domain:443:127.0.0.1" "https://$domain/" | grep -Fq 'Masuk CBT Sekolah'
-echo "Halaman pilih sekolah aktif di https://$domain/"
+# Reload is asynchronous. Verify the page and hostname on fresh connections.
+probe() {
+    local ip="$1"
+    curl --noproxy '*' --connect-timeout 3 --max-time 6 -fsS --resolve "$domain:443:$ip" \
+        "https://$domain/" -o "$work/page" 2>"$work/curl-error" &&
+        grep -Fq '<title>Masuk CBT Sekolah · SIS</title>' "$work/page"
+}
+diagnose() {
+    local ip="$1"
+    echo "Sertifikat yang disajikan ke $domain pada $ip:443:"
+    timeout 6 openssl s_client -connect "$ip:443" -servername "$domain" </dev/null 2>/dev/null |
+        openssl x509 -noout -subject -ext subjectAltName || true
+}
+origin_ip=${CBT_ORIGIN_IP:-127.0.0.1}
+for attempt in 1 2 3 4 5; do
+    if probe "$origin_ip"; then
+        echo "Halaman pilih sekolah aktif di https://$domain/ (diuji melalui $origin_ip)."
+        exit 0
+    fi
+    if (( attempt < 5 )); then sleep 1; fi
+done
+cat "$work/curl-error" >&2
+echo "HTTPS belum menampilkan halaman CBT. Sertifikat pada disk:"
+openssl x509 -in "$cert_dir/fullchain.pem" -noout -subject -ext subjectAltName
+diagnose "$origin_ip"
+if [[ "$origin_ip" != 127.0.0.1 ]]; then diagnose 127.0.0.1; fi
+echo "Konfigurasi server HTTPS aktif (file, listen dan nama host):"
+awk '/^# configuration file / {file=$0} /^[[:space:]]*listen[[:space:]].*443/ || /server_name.*cbt-sekolah[.]sityoyitsolutions[.]com/ {print file, $0}' "$work/active"
+exit 1

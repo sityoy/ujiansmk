@@ -22,15 +22,12 @@ CBT baru menggunakan satu rilis Laravel tersendiri di /var/www/cbt-sekolah. Data
 
        curl -fsS https://cbt-sekolah.sityoyitsolutions.com/ | grep -o '<title>[^<]*</title>'
 
-4. Buat /etc/sis-cbt/provision.ini dengan mode 0600 milik root. Isi socket dan NPSN terverifikasi dari sekolah pengguna db_ujiansis. Gunakan NONE hanya jika layanan lama memang tidak akan dihubungkan. Jangan menebak NPSN. Contoh struktur:
+4. Siapkan konfigurasi provisioner dengan akun root MySQL lokal melalui socket. Skrip menampilkan nama dan NPSN dari db_ujiansis, meminta NPSN resmi sekolah lama, dan menulis /etc/sis-cbt/provision.ini dengan mode 0600.
 
-   ~~~ini
-   socket=/run/mysqld/mysqld.sock
-   user=root
-   legacy_npsn=ISI_NPSN_TERVERIFIKASI
-   ~~~
+       sudo bash deploy/tenants/siapkan-provision.sh
 
-   Pada Ubuntu dengan autentikasi socket, timer lokal dapat mengakses MySQL sebagai root. Jika memakai akun DBA dengan kata sandi, tambahkan password pada file ini. Kredensial provisioner hanya dibaca oleh proses CLI, di luar aplikasi web.
+   Jika memakai kredensial DBA terpisah, atur socket, user, password, dan legacy_npsn langsung di file tersebut (pemilik root). Nilai NONE hanya untuk instalasi tanpa sekolah CBT lama.
+
 5. Aktifkan setelah konfigurasi dan DNS/TLS diverifikasi. Skrip menggunakan socket FPM /run/php/php8.4-fpm.sock dan akun www-data.
 
    ~~~bash
@@ -50,3 +47,11 @@ Cadangkan database setiap sekolah bersama /var/lib/sis-cbt (termasuk kunci enkri
 Untuk rilis yang menambah migrasi, jadwalkan pemeliharaan saat tidak ada ujian aktif. Perbarui kode dan build di checkout tenant, lalu jalankan skrip upgrade di bawah sebagai root untuk memigrasikan database sekolah yang telah disiapkan. Skrip menghentikan proses jika migrasi satu sekolah gagal dan bisa dijalankan kembali.
 
     sudo bash deploy/tenants/upgrade.sh
+
+## Jika uji HTTPS gagal
+
+Jika Certbot telah menerbitkan sertifikat tetapi curl melaporkan error 60, ulangi pemeriksaan melalui IP asal VPS. Contoh untuk server SIS:
+
+    sudo env CBT_ORIGIN_IP=103.176.78.161 bash deploy/tenants/hubungkan-domain.sh
+
+Skrip menggunakan kembali sertifikat yang sesuai, memeriksa bahwa Nginx memuat konfigurasi CBT, dan menguji nama host serta isi halaman setelah reload. Jika uji tetap gagal, hasil menampilkan nama pada sertifikat di disk, sertifikat yang benar-benar disajikan, dan listener 443. Gunakan CBT_ORIGIN_IP yang sama saat memanggil install.sh agar pemeriksaan di dalam installer juga menguji IP tersebut.
