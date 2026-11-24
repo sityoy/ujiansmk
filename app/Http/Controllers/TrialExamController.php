@@ -364,6 +364,7 @@ class TrialExamController extends Controller
             ],
         ]);
         $settings = $this->validateSettings($request);
+        $settings['trial_location_id'] = $this->requiredLocationId($settings['trial_location_id'] ?? null);
 
         DB::transaction(function () use ($settings, $validated): void {
             // Lock the parent bank so two simultaneous clicks cannot create duplicates.
@@ -451,8 +452,8 @@ class TrialExamController extends Controller
                     throw ValidationException::withMessages(['is_active' => 'Pulihkan bank soal sebelum mengaktifkan ujian.']);
                 }
 
-                if (array_key_exists('trial_location_id', $settings)
-                    && (int) $settings['trial_location_id'] !== (int) $exam->trial_location_id
+                $settings['trial_location_id'] = $this->requiredLocationId($settings['trial_location_id'] ?? $exam->trial_location_id);
+                if ($settings['trial_location_id'] !== (int) $exam->trial_location_id
                     && $exam->checkins()->exists()) {
                     throw ValidationException::withMessages(['trial_location_id' => 'Lokasi ujian tidak dapat diganti setelah ada absensi simulasi.']);
                 }
@@ -484,7 +485,9 @@ class TrialExamController extends Controller
             'starts_at' => ['nullable', 'date'],
             'ends_at' => ['nullable', 'date', Rule::when($request->filled('starts_at'), ['after:starts_at'])],
             'is_active' => ['nullable', 'boolean'],
-            'trial_location_id' => ['nullable', 'integer', 'exists:trial_locations,id'],
+            'trial_location_id' => ['sometimes', 'required', 'integer', 'exists:trial_locations,id'],
+        ], [
+            'trial_location_id.required' => 'Pilih lokasi GPS untuk Ujian Uji Coba.',
         ]);
 
         return [
@@ -493,6 +496,20 @@ class TrialExamController extends Controller
             'ends_at' => $settings['ends_at'] ?? null,
             'is_active' => $request->boolean('is_active'),
         ];
+    }
+
+    private function requiredLocationId(int|string|null $locationId): int
+    {
+        if ($locationId !== null) {
+            return (int) $locationId;
+        }
+
+        $locations = TrialLocation::query()->orderBy('id')->limit(2)->pluck('id');
+        if ($locations->count() === 1) {
+            return $locations->first();
+        }
+
+        throw ValidationException::withMessages(['trial_location_id' => 'Pilih lokasi GPS untuk Ujian Uji Coba. Tambahkan lokasi simulasi jika belum tersedia.']);
     }
 
     public function restartParticipant(
@@ -528,7 +545,10 @@ class TrialExamController extends Controller
             if ($bank->archived_at) {
                 throw ValidationException::withMessages(['bank' => 'Pulihkan bank soal dari bagian Dihapus sebelum mengaktifkan ujian.']);
             }
-            $trialExam->refresh()->update(['is_active' => ! $trialExam->is_active]);
+            $trialExam->refresh();
+            $trialExam->update($trialExam->is_active
+                ? ['is_active' => false]
+                : ['is_active' => true, 'trial_location_id' => $this->requiredLocationId($trialExam->trial_location_id)]);
         });
 
         return back()->with('status', $trialExam->is_active ? 'Ujian uji coba diaktifkan.' : 'Ujian uji coba dinonaktifkan.');

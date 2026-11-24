@@ -1,4 +1,7 @@
 (() => {
+    const locationTimeoutMs = 12000;
+    const locationTimeoutMessage = 'Lokasi belum terbaca. Nyalakan GPS presisi, lalu pilih Coba lagi.';
+
     const setFeedback = (form, state, text) => {
         const feedback = form.querySelector('[data-attendance-feedback]');
         feedback.dataset.state = state;
@@ -11,13 +14,25 @@
             return;
         }
 
-        navigator.geolocation.getCurrentPosition(
-            result => resolve(result.coords),
-            error => reject(new Error(error.code === 1
-                ? 'Izin lokasi ditolak. Aktifkan izin lokasi untuk situs ini, lalu coba lagi.'
-                : 'Posisi belum terbaca. Aktifkan GPS, lalu coba lagi.')),
-            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
-        );
+        const timeout = setTimeout(() => reject(new Error(locationTimeoutMessage)), locationTimeoutMs);
+        try {
+            navigator.geolocation.getCurrentPosition(
+                result => {
+                    clearTimeout(timeout);
+                    resolve(result.coords);
+                },
+                error => {
+                    clearTimeout(timeout);
+                    reject(new Error(error.code === 1
+                        ? 'Izin lokasi ditolak. Izinkan lokasi presisi untuk situs ujian, lalu pilih Coba lagi.'
+                        : locationTimeoutMessage));
+                },
+                { enableHighAccuracy: true, timeout: locationTimeoutMs, maximumAge: 0 },
+            );
+        } catch (error) {
+            clearTimeout(timeout);
+            reject(error);
+        }
     });
 
     document.querySelectorAll('[data-core-attendance]').forEach(form => {
@@ -26,7 +41,7 @@
             event.preventDefault();
             if (check.disabled) return;
             check.disabled = true;
-            setFeedback(form, 'checking', 'Membaca lokasi. Izinkan akses lokasi presisi jika diminta.');
+            setFeedback(form, 'checking', 'Membaca GPS. Pilih Izinkan jika browser meminta lokasi presisi.');
 
             try {
                 const coords = await getLocation();
@@ -37,6 +52,7 @@
                 form.submit();
             } catch (error) {
                 setFeedback(form, 'error', error.message);
+                check.textContent = 'Coba lagi';
                 check.disabled = false;
             }
         });
@@ -58,7 +74,7 @@
         start.disabled = true;
         check.disabled = true;
         credentials.forEach(input => { input.readOnly = true; });
-        setFeedback(trial, 'checking', 'Membaca lokasi. Izinkan akses lokasi presisi jika diminta.');
+        setFeedback(trial, 'checking', 'Membaca GPS. Pilih Izinkan jika browser meminta lokasi presisi.');
         try {
             const coords = await getLocation();
             const data = new FormData(trial);
@@ -85,6 +101,7 @@
                     throw new Error(message || 'Absensi belum terverifikasi. Periksa koneksi, lalu coba lagi.');
                 }
                 setFeedback(trial, 'success', result.message || 'Lokasi terverifikasi. Centang pernyataan kesiapan, lalu pilih Mulai ujian.');
+                check.textContent = 'Periksa ulang lokasi';
                 start.disabled = false;
             } finally {
                 clearTimeout(timeout);
@@ -94,6 +111,7 @@
                 ? 'Gagal terhubung ke server. Periksa koneksi, lalu coba lagi.'
                 : error.message;
             setFeedback(trial, 'error', message);
+            check.textContent = 'Coba lagi';
         } finally {
             check.disabled = false;
             credentials.forEach(input => { input.readOnly = false; });

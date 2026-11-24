@@ -101,7 +101,7 @@ class ExamFlyerController extends Controller
             'kind' => 'Simulasi '.$this->assessmentTitle($period), 'period' => $period, 'headline' => $trialExam->title,
             'subtitle' => 'UJIAN UJI COBA', 'entryUrl' => route('tryout.entry', $trialExam),
             'code' => $trialExam->access_code, 'details' => $details,
-            'trial' => true, 'locationRequired' => $trialExam->location !== null,
+            'trial' => true, 'locationRequired' => true,
             'notice' => $trialExam->is_active ? null : 'Simulasi nonaktif. Tunggu panitia membuka akses.',
         ];
     }

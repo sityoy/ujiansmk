@@ -22,13 +22,13 @@
     <p class="rounded-xl border border-amber-400/20 bg-amber-400/10 p-3 text-sm text-amber-200">Lokasi simulasi {{ $trial->location?->name }} · absensi sudah tercatat.</p>
 @else
     <label class="block text-sm text-slate-300">Lokasi dan absensi simulasi
-        <select name="trial_location_id" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3">
-            <option value="">Tanpa absensi lokasi</option>
+        <select name="trial_location_id" required class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3">
+            <option value="">Pilih lokasi GPS</option>
             @foreach ($trialLocations as $location)
-                <option value="{{ $location->id }}" @selected(old('trial_location_id', $trial?->trial_location_id) == $location->id)>{{ $location->name }} · GPS wajib</option>
+                <option value="{{ $location->id }}" @selected(old('trial_location_id', $trial?->trial_location_id ?? ($trialLocations->count() === 1 ? $trialLocations->first()->id : null)) == $location->id)>{{ $location->name }} · GPS wajib</option>
             @endforeach
         </select>
-        <span class="mt-1 block text-xs text-slate-400">Untuk simulasi di sekolah, pilih lokasi agar siswa absen sebelum waktu ujian berjalan.</span>
+        <span class="mt-1 block text-xs text-slate-400">Lokasi wajib untuk absensi. Jika hanya ada satu lokasi simulasi, sistem memilihnya otomatis.</span>
     </label>
 @endif
 <a href="{{ route('trial-locations.index') }}" class="inline-flex text-sm font-semibold text-cyan-300">Kelola lokasi simulasi →</a>

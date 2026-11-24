@@ -29,6 +29,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 class TrialExamFlowTest extends TestCase
@@ -51,11 +52,11 @@ class TrialExamFlowTest extends TestCase
             ->assertSee('data-theme="light"', false)
             ->assertSeeInOrder(['Peringatan sebelum memulai ujian', 'Siapkan NIS atau NISN milik sendiri', 'Jangan tarik bilah notifikasi', 'Pelanggaran kedua', 'Saya sudah membaca dan memahami aturan'])
             ->assertSee('required aria-describedby="trial-exam-rules-title"', false)
-            ->assertDontSee('Absensi lokasi sebelum ujian')
+            ->assertSee('Absensi lokasi sebelum ujian')
             ->assertSee('Setiap jawaban PG benar bernilai tetap 2 poin')
             ->assertSee('Nama peserta diambil otomatis dari data siswa');
 
-        $this->post(route('tryout.start', $trial), [
+        $this->startTrial($trial, [
             'participant_name' => 'Nama Tidak Boleh Dipakai',
             'participant_identifier' => '1234567890',
             'access_code' => 'SJR-SMKBHG',
@@ -188,7 +189,7 @@ class TrialExamFlowTest extends TestCase
     {
         [$trial, $question] = $this->makeTrial();
         $student = Student::query()->where('nisn', '1234567890')->firstOrFail();
-        $this->actingAs($student->user)->post(route('tryout.start', $trial), ['access_code' => 'SJR-SMKBHG'])->assertSessionHasNoErrors();
+        $this->actingAs($student->user)->startTrial($trial, ['access_code' => 'SJR-SMKBHG'])->assertSessionHasNoErrors();
         $attempt = $trial->currentAttempts()->sole();
         $show = route('tryout.show', [$trial, $attempt]);
         $submit = route('tryout.submit', [$trial, $attempt]);
@@ -207,7 +208,7 @@ class TrialExamFlowTest extends TestCase
     {
         [$trial] = $this->makeTrial();
         $student = Student::query()->where('nisn', '1234567890')->firstOrFail();
-        $this->actingAs($student->user)->post(route('tryout.start', $trial), ['access_code' => 'SJR-SMKBHG'])->assertSessionHasNoErrors();
+        $this->actingAs($student->user)->startTrial($trial, ['access_code' => 'SJR-SMKBHG'])->assertSessionHasNoErrors();
         $attempt = $trial->currentAttempts()->sole();
 
         $this->travel(60)->minutes();
@@ -237,7 +238,7 @@ class TrialExamFlowTest extends TestCase
         ])->assertSessionHasNoErrors();
         $this->get(route('trial-question-banks.questions.index', $bank))->assertOk()->assertSee('Esai · 10 poin');
 
-        $this->actingAs($student->user)->post(route('tryout.start', $trial), ['access_code' => $trial->access_code])->assertRedirect();
+        $this->actingAs($student->user)->startTrial($trial, ['access_code' => $trial->access_code])->assertRedirect();
         $attempt = $trial->currentAttempts()->sole();
         $show = route('tryout.show', [$trial, $attempt]);
         $submit = route('tryout.submit', [$trial, $attempt]);
@@ -282,7 +283,7 @@ class TrialExamFlowTest extends TestCase
             'points' => 5,
         ]);
         $student = Student::query()->where('nisn', '1234567890')->firstOrFail();
-        $this->actingAs($student->user)->post(route('tryout.start', $trial), ['access_code' => $trial->access_code])->assertRedirect();
+        $this->actingAs($student->user)->startTrial($trial, ['access_code' => $trial->access_code])->assertRedirect();
         $attempt = $trial->currentAttempts()->sole();
         $this->get(route('tryout.show', [$trial, $attempt]))->assertOk()
             ->assertSee('data-exam-section="essay"', false)->assertDontSee('data-exam-section="multiple_choice"', false);
@@ -320,7 +321,7 @@ class TrialExamFlowTest extends TestCase
             ->assertSee('Isian Singkat · 3 poin');
 
         $student = Student::query()->where('nisn', '1234567890')->firstOrFail();
-        $this->actingAs($student->user)->post(route('tryout.start', $trial), ['access_code' => $trial->access_code])->assertRedirect();
+        $this->actingAs($student->user)->startTrial($trial, ['access_code' => $trial->access_code])->assertRedirect();
         $attempt = $trial->currentAttempts()->sole();
         $show = route('tryout.show', [$trial, $attempt]);
         $submit = route('tryout.submit', [$trial, $attempt]);
@@ -424,7 +425,7 @@ class TrialExamFlowTest extends TestCase
         ];
 
         $this->actingAs($student->user)
-            ->post(route('tryout.start', $trial), ['access_code' => 'SJR-SMKBHG'])
+            ->startTrial($trial, ['access_code' => 'SJR-SMKBHG'])
             ->assertRedirect();
 
         $attempt = TrialAttempt::query()->firstOrFail();
@@ -468,7 +469,7 @@ class TrialExamFlowTest extends TestCase
         $question = $trial->questionBank->questions()->firstOrFail();
         $question->update(['option_file_paths' => ['A' => 'trial-options/benar.png', 'B' => 'trial-options/lain.pdf']]);
         $student = Student::query()->where('nisn', '1234567890')->firstOrFail();
-        $this->actingAs($student->user)->post(route('tryout.start', $trial), ['access_code' => 'SJR-SMKBHG'])->assertRedirect();
+        $this->actingAs($student->user)->startTrial($trial, ['access_code' => 'SJR-SMKBHG'])->assertRedirect();
         $attempt = TrialAttempt::query()->firstOrFail();
         $route = route('tryout.show', [$trial, $attempt]);
         $expected = app(StudentOptionOrder::class)->forQuestion($attempt, $question)->keys()->all();
@@ -521,7 +522,7 @@ class TrialExamFlowTest extends TestCase
         $this->put(route('trial-question-banks.questions.update', [$trial->questionBank, $question]), $payload)
             ->assertSessionHasNoErrors();
         $student = Student::query()->where('nisn', '1234567890')->firstOrFail();
-        $this->actingAs($student->user)->post(route('tryout.start', $trial), ['access_code' => 'SJR-SMKBHG'])
+        $this->actingAs($student->user)->startTrial($trial, ['access_code' => 'SJR-SMKBHG'])
             ->assertRedirect();
         $attempt = TrialAttempt::query()->firstOrFail();
         $this->get(route('tryout.show', [$trial, $attempt]))->assertOk()
@@ -593,6 +594,7 @@ class TrialExamFlowTest extends TestCase
             ->firstOrFail();
 
         $this->assertSame($existingTrial->assessment_subject_id, $created->assessment_subject_id);
+        $this->assertSame($existingTrial->trial_location_id, $created->trial_location_id);
         $this->assertTrue($created->is_active);
     }
 
@@ -606,7 +608,7 @@ class TrialExamFlowTest extends TestCase
     public function test_trial_resets_share_a_two_action_limit_across_roles_without_losing_answers_or_audit(): void
     {
         [$trial, $question] = $this->makeTrial();
-        $this->post(route('tryout.start', $trial), ['participant_identifier' => '1234567890', 'access_code' => 'SJR-SMKBHG'])->assertRedirect();
+        $this->startTrial($trial, ['participant_identifier' => '1234567890', 'access_code' => 'SJR-SMKBHG'])->assertRedirect();
         $attempt = TrialAttempt::firstOrFail();
         $this->putJson(route('tryout.answer', [$trial, $attempt, $question]), ['answer' => 'A'])->assertOk();
         $this->assertSame(1, $attempt->answers()->count());
@@ -635,7 +637,7 @@ class TrialExamFlowTest extends TestCase
         $trial->assessmentSubject->update(['teacher_user_id' => $teacher->id]);
         $otherClass = SchoolClass::create(['academic_year_id' => $trial->assessmentSubject->assessmentPeriod->academic_year_id, 'name' => 'X-2', 'grade_level' => 10]);
         $other = Student::create(['school_class_id' => $otherClass->id, 'student_number' => 'OTHER', 'full_name' => 'Siswa Di Luar Kelas Guru', 'is_active' => true]);
-        $this->post(route('tryout.start', $trial), ['participant_identifier' => '1234567890', 'access_code' => 'SJR-SMKBHG'])->assertRedirect();
+        $this->startTrial($trial, ['participant_identifier' => '1234567890', 'access_code' => 'SJR-SMKBHG'])->assertRedirect();
         $attempt = TrialAttempt::firstOrFail();
         $this->postJson(route('tryout.incident', [$trial, $attempt]), ['category' => 'tab_hidden', 'event_id' => (string) Str::uuid()])->assertOk();
         $this->actingAs($teacher)->get(route('tryouts.participants', $trial))->assertOk()->assertSee('Berpindah tab/aplikasi')->assertDontSee('Siswa Di Luar Kelas Guru')->assertDontSee('Reset ke 0/2');
@@ -649,7 +651,7 @@ class TrialExamFlowTest extends TestCase
     public function test_trial_legacy_reset_actions_are_counted_by_the_migration(): void
     {
         [$trial] = $this->makeTrial();
-        $this->post(route('tryout.start', $trial), ['participant_identifier' => '1234567890', 'access_code' => 'SJR-SMKBHG'])->assertRedirect();
+        $this->startTrial($trial, ['participant_identifier' => '1234567890', 'access_code' => 'SJR-SMKBHG'])->assertRedirect();
         $attempt = TrialAttempt::firstOrFail();
         foreach ([1, 2] as $number) {
             $attempt->securityIncidents()->create(['category' => 'supervisor_reset', 'severity' => 0, 'occurred_at' => now(), 'details' => []]);
@@ -664,7 +666,7 @@ class TrialExamFlowTest extends TestCase
     {
         [$trial] = $this->makeTrial();
         $student = Student::where('nisn', '1234567890')->firstOrFail();
-        $this->post(route('tryout.start', $trial), ['participant_identifier' => $student->nisn, 'access_code' => 'SJR-SMKBHG'])->assertRedirect();
+        $this->startTrial($trial, ['participant_identifier' => $student->nisn, 'access_code' => 'SJR-SMKBHG'])->assertRedirect();
         $attempt = TrialAttempt::firstOrFail();
         $token = $attempt->session_token_hash;
         $attempt->forceFill(['security_reset_count' => 2, 'violation_count' => 2, 'security_locked_at' => now()])->save();
@@ -712,7 +714,7 @@ class TrialExamFlowTest extends TestCase
     public function test_bank_with_student_in_progress_cannot_be_deleted(): void
     {
         [$trial] = $this->makeTrial();
-        $this->post(route('tryout.start', $trial), ['participant_identifier' => '1234567890', 'access_code' => 'SJR-SMKBHG'])->assertRedirect();
+        $this->startTrial($trial, ['participant_identifier' => '1234567890', 'access_code' => 'SJR-SMKBHG'])->assertRedirect();
         $admin = User::factory()->create(['role' => UserRole::SuperAdmin, 'must_change_password' => false, 'is_active' => true]);
         $this->actingAs($admin)->delete(route('trial-question-banks.destroy', $trial->questionBank))->assertSessionHasErrors('bank');
         $this->assertNull($trial->questionBank->fresh()->archived_at);
@@ -754,14 +756,28 @@ class TrialExamFlowTest extends TestCase
         $this->assertDatabaseCount('trial_questions', 21);
     }
 
-    public function test_simulation_attendance_checks_the_radius_and_gates_start_in_the_same_browser(): void
+    public function test_trial_cannot_start_without_configured_location_and_upgrades_open_trials_with_a_single_location(): void
     {
-        [$trial] = $this->makeTrial();
+        [$trial] = $this->makeTrial(withLocation: false);
+        $this->get(route('tryout.entry', $trial))->assertOk()
+            ->assertSee('Lokasi GPS ujian belum disiapkan')->assertDontSee(route('tryout.start', $trial));
+        $this->post(route('tryout.start', $trial), [
+            'participant_identifier' => '1234567890', 'access_code' => $trial->access_code,
+        ])->assertSessionHasErrors('location');
+        $this->assertDatabaseCount('trial_attempts', 0);
+
         $location = TrialLocation::create([
             'name' => 'Sekolah Simulasi', 'latitude' => -6.2, 'longitude' => 106.8,
             'radius_meters' => 100, 'max_accuracy_meters' => 50,
         ]);
-        $trial->update(['trial_location_id' => $location->id]);
+        $migration = require database_path('migrations/2026_11_24_000100_assign_gps_location_to_open_trial_exams.php');
+        $migration->up();
+        $this->assertSame($location->id, $trial->refresh()->trial_location_id);
+    }
+
+    public function test_simulation_attendance_checks_the_radius_and_gates_start_in_the_same_browser(): void
+    {
+        [$trial] = $this->makeTrial();
         Student::create([
             'school_class_id' => $trial->assessmentSubject->school_class_id,
             'student_number' => '1234', 'nisn' => '1234567891', 'full_name' => 'Siswa Belum Absen', 'is_active' => true,
@@ -798,7 +814,8 @@ class TrialExamFlowTest extends TestCase
         $this->flushSession();
         $this->post($start, $credentials)->assertSessionHasErrors('location');
         $this->postJson($attendance, $inside)->assertOk();
-        $this->post($start, $credentials)->assertRedirect()->assertSessionHasNoErrors();
+        $this->post($start, $credentials)->assertRedirect()->assertSessionHasNoErrors()
+            ->assertSessionMissing('trial_checkin.'.$trial->id);
         $this->assertDatabaseCount('trial_attempts', 1);
     }
 
@@ -806,16 +823,12 @@ class TrialExamFlowTest extends TestCase
     {
         [$trial, $question] = $this->makeTrial();
         $student = Student::query()->sole();
-        $this->post(route('tryout.start', $trial), [
+        $this->startTrial($trial, [
             'participant_identifier' => $student->student_number, 'access_code' => $trial->access_code,
         ])->assertSessionHasNoErrors();
         $attempt = $trial->currentAttempts()->sole();
         $delete = route('tryouts.destroy', $trial);
         app(TrialExamAttemptService::class)->saveAnswer($attempt, $question, 'A');
-        $trial->checkins()->create([
-            'student_id' => $student->id, 'class_name' => 'X-1',
-            'distance_meters' => 5, 'accuracy_meters' => 12, 'verified_at' => now(),
-        ]);
 
         $this->actingAs(User::factory()->create(['role' => UserRole::Committee]));
         $this->get(route('tryouts.index'))->assertOk()->assertSee('Hapus konfigurasi');
@@ -859,7 +872,7 @@ class TrialExamFlowTest extends TestCase
     {
         [$trial, $question] = $this->makeTrial();
         $student = Student::query()->sole();
-        $this->actingAs($student->user)->post(route('tryout.start', $trial), ['access_code' => $trial->access_code])->assertSessionHasNoErrors();
+        $this->actingAs($student->user)->startTrial($trial, ['access_code' => $trial->access_code])->assertSessionHasNoErrors();
         $attempt = $trial->currentAttempts()->sole();
         $this->post(route('tryout.submit', [$trial, $attempt]), ['answers' => [$question->id => 'A']])->assertSessionHasNoErrors();
         $this->assertSame('submitted', $attempt->fresh()->status);
@@ -877,7 +890,7 @@ class TrialExamFlowTest extends TestCase
     {
         [$trial, $question] = $this->makeTrial();
         $student = Student::query()->sole();
-        $this->actingAs($student->user)->post(route('tryout.start', $trial), ['access_code' => $trial->access_code])->assertSessionHasNoErrors();
+        $this->actingAs($student->user)->startTrial($trial, ['access_code' => $trial->access_code])->assertSessionHasNoErrors();
         $attempt = $trial->currentAttempts()->sole();
         $this->travel($attempt->duration_minutes)->minutes();
         $this->assertSame('in_progress', $attempt->fresh()->status);
@@ -891,7 +904,7 @@ class TrialExamFlowTest extends TestCase
 
     public function test_trial_location_settings_and_printed_attendance_are_separate_from_core(): void
     {
-        [$trial] = $this->makeTrial();
+        [$trial] = $this->makeTrial(withLocation: false);
         $settings = ['name' => 'Kampus Utama', 'latitude' => -6.2, 'longitude' => 106.8, 'radius_meters' => 100, 'max_accuracy_meters' => 50];
         Campus::create([...$settings, 'is_active' => true]);
         $teacher = User::factory()->create(['role' => UserRole::Teacher]);
@@ -1022,7 +1035,7 @@ class TrialExamFlowTest extends TestCase
         ])->assertRedirect()->assertSessionHasNoErrors();
 
         $trial = $bank->trialExams()->sole();
-        $this->post(route('tryout.start', $trial), [
+        $this->startTrial($trial, [
             'participant_identifier' => '1234567890',
             'access_code' => 'SEJARAH-X-MIX',
         ])->assertRedirect()->assertSessionHasNoErrors();
@@ -1055,7 +1068,7 @@ class TrialExamFlowTest extends TestCase
     {
         [$trial, $question] = $this->makeTrial();
         $student = Student::firstOrFail();
-        $this->actingAs($student->user)->post(route('tryout.start', $trial), ['access_code' => $trial->access_code])->assertRedirect();
+        $this->actingAs($student->user)->startTrial($trial, ['access_code' => $trial->access_code])->assertRedirect();
         $attempt = $trial->currentAttempts()->firstOrFail();
         app(TrialExamAttemptService::class)->submit($attempt, [$question->id => 'A']);
 
@@ -1098,7 +1111,7 @@ class TrialExamFlowTest extends TestCase
         $student = Student::firstOrFail();
         $teacher = User::factory()->create(['role' => UserRole::Teacher]);
         $trial->assessmentSubject->update(['teacher_user_id' => $teacher->id]);
-        $this->actingAs($student->user)->post(route('tryout.start', $trial), ['access_code' => $trial->access_code])->assertRedirect();
+        $this->actingAs($student->user)->startTrial($trial, ['access_code' => $trial->access_code])->assertRedirect();
         app(TrialExamAttemptService::class)->submit($trial->currentAttempts()->sole(), [$question->id => 'A']);
 
         $otherSubject = Subject::create(['code' => 'MAT', 'name' => 'Matematika', 'is_active' => true]);
@@ -1170,19 +1183,18 @@ class TrialExamFlowTest extends TestCase
         [$trial, $question] = $this->makeTrial();
         $student = Student::firstOrFail();
         $reviewer = User::factory()->create(['role' => UserRole::Committee, 'name' => 'Petugas Simulasi']);
-        $start = route('tryout.start', $trial);
         $payload = ['access_code' => $trial->access_code];
         $security = app(TrialExamSecurityService::class);
         $attempts = app(TrialExamAttemptService::class);
 
-        $this->actingAs($student->user)->post($start, $payload)->assertRedirect();
+        $this->actingAs($student->user)->startTrial($trial, $payload)->assertRedirect();
         $previous = $trial->currentAttempts()->sole();
         $security->record($previous, 'tab_hidden', (string) Str::uuid());
         $security->record($previous, 'window_blur', (string) Str::uuid());
         $attempts->restart($trial, $previous, $reviewer);
 
         $this->travel(5)->seconds();
-        $this->post($start, $payload)->assertRedirect();
+        $this->startTrial($trial, $payload)->assertRedirect();
         $current = $trial->currentAttempts()->sole();
         $security->record($current, 'fullscreen_exit', (string) Str::uuid());
         $security->resetViolations($current, $reviewer, 'Perangkat sudah diperiksa');
@@ -1244,7 +1256,7 @@ class TrialExamFlowTest extends TestCase
             'is_active' => '1',
         ];
 
-        $this->actingAs($firstStudent->user)->post($start, ['access_code' => $oldCode])->assertRedirect();
+        $this->actingAs($firstStudent->user)->startTrial($trial, ['access_code' => $oldCode])->assertRedirect();
         $first = $trial->currentAttempts()->sole();
         $this->assertSame(60, $first->duration_minutes);
         $this->get($edit)->assertForbidden();
@@ -1279,7 +1291,7 @@ class TrialExamFlowTest extends TestCase
         $this->assertSame(60, $first->fresh()->duration_minutes);
 
         $this->actingAs($secondUser)->post($start, ['access_code' => $oldCode])->assertSessionHasErrors('access_code');
-        $this->post($start, ['access_code' => 'KODE-BARU'])->assertSessionHasNoErrors();
+        $this->startTrial($trial, ['access_code' => 'KODE-BARU'])->assertSessionHasNoErrors();
         $second = $trial->currentAttempts()->where('student_id', $secondUser->student->id)->sole();
         $this->assertSame(20, $second->duration_minutes);
         $this->assertTrue(app(TrialExamAttemptService::class)->deadline($second)->equalTo($second->started_at->copy()->addMinutes(20)));
@@ -1291,9 +1303,8 @@ class TrialExamFlowTest extends TestCase
         $student = Student::firstOrFail();
         $committee = User::factory()->create(['role' => UserRole::Committee]);
         $teacher = User::factory()->create(['role' => UserRole::Teacher]);
-        $start = route('tryout.start', $trial);
         $payload = ['access_code' => $trial->access_code];
-        $this->actingAs($student->user)->post($start, $payload)->assertRedirect();
+        $this->actingAs($student->user)->startTrial($trial, $payload)->assertRedirect();
         $first = $trial->currentAttempts()->sole();
         app(TrialExamAttemptService::class)->submit($first, [$question->id => 'A']);
         $restart = route('tryouts.attempts.restart', [$trial, $first]);
@@ -1313,7 +1324,7 @@ class TrialExamFlowTest extends TestCase
 
         $this->actingAs($student->user)->get(route('tryout.result', [$trial, $first]))->assertNotFound();
         $this->get(route('student.exams.index'))->assertOk()->assertViewHas('trialAttempts', fn ($attempts) => $attempts->isEmpty());
-        $this->post($start, $payload)->assertRedirect();
+        $this->startTrial($trial, $payload)->assertRedirect();
         $second = $trial->currentAttempts()->sole();
         $this->assertNotSame($first->id, $second->id);
         $this->assertSame(0, $second->answers()->count());
@@ -1321,14 +1332,23 @@ class TrialExamFlowTest extends TestCase
 
         $this->actingAs($committee)
             ->post(route('tryouts.attempts.restart', [$trial, $second]))->assertRedirect()->assertSessionHasNoErrors();
-        $this->actingAs($student->user)->post($start, $payload)->assertRedirect();
+        $this->actingAs($student->user)->startTrial($trial, $payload)->assertRedirect();
         $third = $trial->currentAttempts()->sole();
         $this->assertSame(0, $third->violation_count);
         $this->assertSame(0, $third->security_reset_count);
         $this->assertNull($third->security_locked_at);
     }
 
-    private function makeTrial(): array
+    private function startTrial(TrialExam $trial, array $credentials): TestResponse
+    {
+        $this->postJson(route('tryout.attendance', $trial), [
+            ...$credentials, 'latitude' => -6.2, 'longitude' => 106.8, 'accuracy_meters' => 12,
+        ])->assertOk()->assertJsonPath('verified', true);
+
+        return $this->post(route('tryout.start', $trial), $credentials);
+    }
+
+    private function makeTrial(bool $withLocation = true): array
     {
         $year = AcademicYear::create([
             'name' => '2026/2027',
@@ -1383,8 +1403,13 @@ class TrialExamFlowTest extends TestCase
             'points' => 1,
             'position' => 1,
         ]);
+        $location = $withLocation ? TrialLocation::create([
+            'name' => 'Sekolah Simulasi', 'latitude' => -6.2, 'longitude' => 106.8,
+            'radius_meters' => 100, 'max_accuracy_meters' => 50,
+        ]) : null;
         $trial = TrialExam::create([
             'assessment_subject_id' => $component->id,
+            'trial_location_id' => $location?->id,
             'trial_question_bank_id' => $bank->id,
             'title' => 'Uji Coba Sejarah',
             'slug' => 'uji-coba-sejarah',

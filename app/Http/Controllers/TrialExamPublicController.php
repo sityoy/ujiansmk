@@ -62,7 +62,7 @@ class TrialExamPublicController extends Controller
             $exam = TrialExam::query()->sharedLock()->findOrFail($trialExam->id)->setRelation('questionBank', $bank);
             $this->validateEntry($exam, $accessCode);
             if (! $exam->trial_location_id) {
-                throw ValidationException::withMessages(['location' => 'Ujian ini tidak menggunakan absensi lokasi. Muat ulang halaman ujian.']);
+                throw ValidationException::withMessages(['location' => 'Lokasi GPS ujian belum disiapkan. Hubungi pengawas.']);
             }
 
             $location = TrialLocation::query()->sharedLock()->findOrFail($exam->trial_location_id);
@@ -186,8 +186,12 @@ class TrialExamPublicController extends Controller
             ]);
         }
 
-        if ($trialExam->trial_location_id && ! $trialExam->checkins()
-            ->whereKey($request->session()->get('trial_checkin.'.$trialExam->id))
+        if (! $trialExam->trial_location_id) {
+            throw ValidationException::withMessages(['location' => 'Lokasi GPS ujian belum disiapkan. Hubungi pengawas.']);
+        }
+        $checkinKey = 'trial_checkin.'.$trialExam->id;
+        if (! $trialExam->checkins()
+            ->whereKey($request->session()->get($checkinKey))
             ->where('student_id', $student->id)->exists()) {
             throw ValidationException::withMessages(['location' => 'Selesaikan absensi lokasi simulasi di browser ini sebelum mulai ujian.']);
         }
@@ -214,6 +218,7 @@ class TrialExamPublicController extends Controller
         ]);
 
         session()->put($this->tokenKey($attempt), $token);
+        $request->session()->forget($checkinKey);
 
         return redirect()->route('tryout.show', [$trialExam, $attempt]);
     }

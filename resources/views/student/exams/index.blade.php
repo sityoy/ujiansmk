@@ -91,7 +91,7 @@
                         <input type="hidden" name="latitude">
                         <input type="hidden" name="longitude">
                         <input type="hidden" name="accuracy_meters">
-                        <p class="text-sm font-semibold text-amber-200">Absensi lokasi ujian</p>
+                        <p class="text-sm font-semibold text-amber-200">Absensi lokasi ujian · GPS wajib</p>
                         <p class="mt-2 text-sm leading-6 text-slate-300">Izinkan lokasi presisi saat browser meminta izin. Tunggu sampai absensi terverifikasi sebelum mulai ujian.</p>
                         <button type="submit" data-location-check class="mt-4 w-full rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-slate-950 disabled:opacity-60 sm:w-auto">Ambil lokasi &amp; kirim absensi</button>
                         <x-attendance-feedback :state="$attendanceError !== '' ? 'error' : 'pending'"
@@ -143,5 +143,5 @@
         @endforelse
     </section>
 
-    <script src="{{ asset('js/exam-attendance.js') }}?v=1" defer></script>
+    <script src="{{ asset('js/exam-attendance.js') }}?v=2" defer></script>
 @endsection

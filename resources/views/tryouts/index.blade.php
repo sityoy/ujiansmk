@@ -69,6 +69,8 @@
                             <p class="mt-1 text-xs text-slate-500">{{ $trial->duration_minutes }} menit · {{ $trial->attempts_count }} peserta · Nilai tidak ditampilkan kepada peserta</p>
                             @if ($trial->location)
                                 <p class="mt-1 text-xs text-emerald-300">GPS wajib · {{ $trial->location->name }}</p>
+                            @else
+                                <p class="mt-1 text-xs text-amber-300">Lokasi GPS belum dipilih · atur melalui Edit</p>
                             @endif
                         </div>
                         <div class="flex flex-wrap gap-2">

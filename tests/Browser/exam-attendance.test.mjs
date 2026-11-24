@@ -34,6 +34,7 @@ function setup({permissionDenied = false, apiError = false, missingVerification 
     const geolocation = {
         getCurrentPosition: (success, failure, options) => {
             assert.equal(options.enableHighAccuracy, true);
+            assert.equal(options.maximumAge, 0);
             if (permissionDenied) failure({code: 1});
             else success({coords: {latitude: -6.2, longitude: 106.8, accuracy: 12}});
         },
@@ -87,6 +88,7 @@ test('denied geolocation or a rejected check-in allows retry and keeps start dis
     assert.equal(denied.check.disabled, false);
     assert.equal(denied.requests.length, 0);
     assert.match(denied.status.textContent, /Izin lokasi ditolak/);
+    assert.equal(denied.check.textContent, 'Coba lagi');
 
     const rejected = setup({apiError: true});
     await rejected.check.fire('click');
@@ -120,6 +122,8 @@ test('core attendance reports GPS errors near the button and submits successful 
             if (deny) failure({code: 1});
             else success({coords: {latitude: -6.2, longitude: 106.8, accuracy: 12}});
         }}},
+        setTimeout,
+        clearTimeout,
     });
     let prevented = 0;
     const submit = {preventDefault: () => prevented++};
@@ -133,4 +137,28 @@ test('core attendance reports GPS errors near the button and submits successful 
     assert.equal(feedback.dataset.state, 'checking');
     assert.equal(form.submissions, 1);
     assert.deepEqual(Object.values(form.elements).map(input => input.value), [-6.2, 106.8, 12]);
+});
+
+test('a browser that never returns a position releases the GPS button for retry', async () => {
+    const status = element();
+    const feedback = {dataset: {}, querySelector: () => status};
+    const button = element({disabled: false});
+    const form = element({querySelector: selector => selector === '[data-location-check]' ? button : feedback});
+    let expire;
+    vm.runInNewContext(script, {
+        document: {querySelector: () => null, querySelectorAll: () => [form]},
+        navigator: {geolocation: {getCurrentPosition() {}}},
+        setTimeout(callback, delay) {
+            assert.equal(delay, 12000);
+            expire = callback;
+        },
+    });
+    const attempt = form.fire('submit', {preventDefault() {}});
+    assert.equal(button.disabled, true);
+    expire();
+    await attempt;
+    assert.equal(button.disabled, false);
+    assert.equal(button.textContent, 'Coba lagi');
+    assert.equal(feedback.dataset.state, 'error');
+    assert.match(status.textContent, /Nyalakan GPS presisi/);
 });
