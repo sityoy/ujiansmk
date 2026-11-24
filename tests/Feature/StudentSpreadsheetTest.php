@@ -104,6 +104,16 @@ class StudentSpreadsheetTest extends TestCase
         $response->assertOk();
         $response->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         $this->assertStringContainsString('template-import-siswa.xlsx', (string) $response->headers->get('content-disposition'));
+        $path = $response->baseResponse->getFile()->getPathname();
+        try {
+            [$example] = app(StudentSpreadsheetService::class)->read(new UploadedFile($path, 'template.xlsx', null, null, true));
+            $this->assertSame('Ruang 01', $example['ruangan']);
+            $this->assertSame('X AK 1', $example['kelas']);
+            $this->assertSame('2026/2027', $example['tahun_ajaran']);
+            $this->assertSame('0123456789', $example['nisn']);
+        } finally {
+            unlink($path);
+        }
     }
 
     public function test_imported_rooms_can_be_updated_cleared_and_preserved_with_an_old_template(): void
@@ -147,31 +157,33 @@ class StudentSpreadsheetTest extends TestCase
         $this->assertDatabaseCount('students', 0);
     }
 
-    public function test_excel_template_and_export_include_rooms_and_export_can_be_reimported(): void
+    public function test_period_export_includes_its_rooms_and_can_only_be_reimported_for_that_period(): void
     {
         $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
         $class = $this->makeClass();
         $period = $this->makeRoomPeriod($class->academic_year_id);
+        $otherPeriod = $this->makeRoomPeriod($class->academic_year_id, 'AAS');
         $this->actingAs($admin)->post(route('academic.students.import'), [
             'school_class_id' => $class->id,
             'assessment_period_id' => $period->id,
             'spreadsheet' => UploadedFile::fake()->createWithContent('ruangan.csv', "NIS,Nama Lengkap,Ruangan\n001,Siswa Satu,Lab Bahasa"),
         ])->assertSessionHasNoErrors();
         $service = app(StudentSpreadsheetService::class);
-        $template = $service->createTemplate();
-        try {
-            $rows = $service->read(new UploadedFile($template, 'template.xlsx', null, null, true));
-            $this->assertSame('Ruang 01', $rows[0]['ruangan']);
-        } finally {
-            unlink($template);
-        }
+        $student = Student::firstOrFail();
+        $student->examRooms()->create(['assessment_period_id' => $otherPeriod->id, 'room_name' => 'Ruang Lain']);
         $response = $this->get(route('academic.students.export', ['assessment_period_id' => $period->id]))->assertOk();
         $path = $response->baseResponse->getFile()->getPathname();
         try {
             $rows = $service->read(new UploadedFile($path, 'export.xlsx', null, null, true));
             $this->assertSame('Lab Bahasa', $rows[0]['ruangan']);
+            $this->assertSame($period->code, $rows[0]['kode_periode']);
             $this->assertArrayNotHasKey('password', $rows[0]);
             StudentExamRoom::query()->where('assessment_period_id', $period->id)->update(['room_name' => 'Ruangan Sementara']);
+            $this->post(route('academic.students.import'), [
+                'spreadsheet' => new UploadedFile($path, 'export.xlsx', null, null, true),
+                'assessment_period_id' => $otherPeriod->id,
+            ])->assertSessionHasErrors('spreadsheet');
+            $this->assertSame('Ruang Lain', $student->examRooms()->where('assessment_period_id', $otherPeriod->id)->value('room_name'));
             $this->post(route('academic.students.import'), [
                 'spreadsheet' => new UploadedFile($path, 'export.xlsx', null, null, true),
                 'assessment_period_id' => $period->id,
@@ -199,7 +211,7 @@ class StudentSpreadsheetTest extends TestCase
         $this->assertDatabaseCount('users', 1);
     }
 
-    public function test_general_student_export_has_no_room_column_and_can_be_reimported_without_a_period(): void
+    public function test_general_student_export_includes_an_empty_room_column_and_preserves_room_assignments_on_import(): void
     {
         $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
         $class = $this->makeClass();
@@ -212,9 +224,16 @@ class StudentSpreadsheetTest extends TestCase
         $path = $response->baseResponse->getFile()->getPathname();
         try {
             $rows = app(StudentSpreadsheetService::class)->read(new UploadedFile($path, 'export.xlsx', null, null, true));
-            $this->assertArrayNotHasKey('ruangan', $rows[0]);
+            $this->assertArrayHasKey('ruangan', $rows[0]);
+            $this->assertArrayHasKey('kode_periode', $rows[0]);
+            $this->assertTrue(blank($rows[0]['ruangan']));
+            $this->assertTrue(blank($rows[0]['kode_periode']));
             $this->post(route('academic.students.import'), ['spreadsheet' => new UploadedFile($path, 'export.xlsx', null, null, true)])
                 ->assertSessionHasNoErrors();
+            $this->post(route('academic.students.import'), [
+                'spreadsheet' => new UploadedFile($path, 'export.xlsx', null, null, true),
+                'assessment_period_id' => $period->id,
+            ])->assertSessionHasNoErrors();
             $this->assertDatabaseHas('student_exam_rooms', ['assessment_period_id' => $period->id, 'room_name' => 'Lab Bahasa']);
         } finally {
             if (is_file($path)) {

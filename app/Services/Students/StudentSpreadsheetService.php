@@ -9,7 +9,7 @@ use ZipArchive;
 
 class StudentSpreadsheetService
 {
-    private const IMPORT_HEADERS = ['NIS', 'NISN', 'Nama Lengkap', 'Email', 'Password', 'UID Kartu', 'Status', 'Ruangan'];
+    private const IMPORT_HEADERS = ['NIS', 'NISN', 'Nama Lengkap', 'Kelas', 'Tahun Ajaran', 'Email', 'Password', 'UID Kartu', 'Status', 'Ruangan'];
 
     /** @return array<int, array<string, string|null>> */
     public function read(UploadedFile $file): array
@@ -73,6 +73,8 @@ class StudentSpreadsheetService
             '2026001',
             '0123456789',
             'Contoh Siswa',
+            'X AK 1',
+            '2026/2027',
             'siswa@example.sch.id',
             '',
             '',
@@ -88,12 +90,9 @@ class StudentSpreadsheetService
     }
 
     /** @param iterable<int, Student> $students */
-    public function createExport(iterable $students, bool $includeRooms = false): string
+    public function createExport(iterable $students, ?string $periodCode = null): string
     {
-        $headers = ['NIS', 'NISN', 'Nama Lengkap', 'Kelas', 'Tahun Ajaran', 'Email', 'Username', 'Status'];
-        if ($includeRooms) {
-            $headers[] = 'Ruangan';
-        }
+        $headers = ['NIS', 'NISN', 'Nama Lengkap', 'Kelas', 'Tahun Ajaran', 'Email', 'Username', 'Status', 'Ruangan', 'Kode Periode'];
         $rows = [];
 
         foreach ($students as $student) {
@@ -106,7 +105,8 @@ class StudentSpreadsheetService
                 $student->user?->email,
                 $student->user?->username,
                 $student->is_active ? 'aktif' : 'nonaktif',
-                ...($includeRooms ? [$student->examRooms->first()?->room_name] : []),
+                $periodCode !== null ? $student->examRooms->first()?->room_name : null,
+                $periodCode,
             ];
         }
 

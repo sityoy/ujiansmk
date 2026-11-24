@@ -37,14 +37,15 @@ class StudentSpreadsheetController extends Controller
         $period = filled($validated['assessment_period_id'] ?? null) ? AssessmentPeriod::findOrFail($validated['assessment_period_id']) : null;
         $students = Student::query()
             ->with(['schoolClass.academicYear', 'user'])
-            ->with(['examRooms' => fn ($query) => $query->where('assessment_period_id', $period?->id ?? 0)])
-            ->when($period, fn ($query) => $query->whereHas('schoolClass', fn ($classes) => $classes->where('academic_year_id', $period->academic_year_id)))
+            ->when($period, fn ($query) => $query
+                ->with(['examRooms' => fn ($rooms) => $rooms->where('assessment_period_id', $period->id)])
+                ->whereHas('schoolClass', fn ($classes) => $classes->where('academic_year_id', $period->academic_year_id)))
             ->orderBy('full_name')
             ->get();
 
         return response()
             ->download(
-                $spreadsheet->createExport($students, $period !== null),
+                $spreadsheet->createExport($students, $period?->code),
                 'data-siswa-'.now()->format('Y-m-d-His').'.xlsx',
                 ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
             )
@@ -86,8 +87,8 @@ class StudentSpreadsheetController extends Controller
         }
 
         $period = filled($validated['assessment_period_id'] ?? null) ? AssessmentPeriod::findOrFail($validated['assessment_period_id']) : null;
-        if (array_key_exists('ruangan', $rows[0]) && ! $period) {
-            return back()->withErrors(['assessment_period_id' => 'Pilih periode ujian untuk mengimpor kolom Ruangan.']);
+        if (! $period && collect($rows)->contains(fn ($row) => filled($row['ruangan'] ?? null) || filled($row['kode_periode'] ?? null))) {
+            return back()->withErrors(['assessment_period_id' => 'Pilih periode ujian untuk mengimpor penempatan ruangan.']);
         }
 
         $defaultSchoolClass = filled($validated['school_class_id'] ?? null)
@@ -156,12 +157,20 @@ class StudentSpreadsheetController extends Controller
             }
 
             $existing = Student::query()->where('student_number', $data['nis'])->first();
+            $filePeriodCode = $row['kode_periode'] ?? null;
+            if ($period && filled($filePeriodCode) && strcasecmp($filePeriodCode, $period->code) !== 0) {
+                $errors[] = 'Baris '.$line.': Kode Periode '.$filePeriodCode.' di file berbeda dari periode yang dipilih ('.$period->code.').';
+
+                continue;
+            }
             if ($period && $rowSchoolClass->academic_year_id !== $period->academic_year_id) {
                 $errors[] = 'Baris '.$line.': tahun ajaran kelas harus sesuai dengan periode ujian.';
 
                 continue;
             }
-            $data['has_room_column'] = array_key_exists('ruangan', $row);
+            // A general export leaves both room fields empty because it did not load any assignments.
+            $data['update_room'] = array_key_exists('ruangan', $row)
+                && (! array_key_exists('kode_periode', $row) || filled($filePeriodCode) || $data['ruangan'] !== null);
             $existingUserId = $existing?->user_id;
             $username = $data['nisn'] ?: $data['nis'];
             $cardHash = $data['card_uid'] ? hash('sha256', $data['card_uid']) : null;
@@ -272,7 +281,7 @@ class StudentSpreadsheetController extends Controller
                         : $student->card_uid_hash,
                     'is_active' => $this->isActive($data['status']),
                 ])->save();
-                if ($period && $data['has_room_column']) {
+                if ($period && $data['update_room']) {
                     $rooms->assign($period, [$student->id], $data['ruangan']);
                 }
             }

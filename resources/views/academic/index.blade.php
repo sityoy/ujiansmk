@@ -205,10 +205,9 @@
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">05 · Excel</p>
                 <h2 class="mt-2 text-xl font-semibold text-white">Impor dan ekspor siswa</h2>
                 <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-                    Unduh template untuk impor per kelas, atau unggah kembali file “Ekspor seluruh siswa” agar kelas dan tahun ajaran dibaca otomatis. NIS wajib; NISN dan email opsional.
+                    Gunakan template atau file ekspor untuk impor siswa. Isi Kelas dan Tahun Ajaran di Excel agar sistem membaca kelas setiap siswa secara otomatis. NIS wajib. NISN dan email opsional.
                     Akun login otomatis dibuat. Username memakai NISN jika tersedia, atau NIS. Pada siswa baru, Password kosong memakai NIS.
                     Kolom Password boleh diisi untuk menentukan password awal lain.
-                    Pilih periode ujian saat mengimpor kolom Ruangan. Ruangan hanya berlaku untuk periode tersebut. Kolom Ruangan kosong menghapus penempatan pada periode terpilih. File tanpa kolom Ruangan mempertahankan penempatan sebelumnya.
                 </p>
                 <form method="POST" action="{{ route('academic.students.participant-cards') }}" target="_blank"
                     class="mt-5 grid max-w-3xl gap-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.04] p-4 sm:grid-cols-[1fr_1fr_auto]">
@@ -227,19 +226,21 @@
                     <p class="sm:col-span-3 text-xs leading-5 text-amber-100/70">Jika password khusus lama belum tersedia untuk cetak, kartu memberi keterangan untuk menghubungi panitia.</p>
                 </form>
 
-                <div class="mt-5 flex flex-wrap gap-3">
-                    <a href="{{ route('academic.students.template') }}" class="rounded-xl border border-cyan-400/30 px-4 py-2.5 text-sm font-medium text-cyan-200 hover:bg-cyan-400/10">Unduh template Excel</a>
-                    <a href="{{ route('academic.students.export') }}" class="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-medium text-slate-200 hover:bg-white/5">Ekspor seluruh siswa</a>
-                </div>
-                <form method="GET" action="{{ route('academic.students.export') }}" class="mt-4 grid max-w-3xl gap-3 sm:grid-cols-[1fr_auto]">
-                    <x-assessment-period-select :periods="$assessmentPeriods" :selected="$roomPeriod?->id" :required="true" label="Ekspor ruangan per periode" />
-                    <button class="self-end rounded-xl border border-cyan-400/30 px-4 py-3 text-sm font-medium text-cyan-200 hover:bg-cyan-400/10">Ekspor siswa dan ruangan</button>
+                <form method="GET" action="{{ route('academic.students.export') }}" class="mt-5 grid max-w-3xl gap-3">
+                    <x-assessment-period-select :periods="$assessmentPeriods"
+                        :selected="$roomPeriod?->id ?? ($assessmentPeriods->count() === 1 ? $assessmentPeriods->first()->id : null)"
+                        label="Periode ruangan untuk ekspor" empty-label="Semua tahun ajaran (Ruangan kosong)" />
+                    <p class="text-xs leading-5 text-slate-400">Pilih periode untuk mengunduh seluruh siswa pada tahun ajaran periode tersebut beserta ruangannya. Untuk mengunduh siswa dari semua tahun ajaran, kolom Ruangan tersedia dan dibiarkan kosong.</p>
+                    <div class="flex flex-wrap gap-3">
+                        <button type="submit" class="rounded-xl border border-cyan-400/30 px-4 py-2.5 text-sm font-medium text-cyan-200 hover:bg-cyan-400/10">Ekspor seluruh siswa (Excel)</button>
+                        <a href="{{ route('academic.students.template') }}" class="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-medium text-slate-200 hover:bg-white/5">Unduh template Excel</a>
+                    </div>
                 </form>
             </div>
 
             <form method="POST" action="{{ route('academic.students.import') }}" enctype="multipart/form-data" class="space-y-3">
                 @csrf
-                <x-assessment-period-select :periods="$assessmentPeriods" :selected="$roomPeriod?->id" label="Periode ruangan (wajib jika file berisi kolom Ruangan)" />
+                <x-assessment-period-select :periods="$assessmentPeriods" :selected="old('assessment_period_id', $roomPeriod?->id)" label="Periode ruangan untuk impor" />
                 <select name="school_class_id" class="w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
                     <option value="">Otomatis dari kolom Kelas & Tahun Ajaran</option>
                     @foreach ($classOptions as $class)<option value="{{ $class->id }}">{{ $class->name }} · {{ $class->academicYear->name }}</option>@endforeach
@@ -247,7 +248,8 @@
                 <input type="file" name="spreadsheet" accept=".xlsx,.csv" required
                     class="block w-full rounded-xl border border-dashed border-white/15 bg-slate-950/50 px-4 py-3 text-sm text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-400 file:px-3 file:py-2 file:font-semibold file:text-slate-950">
                 <button class="w-full rounded-xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950">Impor data siswa</button>
-                <p class="text-xs text-slate-500">Format: XLSX/CSV, maksimal 10 MB dan 2.000 siswa sekali impor. Untuk file ekspor seluruh siswa, biarkan pilihan kelas pada mode otomatis.</p>
+                <p class="text-xs leading-5 text-slate-400">Pilih periode saat mengimpor isi kolom Ruangan atau file dengan Kode Periode. Pada file ekspor berperiode, Ruangan yang dikosongkan menghapus penempatan siswa pada periode tersebut. Saat memakai template, pilih periode untuk menerapkan penempatan, termasuk pengosongan ruangan.</p>
+                <p class="text-xs text-slate-500">Format XLSX atau CSV. Maksimal 10 MB dan 2.000 siswa sekali impor. Biarkan pilihan kelas pada mode otomatis untuk membaca kelas dari file ekspor.</p>
                 <p class="text-xs leading-5 text-cyan-200/80">Impor siswa baru dapat memerlukan beberapa menit karena sistem membuat dan mengenkripsi password setiap akun. Jangan menutup atau memuat ulang halaman selama proses berjalan.</p>
                 <p class="text-xs leading-5 text-amber-200/80">Password tidak ikut diekspor. Saat impor ulang, password lama tetap dipertahankan jika kolom Password kosong.</p>
             </form>
