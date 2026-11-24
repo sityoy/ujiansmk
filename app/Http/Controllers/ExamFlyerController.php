@@ -132,7 +132,7 @@ class ExamFlyerController extends Controller
             'trial' => false, 'locationRequired' => true,
             'notice' => null, 'schedule' => collect(),
             'flyers' => $flyers, 'printTitle' => $printTitle, 'toolbarLabel' => $toolbarLabel,
-            'resetLimit' => ExamResetAllowance::LIMIT, 'schoolName' => 'SMK ISLAM BAHAGIA',
+            'resetLimit' => ExamResetAllowance::LIMIT, 'schoolName' => config('tenant.npsn') ? (\App\Models\SchoolProfile::query()->value('name') ?? 'CBT Sekolah') : 'SMK ISLAM BAHAGIA',
         ])
             ->header('Cache-Control', 'no-store, private')->header('X-Robots-Tag', 'noindex, nofollow');
     }

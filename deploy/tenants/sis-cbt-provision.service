@@ -1,0 +1,9 @@
+[Unit]
+Description=Siapkan database CBT untuk sekolah yang disetujui
+After=mysql.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/php /usr/local/lib/sis-cbt/provision.php
+PrivateTmp=true
+UMask=0027

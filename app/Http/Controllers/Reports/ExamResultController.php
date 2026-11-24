@@ -146,7 +146,7 @@ class ExamResultController extends Controller
         $profile = SchoolProfile::query()->first();
         $path = $profile?->letterhead_path && Storage::exists($profile->letterhead_path)
             ? Storage::path($profile->letterhead_path)
-            : public_path('images/kop-surat-smk-islam-bahagia.png');
+            : (config('tenant.npsn') ? '' : public_path('images/kop-surat-smk-islam-bahagia.png'));
 
         if (! is_file($path) || ! is_readable($path)) {
             return null;

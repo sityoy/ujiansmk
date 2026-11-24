@@ -12,17 +12,19 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="antialiased">
-    @php($schoolName = $schoolProfile?->name ?? 'SMK Islam Bahagia')
+    @php($schoolName = $schoolProfile?->name ?? (config('tenant.npsn') ? 'CBT Sekolah' : 'SMK Islam Bahagia'))
 
     <main class="login-shell">
         <div class="login-card">
             <section class="login-brand" aria-labelledby="login-brand-title">
                 <div class="login-logos">
                     <div class="login-identity">
+                        @unless(config('tenant.npsn'))
                         <div class="login-logo-tile">
                             <img src="{{ asset('images/logo-ypmi-bahagia.jpeg') }}" alt="Logo YPMI Bahagia"
                                 width="1222" height="1198">
                         </div>
+                        @endunless
                         <p>{{ $schoolName }}</p>
                     </div>
                     <div class="login-identity">

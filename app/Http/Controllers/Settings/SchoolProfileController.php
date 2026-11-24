@@ -37,6 +37,9 @@ class SchoolProfileController extends Controller
 
         $profile = SchoolProfile::query()->first() ?? new SchoolProfile();
         unset($validated['letterhead']);
+        if (config('tenant.npsn')) {
+            $validated['npsn'] = config('tenant.npsn');
+        }
 
         if ($request->hasFile('letterhead')) {
             $newPath = $request->file('letterhead')->store('school/letterheads');
@@ -56,7 +59,7 @@ class SchoolProfileController extends Controller
         $profile = SchoolProfile::query()->first();
         $path = $profile?->letterhead_path && Storage::exists($profile->letterhead_path)
             ? Storage::path($profile->letterhead_path)
-            : public_path('images/kop-surat-smk-islam-bahagia.png');
+            : (config('tenant.npsn') ? '' : public_path('images/kop-surat-smk-islam-bahagia.png'));
 
         abort_unless(is_file($path), 404);
 
