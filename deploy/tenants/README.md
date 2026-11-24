@@ -1,6 +1,6 @@
 # CBT per sekolah
 
-CBT baru menggunakan satu rilis Laravel tersendiri di /var/www/cbt-sekolah. Database MySQL, pengguna SQL beserta kata sandinya, APP_KEY, cookie, sesi, cache, unggahan, dan direktori penyimpanan berbeda untuk setiap NPSN. Nginx memberikan NPSN dari nama host ke bootstrap khusus tenant. Instance CBT lama tetap menggunakan entry point dan db_ujiansis yang sudah ada.
+CBT baru menggunakan satu rilis Laravel tersendiri di /var/www/cbt-sekolah. Database MySQL, pengguna SQL beserta kata sandinya, APP_KEY, cookie, sesi, cache, unggahan, dan direktori penyimpanan berbeda untuk setiap NPSN. Sekolah baru menggunakan https://cbt-sekolah.sityoyitsolutions.com/s/<npsn>/login. Pemilihan dengan kode SIS atau NPSN di halaman utama menggunakan direktori lokal yang diperbarui timer. NPSN pada URL menentukan database untuk setiap permintaan, termasuk saat dua sekolah dibuka di tab berbeda. Instance CBT lama tetap menggunakan entry point dan db_ujiansis yang sudah ada.
 
 ## Persiapan VPS satu kali
 
@@ -14,7 +14,14 @@ CBT baru menggunakan satu rilis Laravel tersendiri di /var/www/cbt-sekolah. Data
    ~~~
 
    Gunakan PHP CLI dan FPM 8.4.1+ dengan PDO MySQL. Web worker www-data memerlukan akses baca ke checkout. Bootstrap Laravel dan build Vite harus tersedia. FPM membaca konfigurasi tenant di luar web root. Checkout ini tidak membutuhkan salinan .env produksi CBT lama.
-3. Arahkan nama-nama **cbt-<npsn>.sityoyitsolutions.com** ke VPS. DNS wildcard untuk *.sityoyitsolutions.com dapat melayani sekolah berikutnya secara otomatis. Siapkan sertifikat yang mencakup nama-nama tersebut. Sediakan /etc/sis-cbt/fullchain.pem dan /etc/sis-cbt/privkey.pem dengan pembaruan sertifikat yang terkelola.
+3. Arahkan record A untuk cbt-sekolah.sityoyitsolutions.com ke VPS. Untuk memasang halaman pilih sekolah dan HTTPS saja, jalankan dari checkout CBT:
+
+       sudo bash deploy/tenants/hubungkan-domain.sh
+
+   Skrip mendaftarkan /var/www/cbt-sekolah/public pada Nginx, menggunakan sertifikat yang sudah cocok, atau meminta sertifikat khusus subdomain lewat Certbot webroot pada port 80. Setelah verifikasi, HTTP dialihkan ke HTTPS. Untuk memeriksa hasil, jalankan:
+
+       curl -fsS https://cbt-sekolah.sityoyitsolutions.com/ | grep -o '<title>[^<]*</title>'
+
 4. Buat /etc/sis-cbt/provision.ini dengan mode 0600 milik root. Isi socket dan NPSN terverifikasi dari sekolah pengguna db_ujiansis. Gunakan NONE hanya jika layanan lama memang tidak akan dihubungkan. Jangan menebak NPSN. Contoh struktur:
 
    ~~~ini

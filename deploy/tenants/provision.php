@@ -66,9 +66,10 @@ function initialize(PDO $db,array $row,string $dir,array $data): void
     if (proc_close($process) !== 0) { throw new RuntimeException('Migrasi tenant gagal.'); }
     atomicWrite($dir.'/initialized','1');
 }
-$rows = $mysql->query('SELECT id,name,npsn,until_date,modules,active,cbt_status,cbt_setup_key FROM '.DOMAIN_TABLE.
+$rows = $mysql->query('SELECT id,code,name,npsn,until_date,modules,active,cbt_status,cbt_setup_key FROM '.DOMAIN_TABLE.
     " WHERE npsn IS NOT NULL AND (FIND_IN_SET('cbt',modules) OR cbt_status IS NOT NULL)")->fetchAll(PDO::FETCH_ASSOC);
 $allowed = [];
+$directory = ['npsn'=>[], 'code'=>[]];
 $failed = false;
 foreach ($rows as $row) {
     if (!preg_match('/^[A-Z0-9]{8}$/D',$row['npsn'])) { continue; }
@@ -78,7 +79,8 @@ foreach ($rows as $row) {
     try {
         if ($row['npsn'] === $config['legacy_npsn']) {
             if (is_dir($dir)) { throw new RuntimeException('Sudah ada database tenant untuk NPSN CBT lama.'); }
-            status($mysql,$row,'legacy');
+            $directory['npsn'][$key] = $directory['code'][strtolower($row['code'])] = 'legacy';
+            if ($row['cbt_status'] !== 'legacy') { status($mysql,$row,'legacy'); }
             continue;
         }
         if ($row['cbt_status'] === 'legacy') { throw new RuntimeException('Periksa pemetaan NPSN CBT lama.'); }
@@ -97,6 +99,7 @@ foreach ($rows as $row) {
             $setup = $used['consumed_at'] === null ? $data['setup_key'] : null;
         }
         if ($row['cbt_status'] !== 'ready' || $row['cbt_setup_key'] !== $setup) { status($mysql,$row,'ready',$setup); }
+        $directory['npsn'][$key] = $directory['code'][strtolower($row['code'])] = $key;
         $allowed[$key] = true;
     } catch (Throwable $error) {
         $failed = true;
@@ -107,5 +110,10 @@ foreach ($rows as $row) {
 }
 foreach (glob(ROOT_DIR.'/*/active-until') as $permit) {
     if (!isset($allowed[basename(dirname($permit))])) { unlink($permit); }
+}
+$index = ROOT_DIR.'/schools.json';
+$json = json_encode($directory, JSON_THROW_ON_ERROR);
+if (!is_file($index) || file_get_contents($index) !== $json) {
+    atomicWrite($index, $json);
 }
 exit($failed ? 1 : 0);
