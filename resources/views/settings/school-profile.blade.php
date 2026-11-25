@@ -34,15 +34,17 @@
 
                 <div class="md:col-span-2 rounded-2xl border border-white/10 bg-slate-950/40 p-4">
                     <label for="letterhead" class="mb-2 block text-sm font-medium text-slate-200">KOP rapor ATS</label>
-                    <p class="mb-4 text-xs leading-5 text-slate-500">KOP SMK Islam Bahagia digunakan sebagai bawaan. Unggah JPG/PNG/WebP maksimal 2 MB untuk menggantinya.</p>
+                    <p class="mb-4 text-xs leading-5 text-slate-500">@unless(config('tenant.npsn'))KOP SMK Islam Bahagia digunakan sebagai bawaan. @endunless Unggah kop sekolah dalam format JPG/PNG/WebP maksimal 2 MB.</p>
+                    @if($profile->letterhead_path || !config('tenant.npsn'))
                     <img src="{{ route('settings.school.letterhead') }}" alt="KOP rapor ATS" class="mb-4 max-h-36 w-full rounded-xl bg-white object-contain p-2">
+                    @endif
                     <input id="letterhead" type="file" name="letterhead" accept="image/jpeg,image/png,image/webp"
                         class="block w-full rounded-xl border border-dashed border-white/15 bg-slate-950/50 px-3 py-2 text-xs text-slate-400 file:mr-2 file:rounded-lg file:border-0 file:bg-cyan-400 file:px-3 file:py-2 file:font-semibold file:text-slate-950">
                 </div>
 
                 <div>
                     <label for="npsn" class="mb-2 block text-sm font-medium text-slate-200">NPSN</label>
-                    <input id="npsn" name="npsn" value="{{ old('npsn', $profile->npsn) }}"
+                    <input @readonly(config('tenant.npsn')) id="npsn" name="npsn" value="{{ old('npsn', $profile->npsn) }}"
                         class="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm outline-none focus:border-cyan-400/70">
                 </div>
 

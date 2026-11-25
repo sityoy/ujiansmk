@@ -18,7 +18,8 @@
         || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) || !!navigator.connection?.saveData);
     liteMode?.addEventListener('change', () => setLiteMode(liteMode.checked));
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
-    const storageKey = `exam-security:${root.dataset.attemptId}`;
+    const schoolPrefix = location.pathname.match(/^\/s\/[a-z0-9]{8}\//)?.[0] || '';
+    const storageKey = `exam-security:${schoolPrefix}${root.dataset.attemptId}`;
     const allowedCategories = [
         'tab_hidden', 'fullscreen_exit', 'window_blur', 'system_gesture',
         'viewport_change', 'restricted_action', 'navigation_attempt',

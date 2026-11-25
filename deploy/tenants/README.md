@@ -1,0 +1,57 @@
+# CBT per sekolah
+
+CBT baru menggunakan satu rilis Laravel tersendiri di /var/www/cbt-sekolah. Database MySQL, pengguna SQL beserta kata sandinya, APP_KEY, cookie, sesi, cache, unggahan, dan direktori penyimpanan berbeda untuk setiap NPSN. Sekolah baru menggunakan https://cbt-sekolah.sityoyitsolutions.com/s/<npsn>/login. Pemilihan dengan kode SIS atau NPSN di halaman utama menggunakan direktori lokal yang diperbarui timer. NPSN pada URL menentukan database untuk setiap permintaan, termasuk saat dua sekolah dibuka di tab berbeda. Instance CBT lama tetap menggunakan entry point dan db_ujiansis yang sudah ada.
+
+## Persiapan VPS satu kali
+
+1. Deploy migrasi portal dan perubahan SISCOM. Keduanya harus menggunakan instance MySQL yang sama dengan provisioner. Setujui paket melalui **Pendaftaran Sekolah**.
+2. Siapkan checkout CBT yang telah ditinjau di **/var/www/cbt-sekolah**, terpisah dari checkout ujian lama. Dari checkout baru jalankan sebagai akun deploy:
+
+   ~~~bash
+   composer install --no-dev --prefer-dist --optimize-autoloader
+   npm ci
+   npm run build
+   ~~~
+
+   Gunakan PHP CLI dan FPM 8.4.1+ dengan PDO MySQL. Web worker www-data memerlukan akses baca ke checkout. Bootstrap Laravel dan build Vite harus tersedia. FPM membaca konfigurasi tenant di luar web root. Checkout ini tidak membutuhkan salinan .env produksi CBT lama.
+3. Arahkan record A untuk cbt-sekolah.sityoyitsolutions.com ke VPS. Untuk memasang halaman pilih sekolah dan HTTPS saja, jalankan dari checkout CBT:
+
+       sudo bash deploy/tenants/hubungkan-domain.sh
+
+   Skrip mendaftarkan /var/www/cbt-sekolah/public pada Nginx, menggunakan sertifikat yang sudah cocok, atau meminta sertifikat khusus subdomain lewat Certbot webroot pada port 80. Setelah verifikasi, HTTP dialihkan ke HTTPS. Untuk memeriksa hasil, jalankan:
+
+       curl -fsS https://cbt-sekolah.sityoyitsolutions.com/ | grep -o '<title>[^<]*</title>'
+
+4. Siapkan konfigurasi provisioner dengan akun root MySQL lokal melalui socket. Skrip menampilkan nama dan NPSN dari db_ujiansis, meminta NPSN resmi sekolah lama, dan menulis /etc/sis-cbt/provision.ini dengan mode 0600.
+
+       sudo bash deploy/tenants/siapkan-provision.sh
+
+   Jika memakai kredensial DBA terpisah, atur socket, user, password, dan legacy_npsn langsung di file tersebut (pemilik root). Nilai NONE hanya untuk instalasi tanpa sekolah CBT lama.
+
+5. Aktifkan setelah konfigurasi dan DNS/TLS diverifikasi. Skrip menggunakan socket FPM /run/php/php8.4-fpm.sock dan akun www-data.
+
+   ~~~bash
+   sudo bash deploy/tenants/install.sh
+   sudo systemctl start sis-cbt-provision.service
+   sudo journalctl -u sis-cbt-provision.service -n 30
+   ~~~
+
+Timer memeriksa sekolah setiap menit. Pendaftaran publik menyimpan permintaan paket. Persetujuan dengan modul CBT, NPSN, dan masa aktif memulai penyiapan. Kegagalan migrasi dapat dicoba kembali menggunakan identitas dan database yang sama. Provisioner memberi akses web setelah migrasi berhasil. Untuk sekolah lama yang NPSN-nya cocok dengan pemetaan operator, portal membuka alamat CBT lama.
+
+Kepala Sekolah membuka portal dan memilih **Siapkan admin pertama CBT**. Tautan berlaku sepuluh menit dan aktivasi hanya bisa diselesaikan sekali. Panitia dan siswa kemudian bisa login langsung pada alamat CBT sekolah. Untuk sekolah baru, penangguhan diproses saat sinkronisasi berikutnya dan tanggal akhir masa sewa juga diperiksa langsung saat mengakses Laravel. Ujian berjalan tanpa query ke portal pada setiap permintaan. Penangguhan tidak menghapus database atau berkas.
+
+## Pemeliharaan
+
+Cadangkan database setiap sekolah bersama /var/lib/sis-cbt (termasuk kunci enkripsi, identitas dan berkas) dan direktori portal. Hentikan timer saat melakukan pemulihan lintas database. Simpan cadangan terenkripsi. Layanan lama dikelola melalui prosedur CBT lama.
+
+Untuk rilis yang menambah migrasi, jadwalkan pemeliharaan saat tidak ada ujian aktif. Perbarui kode dan build di checkout tenant, lalu jalankan skrip upgrade di bawah sebagai root untuk memigrasikan database sekolah yang telah disiapkan. Skrip menghentikan proses jika migrasi satu sekolah gagal dan bisa dijalankan kembali.
+
+    sudo bash deploy/tenants/upgrade.sh
+
+## Jika uji HTTPS gagal
+
+Jika Certbot telah menerbitkan sertifikat tetapi curl melaporkan error 60, ulangi pemeriksaan melalui IP asal VPS. Contoh untuk server SIS:
+
+    sudo env CBT_ORIGIN_IP=103.176.78.161 bash deploy/tenants/hubungkan-domain.sh
+
+Skrip menggunakan kembali sertifikat yang sesuai, memeriksa bahwa Nginx memuat konfigurasi CBT, dan menguji nama host serta isi halaman setelah reload. Jika uji tetap gagal, hasil menampilkan nama pada sertifikat di disk, sertifikat yang benar-benar disajikan, dan listener 443. Gunakan CBT_ORIGIN_IP yang sama saat memanggil install.sh agar pemeriksaan di dalam installer juga menguji IP tersebut.

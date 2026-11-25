@@ -48,7 +48,7 @@
     </div>
     <main class="sheet">
         <header class="brand">
-            <img id="report-logo" src="{{ asset('images/logo-ypmi-bahagia.jpeg') }}" alt="Logo sekolah">
+            <img id="report-logo" src="{{ asset(config('tenant.npsn') ? 'images/logo-pt-sityoy.png' : 'images/logo-ypmi-bahagia.jpeg') }}" alt="Logo sekolah">
             <div><h1>{{ $school?->name ?? config('app.name') }}</h1><p><strong>REKAP PEMBUATAN SOAL · {{ mb_strtoupper($reportKind ?? 'Bank Soal Inti') }}</strong></p><p class="muted">{{ $school?->address }}</p></div>
         </header>
         <div class="meta"><strong>{{ $gradeLabel }} · {{ $periodLabel }}</strong>
