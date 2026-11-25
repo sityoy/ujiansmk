@@ -1352,7 +1352,9 @@ class TrialExamFlowTest extends TestCase
         $committee = User::factory()->create(['role' => UserRole::Committee]);
         $teacher = User::factory()->create(['role' => UserRole::Teacher]);
         $payload = ['access_code' => $trial->access_code];
-        $this->actingAs($student->user)->startTrial($trial, $payload)->assertRedirect();
+        $this->actingAs($student->user)->get(route('student.exams.index'))->assertOk()
+            ->assertDontSee($trial->title)->assertDontSee(route('tryout.entry', $trial));
+        $this->startTrial($trial, $payload)->assertRedirect();
         $first = $trial->currentAttempts()->sole();
         app(TrialExamAttemptService::class)->submit($first, [$question->id => 'A']);
         $restart = route('tryouts.attempts.restart', [$trial, $first]);
@@ -1371,7 +1373,7 @@ class TrialExamFlowTest extends TestCase
             ->assertJsonPath('participants.'.$student->id.'.restart_url', null);
 
         $this->actingAs($student->user)->get(route('tryout.result', [$trial, $first]))->assertNotFound();
-        $this->get(route('student.exams.index'))->assertOk()->assertViewHas('trialAttempts', fn ($attempts) => $attempts->isEmpty());
+        $this->get(route('student.exams.index'))->assertOk()->assertDontSee('Ujian Uji Coba');
         $this->startTrial($trial, $payload)->assertRedirect();
         $second = $trial->currentAttempts()->sole();
         $this->assertNotSame($first->id, $second->id);

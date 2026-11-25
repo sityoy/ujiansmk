@@ -261,6 +261,47 @@ html[data-theme='light'] .exam-text-controls button { color: #0f172a; background
 /* Keep written-answer fields readable without focus zoom on mobile Safari. */
 #exam-content .exam-written-answer { font-size: max(1rem, var(--exam-reading-size)); }
 
+.student-exam-card {
+    --exam-accent: #94a3b8;
+    --exam-label: #e2e8f0;
+    --exam-action-ink: #0f172a;
+    border-color: color-mix(in srgb, var(--exam-accent) 35%, transparent);
+    border-inline-start: 4px solid var(--exam-accent);
+    background-color: color-mix(in srgb, var(--exam-accent) 7%, transparent);
+}
+
+.student-exam-card[data-exam-state='ready'] { --exam-accent: #22d3ee; --exam-label: #a5f3fc; }
+.student-exam-card[data-exam-state='checkin'] { --exam-accent: #fbbf24; --exam-label: #fde68a; }
+.student-exam-card[data-exam-state='working'] { --exam-accent: #a5b4fc; --exam-label: #e0e7ff; }
+.student-exam-card[data-exam-state='done'] { --exam-accent: #34d399; --exam-label: #a7f3d0; }
+.student-exam-card:is([data-exam-state='blocked'], [data-exam-state='locked'], [data-exam-state='terminated']) {
+    --exam-accent: #fb7185;
+    --exam-label: #fecdd3;
+}
+
+.student-exam-status {
+    color: var(--exam-label);
+    background-color: color-mix(in srgb, var(--exam-accent) 14%, transparent);
+}
+
+.student-exam-action {
+    background-color: var(--exam-accent);
+    color: var(--exam-action-ink);
+}
+
+.student-exam-action:hover { filter: brightness(1.1); }
+.student-exam-action:focus-visible { outline: 2px solid var(--exam-accent); outline-offset: 3px; }
+
+html[data-theme='light'] .student-exam-card { --exam-accent: #64748b; --exam-label: #334155; --exam-action-ink: #fff; }
+html[data-theme='light'] .student-exam-card[data-exam-state='ready'] { --exam-accent: #0e7490; --exam-label: #155e75; }
+html[data-theme='light'] .student-exam-card[data-exam-state='checkin'] { --exam-accent: #b45309; --exam-label: #78350f; }
+html[data-theme='light'] .student-exam-card[data-exam-state='working'] { --exam-accent: #4338ca; --exam-label: #3730a3; }
+html[data-theme='light'] .student-exam-card[data-exam-state='done'] { --exam-accent: #047857; --exam-label: #065f46; }
+html[data-theme='light'] .student-exam-card:is([data-exam-state='blocked'], [data-exam-state='locked'], [data-exam-state='terminated']) {
+    --exam-accent: #be123c;
+    --exam-label: #9f1239;
+}
+
 .attendance-feedback {
     border: 1px solid;
     border-radius: .75rem;

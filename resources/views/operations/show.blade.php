@@ -120,12 +120,12 @@
                                     @endif
                                     @if ($assignment->security_reset_count < 2 && in_array(auth()->user()->role->value, ['super_admin', 'committee', 'principal'], true) && $session->status->value !== 'closed' && now()->lt($session->ends_at))
                                         <details class="mt-3 border-t border-white/10 pt-3">
-                                            <summary class="cursor-pointer text-xs font-semibold text-rose-300">Reset seluruh ujian peserta</summary>
-                                            <form method="POST" action="{{ route('operations.assignments.reset-attempt', $assignment) }}" class="mt-3 space-y-2" onsubmit="return confirm('Reset SELURUH ujian peserta? Semua jawaban percobaan ini dihapus dan siswa harus mulai kembali dari awal.')">
+                                            <summary class="cursor-pointer text-xs font-semibold text-rose-300">Reset dan ulang pada peserta ini</summary>
+                                            <form method="POST" action="{{ route('operations.assignments.reset-attempt', $assignment) }}" class="mt-3 space-y-2" onsubmit="return confirm('Reset ujian peserta ini agar bisa mengulang dari awal? Jawaban dan nilai percobaan aktif akan dikeluarkan dari sesi.')">
                                                 @csrf
-                                                <textarea name="reason" required minlength="5" maxlength="1000" rows="2" placeholder="Alasan reset seluruh ujian..." class="w-full rounded-lg border border-rose-300/30 bg-slate-950 p-2 text-xs text-white"></textarea>
-                                                <p class="text-xs leading-5 text-slate-400">Jawaban aktif dihapus dan peserta kembali ke status belum mulai. Ringkasan percobaan lama, petugas, dan alasan tetap tersimpan sebagai audit.</p>
-                                                <button class="rounded-lg bg-rose-400 px-3 py-2 text-xs font-semibold text-slate-950">Reset ujian dari awal</button>
+                                                <textarea name="reason" required minlength="5" maxlength="1000" rows="2" placeholder="Alasan peserta ini perlu mengulang…" class="w-full rounded-lg border border-rose-300/30 bg-slate-950 p-2 text-xs text-white"></textarea>
+                                                <p class="text-xs leading-5 text-slate-400">Peserta ini kembali ke status Belum mulai dan dapat mengulang selama sesi masih tersedia. Percobaan sebelumnya disimpan dalam riwayat reset.</p>
+                                                <button class="rounded-lg bg-rose-400 px-3 py-2 text-xs font-semibold text-slate-950">Reset dan izinkan ulang</button>
                                             </form>
                                         </details>
                                     @endif

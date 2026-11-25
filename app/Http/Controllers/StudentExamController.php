@@ -2,15 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AssignmentStatus;
 use App\Enums\AttemptStatus;
 use App\Enums\CheckinStatus;
+use App\Enums\ExamQuestionType;
+use App\Enums\SessionStatus;
 use App\Models\DailyCheckin;
 use App\Models\ExamAssignment;
 use App\Models\ExamAttempt;
 use App\Models\ExamQuestion;
 use App\Models\Student;
-use App\Models\TrialAttempt;
-use App\Models\TrialExam;
+use App\Services\Attendance\AttendanceAvailability;
 use App\Services\Exams\ExamAttemptService;
 use App\Services\Exams\ExamSecurityService;
 use App\Services\Exams\StudentQuestionSections;
@@ -23,51 +25,62 @@ use Illuminate\View\View;
 
 class StudentExamController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, AttendanceAvailability $attendance, ExamAttemptService $attempts): View
     {
         $student = $this->student($request);
-        $assignments = $student->examAssignments()
+        $student->loadMissing('schoolClass');
+        $checkin = $student->dailyCheckins()->whereDate('attendance_date', now()->toDateString())->first();
+        $order = ['working' => 0, 'ready' => 0, 'checkin' => 0, 'locked' => 0, 'waiting' => 1];
+
+        $exams = $student->examAssignments()
             ->with([
-                'assessmentSubject.assessmentPeriod',
-                'assessmentSubject.subject',
-                'assessmentSubject.questions',
+                'assessmentSubject' => fn ($component) => $component->with(['assessmentPeriod', 'subject'])
+                    ->withExists([
+                        'questions as has_multiple_choice' => fn ($questions) => $questions->where('question_type', ExamQuestionType::MultipleChoice),
+                    ]),
                 'examSession.campus',
                 'attempt',
             ])
-            ->whereHas('examSession', fn ($query) => $query->orderBy('starts_at'))
             ->get()
-            ->sortBy('examSession.starts_at');
+            ->map(function (ExamAssignment $assignment) use ($attendance, $checkin, $attempts): array {
+                $reason = $attendance->reason($assignment, $checkin);
 
-        $student->loadMissing('schoolClass');
-        $trialExams = TrialExam::query()
-            ->with('questionBank.subject')
-            ->whereHas('questionBank', fn ($query) => $query
-                ->where('grade_level', $student->schoolClass->grade_level))
-            ->where(function ($query) use ($student): void {
-                $query->where(function ($available): void {
-                    $available->where('is_active', true)
-                        ->where(fn ($window) => $window->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
-                        ->where(fn ($window) => $window->whereNull('ends_at')->orWhere('ends_at', '>=', now()));
-                })->orWhereHas('currentAttempts', fn ($attempts) => $attempts->where('student_id', $student->id));
+                return ['assignment' => $assignment, 'attendanceReason' => $reason,
+                    'state' => $this->portalState($assignment, $checkin, $reason, $attempts)];
             })
-            ->orderBy('title')
-            ->get();
-        $trialAttempts = TrialAttempt::query()
-            ->where('status', '!=', TrialAttempt::RESET_STATUS)
-            ->where('student_id', $student->id)
-            ->whereIn('trial_exam_id', $trialExams->modelKeys())
-            ->get()
-            ->keyBy('trial_exam_id');
+            ->sortBy([
+                fn (array $a, array $b) => ($order[$a['state']] ?? 2) <=> ($order[$b['state']] ?? 2),
+                fn (array $a, array $b) => $a['assignment']->examSession->starts_at <=> $b['assignment']->examSession->starts_at,
+            ]);
 
-        return view('student.exams.index', [
-            'student' => $student,
-            'assignments' => $assignments,
-            'trialExams' => $trialExams,
-            'trialAttempts' => $trialAttempts,
-            'checkin' => $student->dailyCheckins()
-                ->whereDate('attendance_date', now()->toDateString())
-                ->first(),
-        ]);
+        return view('student.exams.index', compact('student', 'exams', 'checkin'));
+    }
+
+    private function portalState(ExamAssignment $assignment, ?DailyCheckin $checkin, ?string $attendanceReason, ExamAttemptService $attempts): string
+    {
+        $session = $assignment->examSession;
+        $attempt = $assignment->attempt;
+        if ($attempt?->status === AttemptStatus::InProgress) {
+            $attempt->setRelation('assignment', $assignment);
+
+            return match (true) {
+                $attempts->isExpired($attempt) => 'expired',
+                $attempt->security_locked_at !== null => 'locked',
+                default => 'working',
+            };
+        }
+
+        return match (true) {
+            $attempt?->status === AttemptStatus::Submitted || $assignment->status === AssignmentStatus::Completed => 'done',
+            $attempt?->status === AttemptStatus::Terminated => 'terminated',
+            $assignment->status === AssignmentStatus::Cancelled => 'cancelled',
+            $assignment->status === AssignmentStatus::Absent => 'absent',
+            $session->status === SessionStatus::Closed || now()->gte($session->ends_at) => 'closed',
+            $session->status === SessionStatus::Draft || now()->lt($session->starts_at) => 'waiting',
+            $attendanceReason !== null => 'blocked',
+            $checkin === null => 'checkin',
+            default => 'ready',
+        };
     }
 
     public function start(Request $request, ExamAssignment $assignment, ExamAttemptService $attempts): RedirectResponse

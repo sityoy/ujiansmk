@@ -14,12 +14,12 @@ use App\Models\AssessmentSubject;
 use App\Models\Campus;
 use App\Models\ExamAssignment;
 use App\Models\ExamAttempt;
+use App\Models\ExamAttemptReset;
 use App\Models\ExamSession;
 use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\Subject;
 use App\Models\User;
-use App\Services\Exams\ExamAttemptResetService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -173,30 +173,58 @@ class GroupedSchedulingTest extends TestCase
         $this->assertDatabaseCount('exam_assignments', 4);
     }
 
-    public function test_schedule_cannot_be_deleted_after_a_participant_starts_even_after_reset(): void
+    public function test_schedule_deletion_waits_for_individual_resets_and_preserves_their_audit(): void
     {
         [$components, $campus] = $this->makeComponents();
-        $this->post(route('scheduling.sessions.store'), $this->scheduleData($components[0], $campus))
-            ->assertSessionHasNoErrors();
+        $data = $this->scheduleData($components[0], $campus);
+        $this->post(route('scheduling.sessions.store'), $data)->assertSessionHasNoErrors();
         $sessions = ExamSession::query()->orderBy('id')->get();
-        $assignment = $sessions[2]->assignments()->sole();
-        ExamAttempt::create([
-            'exam_assignment_id' => $assignment->id,
-            'status' => AttemptStatus::InProgress,
-            'started_at' => now(),
-            'device_session_hash' => str_repeat('a', 64),
+        $first = $sessions[0]->assignments()->sole();
+        $second = $sessions[2]->assignments()->sole();
+        $this->travelTo(now()->setTime(8, 10));
+        $firstAttempt = ExamAttempt::create([
+            'exam_assignment_id' => $first->id, 'status' => AttemptStatus::InProgress,
+            'started_at' => now(), 'device_session_hash' => str_repeat('a', 64),
+        ]);
+        $secondAttempt = ExamAttempt::create([
+            'exam_assignment_id' => $second->id, 'status' => AttemptStatus::Submitted,
+            'started_at' => now()->subMinutes(5), 'submitted_at' => now(), 'score' => 80,
+            'device_session_hash' => str_repeat('b', 64),
         ]);
 
         $delete = route('scheduling.sessions.destroy', $sessions[0]);
+        $reason = ['reason' => 'Peserta ini perlu mengulang.'];
+        $this->get(route('scheduling.index'))->assertOk()->assertSee('2 peserta masih memiliki percobaan ujian')
+            ->assertDontSee('>Hapus jadwal</button>', false);
+        $this->get(route('operations.sessions.show', $sessions[0]))->assertOk()
+            ->assertSee('Reset dan ulang pada peserta ini')->assertDontSee('Reset seluruh ujian peserta');
         $this->delete($delete)->assertSessionHasErrors('session');
-        $this->assertDatabaseCount('exam_attempts', 1);
-        app(ExamAttemptResetService::class)->reset($assignment, auth()->user(), 'Peserta perlu mengulang.');
-        $this->assertDatabaseCount('exam_attempts', 0);
+        $this->post(route('operations.assignments.reset-attempt', $first), $reason)->assertSessionHasNoErrors();
+        $this->assertModelMissing($firstAttempt);
+        $this->assertModelExists($secondAttempt);
+        $this->delete($delete)->assertSessionHasErrors('session');
 
-        $this->delete($delete)->assertSessionHasErrors('session');
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $this->actingAs($committee);
+        $this->post(route('operations.assignments.reset-attempt', $second), $reason)->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('exam_attempts', 0);
+        $this->get(route('scheduling.index'))->assertOk()->assertSee('>Hapus jadwal</button>', false);
+        $this->actingAs($components[0]->teacher)->delete($delete)->assertForbidden();
+        $this->actingAs($committee)->delete($delete)->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('exam_sessions', 0);
+        $this->assertDatabaseCount('exam_assignments', 0);
+        $this->assertDatabaseCount('exam_attempt_resets', 2);
+        $audit = ExamAttemptReset::query()->where('original_attempt_id', $secondAttempt->id)->sole();
+        $this->assertNull($audit->exam_assignment_id);
+        $this->assertSame($second->id, $audit->snapshot['deleted_schedule']['assignment_id']);
+        $this->assertSame($second->student_id, $audit->snapshot['deleted_schedule']['student_id']);
+        $this->assertSame($sessions[2]->id, $audit->snapshot['deleted_schedule']['session_id']);
+        $this->assertSame('80.00', $audit->snapshot['score']);
+        $this->assertSame($committee->id, $audit->performed_by_user_id);
+
+        $this->post(route('scheduling.sessions.store'), $data)->assertSessionHasNoErrors();
         $this->assertDatabaseCount('exam_sessions', 3);
         $this->assertDatabaseCount('exam_assignments', 3);
-        $this->assertDatabaseCount('exam_attempt_resets', 1);
     }
 
     public function test_one_started_class_locks_the_whole_schedule_and_closure_is_shared(): void

@@ -32,7 +32,14 @@
         </details>
 
         @forelse ($schedules as $sessions)
-            @php($session = $sessions->first())
+            @php
+                $session = $sessions->first();
+                $unresetCount = $sessions->sum('deletion_blocker_count');
+                $hasMakeup = $sessions->contains('makeup_sessions_exists', true);
+                $hasMakeupRoster = $session->kind->value === 'makeup' && $sessions->sum('assignments_count') > 0
+                    && $sessions->sum('reset_participant_count') === 0;
+                $canDelete = ! $hasMakeup && ! $hasMakeupRoster && $unresetCount === 0;
+            @endphp
             <section class="rounded-2xl border border-white/10 p-4">
                 <div class="flex flex-wrap items-start justify-between gap-4">
                     <div>
@@ -83,12 +90,21 @@
                             <button class="text-xs font-semibold text-emerald-300">Tempatkan siswa aktif semua rombel</button>
                         </form>
                     @endif
-                    <form method="POST" action="{{ route('scheduling.sessions.destroy', $session) }}"
-                        onsubmit="return confirm('{{ $session->kind->value === 'regular' ? 'Hapus jadwal seluruh rombel beserta penempatan peserta yang belum mulai?' : 'Hapus jadwal susulan seluruh rombel yang tercantum?' }}')">
-                        @csrf @method('DELETE')
-                        <button class="text-xs text-rose-300">Hapus jadwal</button>
-                    </form>
+                    @if ($canDelete)
+                        <form method="POST" action="{{ route('scheduling.sessions.destroy', $session) }}"
+                            onsubmit="return confirm('Hapus jadwal ini untuk seluruh rombel yang tercantum beserta penempatan pesertanya?')">
+                            @csrf @method('DELETE')
+                            <button class="rounded-lg border border-rose-400/40 px-3 py-2 text-xs font-semibold text-rose-300">Hapus jadwal</button>
+                        </form>
+                    @endif
                 </div>
+                @if ($unresetCount > 0)
+                    <p class="mt-3 text-xs leading-5 text-amber-200">{{ $unresetCount }} peserta masih memiliki percobaan ujian. Buka <strong>Lihat peserta</strong> pada rombel terkait, lalu pilih <strong>Reset dan ulang pada peserta ini</strong> untuk setiap peserta tersebut sebelum menghapus jadwal.</p>
+                @elseif ($hasMakeup)
+                    <p class="mt-3 text-xs text-amber-200">Jadwal ini masih menjadi sumber sesi susulan. Hapus sesi susulan terkait terlebih dahulu.</p>
+                @elseif ($hasMakeupRoster)
+                    <p class="mt-3 text-xs text-amber-200">Pindahkan peserta ke sesi susulan lain sebelum menghapus jadwal ini.</p>
+                @endif
             </section>
         @empty
             <p class="text-sm text-slate-400">Belum ada jadwal. Tambahkan satu jadwal untuk seluruh rombel di atas.</p>

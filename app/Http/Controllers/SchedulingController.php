@@ -21,8 +21,10 @@ use App\Models\Subject;
 use App\Models\User;
 use App\Services\Exams\CoreQuestionBank;
 use App\Services\Exams\ExamAssignmentService;
+use App\Services\Exams\ExamAttemptResetService;
 use App\Services\Exams\ExamSessionService;
 use App\Support\TablePagination;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
@@ -51,11 +53,14 @@ class SchedulingController extends Controller
                 'schoolClass', 'teacher',
                 'examSessions' => fn ($query) => $query
                     ->with(['campus', 'assessmentSubject.schoolClass'])
+                    ->withExists('makeupSessions')
                     ->withCount([
                         'assignments',
                         'assignments as finished_count' => fn ($assignments) => $assignments->whereHas('attempt', fn ($attempts) => $attempts->where('status', 'submitted')),
                         'assignments as working_count' => fn ($assignments) => $assignments->whereHas('attempt', fn ($attempts) => $attempts->where('status', 'in_progress')),
                         'assignments as pending_count' => fn ($assignments) => $assignments->whereDoesntHave('attempt')->where('status', '!=', 'cancelled'),
+                        'assignments as deletion_blocker_count' => $this->withUnresetAttempts(...),
+                        'assignments as reset_participant_count' => fn ($assignments) => $assignments->whereHas('attemptResets'),
                     ])
                     ->orderBy('starts_at'),
             ])
@@ -586,23 +591,20 @@ class SchedulingController extends Controller
         return back()->with('status', 'Peserta dipindahkan ke sesi susulan tanpa membuat penugasan baru.');
     }
 
-    public function destroySession(ExamSession $examSession): RedirectResponse
+    public function destroySession(ExamSession $examSession, ExamAttemptResetService $resets): RedirectResponse
     {
         return $this->deleteSafely(
-            fn () => DB::transaction(function () use ($examSession): void {
+            fn () => DB::transaction(function () use ($examSession, $resets): void {
                 $group = $examSession->scheduleGroup()->orderBy('id')->lockForUpdate()->get(['id', 'kind']);
+                abort_unless($group->contains('id', $examSession->id), 404);
                 $sessionIds = $group->modelKeys();
 
                 // Exam starts also lock the session and assignment before writing an attempt.
                 $assignments = ExamAssignment::query()->whereIn('exam_session_id', $sessionIds);
                 $assignmentIds = (clone $assignments)->orderBy('id')->lockForUpdate()->pluck('id');
-                if ($assignments->where(fn ($query) => $query
-                    ->where('status', '!=', AssignmentStatus::Scheduled)
-                    ->orWhere('security_reset_count', '>', 0)
-                    ->orWhereHas('attempt')
-                    ->orWhereHas('attemptResets'))->exists()) {
+                if ($this->withUnresetAttempts(clone $assignments)->exists()) {
                     throw ValidationException::withMessages([
-                        'session' => 'Jadwal tidak dapat dihapus karena peserta sudah memulai ujian atau memiliki riwayat ujian di salah satu rombel.',
+                        'session' => 'Jadwal masih memiliki peserta yang mengerjakan atau sudah menyelesaikan ujian. Gunakan Reset dan ulang pada peserta ini untuk setiap peserta terkait sebelum menghapus jadwal.',
                     ]);
                 }
                 if (ExamSession::query()->whereIn('source_session_id', $sessionIds)->exists()) {
@@ -610,18 +612,27 @@ class SchedulingController extends Controller
                         'session' => 'Jadwal reguler ini masih digunakan oleh sesi susulan. Hapus sesi susulan terkait terlebih dahulu.',
                     ]);
                 }
-                if ($assignmentIds->isNotEmpty() && $group->contains('kind', SessionKind::Makeup)) {
+                if ($assignmentIds->isNotEmpty() && $group->contains('kind', SessionKind::Makeup)
+                    && ! $assignments->whereHas('attemptResets')->exists()) {
                     throw ValidationException::withMessages([
                         'session' => 'Sesi susulan ini masih memiliki peserta. Pindahkan peserta ke sesi susulan lain terlebih dahulu.',
                     ]);
                 }
 
+                $resets->archiveForDeletedSchedule($assignmentIds->all());
                 ExamAssignment::query()->whereKey($assignmentIds)->delete();
                 ExamSession::query()->whereKey($sessionIds)->delete();
             }, 3),
             'Sesi ujian berhasil dihapus.',
             'Sesi ujian tidak dapat dihapus karena masih terkait dengan data ujian lain.',
         );
+    }
+
+    private function withUnresetAttempts(Builder $assignments): Builder
+    {
+        return $assignments->where(fn ($query) => $query
+            ->whereIn('status', [AssignmentStatus::Started, AssignmentStatus::Completed])
+            ->orWhereHas('attempt'));
     }
 
     private function assertComponentAcademicYear(array $validated): void

@@ -56,7 +56,9 @@ class StudentExamFlowTest extends TestCase
     {
         [$user, $assignment, $questions] = $this->makeExam();
         $deviceToken = str_repeat('a', 64);
-        $this->actingAs($user);
+        $this->actingAs($user)->get(route('student.exams.index'))->assertOk()
+            ->assertSee('data-exam-state="checkin"', false)->assertSee('Belum mulai · Absen dulu')
+            ->assertDontSee(route('student.exams.start', $assignment));
 
         $this->withSession(['exam_device_token' => $deviceToken])
             ->post(route('student.attendance.store', $assignment), [
@@ -68,6 +70,8 @@ class StudentExamFlowTest extends TestCase
             ->assertSessionHasNoErrors();
 
         $this->get(route('student.exams.index'))->assertOk()
+            ->assertSee('data-exam-state="ready"', false)->assertSee('Siap dimulai')
+            ->assertSee(route('student.exams.start', $assignment))
             ->assertSee('data-state="success"', false)->assertSee('Lokasi terverifikasi.')
             ->assertSeeInOrder(['Peringatan sebelum memulai ujian', 'Absensi lokasi sebelum ujian', 'Waktu ujian belum berjalan saat Anda absen', 'Jika absensi gagal', 'Cara mengaktifkan Jangan Ganggu di HP', 'Baca kembali peringatan ujian', 'Saya sudah membaca dan memahami aturan'])
             ->assertSee('required aria-describedby="core-exam-rules-title"', false);
@@ -77,6 +81,9 @@ class StudentExamFlowTest extends TestCase
             ->assertRedirect();
 
         $attempt = ExamAttempt::query()->firstOrFail();
+        $this->get(route('student.exams.index'))->assertOk()
+            ->assertSee('data-exam-state="working"', false)->assertSee('Lanjutkan ujian')
+            ->assertSee(route('student.exams.show', $attempt));
 
         $this->withSession(['exam_device_token' => $deviceToken])
             ->putJson(route('student.exams.answer', [$attempt, $questions[0]]), ['answer' => 'A'])
@@ -96,6 +103,9 @@ class StudentExamFlowTest extends TestCase
         $this->get(route('student.exams.result', $attempt))->assertOk()
             ->assertSee('Kembali ke Dashboard Siswa')->assertSee(route('student.exams.index'));
 
+        $this->get(route('student.exams.index'))->assertOk()
+            ->assertSee('data-exam-state="done"', false)->assertSee('Jawaban sudah dikumpulkan.')
+            ->assertDontSee(route('student.exams.start', $assignment))->assertDontSee('Lanjutkan ujian');
         $this->assertSame('submitted', $attempt->refresh()->status->value);
         $this->assertSame('2.00', $attempt->score);
         $this->assertSame(1, $attempt->correct_answers);
@@ -412,7 +422,7 @@ class StudentExamFlowTest extends TestCase
         $this->withCookie(config('session.cookie'), $failed->getCookie(config('session.cookie'))->getValue());
         $this->get($index)->assertOk()->assertSee('data-state="error"', false)->assertSee('melewati radius')->assertDontSee($start);
         $this->from($index)->post($store, $coords)->assertRedirect($anchor)->assertSessionHasNoErrors();
-        $this->get($index)->assertOk()->assertSee('data-state="pending"', false)->assertSee('Menunggu jadwal')
+        $this->get($index)->assertOk()->assertSee('data-exam-state="waiting"', false)->assertSee('data-state="pending"', false)->assertSee('Menunggu jadwal')
             ->assertSee('Absensi sudah terverifikasi. Ujian dapat dimulai pukul 10:20.')->assertDontSee($start);
         $this->travel(20)->minutes();
         $this->get($index)->assertOk()->assertSee('data-state="success"', false)->assertSee($start);

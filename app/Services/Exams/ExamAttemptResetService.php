@@ -13,6 +13,28 @@ use Illuminate\Validation\ValidationException;
 
 class ExamAttemptResetService
 {
+    public function archiveForDeletedSchedule(array $assignmentIds): void
+    {
+        ExamAttemptReset::query()->whereIn('exam_assignment_id', $assignmentIds)
+            ->with('assignment.examSession')
+            ->eachById(function (ExamAttemptReset $reset): void {
+                $assignment = $reset->assignment;
+                $session = $assignment->examSession;
+
+                $reset->update([
+                    'exam_assignment_id' => null,
+                    'snapshot' => [...$reset->snapshot, 'deleted_schedule' => [
+                        'assignment_id' => $assignment->id,
+                        'student_id' => $assignment->student_id,
+                        'assessment_subject_id' => $assignment->assessment_subject_id,
+                        'session_id' => $session->id,
+                        'starts_at' => $session->starts_at->toIso8601String(),
+                        'ends_at' => $session->ends_at->toIso8601String(),
+                    ]],
+                ]);
+            });
+    }
+
     public function reset(ExamAssignment $assignment, User $actor, string $reason): void
     {
         DB::transaction(function () use ($assignment, $actor, $reason): void {

@@ -50,6 +50,11 @@ class ExamSession extends Model
         return $this->belongsTo(self::class, 'source_session_id');
     }
 
+    public function makeupSessions(): HasMany
+    {
+        return $this->hasMany(self::class, 'source_session_id');
+    }
+
     public function assignments(): HasMany
     {
         return $this->hasMany(ExamAssignment::class);
