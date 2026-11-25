@@ -80,7 +80,7 @@
                     @if ($question->question_type->value === 'multiple_choice')
                         <div class="mt-4 grid gap-2 sm:grid-cols-2">
                             @foreach (collect($question->options)->sortKeys() as $key => $option)
-                                <div class="rounded-xl border px-3 py-2 text-xs {{ $key === $question->correct_answer ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200' : 'border-white/10 text-slate-400' }}">
+                                <div class="rounded-xl border px-3 py-2 text-xs {{ in_array($key, str_split($question->correct_answer ?? ''), true) ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200' : 'border-white/10 text-slate-400' }}">
                                     <div class="flex items-start gap-2"><span class="shrink-0 font-semibold">{{ $key }}.</span><x-question-text :text="$option" :format="$question->text_format" /></div>
                                     @if ($question->option_file_paths[$key] ?? null)
                                         <x-question-attachment :path="$question->option_file_paths[$key]" :alt="'lampiran pilihan '.$key" class="mt-2" />

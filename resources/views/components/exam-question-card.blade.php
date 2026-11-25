@@ -1,6 +1,10 @@
 @props(['question', 'number', 'total', 'options', 'name', 'answer' => null, 'saveUrl' => null, 'trial' => false])
 
-@php($type = $question->question_type->value)
+@php
+    $type = $question->question_type->value;
+    $multiple = \App\Services\Exams\MultipleChoiceAnswers::allowsMultiple($question->correct_answer);
+    $selected = $type === 'multiple_choice' ? str_split($answer ?? '') : [];
+@endphp
 <article @class(['border border-white/10 bg-white/[0.035]', 'rounded-3xl p-6' => $trial, 'rounded-2xl p-5' => ! $trial])>
     @if ($trial)
         <div class="flex gap-4">
@@ -11,16 +15,22 @@
     @endif
     <x-question-prompt :question="$question" :multiple-choice="$trial || $type === 'multiple_choice'" :class="$trial ? '' : 'mt-3'" />
     @if ($type === 'multiple_choice')
-        <div @class(['grid', 'mt-5 gap-3' => $trial, 'mt-4 gap-2' => ! $trial])>
+        <fieldset @if ($multiple) data-multiple-answer @endif @class(['grid min-w-0', 'mt-5 gap-3' => $trial, 'mt-4 gap-2' => ! $trial])>
+            <legend class="mb-2 text-sm font-semibold {{ $multiple ? 'text-cyan-300' : 'text-slate-400' }}">
+                {{ $multiple ? 'Pilih semua jawaban yang benar. Centang minimal satu pilihan.' : 'Pilih satu jawaban.' }}
+            </legend>
+            @if ($multiple && $trial && $saveUrl)
+                <input type="hidden" name="{{ $name }}" value="{{ $answer }}" data-choice-value>
+            @endif
             @foreach ($options as $key => $option)
                 @php($displayKey = chr(65 + $loop->index))
                 @php($optionPath = $question->option_file_paths[$key] ?? null)
                 <div @class(['rounded-xl border border-white/10 hover:border-cyan-400/30', 'tryout-option bg-slate-950/50' => $trial,
                     'text-sm text-slate-300 transition hover:bg-cyan-400/5' => ! $trial])>
                     <label class="exam-choice-label flex cursor-pointer items-start gap-3 px-4 py-3">
-                        <input type="radio" name="{{ $name }}" value="{{ $key }}"
+                        <input type="{{ $multiple ? 'checkbox' : 'radio' }}" name="{{ $multiple ? 'selection_'.$question->id : $name }}" value="{{ $key }}"
                             @if ($saveUrl) data-save-url="{{ $saveUrl }}" @else data-preview-answer @endif
-                            @checked($answer === $key) class="mt-1">
+                            @checked(in_array($key, $selected, true)) class="mt-1 accent-cyan-500">
                         <strong class="text-cyan-300">{{ $displayKey }}.</strong>
                         <x-question-text :text="$option" :format="$question->text_format" />
                     </label>
@@ -29,7 +39,7 @@
                     @endif
                 </div>
             @endforeach
-        </div>
+        </fieldset>
     @else
         <label class="mt-4 block text-xs text-slate-400">
             {{ $type === 'short_answer' ? 'Jawaban singkat' : 'Jawaban esai' }} · dikoreksi manual{{ $trial ? '' : ' oleh guru' }}

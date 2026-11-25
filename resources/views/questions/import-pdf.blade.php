@@ -38,7 +38,7 @@
                             <p class="whitespace-pre-wrap break-words">{{ $letter }}. {{ $choice }}</p>
                         @endforeach
                         <p class="text-xs text-slate-400">
-                            @if ($question['correct_answer']) Kunci {{ $question['correct_answer'] }} · @endif
+                            @if ($question['correct_answer']) Kunci {{ \App\Services\Exams\MultipleChoiceAnswers::label($question['correct_answer']) }} · @endif
                             Bobot {{ $question['points'] }} poin
                         </p>
                     </li>
@@ -70,7 +70,7 @@
                         PDF kunci jawaban (opsional)
                         <input type="file" name="key_pdf" accept=".pdf,application/pdf" class="mt-1 block w-full">
                     </label>
-                    <p class="text-xs text-slate-400">Jika kunci terpisah, tulis satu kunci per baris, misalnya 1. C, dengan nomor yang sama seperti di naskah.</p>
+                    <p class="text-xs text-slate-400">Untuk PDF kunci terpisah, tulis satu baris per nomor. Contoh 1. C untuk PG biasa atau 1. A, C untuk PG dengan beberapa jawaban benar.</p>
                 @endif
                 <button class="rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950">Tinjau soal</button>
             </form>
@@ -78,6 +78,7 @@
                 <h3 id="format-impor" class="font-semibold text-slate-200">Ketentuan &amp; Format Impor PDF</h3>
                 <p class="text-sm text-slate-300">Salin contoh ke Word atau Google Docs, ganti isinya, lalu simpan sebagai PDF dengan nomor soal yang unik. Gunakan judul dan pilihan seperti contoh pada baris tersendiri. Periksa gambar di pratinjau sebelum menyimpan. Gambar yang dilewati bisa ditambahkan melalui Edit Soal.</p>
                 @if ($allowsChoices)
+                    <p class="text-sm text-slate-300">Untuk soal dengan beberapa jawaban benar, tulis kunci seperti <strong>Kunci: A, C</strong>.</p>
                     <pre class="overflow-auto rounded-xl border border-white/10 p-4 text-sm text-slate-200">Soal 1 · Pilihan Ganda
 Pernyataan: Perhatikan hasil penjumlahan berikut.
 Pertanyaan: Berapakah 2 + 3?

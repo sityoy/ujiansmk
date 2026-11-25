@@ -13,7 +13,7 @@
         <p class="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">{{ $bank->subject->name }} · Kelas {{ $bank->grade_level }}</p>
         <h2 class="mt-2 text-2xl font-semibold text-white">{{ $bank->name }}</h2>
         <p class="mt-2 text-sm text-slate-400">{{ $questionCount }} soal · Total bobot {{ number_format($totalPoints, 2, ',', '.') }}</p>
-        <p class="mt-2 text-xs text-cyan-200">Setiap jawaban PG benar bernilai tetap 2 poin. Nilai PG maksimal 100.</p>
+        <p class="mt-2 text-xs text-cyan-200">Setiap soal PG bernilai 2 poin jika pilihan sesuai kunci. Nilai PG maksimal 100.</p>
         <p class="mt-2 text-sm text-slate-400">Guru {{ $bank->teacher?->name ?? 'belum ditetapkan' }}</p>
         <p class="mt-2 text-sm text-slate-400">Batas pembuatan soal · {{ $bank->questionDeadlineLabel() ?? 'Belum ditetapkan' }}</p>
         @if (auth()->user()->role !== \App\Enums\UserRole::Teacher && ! $bank->archived_at)
@@ -99,7 +99,7 @@
                     <x-question-prompt :question="$question" class="mt-3" />
                     <div class="mt-4 grid gap-2 sm:grid-cols-2">
                         @foreach (collect($question->options)->sortKeys() as $key => $option)
-                            <div class="rounded-xl border px-3 py-2 text-xs {{ $key === $question->correct_answer ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200' : 'border-white/10 text-slate-400' }}"><div class="flex items-start gap-2"><strong class="shrink-0">{{ $key }}.</strong><x-question-text :text="$option" :format="$question->text_format" /></div>
+                            <div class="rounded-xl border px-3 py-2 text-xs {{ in_array($key, str_split($question->correct_answer ?? ''), true) ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200' : 'border-white/10 text-slate-400' }}"><div class="flex items-start gap-2"><strong class="shrink-0">{{ $key }}.</strong><x-question-text :text="$option" :format="$question->text_format" /></div>
                                 @if ($question->option_file_paths[$key] ?? null)
                                     <x-question-attachment :path="$question->option_file_paths[$key]" :alt="'lampiran pilihan '.$key" class="mt-2" />
                                 @endif

@@ -121,29 +121,29 @@ class ExamAttemptService
         return $attempt->refresh();
     }
 
-    public function saveAnswer(ExamAttempt $attempt, ExamQuestion $question, string $answer): ExamAnswer
+    public function saveAnswer(ExamAttempt $attempt, ExamQuestion $question, string $answer): ?ExamAnswer
     {
-        $saved = DB::transaction(function () use ($attempt, $question, $answer): ?ExamAnswer {
+        $saved = DB::transaction(function () use ($attempt, $question, $answer): ExamAnswer|false|null {
             $attempt = ExamAttempt::query()->lockForUpdate()->findOrFail($attempt->id);
 
             if ($attempt->status === AttemptStatus::InProgress && $this->isExpired($attempt)) {
                 $this->submit($attempt);
 
-                return null;
+                return false;
             }
 
             return $this->saveAnswerLocked($attempt, $question, $answer);
         });
 
         // Throw after committing the automatic submission, not inside its transaction.
-        if (! $saved) {
+        if ($saved === false) {
             throw ValidationException::withMessages(['exam' => 'Waktu ujian telah berakhir dan jawaban dikumpulkan otomatis.']);
         }
 
         return $saved;
     }
 
-    private function saveAnswerLocked(ExamAttempt $attempt, ExamQuestion $question, string $answer): ExamAnswer
+    private function saveAnswerLocked(ExamAttempt $attempt, ExamQuestion $question, string $answer): ?ExamAnswer
     {
         if ($attempt->status !== AttemptStatus::InProgress) {
             throw ValidationException::withMessages(['exam' => 'Ujian sudah tidak menerima jawaban.']);
@@ -159,27 +159,33 @@ class ExamAttemptService
         }
 
         $answer = trim($answer);
-        if ($question->question_type === ExamQuestionType::MultipleChoice) {
-            if (! array_key_exists($answer, $question->options ?? [])) {
-                throw ValidationException::withMessages(['answer' => 'Pilihan jawaban tidak tersedia.']);
+        $choice = $question->question_type === ExamQuestionType::MultipleChoice;
+        $lookup = ['exam_attempt_id' => $attempt->id, 'exam_question_id' => $question->id];
+
+        if ($choice) {
+            $multiple = MultipleChoiceAnswers::allowsMultiple($question->correct_answer);
+            if ($multiple && $answer === '') {
+                ExamAnswer::query()->where($lookup)->delete();
+                $attempt->update(['last_seen_at' => now()]);
+
+                return null;
+            }
+
+            $answer = MultipleChoiceAnswers::normalize($answer, $question->options ?? [], $multiple);
+            if ($answer === null) {
+                throw ValidationException::withMessages(['answer' => 'Pilihan jawaban tidak tersedia untuk soal ini.']);
             }
         } elseif ($answer === '' || mb_strlen($answer) > 10000) {
             throw ValidationException::withMessages(['answer' => 'Jawaban wajib diisi dan maksimal 10.000 karakter.']);
         }
 
+        $correct = $choice ? $answer === $question->correct_answer : null;
         $saved = ExamAnswer::query()->updateOrCreate(
-            [
-                'exam_attempt_id' => $attempt->id,
-                'exam_question_id' => $question->id,
-            ],
+            $lookup,
             [
                 'answer' => $answer,
-                'is_correct' => $question->question_type === ExamQuestionType::MultipleChoice
-                    ? $answer === $question->correct_answer
-                    : null,
-                'points_awarded' => $question->question_type === ExamQuestionType::MultipleChoice
-                    ? ($answer === $question->correct_answer ? ExamScoreCalculator::MULTIPLE_CHOICE_POINTS : 0)
-                    : null,
+                'is_correct' => $correct,
+                'points_awarded' => $choice ? ($correct ? ExamScoreCalculator::MULTIPLE_CHOICE_POINTS : 0) : null,
                 'graded_by_user_id' => null,
                 'graded_at' => null,
                 'answered_at' => now(),

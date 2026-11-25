@@ -4,6 +4,7 @@
     $typeValue = old('question_type', $question?->question_type->value ?? $questionTypes[0]->value);
     $format = old('text_format', $question?->text_format ?? 'plain');
     $multipleChoice = $typeValue === 'multiple_choice';
+    $keys = (array) old('correct_answers', $errors->has('correct_answers') ? [] : str_split($question?->correct_answer ?? ''));
     $points = old('points', $question?->question_type->requiresManualGrading() ? $question->points : null);
 @endphp
 
@@ -31,16 +32,20 @@
                     :disabled="! $multipleChoice" class="w-full text-xs text-slate-400" />
             </div>
         @endforeach
-        <label class="block text-sm text-slate-300">Kunci jawaban
-            <select name="correct_answer" @required($multipleChoice) @disabled(! $multipleChoice)
-                class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
-                <option value="">Pilih jawaban benar</option>
+        <fieldset class="space-y-2 rounded-xl border border-white/10 p-3">
+            <legend class="px-1 text-sm font-semibold text-slate-200">Kunci jawaban</legend>
+            <p class="text-sm text-slate-400">Centang satu kunci untuk PG biasa. Centang beberapa jika soal memiliki lebih dari satu jawaban benar.</p>
+            <div class="flex flex-wrap gap-2">
                 @foreach (['A', 'B', 'C', 'D', 'E'] as $option)
-                    <option value="{{ $option }}" @selected(old('correct_answer', $question?->correct_answer) === $option)>Pilihan {{ $option }}</option>
+                    <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm text-slate-200">
+                        <input type="checkbox" name="correct_answers[]" value="{{ $option }}" @checked(in_array($option, $keys, true)) @disabled(! $multipleChoice) class="accent-cyan-500">
+                        {{ $option }}
+                    </label>
                 @endforeach
-            </select>
-        </label>
-        <p class="text-xs text-slate-400">Setiap jawaban PG yang benar bernilai 2 poin. Lampiran pilihan dapat berupa gambar atau PDF hingga 5 MB.</p>
+            </div>
+            @error('correct_answers') <p class="text-xs text-rose-300" role="alert">Centang minimal satu kunci jawaban.</p> @enderror
+        </fieldset>
+        <p class="text-xs text-slate-400">Setiap soal PG bernilai 2 poin jika pilihan siswa sama dengan kunci. Lampiran pilihan dapat berupa gambar atau PDF hingga 5 MB.</p>
     </div>
     <label data-question-manual-points @if ($multipleChoice) hidden @endif class="block text-sm text-slate-300">Bobot maksimal soal
         <input type="number" name="points" min="0.01" max="1000" step="0.01" required @disabled($multipleChoice)
@@ -54,4 +59,4 @@
         @endif
     </div>
 </form>
-<script src="{{ asset('js/question-bank-form.js') }}" defer></script>
+<script src="{{ asset('js/question-bank-form.js') }}?v=2" defer></script>

@@ -18,10 +18,19 @@ function element(extra = {}) {
         addEventListener(name, listener) { this.listeners[name] = listener; }, ...extra };
 }
 
-function setup({trial = false, oldBrowser = false, written = false, grouped = false, essayOnlyAfterPg = false, resumed = false} = {}) {
+function setup({trial = false, oldBrowser = false, written = false, grouped = false, essayOnlyAfterPg = false, resumed = false, multiple = false} = {}) {
     const button = element();
     const form = element({ hidden: false, submissions: 0, dataset: { questionCount: written ? '2' : '1' }, submit() { this.submissions++; }, querySelector: () => button });
     const inputs = ['A', 'B', 'C'].map(value => element({ type: 'radio', value, checked: value === 'A', dataset: { saveUrl: '/answer/1' } }));
+    const selectionValue = { value: '' };
+    if (multiple) {
+        const group = {
+            querySelector: () => trial ? selectionValue : null,
+            querySelectorAll: () => inputs.filter(input => input.checked),
+        };
+        inputs.forEach(input => Object.assign(input, {type: 'checkbox', checked: false, closest: () => group}));
+    }
+
     const sections = [];
     if (grouped) {
         inputs[0].checked = resumed;
@@ -73,7 +82,7 @@ function setup({trial = false, oldBrowser = false, written = false, grouped = fa
         fetch: (url, options) => new Promise(resolve => requests.push({ url, options, resolve })),
     });
     const click = { preventDefault() {} };
-    return { inputs, nodes, form, requests, window, dialog, button, cancel, sections,
+    return { inputs, selectionValue, nodes, form, requests, window, dialog, button, cancel, sections,
         open: () => form.listeners.submit(click), confirm: () => confirm.listeners.click(),
         block() { blocked = true; window.listeners['examsecurity:blocked'](); },
         expire() { elapsed = 60001; tick(); } };
@@ -222,6 +231,42 @@ for (const trial of [false, true]) {
         assert.equal(page.window.examAutoSubmit, false);
         assert.equal(page.form.submissions, 0);
         assert.equal(page.requests.length, 0);
+    });
+
+    test(`${trial ? 'trial' : 'core'} saves the full checkbox selection and clears an unanswered question`, async () => {
+        const page = setup({trial, multiple: true});
+        page.open();
+        assert.equal(page.dialog.hidden, true);
+        assert.match(page.nodes['exam-submit-message'].textContent, /1 soal yang belum terjawab/);
+        const [first, , third] = page.inputs;
+        third.checked = true;
+        third.listeners.change();
+        first.checked = true;
+        first.listeners.change();
+        assert.deepEqual(JSON.parse(page.requests[0].options.body), {answer: 'C'});
+        page.requests[0].resolve(ok);
+        await settle();
+        assert.deepEqual(JSON.parse(page.requests[1].options.body), {answer: 'AC'});
+        if (trial) assert.equal(page.selectionValue.value, 'AC');
+        page.requests[1].resolve(ok);
+        await settle();
+        page.open();
+        assert.equal(page.dialog.hidden, false);
+        page.cancel.listeners.click({preventDefault() {}});
+
+        third.checked = false;
+        third.listeners.change();
+        first.checked = false;
+        first.listeners.change();
+        page.requests[2].resolve(ok);
+        await settle();
+        assert.deepEqual(JSON.parse(page.requests[3].options.body), {answer: ''});
+        if (trial) assert.equal(page.selectionValue.value, '');
+        page.requests[3].resolve(ok);
+        await settle();
+        page.open();
+        assert.equal(page.dialog.hidden, true);
+        assert.match(page.nodes['exam-submit-message'].textContent, /1 soal yang belum terjawab/);
     });
 
     test(`${trial ? 'trial' : 'core'} saves answers when AbortController is unavailable`, async () => {

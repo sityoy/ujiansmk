@@ -97,6 +97,7 @@
                         @endfor
                     @endunless
                 @else
+                    <p>{{ \App\Services\Exams\MultipleChoiceAnswers::allowsMultiple($question->correct_answer) ? 'Pilih semua jawaban yang benar.' : 'Pilih satu jawaban.' }}</p>
                     <div class="options">
                         @foreach (collect($question->options)->sortKeys() as $letter => $answer)
                             <div class="option">
@@ -129,7 +130,7 @@
                             <tr>
                                 <td>{{ $question->position }}</td>
                                 <td>{{ $question->question_type->label() }}</td>
-                                <td>{{ $question->question_type->requiresManualGrading() ? 'Koreksi manual' : ($question->correct_answer ?? '—') }}</td>
+                                <td>{{ $question->question_type->requiresManualGrading() ? 'Koreksi manual' : \App\Services\Exams\MultipleChoiceAnswers::label($question->correct_answer) }}</td>
                                 <td>{{ $question->question_type->requiresManualGrading() ? (float) $question->points : \App\Services\Exams\ExamScoreCalculator::MULTIPLE_CHOICE_POINTS }}</td>
                             </tr>
                         @endforeach

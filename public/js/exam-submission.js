@@ -1,7 +1,19 @@
+function examAnswerValue(input) {
+    if (input.type !== 'checkbox') return input.value;
+
+    const group = input.closest('[data-multiple-answer]');
+    const answer = [...group.querySelectorAll('input[type="checkbox"]:checked')].map(choice => choice.value).sort().join('');
+    const value = group.querySelector('[data-choice-value]');
+    if (value) value.value = answer;
+
+    return answer;
+}
+
 function countUnansweredExamQuestions(inputs, questionCount) {
     const answered = new Set();
     inputs.forEach(input => {
-        if (input.type === 'radio' ? input.checked : input.value.trim() !== '') {
+        const isChoice = input.type === 'radio' || input.type === 'checkbox';
+        if (isChoice ? input.checked : input.value.trim() !== '') {
             answered.add(input.dataset.saveUrl ?? input.name);
         }
     });

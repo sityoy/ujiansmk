@@ -12,6 +12,7 @@ use App\Models\SchoolProfile;
 use App\Services\Exams\CoreQuestionBank;
 use App\Services\Exams\CoreQuestionBankCatalog;
 use App\Services\Exams\ExamScoreCalculator;
+use App\Services\Exams\MultipleChoiceAnswers;
 use App\Services\Exams\QuestionPdfImport;
 use App\Services\Exams\QuestionText;
 use App\Services\Students\StudentSpreadsheetService;
@@ -341,7 +342,7 @@ class QuestionBankController extends Controller
             $this->questionText->plainText($question->options['C'] ?? '', $question->text_format),
             $this->questionText->plainText($question->options['D'] ?? '', $question->text_format),
             $this->questionText->plainText($question->options['E'] ?? '', $question->text_format),
-            $question->correct_answer,
+            MultipleChoiceAnswers::label($question->correct_answer),
             number_format($weight, 4, '.', ''),
             $question->question_image_path ? Storage::url($question->question_image_path) : '',
             $this->questionText->plainText($question->statement, $question->text_format),
@@ -546,7 +547,7 @@ class QuestionBankController extends Controller
             'option_c' => ['required_if:question_type,multiple_choice', 'nullable', 'string', 'max:20000'],
             'option_d' => ['required_if:question_type,multiple_choice', 'nullable', 'string', 'max:20000'],
             'option_e' => ['required_if:question_type,multiple_choice', 'nullable', 'string', 'max:20000'],
-            'correct_answer' => ['required_if:question_type,multiple_choice', 'nullable', Rule::in(['A', 'B', 'C', 'D', 'E'])],
+            ...MultipleChoiceAnswers::bankRules(),
             'question_image' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
             'option_file_a' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
             'option_file_b' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
@@ -575,7 +576,8 @@ class QuestionBankController extends Controller
                 'D' => trim($validated['option_d']),
                 'E' => trim($validated['option_e']),
             ] : null,
-            'correct_answer' => $isMultipleChoice ? $validated['correct_answer'] : null,
+            'correct_answer' => $isMultipleChoice
+                ? MultipleChoiceAnswers::key($validated['correct_answers'] ?? [$validated['correct_answer']]) : null,
             'points' => $isMultipleChoice ? ExamScoreCalculator::MULTIPLE_CHOICE_POINTS : $validated['points'],
         ];
     }

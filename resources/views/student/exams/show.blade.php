@@ -23,7 +23,7 @@
                     <p class="mt-3 text-sm leading-6 text-slate-300">Jika ada gambar soal atau pilihan jawaban, ketuk Perbesar / Perkecil gambar di bawah gambar tersebut.</p>
                     <p class="mt-3 text-sm leading-6 text-amber-200">Waktu sedang berjalan, termasuk saat peringatan muncul atau ujian terkunci. Jika ada masalah, panggil pengawas dan biarkan ujian tetap terbuka.</p>
                     @php($pgCount = $questions->filter(fn ($question) => $question->question_type->value === 'multiple_choice')->count())
-                    @if ($pgCount > 0)<p class="mt-3 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.06] p-3 text-sm text-cyan-100">Setiap jawaban PG benar bernilai tetap <strong>2 poin</strong>. Nilai PG maksimal 100.</p>@endif
+                    @if ($pgCount > 0)<p class="mt-3 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.06] p-3 text-sm text-cyan-100">Setiap soal PG bernilai <strong>2 poin</strong> jika pilihan sesuai kunci. Nilai PG maksimal 100.</p>@endif
                     <x-exam-device-preparation />
                     <button id="security-continue" type="button" class="mt-6 w-full rounded-xl bg-cyan-400 px-5 py-3 font-semibold text-slate-950">Saya paham, masuk mode ujian</button>
                     <p id="security-network" aria-live="polite" class="mt-3 text-sm text-amber-300"></p>
@@ -92,7 +92,7 @@
         <x-exam-image-dialog />
     </fieldset>
 
-    <script src="{{ asset('js/exam-submission.js') }}?v=4"></script>
+    <script src="{{ asset('js/exam-submission.js') }}?v=5"></script>
     <script>
         const csrf = document.querySelector('meta[name="csrf-token"]').content;
         // Base the countdown on server time, not the student's system clock.
@@ -147,7 +147,7 @@
 
         const queueAnswer = (input) => {
             if (window.examSecurity?.isBlocked()) return;
-            pending.set(input.dataset.saveUrl, input.value);
+            pending.set(input.dataset.saveUrl, examAnswerValue(input));
             flushAnswers();
         };
         const textTimers = new Map();

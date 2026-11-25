@@ -22,6 +22,8 @@ class QuestionPdfImport
     private const HEADING_PATTERN = '/^\h*(?:Soal\h+(\d{1,4})(?:\h*[·–:-]\h*(Pilihan Ganda|Isian Singkat|Esai))?|'
         .'(\d{1,4})\h*\/\h*[^\r\n]+)\h*$/miu';
 
+    private const ANSWER_KEY_PATTERN = '[A-E](?:\h*,\h*[A-E]){0,4}';
+
     public function __construct(private readonly QuestionPdfImages $pdfImages) {}
 
     public function prepare(Request $request, string $bank, array $allowedTypes, bool $allowWrittenStatement = true): array
@@ -167,18 +169,18 @@ class QuestionPdfImport
 
     private function parseKey(string $text): array
     {
-        preg_match_all('/^\s*(\d{1,4})\s*(?:\/|[.):])\s*([A-E])(?:$|\s*\/)/mi', $text, $matches, PREG_SET_ORDER);
+        preg_match_all('/^\h*(\d{1,4})\h*(?:\/|[.):])\h*('.self::ANSWER_KEY_PATTERN.')\h*(?:$|\/)/mi', $text, $matches, PREG_SET_ORDER);
         $keys = [];
-        foreach ($matches as [, $number, $letter]) {
+        foreach ($matches as [, $number, $key]) {
             $number = (int) $number;
-            $letter = strtoupper($letter);
-            if (isset($keys[$number]) && $keys[$number] !== $letter) {
+            $key = $this->parseAnswerKey($key, $number);
+            if (isset($keys[$number]) && $keys[$number] !== $key) {
                 $this->invalid($number, 'Kunci pada PDF pendamping bertentangan.');
             }
-            $keys[$number] = $letter;
+            $keys[$number] = $key;
         }
         if ($keys === []) {
-            throw ValidationException::withMessages(['key_pdf' => 'Kunci tidak terbaca. Tulis tiap kunci pada baris tersendiri, misalnya 1. C.']);
+            throw ValidationException::withMessages(['key_pdf' => 'Kunci tidak terbaca. Tulis kunci pada baris tersendiri untuk tiap soal, misalnya 1. C atau 1. A, C.']);
         }
 
         return $keys;
@@ -240,11 +242,12 @@ class QuestionPdfImport
                     $this->invalid($number, 'Pilihan '.$field.' berulang.');
                 }
                 $fields[$field] = [$match[2]];
-            } elseif (preg_match('/^Kunci\s*:\s*([A-E])$/iu', $line, $match)) {
-                if ($inlineKey !== null || ($fileKey !== null && $fileKey !== strtoupper($match[1]))) {
+            } elseif (preg_match('/^Kunci\h*:\h*('.self::ANSWER_KEY_PATTERN.')$/iu', $line, $match)) {
+                $key = $this->parseAnswerKey($match[1], $number);
+                if ($inlineKey !== null || ($fileKey !== null && $fileKey !== $key)) {
                     $this->invalid($number, 'Kunci ganda atau tidak cocok dengan PDF pendamping.');
                 }
-                $inlineKey = strtoupper($match[1]);
+                $inlineKey = $key;
             } elseif (preg_match('/^Bobot\s*:\s*(\d+(?:[.,]\d{1,2})?)$/iu', $line, $match)) {
                 $points = (float) str_replace(',', '.', $match[1]);
             } elseif (preg_match('/^(Kunci|Bobot)\h*:/iu', $line)) {
@@ -266,7 +269,7 @@ class QuestionPdfImport
         $key = $inlineKey ?? $fileKey;
         if ($type === ExamQuestionType::MultipleChoice) {
             if (count($options) !== 5 || $key === null) {
-                $this->invalid($number, 'Pilihan A–E dan satu kunci wajib diisi.');
+                $this->invalid($number, 'Pilihan A–E dan minimal satu kunci wajib diisi.');
             }
             $points = ExamScoreCalculator::MULTIPLE_CHOICE_POINTS;
         } elseif ($options !== [] || $key !== null || $points === null || $points < 0.01 || $points > 1000) {
@@ -282,6 +285,16 @@ class QuestionPdfImport
             'correct_answer' => $key,
             'points' => $points,
         ];
+    }
+
+    private function parseAnswerKey(string $key, int $number): string
+    {
+        $letters = preg_split('/\h*,\h*/u', strtoupper($key));
+        if (count(array_unique($letters)) !== count($letters)) {
+            $this->invalid($number, 'Pilihan pada kunci jawaban tidak boleh berulang.');
+        }
+
+        return MultipleChoiceAnswers::key($letters);
     }
 
     private function invalid(int $number, string $message): never

@@ -72,7 +72,7 @@
             </div>
         </div>
         <x-exam-image-dialog />
-        <script src="{{ asset('js/exam-submission.js') }}?v=4"></script>
+        <script src="{{ asset('js/exam-submission.js') }}?v=5"></script>
         <script>
             (() => {
                 const answerSelector = '[data-preview-answer]';

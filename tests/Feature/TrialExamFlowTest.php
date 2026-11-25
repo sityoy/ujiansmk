@@ -45,6 +45,35 @@ class TrialExamFlowTest extends TestCase
         $this->travelTo(Carbon::parse('2026-11-05 10:00:00'));
     }
 
+    public function test_trial_multiple_choice_keys_work_in_bank_autosave_and_submission(): void
+    {
+        [$trial, $question] = $this->makeTrial();
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $this->actingAs($admin)->put(route('trial-question-banks.questions.update', [$trial->questionBank, $question]), [
+            'question_type' => 'multiple_choice', 'question_text' => 'Pilih dua tanggal yang benar.',
+            'option_a' => 'Tanggal A', 'option_b' => 'Tanggal B', 'option_c' => 'Tanggal C',
+            'option_d' => 'Tanggal D', 'option_e' => 'Tanggal E', 'correct_answers' => ['E', 'B'],
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('BE', $question->fresh()->correct_answer);
+
+        $student = Student::query()->sole()->user;
+        $this->actingAs($student)->startTrial($trial, ['access_code' => $trial->access_code])->assertRedirect();
+        $attempt = $trial->currentAttempts()->sole();
+        $answer = route('tryout.answer', [$trial, $attempt, $question]);
+        $show = route('tryout.show', [$trial, $attempt]);
+        $submit = route('tryout.submit', [$trial, $attempt]);
+        $this->get($show)->assertOk()
+            ->assertSee('Pilih semua jawaban yang benar. Centang minimal satu pilihan.')
+            ->assertSee('type="checkbox" name="selection_'.$question->id.'"', false);
+        $this->putJson($answer, ['answer' => 'EB'])->assertOk();
+        $this->assertSame('BE', $attempt->answers()->sole()->answer);
+        $this->putJson($answer, ['answer' => ''])->assertOk();
+        $this->assertFalse($attempt->answers()->exists());
+        $this->from($show)->post($submit, ['answers' => [$question->id => '']])->assertSessionHasErrors('submission');
+        $this->post($submit, ['answers' => [$question->id => 'EB']])->assertRedirect(route('tryout.result', [$trial, $attempt]));
+        $this->assertSame('2.00', $attempt->fresh()->score);
+    }
+
     public function test_trial_exam_uses_strict_security_lists_participants_and_hides_scores(): void
     {
         [$trial, $question] = $this->makeTrial();
@@ -55,7 +84,7 @@ class TrialExamFlowTest extends TestCase
             ->assertSeeInOrder(['Peringatan sebelum memulai ujian', 'Siapkan NIS atau NISN milik sendiri', 'Jangan tarik bilah notifikasi', 'Pelanggaran kedua', 'Saya sudah membaca dan memahami aturan'])
             ->assertSee('required aria-describedby="trial-exam-rules-title"', false)
             ->assertSee('Absensi lokasi sebelum ujian')
-            ->assertSee('Setiap jawaban PG benar bernilai tetap 2 poin')
+            ->assertSee('Setiap soal PG bernilai 2 poin jika pilihan sesuai kunci')
             ->assertSee('Nama peserta diambil otomatis dari data siswa');
 
         $this->startTrial($trial, [
@@ -301,7 +330,7 @@ class TrialExamFlowTest extends TestCase
         $file = UploadedFile::fake()->create('soal.pdf', 5, 'application/pdf');
         $key = UploadedFile::fake()->create('kunci.pdf', 5, 'application/pdf');
         $outputs = [
-            "01 / C / Matematika\n",
+            "01 / E, C / Matematika\n",
             "01 / Matematika\nBerapa 2 + 3?\nA. 2\nB. 3\nC. 5\nD. 6\nE. 7\n",
         ];
         Process::fake([
@@ -311,14 +340,14 @@ class TrialExamFlowTest extends TestCase
             '*pdfimages*' => Process::result(),
         ]);
         $preview = $this->actingAs($admin)->post($url, ['pdf' => $file, 'key_pdf' => $key])->assertOk()
-            ->assertSee('Berapa 2 + 3?')->assertSee('Kunci C');
+            ->assertSee('Berapa 2 + 3?')->assertSee('Kunci C, E');
         $confirmation = ['import_token' => $preview->viewData('token'), 'confirm_import' => '1'];
         $bank->forceFill(['question_deadline_at' => now()->subMinute()])->save();
         $this->from($url)->post($url, $confirmation)->assertSessionHasErrors('question');
         $this->assertSame(1, $bank->questions()->count());
         $bank->forceFill(['question_deadline_at' => null])->save();
         $this->post($url, $confirmation)->assertRedirect()->assertSessionHasNoErrors();
-        $this->assertSame('C', $bank->questions()->where('position', 2)->sole()->correct_answer);
+        $this->assertSame('CE', $bank->questions()->where('position', 2)->sole()->correct_answer);
     }
 
     public function test_trial_can_use_only_essays_and_grade_a_blank_expired_response(): void

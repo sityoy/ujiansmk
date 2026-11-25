@@ -31,7 +31,7 @@
                 data-trial-attendance-url="{{ route('tryout.attendance', $trialExam) }}">
                 @csrf
                 @if ($pgCount > 0)
-                    <p class="text-sm text-slate-300">Setiap jawaban PG benar bernilai tetap 2 poin. Nilai PG maksimal 100.</p>
+                    <p class="text-sm text-slate-300">Setiap soal PG bernilai 2 poin jika pilihan sesuai kunci. Nilai PG maksimal 100.</p>
                 @endif
                 @if ($shortCount > 0 || $essayCount > 0)
                     <p class="text-sm text-slate-300">{{ collect([

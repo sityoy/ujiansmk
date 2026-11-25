@@ -11,6 +11,7 @@ use App\Models\TrialQuestion;
 use App\Models\TrialQuestionBank;
 use App\Models\User;
 use App\Services\Exams\ExamScoreCalculator;
+use App\Services\Exams\MultipleChoiceAnswers;
 use App\Services\Exams\QuestionPdfImport;
 use App\Services\Exams\QuestionText;
 use App\Services\Exams\TrialQuestionBankArchive;
@@ -308,7 +309,7 @@ class TrialQuestionBankController extends Controller
             $this->questionText->plainText($question->options['C'] ?? '', $question->text_format),
             $this->questionText->plainText($question->options['D'] ?? '', $question->text_format),
             $this->questionText->plainText($question->options['E'] ?? '', $question->text_format),
-            $question->correct_answer,
+            MultipleChoiceAnswers::label($question->correct_answer),
             number_format((float) $question->points, 4, '.', ''),
             $question->question_image_path ? Storage::url($question->question_image_path) : '',
             $this->questionText->plainText($question->statement, $question->text_format),
@@ -469,7 +470,7 @@ class TrialQuestionBankController extends Controller
             'option_c' => ['exclude_unless:question_type,multiple_choice', 'required', 'string', 'max:20000'],
             'option_d' => ['exclude_unless:question_type,multiple_choice', 'required', 'string', 'max:20000'],
             'option_e' => ['exclude_unless:question_type,multiple_choice', 'required', 'string', 'max:20000'],
-            'correct_answer' => ['exclude_unless:question_type,multiple_choice', 'required', Rule::in(['A', 'B', 'C', 'D', 'E'])],
+            ...MultipleChoiceAnswers::bankRules(),
             'question_image' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
             'option_file_a' => ['exclude_unless:question_type,multiple_choice', 'nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
             'option_file_b' => ['exclude_unless:question_type,multiple_choice', 'nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
@@ -497,7 +498,8 @@ class TrialQuestionBankController extends Controller
                 'D' => trim($validated['option_d']),
                 'E' => trim($validated['option_e']),
             ] : null,
-            'correct_answer' => $validated['correct_answer'] ?? null,
+            'correct_answer' => $multipleChoice
+                ? MultipleChoiceAnswers::key($validated['correct_answers'] ?? [$validated['correct_answer']]) : null,
             'points' => $multipleChoice ? ExamScoreCalculator::MULTIPLE_CHOICE_POINTS : $validated['points'],
         ];
     }

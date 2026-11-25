@@ -12,7 +12,6 @@ use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class TrialExamAttemptService
@@ -66,15 +65,17 @@ class TrialExamAttemptService
                 404
             );
 
-            $normalized = $this->normalizeAnswer($question, $answer);
-            if ($normalized === null && ! $question->question_type->requiresManualGrading()) {
-                throw ValidationException::withMessages(['answer' => 'Pilihan jawaban tidak tersedia.']);
-            }
+            $lookup = ['trial_attempt_id' => $attempt->id, 'trial_question_id' => $question->id];
+            if (trim($answer) === '' && MultipleChoiceAnswers::allowsMultiple($question->correct_answer)) {
+                TrialAnswer::query()->where($lookup)->delete();
+            } else {
+                $normalized = $this->normalizeAnswer($question, $answer);
+                if ($normalized === null && ! $question->question_type->requiresManualGrading()) {
+                    throw ValidationException::withMessages(['answer' => 'Pilihan jawaban tidak tersedia untuk soal ini.']);
+                }
 
-            TrialAnswer::updateOrCreate(
-                ['trial_attempt_id' => $attempt->id, 'trial_question_id' => $question->id],
-                ['answer' => $normalized],
-            );
+                TrialAnswer::updateOrCreate($lookup, ['answer' => $normalized]);
+            }
             $attempt->update(['last_seen_at' => now()]);
         });
     }
@@ -189,9 +190,9 @@ class TrialExamAttemptService
             return $answer === '' ? null : $answer;
         }
 
-        $key = Str::upper($answer);
-
-        return array_key_exists($key, $question->options ?? []) ? $key : null;
+        return MultipleChoiceAnswers::normalize(
+            strtoupper($answer), $question->options ?? [], MultipleChoiceAnswers::allowsMultiple($question->correct_answer),
+        );
     }
 
     private function assertWritable(TrialAttempt $attempt): void

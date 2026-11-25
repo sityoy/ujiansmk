@@ -52,6 +52,41 @@ class StudentExamFlowTest extends TestCase
         $this->travelTo(Carbon::parse('2026-09-04 10:00:00'));
     }
 
+    public function test_core_multiple_choices_require_a_selection_and_only_score_the_exact_set(): void
+    {
+        [$user, $assignment, [$multi, $single]] = $this->makeExam();
+        $multi->update(['correct_answer' => 'AC']);
+        $attempt = $this->startAttempt($assignment);
+        $this->actingAs($user)->withSession(['exam_device_token' => str_repeat('a', 64)]);
+        $answer = route('student.exams.answer', [$attempt, $multi]);
+        $singleAnswer = route('student.exams.answer', [$attempt, $single]);
+        $show = route('student.exams.show', $attempt);
+
+        $this->get($show)->assertOk()->assertSee('Pilih semua jawaban yang benar. Centang minimal satu pilihan.')
+            ->assertSee('Pilih satu jawaban.')->assertSee('data-multiple-answer', false)
+            ->assertSee('type="checkbox" name="selection_'.$multi->id.'"', false);
+        $this->putJson($singleAnswer, ['answer' => 'BC'])->assertUnprocessable()->assertJsonValidationErrors('answer');
+        $this->putJson($singleAnswer, ['answer' => 'B'])->assertOk();
+        $this->putJson($answer, ['answer' => 'AA'])->assertUnprocessable()->assertJsonValidationErrors('answer');
+        $this->putJson($answer, ['answer' => 'A'])->assertOk();
+        $this->assertSame('0.00', $attempt->answers()->where('exam_question_id', $multi->id)->sole()->points_awarded);
+        $this->putJson($answer, ['answer' => 'ABC'])->assertOk();
+        $this->assertSame('0.00', $attempt->answers()->where('exam_question_id', $multi->id)->sole()->points_awarded);
+        $this->putJson($answer, ['answer' => ''])->assertOk();
+        $this->assertFalse($attempt->answers()->where('exam_question_id', $multi->id)->exists());
+        $this->from($show)->post(route('student.exams.submit', $attempt))->assertSessionHasErrors('submission');
+
+        $this->putJson($answer, ['answer' => 'CA'])->assertOk();
+        $card = $this->get($show)->assertOk();
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="UTF-8">'.$card->getContent());
+        $xpath = new \DOMXPath($dom);
+        $this->assertSame(2, $xpath->query('//fieldset[@data-multiple-answer]//input[@checked]')->length);
+        $this->assertSame('AC', $attempt->answers()->where('exam_question_id', $multi->id)->sole()->answer);
+        $this->post(route('student.exams.submit', $attempt))->assertRedirect(route('student.exams.result', $attempt));
+        $this->assertSame('4.00', $attempt->fresh()->score);
+    }
+
     public function test_student_can_check_in_start_autosave_and_submit_an_exam(): void
     {
         [$user, $assignment, $questions] = $this->makeExam();

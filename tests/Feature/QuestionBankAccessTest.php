@@ -144,6 +144,34 @@ class QuestionBankAccessTest extends TestCase
             ->assertSee('Kunci Jawaban · Pegangan Guru')->assertSee('<td>E</td>', false);
     }
 
+    public function test_teacher_can_configure_multiple_keys_and_save_only_one_for_regular_pg(): void
+    {
+        $this->withoutVite();
+        [$teacher, , $assigned] = $this->makeComponents();
+        $assigned->assessmentPeriod()->update(['type' => AssessmentType::ASAS]);
+        $store = route('scheduling.questions.store', $assigned);
+        $payload = [
+            'question_type' => ExamQuestionType::MultipleChoice->value, 'question_text' => 'Pilih bilangan genap.',
+            'option_a' => '2', 'option_b' => '3', 'option_c' => '4', 'option_d' => '5', 'option_e' => '7',
+        ];
+        $this->actingAs($teacher)->post($store, $payload)->assertSessionHasErrors('correct_answers');
+        $this->post($store, $payload + ['correct_answers' => ['A', 'A']])->assertSessionHasErrors('correct_answers.0');
+        $this->post($store, $payload + ['correct_answers' => ['C', 'A']])->assertSessionHasNoErrors();
+        $question = $assigned->questions()->sole();
+        $this->assertSame('AC', $question->correct_answer);
+        $this->get(route('scheduling.questions.edit', [$assigned, $question]))->assertOk()
+            ->assertSee('name="correct_answers[]" value="A" checked', false)
+            ->assertSee('name="correct_answers[]" value="C" checked', false);
+        $this->get(route('scheduling.questions.pdf', [$assigned, 'kunci' => 1]))->assertOk()
+            ->assertSee('Pilih semua jawaban yang benar.')->assertSee('<td>A, C</td>', false);
+
+        $this->put(route('scheduling.questions.update', [$assigned, $question]), $payload + ['correct_answers' => ['A']])
+            ->assertSessionHasNoErrors();
+        $this->assertSame('A', $question->fresh()->correct_answer);
+        $this->get(route('scheduling.questions.preview', [$assigned, 'soal' => $question->id]))->assertOk()
+            ->assertSee('Pilih satu jawaban.')->assertDontSee('data-multiple-answer', false);
+    }
+
     public function test_pdf_import_reviews_then_appends_once_and_respects_bank_access_and_type(): void
     {
         $this->withoutVite();
@@ -161,7 +189,7 @@ B. 2
 C. 3
 D. 5
 E. 7
-Kunci: B
+Kunci: E, B
 Soal 2 · Esai
 Pertanyaan: Jelaskan cara menentukan bilangan genap.
 Bobot: 7
@@ -191,7 +219,7 @@ XML);
         $assigned->assessmentPeriod()->update(['type' => AssessmentType::ASAS]);
         $assigned->questions()->create(['position' => 1, 'question_type' => 'essay', 'question_text' => 'Soal yang sudah ada.', 'points' => 3]);
         $preview = $this->post($url, ['pdf' => $file])->assertOk()
-            ->assertSee('Simpan 2 soal')->assertSee('Kunci B')->assertSee('1 gambar siap diimpor')
+            ->assertSee('Simpan 2 soal')->assertSee('Kunci B, E')->assertSee('1 gambar siap diimpor')
             ->assertSeeInOrder(['Soal 2 · Esai', 'alt="Gambar soal 2"'], false)
             ->assertDontSee('alt="Gambar soal 1"', false);
         $this->assertCount(0, Storage::disk('public')->allFiles());
@@ -202,7 +230,7 @@ XML);
         $this->assertSame(['Soal yang sudah ada.', 'Manakah angka genap?', 'Jelaskan cara menentukan bilangan genap.'], $assigned->questions()->pluck('question_text')->all());
         $first = $assigned->questions()->where('position', 2)->sole();
         $second = $assigned->questions()->where('position', 3)->sole();
-        $this->assertSame('B', $first->correct_answer);
+        $this->assertSame('BE', $first->correct_answer);
         $this->assertNull($first->question_image_path);
         Storage::disk('public')->assertExists($second->question_image_path);
         $this->assertCount(0, Storage::disk('local')->allFiles('question-pdf-imports'));
