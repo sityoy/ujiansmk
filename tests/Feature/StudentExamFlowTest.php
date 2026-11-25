@@ -807,6 +807,10 @@ class StudentExamFlowTest extends TestCase
         $this->assertSame('100.00', $attempt->manual_score);
         $this->assertSame('52.00', $attempt->score);
         $this->assertLessThanOrEqual(100, (float) $attempt->score);
+        $component = $assignment->assessmentSubject;
+        $this->actingAs(User::factory()->create(['role' => UserRole::Committee]))
+            ->get(route('reports.exam-results.print', [$component->assessmentPeriod, $component->schoolClass]))
+            ->assertOk()->assertSee('Esai')->assertSee('100,00')->assertSee('52,00');
     }
 
     public function test_admin_can_reset_entire_attempt_with_audit_and_student_can_start_again(): void
@@ -1238,6 +1242,71 @@ class StudentExamFlowTest extends TestCase
         ];
     }
 
+    public function test_core_report_shows_each_score_and_recalculates_class_rank_after_essay_correction(): void
+    {
+        [, $assignment, [$multi, $single]] = $this->makeExam();
+        $component = $assignment->assessmentSubject;
+        $teacher = User::factory()->create(['role' => UserRole::Teacher]);
+        $component->update(['teacher_user_id' => $teacher->id]);
+        $component->schoolClass->update(['homeroom_teacher_user_id' => $teacher->id]);
+        $multi->update(['correct_answer' => 'AC']);
+        $short = $component->questions()->create([
+            'position' => 3, 'question_type' => ExamQuestionType::ShortAnswer, 'question_text' => 'Jawab dengan singkat.', 'points' => 4,
+        ]);
+        $essay = $component->questions()->create([
+            'position' => 4, 'question_type' => ExamQuestionType::Essay, 'question_text' => 'Jelaskan jawaban Anda.', 'points' => 6,
+        ]);
+        $attempt = $this->startAttempt($assignment);
+        $exams = app(ExamAttemptService::class);
+        $exams->saveAnswer($attempt, $multi, 'A');
+        $exams->saveAnswer($attempt, $single, 'B');
+        $exams->saveAnswer($attempt, $short, 'Jawaban singkat siswa');
+        $exams->saveAnswer($attempt, $essay, 'Penjelasan siswa');
+        $exams->submit($attempt);
+
+        $otherSubject = Subject::create(['code' => 'MTK2', 'name' => 'Matematika', 'is_active' => true]);
+        $otherComponent = $component->replicate()->fill(['subject_id' => $otherSubject->id]);
+        $otherComponent->save();
+        $otherSession = $assignment->examSession->replicate()->fill(['assessment_subject_id' => $otherComponent->id]);
+        $otherSession->save();
+        $sameStudent = $assignment->replicate()->fill([
+            'assessment_subject_id' => $otherComponent->id, 'exam_session_id' => $otherSession->id,
+        ]);
+        $sameStudent->save();
+        $secondStudent = $this->additionalParticipant($assignment->examSession, 'S-002', 'Peserta Lain');
+        $secondOther = $secondStudent->replicate()->fill([
+            'assessment_subject_id' => $otherComponent->id, 'exam_session_id' => $otherSession->id,
+        ]);
+        $secondOther->save();
+        foreach ([[$sameStudent, 83.5], [$secondStudent, 50], [$secondOther, 60]] as [$entry, $score]) {
+            $entry->attempt()->create([
+                'status' => AttemptStatus::Submitted, 'score' => $score,
+                'started_at' => now(), 'submitted_at' => now(), 'device_session_hash' => str_repeat('b', 64),
+            ]);
+        }
+
+        $report = route('reports.exam-results.print', [$component->assessmentPeriod, $component->schoolClass]);
+        $this->actingAs($teacher)->get(route('grading.show', $attempt))->assertOk()
+            ->assertSee('Nilai PG')->assertSee('3,00')->assertSee('Nilai Isian Singkat')->assertSee('Nilai Esai');
+        $this->put(route('grading.update', $attempt), ['scores' => [$short->id => 4, $essay->id => null]])
+            ->assertSessionHasNoErrors();
+        $this->assertNull($attempt->fresh()->score);
+        $before = $this->get($report)->assertOk()->assertSee('Menunggu koreksi')->assertSee('Sementara');
+        $row = $before->viewData('rows')->firstWhere('student.id', $assignment->student_id);
+        $this->assertSame(['multiple_choice' => 3.0, 'short_answer' => 100.0, 'essay' => null], $row['results'][$component->id]['components']);
+        $this->assertSame(83.5, $row['average']);
+        $this->assertNull($row['rank']);
+
+        $this->put(route('grading.update', $attempt), ['scores' => [$essay->id => 3]])->assertSessionHasNoErrors();
+        $after = $this->get($report)->assertOk()->assertDontSee('Menunggu koreksi');
+        $row = $after->viewData('rows')->firstWhere('student.id', $assignment->student_id);
+        $this->assertSame(['multiple_choice' => 3.0, 'short_answer' => 100.0, 'essay' => 50.0], $row['results'][$component->id]['components']);
+        $this->assertSame(36.5, $row['results'][$component->id]['final']);
+        $this->assertSame(60.0, $row['average']);
+        $this->assertSame(1, $row['rank']);
+        $this->assertSame(2, $after->viewData('rows')->firstWhere('student.id', $secondStudent->student_id)['rank']);
+    }
+
     public function test_core_score_print_groups_many_subjects_and_keeps_all_subjects_visible(): void
     {
         [, $assignment] = $this->makeExam();
@@ -1259,7 +1328,7 @@ class StudentExamFlowTest extends TestCase
         $tables = $xpath->query('//*[@data-print-content]//table');
         $this->assertCount(3, $tables);
         foreach ($tables as $table) {
-            $columns = $xpath->query('.//thead/tr/th', $table);
+            $columns = $xpath->query('.//tbody/tr[1]/td', $table);
             $this->assertLessThanOrEqual(12, $columns->length);
             $this->assertStringContainsString('Nama Peserta Didik', $table->textContent);
             $this->assertStringContainsString('Peserta Uji', $table->textContent);

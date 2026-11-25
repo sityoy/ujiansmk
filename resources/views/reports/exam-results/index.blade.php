@@ -13,7 +13,7 @@
     <section class="rounded-3xl border border-white/10 bg-white/[0.035] p-6 md:p-8">
         <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">ATS · ASAS · AAT · UUB · Lainnya</p>
         <h2 class="mt-2 text-2xl font-semibold text-white">Hasil seluruh periode ujian</h2>
-        <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-400">Pilih tahun pelajaran, jenis asesmen, dan status periode. Rekap mengambil nilai akhir yang sudah tersimpan pada pengerjaan peserta.</p>
+        <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-400">Pilih tahun pelajaran, jenis asesmen, dan status periode. Rekap menampilkan nilai PG, Isian Singkat, Esai, dan nilai akhir setiap mapel. Koreksi guru otomatis terlihat saat rekap dibuka kembali.</p>
 
         <form method="GET" class="mt-6 grid gap-3 rounded-2xl border border-white/10 bg-slate-950/40 p-4 md:grid-cols-4">
             <select name="academic_year_id" class="rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm">

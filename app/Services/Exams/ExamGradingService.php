@@ -33,13 +33,12 @@ class ExamGradingService
                 ]);
             }
 
+            if ($manualScore === null && array_intersect_key($scores, $manualQuestions->keyBy('id')->all()) === []) {
+                throw ValidationException::withMessages(['scores' => 'Isi minimal satu nilai jawaban tertulis sebelum menyimpan.']);
+            }
+
             foreach ($manualQuestions as $question) {
                 if (! array_key_exists($question->id, $scores)) {
-                    if ($manualScore === null) {
-                        throw ValidationException::withMessages([
-                            'scores.'.$question->id => 'Nilai soal '.$question->position.' wajib diisi.',
-                        ]);
-                    }
                     continue;
                 }
 
@@ -59,6 +58,10 @@ class ExamGradingService
             $attempt->load('answers');
             $answers = $attempt->answers->keyBy('exam_question_id');
             $calculator = app(ExamScoreCalculator::class);
+            if ($manualScore === null && ! $calculator->writtenGroupIsGraded($manualQuestions, $answers)) {
+                return $attempt;
+            }
+
             $manualComponent = $manualScore !== null
                 ? max(0, min(100, $manualScore))
                 : $calculator->manualComponentScore($questions, $answers);

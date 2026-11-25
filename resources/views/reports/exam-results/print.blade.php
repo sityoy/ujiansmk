@@ -19,11 +19,15 @@
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         th, td { border: 1px solid #94a3b8; padding: 5px; text-align: center; vertical-align: top; }
         th { background: #e2e8f0; font-size: 11px; }
-        th:nth-child(1) { width: 5%; }
-        th:nth-child(2) { width: 13%; }
-        th:nth-child(3) { width: 22%; }
-        th:nth-last-child(2) { width: 10%; }
-        th:last-child { width: 6%; }
+        .row-number { width: 5%; }
+        .identifier { width: 12%; }
+        .student-name { width: 20%; }
+        .average { width: 10%; }
+        .rank { width: 6%; }
+        .score-heading { font-size: 10px; overflow-wrap: anywhere; }
+        .final-score { background: #f1f5f9; font-weight: 700; }
+        .note, .pending { font-size: 10px; color: #475569; }
+        .pending { display: block; }
         td.name { text-align: left; }
         tr { break-inside: avoid; }
         .signature { width: 60mm; margin: 7mm 0 0 auto; text-align: center; line-height: 1.5; }
@@ -39,7 +43,7 @@
 </head>
 <body>
     <div class="toolbar"><span>{{ $period->name }} · {{ $schoolClass->name }}</span><x-print-actions filename="rekap-nilai-ujian-inti" landscape :margin="10" /></div>
-    @php($subjectPages = $subjects->isEmpty() ? collect([$subjects]) : $subjects->chunk(7))
+
     <main class="report-sheet" data-print-content>
     @foreach ($subjectPages as $subjectPage)
         <section class="results-section" data-print-break>
@@ -51,22 +55,83 @@
                 <strong>Tahun Ajaran</strong><span>: {{ $period->academicYear->name }}</span>
                 <strong>Jenis Asesmen</strong><span>: {{ $period->type->label() }}</span>
             </div>
-            @if ($subjectPages->count() > 1)
+            @if (count($subjectPages) > 1)
                 <p>Kelompok mata pelajaran {{ $loop->iteration }} dari {{ $loop->count }}</p>
             @endif
+            <p class="note">Rata-rata dihitung dari Nilai Akhir mapel yang selesai. Peringkat tersedia setelah nilai semua mapel lengkap.</p>
+            @php
+                $hasBreakdown = collect($subjectPage)->contains(fn ($group) => count($group['columns']) > 1);
+                $totalColumns = 5 + collect($subjectPage)->sum(fn ($group) => count($group['columns']));
+                $rowspan = $hasBreakdown ? 2 : 1;
+            @endphp
             <div class="table-wrap"><table>
-                <thead><tr><th>No.</th><th>NIS/NISN</th><th>Nama Peserta Didik</th>
-                    @foreach ($subjectPage as $subject)<th>{{ $subject->subject->name }}</th>@endforeach
-                    <th>Rata-rata</th><th>Rank</th>
-                </tr></thead>
+                <colgroup><col class="row-number"><col class="identifier"><col class="student-name"></colgroup>
+                @foreach ($subjectPage as $group)
+                    <colgroup span="{{ count($group['columns']) }}"></colgroup>
+                @endforeach
+                <colgroup><col class="average"><col class="rank"></colgroup>
+                <thead>
+                    <tr>
+                        <th class="row-number" scope="col" rowspan="{{ $rowspan }}">No.</th>
+                        <th class="identifier" scope="col" rowspan="{{ $rowspan }}">NIS/NISN</th>
+                        <th class="student-name" scope="col" rowspan="{{ $rowspan }}">Nama Peserta Didik</th>
+                        @foreach ($subjectPage as ['subject' => $subject, 'columns' => $columns])
+                            @if (count($columns) > 1)
+                                <th scope="colgroup" colspan="{{ count($columns) }}">{{ $subject->subject->name }}</th>
+                            @else
+                                <th scope="col" rowspan="{{ $rowspan }}">{{ $subject->subject->name }}</th>
+                            @endif
+                        @endforeach
+                        <th class="average" scope="col" rowspan="{{ $rowspan }}">Rata-rata</th>
+                        <th class="rank" scope="col" rowspan="{{ $rowspan }}">Rank</th>
+                    </tr>
+                    @if ($hasBreakdown)
+                        <tr>
+                            @foreach ($subjectPage as $group)
+                                @if (count($group['columns']) > 1)
+                                    @foreach ($group['columns'] as $key => $label)
+                                        <th scope="col" @class(['score-heading', 'final-score' => $key === 'final'])>{{ $label }}</th>
+                                    @endforeach
+                                @endif
+                            @endforeach
+                        </tr>
+                    @endif
+                </thead>
                 <tbody>
                     @forelse ($rows as $index => $row)
-                        <tr><td>{{ $index + 1 }}</td><td class="number">{{ $row['student']->student_number }}<br>{{ $row['student']->nisn ?? '—' }}</td><td class="name">{{ $row['student']->full_name }}</td>
-                            @foreach ($subjectPage as $subject)<td>{{ $row['scores'][$subject->id] === null ? '—' : number_format($row['scores'][$subject->id], 2, ',', '.') }}</td>@endforeach
-                            <td>{{ $row['average'] === null ? '—' : number_format($row['average'], 2, ',', '.') }}</td><td>{{ $row['rank'] ?? '—' }}</td>
+                        <tr>
+                            <td>{{ $index + 1 }}</td>
+                            <td class="number">{{ $row['student']->student_number }}<br>{{ $row['student']->nisn ?? '—' }}</td>
+                            <td class="name">{{ $row['student']->full_name }}</td>
+                            @foreach ($subjectPage as ['subject' => $subject, 'columns' => $columns])
+                                @php
+                                    $result = $row['results'][$subject->id] ?? null;
+                                @endphp
+                                @foreach ($columns as $key => $label)
+                                    @php
+                                        $final = $key === 'final';
+                                        $score = $final ? ($result['final'] ?? null) : ($result['components'][$key] ?? null);
+                                        $waiting = $result && $result['final'] === null && ($final || array_key_exists($key, $result['components']));
+                                    @endphp
+                                    <td @class(['final-score' => $final])>
+                                        @if ($score !== null)
+                                            {{ number_format($score, 2, ',', '.') }}
+                                        @elseif ($waiting)
+                                            <span class="pending">Menunggu koreksi</span>
+                                        @else
+                                            —
+                                        @endif
+                                    </td>
+                                @endforeach
+                            @endforeach
+                            <td>
+                                {{ $row['average'] === null ? '—' : number_format($row['average'], 2, ',', '.') }}
+                                @if ($row['average'] !== null && ! $row['complete'])<span class="pending">Sementara</span>@endif
+                            </td>
+                            <td>{{ $row['rank'] ?? '—' }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="{{ $subjectPage->count() + 5 }}">Belum ada peserta pada kelas ini.</td></tr>
+                        <tr><td colspan="{{ $totalColumns }}">Belum ada peserta pada kelas ini.</td></tr>
                     @endforelse
                 </tbody>
             </table></div>

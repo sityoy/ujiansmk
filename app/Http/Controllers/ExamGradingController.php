@@ -11,6 +11,7 @@ use App\Models\AssessmentPeriod;
 use App\Models\ExamAttempt;
 use App\Models\SchoolClass;
 use App\Services\Exams\ExamGradingService;
+use App\Services\Exams\ExamScoreCalculator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -74,17 +75,25 @@ class ExamGradingController extends Controller
         ]);
     }
 
-    public function show(Request $request, ExamAttempt $attempt): View
+    public function show(Request $request, ExamAttempt $attempt, ExamScoreCalculator $calculator): View
     {
         $this->authorizeGrader($request, $attempt);
         $attempt->load(['assignment.student', 'assignment.assessmentSubject.subject',
             'assignment.assessmentSubject.schoolClass', 'assignment.assessmentSubject.questions', 'answers']);
 
+        $questions = $attempt->assignment->assessmentSubject->questions;
+        $answers = $attempt->answers->keyBy('exam_question_id');
+
         return view('grading.show', [
             'attempt' => $attempt,
-            'questions' => $attempt->assignment->assessmentSubject->questions
-                ->filter(fn ($question) => $question->question_type->requiresManualGrading()),
-            'answers' => $attempt->answers->keyBy('exam_question_id'),
+            'questions' => $questions->filter(fn ($question) => $question->question_type->requiresManualGrading()),
+            'answers' => $answers,
+            'componentScores' => $calculator->componentScores(
+                $questions,
+                $answers,
+                $attempt->manual_score === null ? null : (float) $attempt->manual_score,
+                $attempt->score === null ? null : (float) $attempt->score,
+            ),
         ]);
     }
 
@@ -99,14 +108,16 @@ class ExamGradingController extends Controller
             'scores.*' => ['nullable', 'numeric', 'min:0'],
             'manual_score' => ['nullable', 'numeric', 'between:0,100', 'required_without:scores'],
         ]);
-        $grading->grade(
+        $graded = $grading->grade(
             $attempt,
             $request->user(),
             array_filter($validated['scores'] ?? [], fn ($value): bool => $value !== null && $value !== ''),
             isset($validated['manual_score']) ? (float) $validated['manual_score'] : null,
         );
 
-        return redirect()->route('grading.index')->with('status', 'Koreksi disimpan dan nilai akhir berhasil dihitung.');
+        return redirect()->route('grading.index')->with('status', $graded->score === null
+            ? 'Koreksi disimpan. Nilai akhir dihitung setelah seluruh bagian yang dinilai guru lengkap.'
+            : 'Koreksi disimpan dan nilai akhir tersedia di Hasil Ujian.');
     }
 
     private function authorizeGrader(Request $request, ExamAttempt $attempt): void
