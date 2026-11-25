@@ -231,6 +231,28 @@ class TrialQuestionBankController extends Controller
             ->whereNotNull('teacher_user_id')->select('teacher_user_id');
     }
 
+    public function print(Request $request, TrialQuestionBank $trialQuestionBank): Response
+    {
+        $this->authorizeBank($request, $trialQuestionBank);
+        $subject = $trialQuestionBank->subject->name;
+        $grade = $trialQuestionBank->grade_level;
+        $withKey = $request->boolean('kunci');
+        $returnPage = ['per_page' => TablePagination::selected(), 'page' => max(1, $request->integer('page', 1))];
+
+        return response()->view('questions.print', [
+            'school' => SchoolProfile::first(),
+            'bankType' => 'Ujian Uji Coba',
+            'title' => $trialQuestionBank->name,
+            'details' => [$subject, 'Kelas '.$grade],
+            'questions' => $trialQuestionBank->questions()->get(),
+            'withKey' => $withKey,
+            'trial' => true,
+            'filename' => 'bank-soal-uji-coba-'.Str::slug($trialQuestionBank->name).($withKey ? '-kunci' : ''),
+            'backUrl' => route('trial-question-banks.questions.index', [$trialQuestionBank, ...$returnPage]),
+            'modeUrl' => route('trial-question-banks.questions.pdf', [$trialQuestionBank, ...$returnPage, 'kunci' => $withKey ? null : 1]),
+        ])->header('Cache-Control', 'private, no-store')->header('X-Robots-Tag', 'noindex, nofollow');
+    }
+
     public function export(
         Request $request,
         TrialQuestionBank $trialQuestionBank,

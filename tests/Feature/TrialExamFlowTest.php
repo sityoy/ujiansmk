@@ -242,6 +242,9 @@ class TrialExamFlowTest extends TestCase
         $this->get(route('trial-question-banks.questions.index', $bank))->assertOk()
             ->assertSeeInOrder(['id="tambah-soal"', 'data-question-bank-form', 'id="bank-questions-title"'], false)
             ->assertSee('Esai · 10 poin')->assertSee('Lihat sebagai peserta');
+        $pdf = route('trial-question-banks.questions.pdf', [$bank, 'kunci' => 1]);
+        $this->get($pdf)->assertOk()->assertSee('Ujian Uji Coba')
+            ->assertSeeInOrder([$pg->question_text, $essay->question_text, 'Kunci Jawaban · Pegangan Guru', 'Koreksi manual', '<td>10</td>'], false);
 
         $preview = route('trial-question-banks.questions.preview', $bank);
         $this->get($preview)->assertOk()->assertSee('Pratinjau Ujian Uji Coba')
@@ -251,6 +254,7 @@ class TrialExamFlowTest extends TestCase
             ->assertSee($pg->question_text)->assertDontSee($essay->question_text)->assertSee('Simulasikan seluruh soal');
         $this->assertDatabaseCount('trial_attempts', 0);
         $this->actingAs($student->user)->get($preview)->assertForbidden();
+        $this->get($pdf)->assertForbidden();
         $this->actingAs($student->user)->startTrial($trial, ['access_code' => $trial->access_code])->assertRedirect();
         $attempt = $trial->currentAttempts()->sole();
         $show = route('tryout.show', [$trial, $attempt]);

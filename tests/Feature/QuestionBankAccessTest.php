@@ -50,7 +50,8 @@ class QuestionBankAccessTest extends TestCase
         $this->actingAs($teacher)
             ->get(route('scheduling.questions.index', $assigned))
             ->assertOk()
-            ->assertSee('10 isian × 3 poin + 10 esai × 7 poin = total 100');
+            ->assertSee('10 isian × 3 poin + 10 esai × 7 poin = total 100')
+            ->assertSee('Ketentuan &amp; Format Soal', false)->assertDontSee('Isi pilihan A sampai E');
 
         $this->post(route('scheduling.questions.store', $assigned), [
             'question_type' => ExamQuestionType::ShortAnswer->value,
@@ -73,6 +74,7 @@ class QuestionBankAccessTest extends TestCase
         $this->assertSame('7.00', $question->points);
 
         $this->get(route('scheduling.questions.index', $other))->assertForbidden();
+        $this->get(route('scheduling.questions.pdf', [$other, 'kunci' => 1]))->assertForbidden();
         $this->post(route('scheduling.questions.store', $other), [
             'question_type' => ExamQuestionType::Essay->value,
             'question_text' => 'Soal yang tidak boleh dibuat.',
@@ -118,6 +120,8 @@ class QuestionBankAccessTest extends TestCase
         $this->assertSame('E', $question->correct_answer);
         $this->assertNotNull($question->question_image_path);
         Storage::disk('public')->assertExists($question->question_image_path);
+        Storage::disk('public')->put('exam-options/lembar-dokumen.pdf', '%PDF-1.4');
+        $question->update(['option_file_paths' => ['E' => 'exam-options/lembar-dokumen.pdf']]);
         $this->actingAs($teacher)
             ->get(route('scheduling.questions.export', $assigned))
             ->assertOk()->assertDownload();
@@ -129,6 +133,14 @@ class QuestionBankAccessTest extends TestCase
             ->assertSee('data-question-file-preview', false)->assertSee('data-exam-image-zoom-in', false)
             ->assertSee('aria-label="Perbesar atau perkecil Gambar soal '.$question->position.'"', false)
             ->assertSeeInOrder([$question->statement, Storage::url($question->question_image_path), $question->question_text, 'Pilihan E']);
+
+        $this->get(route('scheduling.questions.pdf', $assigned))->assertOk()
+            ->assertHeader('X-Robots-Tag', 'noindex, nofollow')
+            ->assertSee('Naskah Peserta')->assertSee('data-document-download="pdf"', false)
+            ->assertDontSee('data-document-download="png"', false)->assertDontSee('Kunci Jawaban · Pegangan Guru')
+            ->assertSeeInOrder([$question->statement, $question->question_image_path, $question->question_text, 'Pilihan E', 'exam-options/lembar-dokumen.pdf']);
+        $this->get(route('scheduling.questions.pdf', [$assigned, 'kunci' => 1]))->assertOk()
+            ->assertSee('Kunci Jawaban · Pegangan Guru')->assertSee('<td>E</td>', false);
     }
 
     public function test_teacher_can_save_edit_and_export_formatted_questions_without_executable_markup(): void
@@ -488,6 +500,9 @@ class QuestionBankAccessTest extends TestCase
         $this->get(route('scheduling.questions.preview', $assigned))->assertOk()
             ->assertSee('Pratinjau Ujian Inti')->assertSee('Soal yang direvisi')->assertSee('Jawaban esai')
             ->assertDontSee('data-save-url=', false);
+        $this->get(route('scheduling.questions.pdf', [$assigned, 'page' => 4, 'per_page' => 15]))->assertOk()
+            ->assertSee('54 soal')->assertSee('Pertanyaan 1')->assertSee('Soal yang direvisi')
+            ->assertDontSee('Pilih satu jawaban yang paling tepat');
         $this->get(route('scheduling.questions.preview', [$assigned, 'soal' => $saved->id, 'per_page' => 15]))
             ->assertOk()->assertSee('Soal nomor 54 dari bank yang dipilih.')->assertSee('Soal yang direvisi')
             ->assertDontSee('Pertanyaan 53')->assertSee('Simulasikan seluruh soal');

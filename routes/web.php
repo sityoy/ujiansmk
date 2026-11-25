@@ -237,6 +237,7 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             Route::post('/import-pack', [TrialQuestionBankController::class, 'importPack'])->middleware('role:super_admin,committee')->name('import-pack');
             Route::patch('/{trialQuestionBank}/restore', [TrialQuestionBankController::class, 'restore'])->middleware('role:super_admin,committee')->name('restore');
             Route::get('/{trialQuestionBank}/questions/export', [TrialQuestionBankController::class, 'export'])->name('questions.export');
+            Route::get('/{trialQuestionBank}/questions/pdf', [TrialQuestionBankController::class, 'print'])->name('questions.pdf');
             Route::get('/{trialQuestionBank}/questions/preview', [TrialQuestionBankController::class, 'preview'])->name('questions.preview');
             Route::get('/{trialQuestionBank}/questions/{question}/edit', [TrialQuestionBankController::class, 'editQuestion'])->name('questions.edit');
             Route::get('/{trialQuestionBank}/questions', [TrialQuestionBankController::class, 'questions'])->name('questions.index');
@@ -264,6 +265,8 @@ Route::middleware(['auth', 'active'])->group(function (): void {
         ->group(function (): void {
             Route::get('/components/{assessmentSubject}/questions/export', [QuestionBankController::class, 'export'])
                 ->name('questions.export');
+            Route::get('/components/{assessmentSubject}/questions/pdf', [QuestionBankController::class, 'print'])
+                ->name('questions.pdf');
             Route::get('/components/{assessmentSubject}/questions/preview', [QuestionBankController::class, 'preview'])
                 ->name('questions.preview');
             Route::get('/components/{assessmentSubject}/questions/{question}/edit', [QuestionBankController::class, 'edit'])

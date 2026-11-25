@@ -22,8 +22,10 @@
         @endif
         <div class="mt-4 flex flex-wrap gap-2">
             <a href="{{ route('scheduling.questions.preview', [$assessmentSubject, 'per_page' => $perPage, 'page' => $questions->currentPage()]) }}" class="inline-flex rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950">Simulasi tampilan peserta</a>
+            <a href="{{ route('scheduling.questions.pdf', [$assessmentSubject, 'per_page' => $perPage, 'page' => $questions->currentPage()]) }}" class="inline-flex rounded-xl border border-cyan-400/35 bg-cyan-400/10 px-4 py-2.5 text-sm font-semibold text-cyan-200">Ekspor PDF</a>
             <a href="{{ route('scheduling.questions.export', $assessmentSubject) }}" class="inline-flex rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-2.5 text-sm font-semibold text-emerald-200">Ekspor PG ke Excel</a>
         </div>
+        <x-question-bank-format :types="$questionTypes" />
     </section>
 
     @if ($hasAttempts)

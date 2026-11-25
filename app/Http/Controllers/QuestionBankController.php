@@ -241,6 +241,33 @@ class QuestionBankController extends Controller
         ])->header('Cache-Control', 'private, no-store');
     }
 
+    public function print(Request $request, AssessmentSubject $assessmentSubject): Response
+    {
+        $this->authorizeAccess($request, $assessmentSubject);
+        $assessmentSubject = $this->banks->readableComponent($assessmentSubject);
+        $assessmentSubject->load(['subject', 'assessmentPeriod.academicYear', 'schoolClass']);
+        $subject = $assessmentSubject->subject->name;
+        $period = $assessmentSubject->assessmentPeriod;
+        $grade = $assessmentSubject->schoolClass->grade_level;
+        $group = $assessmentSubject->questionBankGroup()->with('schoolClass')->get()
+            ->pluck('schoolClass.name')->sort(SORT_NATURAL)->join(', ');
+        $withKey = $request->boolean('kunci');
+        $returnPage = ['per_page' => TablePagination::selected(), 'page' => max(1, $request->integer('page', 1))];
+
+        return response()->view('questions.print', [
+            'school' => SchoolProfile::first(),
+            'bankType' => 'Ujian Inti',
+            'title' => $subject,
+            'details' => [$period->name, 'Tahun ajaran '.$period->academicYear->name, 'Kelas '.$grade, 'Rombel '.$group],
+            'questions' => $assessmentSubject->questions()->get(),
+            'withKey' => $withKey,
+            'trial' => false,
+            'filename' => 'bank-soal-inti-'.Str::slug($subject).'-kelas-'.$grade.($withKey ? '-kunci' : ''),
+            'backUrl' => route('scheduling.questions.index', [$assessmentSubject, ...$returnPage]),
+            'modeUrl' => route('scheduling.questions.pdf', [$assessmentSubject, ...$returnPage, 'kunci' => $withKey ? null : 1]),
+        ])->header('Cache-Control', 'private, no-store')->header('X-Robots-Tag', 'noindex, nofollow');
+    }
+
     public function export(
         Request $request,
         AssessmentSubject $assessmentSubject,

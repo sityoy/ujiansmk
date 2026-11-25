@@ -6,6 +6,7 @@
     'margin' => 12,
     'margins' => null,
     'scale' => 100,
+    'pdfOnly' => false,
 ])
 
 @once
@@ -43,7 +44,9 @@
     data-paper-height="{{ $paperHeight ?? ($landscape ? 210 : 297) }}"
     data-paper-margins="{{ implode(',', $margins ?? array_fill(0, 4, $margin)) }}" data-paper-scale="{{ $scale }}">
     <button type="button" data-document-download="pdf" hidden>Unduh PDF</button>
-    <button type="button" data-document-download="png" hidden>Unduh gambar PNG</button>
+    @unless ($pdfOnly)
+        <button type="button" data-document-download="png" hidden>Unduh gambar PNG</button>
+    @endunless
     <button type="button" onclick="window.print()">Cetak / Simpan PDF</button>
     <span role="status" aria-live="polite"></span>
 </div>
