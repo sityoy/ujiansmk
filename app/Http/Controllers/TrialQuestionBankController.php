@@ -254,22 +254,20 @@ class TrialQuestionBankController extends Controller
                 fn () => $import->prepare($request, 'trial:'.$trialQuestionBank->id, ExamQuestionType::cases()));
         }
 
-        $questions = $import->confirmed($request, 'trial:'.$trialQuestionBank->id);
-        $question = DB::transaction(function () use ($request, $trialQuestionBank, $questions): TrialQuestion {
-            $this->assertEditable($request, $trialQuestionBank);
-            $position = (int) $trialQuestionBank->questions()->max('position') + 1;
-            $next = $position;
-            foreach ($questions as $attributes) {
-                $trialQuestionBank->questions()->create($attributes + ['position' => $next++]);
-            }
+        [$question, $count] = $import->confirm($request, 'trial:'.$trialQuestionBank->id, 'trial-questions',
+            function (array $questions) use ($request, $trialQuestionBank): array {
+                $this->assertEditable($request, $trialQuestionBank);
+                $position = (int) $trialQuestionBank->questions()->max('position') + 1;
+                $next = $position;
+                foreach ($questions as $attributes) {
+                    $trialQuestionBank->questions()->create($attributes + ['position' => $next++]);
+                }
 
-            return $trialQuestionBank->questions()->where('position', $position)->firstOrFail();
-        });
-
-        $import->finish($request);
+                return [$trialQuestionBank->questions()->where('position', $position)->firstOrFail(), count($questions)];
+            });
 
         return redirect()->to(QuestionBankNavigation::questionUrl($trialQuestionBank, $question))
-            ->with('saved_question_id', $question->id)->with('status', count($questions).' soal berhasil diimpor.');
+            ->with('saved_question_id', $question->id)->with('status', $count.' soal berhasil diimpor.');
     }
 
     public function print(Request $request, TrialQuestionBank $trialQuestionBank): Response

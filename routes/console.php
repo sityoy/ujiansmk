@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Schedule;
 use App\Enums\AttemptStatus;
 use App\Models\ExamAttempt;
 use App\Services\Exams\ExamAttemptService;
+use App\Services\Exams\QuestionPdfImport;
 use Illuminate\Support\Facades\DB;
 
 Artisan::command('inspire', function () {
@@ -26,6 +27,11 @@ Artisan::command('exams:finalize-expired', function (ExamAttemptService $service
 })->purpose('Kumpulkan ujian yang waktunya habis meskipun siswa menutup browser');
 
 Schedule::command('exams:finalize-expired')->everyMinute()->withoutOverlapping();
+
+Schedule::call(fn () => app(QuestionPdfImport::class)->pruneExpiredImages())
+    ->name('exams:prune-pdf-import-images')
+    ->hourly()
+    ->withoutOverlapping();
 
 Artisan::command('exams:readiness {--deployment : Tolak jika masih ada ujian berlangsung}', function () {
     $checks = [];

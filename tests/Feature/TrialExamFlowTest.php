@@ -304,9 +304,12 @@ class TrialExamFlowTest extends TestCase
             "01 / C / Matematika\n",
             "01 / Matematika\nBerapa 2 + 3?\nA. 2\nB. 3\nC. 5\nD. 6\nE. 7\n",
         ];
-        Process::fake(function () use (&$outputs) {
-            return Process::result(output: array_shift($outputs));
-        });
+        Process::fake([
+            '*pdftotext*' => function () use (&$outputs) {
+                return Process::result(output: array_shift($outputs));
+            },
+            '*pdfimages*' => Process::result(),
+        ]);
         $preview = $this->actingAs($admin)->post($url, ['pdf' => $file, 'key_pdf' => $key])->assertOk()
             ->assertSee('Berapa 2 + 3?')->assertSee('Kunci C');
         $confirmation = ['import_token' => $preview->viewData('token'), 'confirm_import' => '1'];

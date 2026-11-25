@@ -147,10 +147,13 @@ class QuestionBankAccessTest extends TestCase
     public function test_pdf_import_reviews_then_appends_once_and_respects_bank_access_and_type(): void
     {
         $this->withoutVite();
+        Storage::fake('local');
+        Storage::fake('public');
         [$teacher, , $assigned, $other] = $this->makeComponents();
         $url = route('scheduling.questions.pdf-import.store', $assigned);
         $file = UploadedFile::fake()->create('soal.pdf', 5, 'application/pdf');
-        Process::fake(fn () => Process::result(output: <<<'TEXT'
+        Process::fake([
+            '*pdftotext*' => Process::result(output: <<<'TEXT'
 Soal 1 · Pilihan Ganda
 Pertanyaan: Manakah angka genap?
 A. 1
@@ -162,7 +165,25 @@ Kunci: B
 Soal 2 · Esai
 Pertanyaan: Jelaskan cara menentukan bilangan genap.
 Bobot: 7
-TEXT));
+TEXT),
+            '*pdfimages*' => Process::result(output: '1 0 image 1 1 rgb'),
+            '*pdftohtml*' => function ($process) {
+                file_put_contents($process->path.'/layout.xml', <<<'XML'
+<pdf2xml>
+    <page>
+        <image top="85" height="50" src="layout-1_1.png"/>
+        <text top="10" height="12"><b>Soal 1 · Pilihan Ganda</b></text>
+        <text top="70" height="12"><b>Soal 2 · Esai</b></text>
+    </page>
+</pdf2xml>
+XML);
+                file_put_contents($process->path.'/layout-1_1.png', base64_decode(
+                    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jc+8AAAAASUVORK5CYII=',
+                ));
+
+                return Process::result();
+            },
+        ]);
 
         $this->actingAs($teacher)->get($url)->assertOk()->assertSee('Ketentuan &amp; Format Impor PDF', false);
         $this->from($url)->post($url, ['pdf' => $file])->assertSessionHasErrors('pdf');
@@ -170,12 +191,21 @@ TEXT));
         $assigned->assessmentPeriod()->update(['type' => AssessmentType::ASAS]);
         $assigned->questions()->create(['position' => 1, 'question_type' => 'essay', 'question_text' => 'Soal yang sudah ada.', 'points' => 3]);
         $preview = $this->post($url, ['pdf' => $file])->assertOk()
-            ->assertSee('Simpan 2 soal')->assertSee('Kunci B');
+            ->assertSee('Simpan 2 soal')->assertSee('Kunci B')->assertSee('1 gambar siap diimpor')
+            ->assertSeeInOrder(['Soal 2 · Esai', 'alt="Gambar soal 2"'], false)
+            ->assertDontSee('alt="Gambar soal 1"', false);
+        $this->assertCount(0, Storage::disk('public')->allFiles());
+        $this->assertCount(1, Storage::disk('local')->allFiles('question-pdf-imports'));
         $this->assertSame(1, $assigned->questions()->count());
         $confirmation = ['import_token' => $preview->viewData('token'), 'confirm_import' => '1'];
         $this->post($url, $confirmation)->assertRedirect()->assertSessionHasNoErrors();
         $this->assertSame(['Soal yang sudah ada.', 'Manakah angka genap?', 'Jelaskan cara menentukan bilangan genap.'], $assigned->questions()->pluck('question_text')->all());
-        $this->assertSame('B', $assigned->questions()->where('position', 2)->sole()->correct_answer);
+        $first = $assigned->questions()->where('position', 2)->sole();
+        $second = $assigned->questions()->where('position', 3)->sole();
+        $this->assertSame('B', $first->correct_answer);
+        $this->assertNull($first->question_image_path);
+        Storage::disk('public')->assertExists($second->question_image_path);
+        $this->assertCount(0, Storage::disk('local')->allFiles('question-pdf-imports'));
         $this->post($url, $confirmation)->assertSessionHasErrors('pdf');
         $this->assertSame(3, $assigned->questions()->count());
     }

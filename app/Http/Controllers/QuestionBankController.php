@@ -267,31 +267,29 @@ class QuestionBankController extends Controller
                 fn () => $import->prepare($request, 'core:'.$assessmentSubject->id, $this->questionTypes($assessmentSubject), allowWrittenStatement: false));
         }
 
-        $questions = $import->confirmed($request, 'core:'.$assessmentSubject->id);
-        $question = DB::transaction(function () use ($request, $assessmentSubject, $questions): ExamQuestion {
-            $siblings = $this->lockedGroup($request, $assessmentSubject);
-            $this->assertEditable($siblings);
-            $current = $siblings->find($assessmentSubject->id);
-            $types = array_column($this->questionTypes($current), 'value');
-            if (array_diff(array_column($questions, 'question_type'), $types) !== []) {
-                throw ValidationException::withMessages(['pdf' => 'Jenis asesmen berubah. Unggah PDF sesuai jenis soal yang berlaku.']);
-            }
-            $this->banks->synchronize($siblings);
-            $position = (int) ExamQuestion::query()->whereIn('assessment_subject_id', $siblings->modelKeys())->max('position') + 1;
-            foreach ($siblings as $component) {
-                $next = $position;
-                foreach ($questions as $attributes) {
-                    $component->questions()->create($attributes + ['position' => $next++]);
+        [$question, $count] = $import->confirm($request, 'core:'.$assessmentSubject->id, 'exam-questions',
+            function (array $questions) use ($request, $assessmentSubject): array {
+                $siblings = $this->lockedGroup($request, $assessmentSubject);
+                $this->assertEditable($siblings);
+                $current = $siblings->find($assessmentSubject->id);
+                $types = array_column($this->questionTypes($current), 'value');
+                if (array_diff(array_column($questions, 'question_type'), $types) !== []) {
+                    throw ValidationException::withMessages(['pdf' => 'Jenis asesmen berubah. Unggah PDF sesuai jenis soal yang berlaku.']);
                 }
-            }
+                $this->banks->synchronize($siblings);
+                $position = (int) ExamQuestion::query()->whereIn('assessment_subject_id', $siblings->modelKeys())->max('position') + 1;
+                foreach ($siblings as $component) {
+                    $next = $position;
+                    foreach ($questions as $attributes) {
+                        $component->questions()->create($attributes + ['position' => $next++]);
+                    }
+                }
 
-            return $current->questions()->where('position', $position)->firstOrFail();
-        });
-
-        $import->finish($request);
+                return [$current->questions()->where('position', $position)->firstOrFail(), count($questions)];
+            });
 
         return redirect()->to(QuestionBankNavigation::questionUrl($assessmentSubject, $question))
-            ->with('saved_question_id', $question->id)->with('status', count($questions).' soal berhasil diimpor.');
+            ->with('saved_question_id', $question->id)->with('status', $count.' soal berhasil diimpor.');
     }
 
     public function print(Request $request, AssessmentSubject $assessmentSubject): Response

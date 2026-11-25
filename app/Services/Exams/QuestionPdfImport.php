@@ -6,13 +6,23 @@ use App\Enums\ExamQuestionType;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Process\Exceptions\ProcessTimedOutException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class QuestionPdfImport
 {
     private const SESSION_KEY = 'pending_question_pdf_import';
+
+    private const STAGING_DIRECTORY = 'question-pdf-imports';
+
+    private const HEADING_PATTERN = '/^\h*(?:Soal\h+(\d{1,4})(?:\h*[·–:-]\h*(Pilihan Ganda|Isian Singkat|Esai))?|'
+        .'(\d{1,4})\h*\/\h*[^\r\n]+)\h*$/miu';
+
+    public function __construct(private readonly QuestionPdfImages $pdfImages) {}
 
     public function prepare(Request $request, string $bank, array $allowedTypes, bool $allowWrittenStatement = true): array
     {
@@ -21,7 +31,8 @@ class QuestionPdfImport
             'key_pdf' => ['nullable', 'file', 'mimes:pdf', 'max:5120'],
         ]);
         $keys = $request->hasFile('key_pdf') ? $this->parseKey($this->extract($request->file('key_pdf'))) : [];
-        $questions = $this->parse($this->extract($request->file('pdf')), $keys, $allowedTypes);
+        $pdf = $request->file('pdf');
+        $questions = $this->parse($this->extract($pdf), $keys, $allowedTypes);
         if (! $allowWrittenStatement) {
             foreach ($questions as $number => $question) {
                 if ($question['question_type'] !== ExamQuestionType::MultipleChoice->value && $question['statement'] !== null) {
@@ -29,19 +40,42 @@ class QuestionPdfImport
                 }
             }
         }
+        ['images' => $images, 'warnings' => $imageWarnings] = $this->pdfImages->extract($pdf, self::HEADING_PATTERN, array_keys($questions));
+        $this->finish($request);
+
         $token = Str::random(48);
+        $staging = $this->stagingPath($token);
+        $private = Storage::disk('local');
+        $previewImages = [];
+        $stagedImages = [];
+        try {
+            foreach ($images as $number => $image) {
+                $filename = $number.'.'.$image['extension'];
+                if (! $private->put($staging.'/'.$filename, $image['contents'])) {
+                    throw ValidationException::withMessages(['pdf' => 'Gambar pratinjau tidak dapat disimpan. Coba unggah PDF kembali.']);
+                }
+                $stagedImages[$number] = $filename;
+                $previewImages[$number] = 'data:'.$image['mime'].';base64,'.base64_encode($image['contents']);
+            }
+        } catch (\Throwable $exception) {
+            $private->deleteDirectory($staging);
+
+            throw $exception;
+        }
+
         $request->session()->put(self::SESSION_KEY, [
             'bank' => $bank,
             'user' => $request->user()->getAuthIdentifier(),
             'token' => $token,
             'expires' => now()->addMinutes(20)->timestamp,
             'questions' => $questions,
+            'images' => $stagedImages,
         ]);
 
-        return compact('questions', 'token');
+        return compact('questions', 'token', 'previewImages', 'imageWarnings');
     }
 
-    public function confirmed(Request $request, string $bank): array
+    public function confirm(Request $request, string $bank, string $directory, \Closure $save): mixed
     {
         $input = $request->validate([
             'import_token' => ['required', 'string', 'size:48'],
@@ -53,12 +87,59 @@ class QuestionPdfImport
             throw ValidationException::withMessages(['pdf' => 'Pratinjau sudah kedaluwarsa atau sudah disimpan. Unggah PDF kembali.']);
         }
 
-        return $pending['questions'];
+        $questions = $pending['questions'];
+        $private = Storage::disk('local');
+        $public = Storage::disk('public');
+        $written = [];
+        try {
+            foreach ($pending['images'] ?? [] as $number => $filename) {
+                $contents = $private->get($this->stagingPath($pending['token']).'/'.$filename);
+                if ($contents === null) {
+                    throw ValidationException::withMessages(['pdf' => 'Pratinjau gambar sudah tidak tersedia. Unggah PDF kembali.']);
+                }
+                $path = $directory.'/'.Str::uuid().'.'.pathinfo($filename, PATHINFO_EXTENSION);
+                $written[] = $path;
+                if (! $public->put($path, $contents)) {
+                    throw ValidationException::withMessages(['pdf' => 'Gambar soal tidak dapat disimpan. Coba simpan kembali.']);
+                }
+                $questions[$number]['question_image_path'] = $path;
+            }
+
+            $saved = DB::transaction(fn () => $save($questions));
+        } catch (\Throwable $exception) {
+            $public->delete($written);
+
+            throw $exception;
+        }
+
+        $this->finish($request);
+
+        return $saved;
     }
 
-    public function finish(Request $request): void
+    private function finish(Request $request): void
     {
-        $request->session()->forget(self::SESSION_KEY);
+        $pending = $request->session()->pull(self::SESSION_KEY);
+        if (! empty($pending['images'])) {
+            Storage::disk('local')->deleteDirectory($this->stagingPath($pending['token']));
+        }
+    }
+
+    public function pruneExpiredImages(): void
+    {
+        $disk = Storage::disk('local');
+        $cutoff = now()->subHour()->timestamp;
+        foreach ($disk->directories(self::STAGING_DIRECTORY) as $directory) {
+            $modified = @File::lastModified($disk->path($directory));
+            if ($modified !== false && $modified < $cutoff) {
+                $disk->deleteDirectory($directory);
+            }
+        }
+    }
+
+    private function stagingPath(string $token): string
+    {
+        return self::STAGING_DIRECTORY.'/'.$token;
     }
 
     private function extract(UploadedFile $file): string
@@ -105,10 +186,8 @@ class QuestionPdfImport
 
     private function parse(string $text, array $keys, array $allowedTypes): array
     {
-        $pattern = '/^\h*(?:Soal\h+(\d{1,4})(?:\h*[·–:-]\h*(Pilihan Ganda|Isian Singkat|Esai))?|'
-            .'(\d{1,4})\h*\/\h*[^\r\n]+)\h*$/miu';
         // Read the headers with byte offsets so optional capture groups can be empty.
-        preg_match_all($pattern, $text, $headers, PREG_SET_ORDER | PREG_OFFSET_CAPTURE | PREG_UNMATCHED_AS_NULL);
+        preg_match_all(self::HEADING_PATTERN, $text, $headers, PREG_SET_ORDER | PREG_OFFSET_CAPTURE | PREG_UNMATCHED_AS_NULL);
         if ($headers === [] || count($headers) > 100) {
             throw ValidationException::withMessages(['pdf' => 'Gunakan judul “Soal 1 · Pilihan Ganda” untuk setiap soal. Maksimal 100 soal per impor.']);
         }

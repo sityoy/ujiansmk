@@ -57,7 +57,7 @@ Aset frontend branch `laravel-v2` dibangun otomatis oleh GitHub Actions dan disi
 
 Untuk VPS CBT 8 vCPU / RAM 10 GB, gunakan [profil VPS ujian](docs/VPS_UJIAN.md). Konfigurasi untuk VPS 2 GB tersedia di [docs/VPS_2GB.md](docs/VPS_2GB.md).
 
-Fitur **Impor PDF** pada bank soal memerlukan `pdftotext` yang dapat dijalankan oleh proses PHP. Pada Ubuntu atau Debian, periksa dengan `command -v pdftotext` dan pasang paket `poppler-utils` jika belum tersedia.
+Fitur **Impor PDF** pada bank soal menggunakan `pdftotext` untuk membaca teks serta `pdfimages` dan `pdftohtml` untuk mengambil gambar. Pada Ubuntu atau Debian, pasang paket `poppler-utils` dan pastikan perintah tersebut dapat dijalankan oleh proses PHP. Gunakan PDF satu kolom dengan satu gambar PNG atau JPG per soal. Letakkan gambar di bawah judul soal pada halaman yang sama. Fitur menerima gambar hingga 5 MB per gambar, 4.000 piksel per sisi, dan 8 MB total per impor.
 
 Absensi dibuka pada hari ujian mulai 60 menit sebelum sesi sampai waktu selesai. Portal menampilkan alasan jika absensi tertutup, termasuk sesi draf, lokasi nonaktif, jadwal tidak valid, atau penugasan tidak aktif. Absensi yang ditolak/diperiksa pengawas tidak dapat diverifikasi ulang sendiri oleh siswa. Selfie dan GPS merupakan bukti pendukung, bukan pengenalan wajah biometrik atau jaminan bahwa lokasi tidak dipalsukan.
 
