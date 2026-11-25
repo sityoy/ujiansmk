@@ -11,6 +11,7 @@ use App\Models\TrialQuestion;
 use App\Models\TrialQuestionBank;
 use App\Models\User;
 use App\Services\Exams\ExamScoreCalculator;
+use App\Services\Exams\QuestionPdfImport;
 use App\Services\Exams\QuestionText;
 use App\Services\Exams\TrialQuestionBankArchive;
 use App\Services\Exams\TrialQuestionBankCatalog;
@@ -229,6 +230,46 @@ class TrialQuestionBankController extends Controller
         return AssessmentSubject::query()->where('subject_id', $bank->subject_id)
             ->whereHas('schoolClass', fn ($classes) => $classes->where('grade_level', $bank->grade_level))
             ->whereNotNull('teacher_user_id')->select('teacher_user_id');
+    }
+
+    public function importPdfForm(Request $request, TrialQuestionBank $trialQuestionBank, ?\Closure $prepare = null): View
+    {
+        $this->authorizeBank($request, $trialQuestionBank);
+        abort_if($reason = $this->lockedReason($trialQuestionBank), 403, $reason);
+
+        return view('questions.import-pdf', ($prepare ? $prepare() : []) + [
+            'title' => $trialQuestionBank->name.' · Kelas '.$trialQuestionBank->grade_level,
+            'types' => ExamQuestionType::cases(),
+            'trial' => true,
+            'action' => route('trial-question-banks.questions.pdf-import.store', $trialQuestionBank),
+            'backUrl' => route('trial-question-banks.questions.index', $trialQuestionBank),
+        ]);
+    }
+
+    public function importPdf(Request $request, TrialQuestionBank $trialQuestionBank, QuestionPdfImport $import): View|RedirectResponse
+    {
+        $this->authorizeBank($request, $trialQuestionBank);
+        if (! $request->has('import_token')) {
+            return $this->importPdfForm($request, $trialQuestionBank,
+                fn () => $import->prepare($request, 'trial:'.$trialQuestionBank->id, ExamQuestionType::cases()));
+        }
+
+        $questions = $import->confirmed($request, 'trial:'.$trialQuestionBank->id);
+        $question = DB::transaction(function () use ($request, $trialQuestionBank, $questions): TrialQuestion {
+            $this->assertEditable($request, $trialQuestionBank);
+            $position = (int) $trialQuestionBank->questions()->max('position') + 1;
+            $next = $position;
+            foreach ($questions as $attributes) {
+                $trialQuestionBank->questions()->create($attributes + ['position' => $next++]);
+            }
+
+            return $trialQuestionBank->questions()->where('position', $position)->firstOrFail();
+        });
+
+        $import->finish($request);
+
+        return redirect()->to(QuestionBankNavigation::questionUrl($trialQuestionBank, $question))
+            ->with('saved_question_id', $question->id)->with('status', count($questions).' soal berhasil diimpor.');
     }
 
     public function print(Request $request, TrialQuestionBank $trialQuestionBank): Response

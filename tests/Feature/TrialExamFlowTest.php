@@ -26,7 +26,9 @@ use App\Services\Exams\StudentOptionOrder;
 use App\Services\Exams\TrialExamAttemptService;
 use App\Services\Exams\TrialExamSecurityService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
@@ -288,6 +290,32 @@ class TrialExamFlowTest extends TestCase
         $this->assertSame(GradingStatus::Graded, $attempt->fresh()->grading_status);
         $this->assertSame('41.00', $attempt->fresh()->score);
         $this->actingAs($admin)->get(route('tryouts.scores.print', $trial))->assertOk()->assertSee('41,00');
+    }
+
+    public function test_trial_pdf_import_reads_a_separate_key_and_rechecks_the_deadline_before_saving(): void
+    {
+        [$trial] = $this->makeTrial();
+        $bank = $trial->questionBank;
+        $url = route('trial-question-banks.questions.pdf-import.store', $bank);
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $file = UploadedFile::fake()->create('soal.pdf', 5, 'application/pdf');
+        $key = UploadedFile::fake()->create('kunci.pdf', 5, 'application/pdf');
+        $outputs = [
+            "01 / C / Matematika\n",
+            "01 / Matematika\nBerapa 2 + 3?\nA. 2\nB. 3\nC. 5\nD. 6\nE. 7\n",
+        ];
+        Process::fake(function () use (&$outputs) {
+            return Process::result(output: array_shift($outputs));
+        });
+        $preview = $this->actingAs($admin)->post($url, ['pdf' => $file, 'key_pdf' => $key])->assertOk()
+            ->assertSee('Berapa 2 + 3?')->assertSee('Kunci C');
+        $confirmation = ['import_token' => $preview->viewData('token'), 'confirm_import' => '1'];
+        $bank->forceFill(['question_deadline_at' => now()->subMinute()])->save();
+        $this->from($url)->post($url, $confirmation)->assertSessionHasErrors('question');
+        $this->assertSame(1, $bank->questions()->count());
+        $bank->forceFill(['question_deadline_at' => null])->save();
+        $this->post($url, $confirmation)->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame('C', $bank->questions()->where('position', 2)->sole()->correct_answer);
     }
 
     public function test_trial_can_use_only_essays_and_grade_a_blank_expired_response(): void

@@ -57,6 +57,8 @@ Aset frontend branch `laravel-v2` dibangun otomatis oleh GitHub Actions dan disi
 
 Untuk VPS CBT 8 vCPU / RAM 10 GB, gunakan [profil VPS ujian](docs/VPS_UJIAN.md). Konfigurasi untuk VPS 2 GB tersedia di [docs/VPS_2GB.md](docs/VPS_2GB.md).
 
+Fitur **Impor PDF** pada bank soal memerlukan `pdftotext` yang dapat dijalankan oleh proses PHP. Pada Ubuntu atau Debian, periksa dengan `command -v pdftotext` dan pasang paket `poppler-utils` jika belum tersedia.
+
 Absensi dibuka pada hari ujian mulai 60 menit sebelum sesi sampai waktu selesai. Portal menampilkan alasan jika absensi tertutup, termasuk sesi draf, lokasi nonaktif, jadwal tidak valid, atau penugasan tidak aktif. Absensi yang ditolak/diperiksa pengawas tidak dapat diverifikasi ulang sendiri oleh siswa. Selfie dan GPS merupakan bukti pendukung, bukan pengenalan wajah biometrik atau jaminan bahwa lokasi tidak dipalsukan.
 
 Autosave mengirim jawaban berurutan, menyediakan percobaan ulang, dan menunggu jawaban tertunda sebelum pengumpulan manual. Jawaban yang belum sampai ke server saat batas waktu habis tidak dihitung. Setelah pembaruan, uji alur lengkap dengan akun siswa dan panitia serta koneksi lambat sebelum dipakai pada ujian sesungguhnya.

@@ -12,6 +12,7 @@ use App\Models\SchoolProfile;
 use App\Services\Exams\CoreQuestionBank;
 use App\Services\Exams\CoreQuestionBankCatalog;
 use App\Services\Exams\ExamScoreCalculator;
+use App\Services\Exams\QuestionPdfImport;
 use App\Services\Exams\QuestionText;
 use App\Services\Students\StudentSpreadsheetService;
 use App\Support\QuestionBankNavigation;
@@ -239,6 +240,58 @@ class QuestionBankController extends Controller
             'backUrl' => $focusedQuestion ? QuestionBankNavigation::questionUrl($assessmentSubject, $focusedQuestion) : route('scheduling.questions.index', $bank),
             'trial' => false,
         ])->header('Cache-Control', 'private, no-store');
+    }
+
+    public function importPdfForm(Request $request, AssessmentSubject $assessmentSubject, ?\Closure $prepare = null): View
+    {
+        $this->authorizeAccess($request, $assessmentSubject);
+        $assessmentSubject->loadMissing('assessmentPeriod');
+        abort_if($assessmentSubject->assessmentPeriod->coreQuestionDeadlinePassed()
+            || $assessmentSubject->questionBankGroup()->whereHas('assignments.attempt')->exists(), 403, 'Bank soal sedang terkunci.');
+
+        return view('questions.import-pdf', ($prepare ? $prepare() : []) + [
+            'title' => $assessmentSubject->subject->name.' · Kelas '.$assessmentSubject->schoolClass->grade_level,
+            'types' => $this->questionTypes($assessmentSubject),
+            'trial' => false,
+            'action' => route('scheduling.questions.pdf-import.store', $assessmentSubject),
+            'backUrl' => route('scheduling.questions.index', $assessmentSubject),
+        ]);
+    }
+
+    public function importPdf(Request $request, AssessmentSubject $assessmentSubject, QuestionPdfImport $import): View|RedirectResponse
+    {
+        $this->authorizeAccess($request, $assessmentSubject);
+        $assessmentSubject->loadMissing('assessmentPeriod');
+        if (! $request->has('import_token')) {
+            return $this->importPdfForm($request, $assessmentSubject,
+                fn () => $import->prepare($request, 'core:'.$assessmentSubject->id, $this->questionTypes($assessmentSubject), allowWrittenStatement: false));
+        }
+
+        $questions = $import->confirmed($request, 'core:'.$assessmentSubject->id);
+        $question = DB::transaction(function () use ($request, $assessmentSubject, $questions): ExamQuestion {
+            $siblings = $this->lockedGroup($request, $assessmentSubject);
+            $this->assertEditable($siblings);
+            $current = $siblings->find($assessmentSubject->id);
+            $types = array_column($this->questionTypes($current), 'value');
+            if (array_diff(array_column($questions, 'question_type'), $types) !== []) {
+                throw ValidationException::withMessages(['pdf' => 'Jenis asesmen berubah. Unggah PDF sesuai jenis soal yang berlaku.']);
+            }
+            $this->banks->synchronize($siblings);
+            $position = (int) ExamQuestion::query()->whereIn('assessment_subject_id', $siblings->modelKeys())->max('position') + 1;
+            foreach ($siblings as $component) {
+                $next = $position;
+                foreach ($questions as $attributes) {
+                    $component->questions()->create($attributes + ['position' => $next++]);
+                }
+            }
+
+            return $current->questions()->where('position', $position)->firstOrFail();
+        });
+
+        $import->finish($request);
+
+        return redirect()->to(QuestionBankNavigation::questionUrl($assessmentSubject, $question))
+            ->with('saved_question_id', $question->id)->with('status', count($questions).' soal berhasil diimpor.');
     }
 
     public function print(Request $request, AssessmentSubject $assessmentSubject): Response

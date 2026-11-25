@@ -48,6 +48,9 @@
         <div class="mt-4 flex flex-wrap gap-2">
             <a href="{{ route('trial-question-banks.questions.preview', [$bank, 'per_page' => $perPage, 'page' => $questions->currentPage()]) }}" class="inline-flex rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950">Simulasi tampilan peserta</a>
             <a href="{{ route('trial-question-banks.questions.pdf', [$bank, 'per_page' => $perPage, 'page' => $questions->currentPage()]) }}" class="inline-flex rounded-xl border border-cyan-400/35 bg-cyan-400/10 px-4 py-2.5 text-sm font-semibold text-cyan-200">Ekspor PDF</a>
+            @unless ($isLocked)
+                <a href="{{ route('trial-question-banks.questions.pdf-import.form', $bank) }}" class="inline-flex rounded-xl border border-cyan-400/35 bg-cyan-400/10 px-4 py-2.5 text-sm font-semibold text-cyan-200">Impor PDF</a>
+            @endunless
             <a href="{{ route('trial-question-banks.questions.export', $bank) }}" class="inline-flex rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-2.5 text-sm font-semibold text-emerald-200">Ekspor soal ke Excel</a>
             @if ($bank->source_pack_key && ! $bank->archived_at && auth()->user()->role !== \App\Enums\UserRole::Teacher)
                 <x-trial-pack-cancel :bank="$bank" />

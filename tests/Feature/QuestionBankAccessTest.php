@@ -16,6 +16,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -141,6 +142,42 @@ class QuestionBankAccessTest extends TestCase
             ->assertSeeInOrder([$question->statement, $question->question_image_path, $question->question_text, 'Pilihan E', 'exam-options/lembar-dokumen.pdf']);
         $this->get(route('scheduling.questions.pdf', [$assigned, 'kunci' => 1]))->assertOk()
             ->assertSee('Kunci Jawaban · Pegangan Guru')->assertSee('<td>E</td>', false);
+    }
+
+    public function test_pdf_import_reviews_then_appends_once_and_respects_bank_access_and_type(): void
+    {
+        $this->withoutVite();
+        [$teacher, , $assigned, $other] = $this->makeComponents();
+        $url = route('scheduling.questions.pdf-import.store', $assigned);
+        $file = UploadedFile::fake()->create('soal.pdf', 5, 'application/pdf');
+        Process::fake(fn () => Process::result(output: <<<'TEXT'
+Soal 1 · Pilihan Ganda
+Pertanyaan: Manakah angka genap?
+A. 1
+B. 2
+C. 3
+D. 5
+E. 7
+Kunci: B
+Soal 2 · Esai
+Pertanyaan: Jelaskan cara menentukan bilangan genap.
+Bobot: 7
+TEXT));
+
+        $this->actingAs($teacher)->get($url)->assertOk()->assertSee('Ketentuan &amp; Format Impor PDF', false);
+        $this->from($url)->post($url, ['pdf' => $file])->assertSessionHasErrors('pdf');
+        $this->post(route('scheduling.questions.pdf-import.store', $other), ['pdf' => $file])->assertForbidden();
+        $assigned->assessmentPeriod()->update(['type' => AssessmentType::ASAS]);
+        $assigned->questions()->create(['position' => 1, 'question_type' => 'essay', 'question_text' => 'Soal yang sudah ada.', 'points' => 3]);
+        $preview = $this->post($url, ['pdf' => $file])->assertOk()
+            ->assertSee('Simpan 2 soal')->assertSee('Kunci B');
+        $this->assertSame(1, $assigned->questions()->count());
+        $confirmation = ['import_token' => $preview->viewData('token'), 'confirm_import' => '1'];
+        $this->post($url, $confirmation)->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame(['Soal yang sudah ada.', 'Manakah angka genap?', 'Jelaskan cara menentukan bilangan genap.'], $assigned->questions()->pluck('question_text')->all());
+        $this->assertSame('B', $assigned->questions()->where('position', 2)->sole()->correct_answer);
+        $this->post($url, $confirmation)->assertSessionHasErrors('pdf');
+        $this->assertSame(3, $assigned->questions()->count());
     }
 
     public function test_teacher_can_save_edit_and_export_formatted_questions_without_executable_markup(): void
