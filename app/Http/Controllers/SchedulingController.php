@@ -396,7 +396,7 @@ class SchedulingController extends Controller
             app(ExamSessionService::class)->update($examSession, [], $attributes);
         }, 3);
 
-        return back()->with('status', 'Jadwal seluruh rombel dalam sesi berhasil diperbarui dan waktu selesai dihitung ulang.');
+        return back()->with('status', 'Jadwal seluruh rombel diperbarui. Durasi dihitung dari waktu mulai dan selesai.');
     }
 
     private function sessionRequestForClass(Request $request, AssessmentSubject $component, ?ExamSession $session = null): Request
@@ -447,19 +447,42 @@ class SchedulingController extends Controller
             'room_name' => ['nullable', 'string', 'max:100'],
             'status' => ['required', Rule::enum(SessionStatus::class)],
             'starts_at' => ['required', 'date'],
-            'duration_minutes' => ['required', 'integer', 'between:10,600'],
+            'ends_at' => ['nullable', 'required_without:duration_minutes', 'date', 'after:starts_at'],
+            'duration_minutes' => [
+                Rule::excludeIf($request->filled('ends_at')),
+                'required_without:ends_at',
+                'integer',
+                'between:'.ExamSession::MIN_DURATION_MINUTES.','.ExamSession::MAX_DURATION_MINUTES,
+            ],
+        ], [
+            'ends_at.required_without' => 'Isi tanggal dan jam selesai.',
+            'ends_at.after' => 'Waktu selesai harus setelah waktu mulai.',
         ]);
 
         $sourceSession = ! empty($validated['source_session_id'])
             ? ExamSession::query()->lockForUpdate()->findOrFail($validated['source_session_id'])
             : null;
-        $startsAt = Carbon::parse($validated['starts_at']);
-        $endsAt = $startsAt->copy()->addMinutes((int) $validated['duration_minutes']);
+        $timezone = config('app.timezone');
+        $startsAt = Carbon::parse($validated['starts_at'], $timezone)->setTimezone($timezone);
+        // Older requests supplied a duration instead of an end time.
+        $explicitEnd = isset($validated['ends_at']);
+        $endsAt = $explicitEnd
+            ? Carbon::parse($validated['ends_at'], $timezone)->setTimezone($timezone)
+            : $startsAt->copy()->addMinutes((int) $validated['duration_minutes']);
+        $seconds = $endsAt->getTimestamp() - $startsAt->getTimestamp();
+        $duration = intdiv($seconds, 60);
         $isMakeup = $validated['kind'] === SessionKind::Makeup->value;
 
         if (! $startsAt->isSameDay($endsAt)) {
             throw ValidationException::withMessages([
-                'duration_minutes' => 'Sesi ujian harus selesai pada tanggal yang sama. Sesuaikan jam mulai atau durasi.',
+                $explicitEnd ? 'ends_at' : 'duration_minutes' => 'Tanggal selesai harus sama dengan tanggal mulai karena absensi tercatat per hari.',
+            ]);
+        }
+
+        if ($seconds % 60 !== 0 || $duration < ExamSession::MIN_DURATION_MINUTES || $duration > ExamSession::MAX_DURATION_MINUTES) {
+            throw ValidationException::withMessages([
+                'ends_at' => 'Selisih waktu mulai dan selesai harus '
+                    .ExamSession::MIN_DURATION_MINUTES.'–'.ExamSession::MAX_DURATION_MINUTES.' menit penuh.',
             ]);
         }
 
@@ -530,6 +553,7 @@ class SchedulingController extends Controller
             : null;
         $validated['starts_at'] = $startsAt;
         $validated['ends_at'] = $endsAt;
+        $validated['duration_minutes'] = $duration;
 
         return $validated;
     }

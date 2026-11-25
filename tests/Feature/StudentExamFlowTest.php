@@ -320,6 +320,36 @@ class StudentExamFlowTest extends TestCase
         ]);
     }
 
+    public function test_scheduled_end_controls_student_display_and_submission_after_a_late_start(): void
+    {
+        [$student, $assignment, $questions] = $this->makeExam();
+        $session = $assignment->examSession;
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $startsAt = now()->subMinutes(10);
+        $endsAt = now()->addMinutes(35);
+        $this->actingAs($committee)->patch(route('scheduling.sessions.update', $session), [
+            ...$this->sessionData($session),
+            'starts_at' => $startsAt->format('Y-m-d\TH:i'),
+            'ends_at' => $endsAt->format('Y-m-d\TH:i'),
+        ])->assertSessionHasNoErrors();
+        $assignment = $assignment->fresh();
+        $this->assertSame(45, (int) $assignment->examSession->duration_minutes);
+
+        $attempt = $this->startAttempt($assignment);
+        $this->actingAs($student)->withSession(['exam_device_token' => str_repeat('a', 64)]);
+        $this->get(route('student.exams.index'))->assertOk()->assertSee('04/09/2026 09:50–10:35 · 45 menit');
+        $show = route('student.exams.show', $attempt);
+        $this->get($show)->assertOk()
+            ->assertSee('04/09/2026 09:50–10:35 · 45 menit')
+            ->assertSee('datetime="'.$endsAt->toIso8601String().'">10:35', false)
+            ->assertSee('remainingAtLoad = 2100000', false);
+        $this->putJson(route('student.exams.answer', [$attempt, $questions[0]]), ['answer' => 'A'])->assertOk();
+
+        $this->travelTo($endsAt);
+        $this->getJson(route('student.exams.security', $attempt))->assertOk()->assertJsonPath('status', 'submitted');
+        $this->assertSame('2.00', $attempt->fresh()->score);
+    }
+
     public function test_started_session_schedule_cannot_be_changed(): void
     {
         [, $assignment] = $this->makeExam();
@@ -328,7 +358,7 @@ class StudentExamFlowTest extends TestCase
         $committee = User::factory()->create(['role' => UserRole::Committee]);
 
         $this->actingAs($committee)->patch(route('scheduling.sessions.update', $session), [
-            ...$this->sessionData($session), 'duration_minutes' => 120,
+            ...$this->sessionData($session), 'ends_at' => $session->starts_at->copy()->addMinutes(120)->toDateTimeString(),
         ])->assertSessionHasErrors('session');
 
         $this->assertSame(90, (int) $session->refresh()->duration_minutes);

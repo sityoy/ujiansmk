@@ -184,20 +184,24 @@ class SchedulingManagementTest extends TestCase
         $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
         [, $regular, , $campus] = $this->makeSchedule();
 
-        $this->actingAs($admin)
-            ->patch(route('scheduling.sessions.update', $regular), [
-                'campus_id' => $campus->id,
-                'kind' => SessionKind::Regular->value,
-                'status' => SessionStatus::Active->value,
-                'starts_at' => '2026-09-02 09:00:00',
-                'duration_minutes' => 60,
-                'room_name' => 'Ruang 9A',
-            ])
-            ->assertRedirect()
-            ->assertSessionHasNoErrors();
+        $update = route('scheduling.sessions.update', $regular);
+        $data = [
+            'campus_id' => $campus->id,
+            'kind' => SessionKind::Regular->value,
+            'status' => SessionStatus::Active->value,
+            'starts_at' => '2026-09-02T09:00',
+            'room_name' => 'Ruang 9A',
+        ];
+        $this->actingAs($admin)->patch($update, $data)->assertSessionHasErrors('ends_at');
+        foreach (['2026-09-02T08:59', '2026-09-02T09:05', '2026-09-02T19:01', '2026-09-03T09:00', '2026-09-02T10:00:30'] as $invalidEnd) {
+            $this->patch($update, $data + ['ends_at' => $invalidEnd])->assertSessionHasErrors('ends_at');
+        }
+        $this->assertSame('2026-09-01 10:00:00', $regular->fresh()->ends_at->toDateTimeString());
+        $this->patch($update, $data + ['ends_at' => '2026-09-02T10:00'])->assertSessionHasNoErrors();
 
         $regular->refresh();
         $this->assertSame('2026-09-02 10:00:00', $regular->ends_at->format('Y-m-d H:i:s'));
+        $this->assertSame(60, (int) $regular->duration_minutes);
         $this->assertSame('Ruang 9A', $regular->room_name);
         $this->assertSame(SessionStatus::Active, $regular->status);
     }

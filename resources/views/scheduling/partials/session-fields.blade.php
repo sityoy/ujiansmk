@@ -6,8 +6,12 @@
     $sourceId = $session?->source_session_id;
     $selectedSource = $allSessions->firstWhere('id', $sourceId);
     $selectedSourceGroup = $selectedSource?->schedule_group_id;
+    $formatDateInput = fn ($date) => $date?->format($date?->second ? 'Y-m-d\TH:i:s' : 'Y-m-d\TH:i');
+    $timeStep = ($session?->starts_at->second || $session?->ends_at->second) ? 1 : 60;
+    $minimum = \App\Models\ExamSession::MIN_DURATION_MINUTES;
+    $maximum = \App\Models\ExamSession::MAX_DURATION_MINUTES;
 @endphp
-<div class="grid gap-3 md:grid-cols-2">
+<div data-session-window data-min-duration="{{ $minimum }}" data-max-duration="{{ $maximum }}" class="grid gap-3 md:grid-cols-2">
     <label class="text-xs text-slate-400">Lokasi
         <select name="campus_id" required class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
             <option value="">Pilih lokasi</option>
@@ -23,11 +27,15 @@
         </select>
     </label>
     <label class="text-xs text-slate-400">Tanggal dan jam mulai
-        <input type="datetime-local" name="starts_at" value="{{ $session?->starts_at->format('Y-m-d\TH:i') }}" required class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
+        <input type="datetime-local" name="starts_at" step="{{ $timeStep }}" value="{{ $formatDateInput($session?->starts_at) }}" required class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
     </label>
-    <label class="text-xs text-slate-400">Durasi (menit)
-        <input type="number" name="duration_minutes" value="{{ $session?->duration_minutes }}" min="10" max="600" required placeholder="Isi durasi sendiri" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
+    <label class="text-xs text-slate-400">Tanggal dan jam selesai
+        <input type="datetime-local" name="ends_at" step="{{ $timeStep }}" value="{{ $formatDateInput($session?->ends_at) }}" required class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
     </label>
+    <div class="md:col-span-2 rounded-xl border border-white/10 px-3 py-2 text-xs text-slate-400">
+        Durasi <output data-session-duration aria-live="polite" class="ml-1 font-semibold text-cyan-300">{{ $session ? $session->duration_minutes.' menit' : '—' }}</output>
+        <p class="mt-1">Isi waktu mulai dan selesai pada tanggal yang sama. Durasi dihitung otomatis ({{ $minimum }}–{{ $maximum }} menit).</p>
+    </div>
     <label class="text-xs text-slate-400">Status
         <select name="status" required class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
             @foreach ($sessionStatuses as $status)
@@ -41,7 +49,7 @@
         <select name="source_session_id" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm">
             <option value="">Pilih sumber untuk sesi susulan</option>
             @foreach ($sourceOptions as $source)
-                <option value="{{ $source->id }}" @selected($source->id === $sourceId || ($selectedSourceGroup && $source->schedule_group_id === $selectedSourceGroup))>{{ $source->starts_at->format('d/m/Y H:i') }} · {{ $source->assessmentSubject->schoolClass->name }}{{ $source->schedule_group_id ? ' dan rombel satu jadwal' : '' }}</option>
+                <option value="{{ $source->id }}" @selected($source->id === $sourceId || ($selectedSourceGroup && $source->schedule_group_id === $selectedSourceGroup))>{{ $source->formattedWindow() }} · {{ $source->assessmentSubject->schoolClass->name }}{{ $source->schedule_group_id ? ' dan rombel satu jadwal' : '' }}</option>
             @endforeach
         </select>
     </label>

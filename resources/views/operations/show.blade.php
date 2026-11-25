@@ -31,7 +31,7 @@
     <section class="rounded-3xl border border-cyan-400/20 bg-cyan-400/[0.045] p-6">
         <p class="text-xs uppercase tracking-wider text-cyan-300">{{ $session->assessmentSubject->assessmentPeriod->name }} · {{ $session->assessmentSubject->assessmentPeriod->academicYear->name }}</p>
         <h2 class="mt-3 text-xl font-semibold">{{ $session->assessmentSubject->subject->name }} · {{ $session->assessmentSubject->schoolClass->name }}</h2>
-        <p class="mt-2 text-sm text-slate-300">{{ $session->starts_at->format('d/m/Y H:i') }}–{{ $session->ends_at->format('d/m/Y H:i') }} · {{ $session->duration_minutes }} menit · {{ $sessionLabels[$session->status->value] }}</p>
+        <p class="mt-2 text-sm text-slate-300">{{ $session->formattedWindow() }} · {{ $session->duration_minutes }} menit · {{ $sessionLabels[$session->status->value] }}</p>
         <p class="mt-2 text-sm text-slate-400">{{ $session->campus->name }}{{ $session->room_name ? ' · '.$session->room_name : '' }} · {{ $session->kind->value === 'makeup' ? 'Susulan' : 'Reguler' }} · {{ $questionCount }} soal</p>
         @if (!$questionCount || !$statistics['total'] || !$session->campus->is_active)
             <p class="mt-4 text-sm text-amber-300">Perlu dilengkapi: {{ collect([!$questionCount ? 'bank soal masih kosong' : null, !$statistics['total'] ? 'belum ada peserta ditempatkan' : null, !$session->campus->is_active ? 'lokasi tidak aktif' : null])->filter()->implode('; ') }}.</p>

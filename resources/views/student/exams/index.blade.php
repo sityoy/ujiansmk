@@ -52,7 +52,7 @@
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-300">{{ $assignment->assessmentSubject->assessmentPeriod->name }}</p>
                         <h3 class="mt-2 text-xl font-semibold text-white">{{ $assignment->assessmentSubject->subject->name }}</h3>
-                        <p class="mt-2 text-sm text-slate-400">{{ $session->starts_at->format('d/m/Y H:i') }}–{{ $session->ends_at->format($session->starts_at->isSameDay($session->ends_at) ? 'H:i' : 'd/m/Y H:i') }} · {{ $session->duration_minutes }} menit</p>
+                        <p class="mt-2 text-sm text-slate-400">{{ $session->formattedWindow() }} · {{ $session->duration_minutes }} menit</p>
                         <p class="mt-1 text-xs text-slate-500">{{ $session->campus->name }}{{ $session->room_name ? ' · '.$session->room_name : '' }} · {{ $session->kind->value === 'makeup' ? 'Susulan' : 'Reguler' }}</p>
                     </div>
                     <span class="student-exam-status inline-flex rounded-full px-3 py-1 text-xs font-semibold">{{ $statusLabels[$state] }}</span>

@@ -31,7 +31,7 @@
                     class="rounded-2xl border p-4 {{ $selectedSession?->id === $session->id ? 'border-cyan-400/50 bg-cyan-400/10' : 'border-white/10 bg-white/[0.035] hover:border-cyan-400/20' }}">
                     <p class="font-semibold text-white">{{ $session->assessmentSubject->subject->name }}</p>
                     <p class="mt-1 text-xs text-slate-400">{{ $session->assessmentSubject->schoolClass->name }} · {{ $session->assessmentSubject->assessmentPeriod->name }}</p>
-                    <p class="mt-2 text-xs text-slate-500">{{ $session->starts_at->format('H:i') }}–{{ $session->ends_at->format('H:i') }} · {{ $session->campus->name }}{{ $session->room_name ? ' · '.$session->room_name : '' }}</p>
+                    <p class="mt-2 text-xs text-slate-500">{{ $session->formattedWindow() }} · {{ $session->duration_minutes }} menit · {{ $session->campus->name }}{{ $session->room_name ? ' · '.$session->room_name : '' }}</p>
                     <p class="mt-2 text-xs text-cyan-200">{{ $session->attempts_count }}/{{ $session->assignments_count }} peserta mulai</p>
                 </a>
             @empty

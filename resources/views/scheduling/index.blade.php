@@ -209,10 +209,11 @@
             <select name="makeup_session_id" required class="rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
                 <option value="">Pilih sesi susulan yang sesuai</option>
                 @foreach ($makeupSessions as $session)
-                    <option value="{{ $session->id }}">{{ $session->assessmentSubject->subject->name }} · {{ $session->assessmentSubject->schoolClass->name }} · {{ $session->starts_at->format('d/m/Y H:i') }}</option>
+                    <option value="{{ $session->id }}">{{ $session->assessmentSubject->subject->name }} · {{ $session->assessmentSubject->schoolClass->name }} · {{ $session->formattedWindow() }}</option>
                 @endforeach
             </select>
             <button class="rounded-xl bg-amber-400 px-5 py-3 text-sm font-semibold text-slate-950">Pindahkan ke susulan</button>
         </form>
     </section>
+    <script src="{{ asset('js/exam-scheduling.js') }}" defer></script>
 @endsection

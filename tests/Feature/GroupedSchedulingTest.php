@@ -38,7 +38,12 @@ class GroupedSchedulingTest extends TestCase
     public function test_schedule_covers_one_grade_across_teachers_and_keeps_class_rosters(): void
     {
         [$components, $campus] = $this->makeComponents();
-        $data = $this->scheduleData($components[0], $campus);
+        $data = [
+            ...$this->scheduleData($components[0], $campus),
+            'starts_at' => '2026-11-11T08:00',
+            'ends_at' => '2026-11-11T09:15',
+            'duration_minutes' => 10,
+        ];
         $this->post(route('scheduling.sessions.store'), $data)->assertSessionHasNoErrors();
         $sessions = ExamSession::query()->orderBy('id')->get();
         $this->assertCount(3, $sessions);
@@ -49,6 +54,8 @@ class GroupedSchedulingTest extends TestCase
         $this->assertFalse($components[4]->examSessions()->exists());
 
         foreach ($sessions as $session) {
+            $this->assertSame(75, (int) $session->duration_minutes);
+            $this->assertSame('2026-11-11 09:15:00', $session->ends_at->toDateTimeString());
             $assignment = $session->assignments()->with('student')->firstOrFail();
             $this->assertSame($session->assessmentSubject->school_class_id, $assignment->student->school_class_id);
             $this->get(route('operations.sessions.show', $session))
@@ -61,22 +68,26 @@ class GroupedSchedulingTest extends TestCase
         $this->assertDatabaseCount('exam_assignments', 3);
 
         $this->patch(route('scheduling.sessions.update', $sessions[0]), [
-            ...$data, 'starts_at' => '2026-11-11 10:00:00',
+            ...$data, 'starts_at' => '2026-11-11T10:00', 'ends_at' => '2026-11-11T10:50',
             'rooms' => [$components[0]->id => 'Lab A', $components[1]->id => 'Lab B', $components[2]->id => 'Lab C'],
         ])->assertSessionHasNoErrors();
         foreach ($sessions as $session) {
             $this->assertSame('10:00', $session->fresh()->starts_at->format('H:i'));
-            $this->assertSame('11:15', $session->fresh()->ends_at->format('H:i'));
+            $this->assertSame('10:50', $session->fresh()->ends_at->format('H:i'));
+            $this->assertSame(50, (int) $session->fresh()->duration_minutes);
         }
         $this->assertSame(['Lab A', 'Lab B', 'Lab C'], ExamSession::query()->orderBy('id')->pluck('room_name')->all());
         $this->patch(route('scheduling.sessions.update', $sessions[0]), [
-            ...$data, 'starts_at' => '2026-11-11 12:00:00',
+            ...$data, 'starts_at' => '2026-11-11T12:00', 'ends_at' => '2026-11-11T12:50',
             'rooms' => [$components[0]->id => 'Lab A', $components[1]->id => 'Lab A', $components[2]->id => 'Lab C'],
         ])->assertSessionHasErrors('rooms');
         $this->assertSame('10:00', $sessions[0]->fresh()->starts_at->format('H:i'));
 
         $this->get(route('scheduling.index'))->assertOk()
             ->assertViewHas('components', fn ($groups): bool => $groups->total() === 3)
+            ->assertSee('Tanggal dan jam selesai')->assertSee('name="ends_at"', false)
+            ->assertSee('value="2026-11-11T10:50"', false)->assertSee('50 menit')
+            ->assertDontSee('name="duration_minutes"', false)
             ->assertSee('Lihat peserta X-1')->assertSee('Lihat peserta X-2')->assertSee('Lihat peserta X-3');
         $this->get(route('scheduling.index', ['session_class_id' => $components[0]->school_class_id]))
             ->assertOk()->assertViewHas('components', fn ($groups): bool => $groups->total() === 1 && $groups->first()->scheduledClasses->count() === 3);
@@ -268,13 +279,15 @@ class GroupedSchedulingTest extends TestCase
         $regular = ExamSession::query()->orderBy('id')->get();
         $this->post(route('scheduling.sessions.store'), [
             ...$this->scheduleData($components[0], $campus),
-            'kind' => 'makeup', 'starts_at' => '2026-11-12 13:00:00', 'source_session_id' => $regular[0]->id,
+            'kind' => 'makeup', 'starts_at' => '2026-11-12T13:00', 'ends_at' => '2026-11-12T14:10',
+            'source_session_id' => $regular[0]->id,
         ])->assertSessionHasNoErrors();
         $makeup = ExamSession::query()->where('kind', 'makeup')->orderBy('id')->get();
         $this->assertCount(3, $makeup);
         $this->delete(route('scheduling.sessions.destroy', $regular[0]))->assertSessionHasErrors('session');
         $this->assertDatabaseCount('exam_sessions', 6);
         foreach ($makeup as $session) {
+            $this->assertSame(70, (int) $session->duration_minutes);
             $this->assertSame($session->assessment_subject_id, $session->sourceSession->assessment_subject_id);
             $this->assertSame(0, $session->assignments()->count());
         }

@@ -16,7 +16,7 @@
     <div class="space-y-5 border-t border-white/10 p-5">
         <details class="rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.04] p-4">
             <summary class="cursor-pointer font-semibold text-cyan-300">Tambah jadwal seluruh rombel</summary>
-            <p class="mt-3 text-sm text-slate-400">Berlaku untuk {{ $members->pluck('schoolClass.name')->join(', ') }}. Tanggal, jam mulai, dan durasi diisi sendiri. Jam selesai dihitung dari durasi.</p>
+            <p class="mt-3 text-sm text-slate-400">Berlaku untuk {{ $members->pluck('schoolClass.name')->join(', ') }}. Tentukan waktu mulai dan selesai. Durasi berlaku sama untuk seluruh rombel.</p>
             <p class="mt-2 text-sm text-slate-300">
                 Periode administrasi {{ $group->assessmentPeriod->name }} ({{ $group->assessmentPeriod->code }}) · {{ $group->assessmentPeriod->starts_on->format('d/m/Y') }}–{{ $group->assessmentPeriod->ends_on->format('d/m/Y') }}
                 <a href="#periode-{{ $group->assessment_period_id }}" class="ml-2 font-medium text-cyan-300 underline">Buka pengaturan periode</a>
@@ -43,7 +43,7 @@
             <section class="rounded-2xl border border-white/10 p-4">
                 <div class="flex flex-wrap items-start justify-between gap-4">
                     <div>
-                        <p class="font-semibold text-white">{{ $session->kind->value === 'regular' ? 'Reguler' : 'Susulan' }} · {{ $session->starts_at->format('d/m/Y H:i') }}–{{ $session->ends_at->format('H:i') }}</p>
+                        <p class="font-semibold text-white">{{ $session->kind->value === 'regular' ? 'Reguler' : 'Susulan' }} · {{ $session->formattedWindow() }}</p>
                         <p class="mt-1 text-xs text-slate-400">{{ $session->campus->name }} · {{ $session->duration_minutes }} menit · {{ $sessions->pluck('assessmentSubject.schoolClass.name')->join(', ') }}</p>
                     </div>
                     <form method="POST" action="{{ route('operations.sessions.status', $session) }}" class="flex flex-wrap gap-2"

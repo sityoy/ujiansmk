@@ -18,6 +18,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Hidden(['access_token_hash'])]
 class ExamSession extends Model
 {
+    public const MIN_DURATION_MINUTES = 10;
+
+    public const MAX_DURATION_MINUTES = 600;
+
+    public function formattedWindow(): string
+    {
+        $endFormat = $this->starts_at->isSameDay($this->ends_at) ? 'H:i' : 'd/m/Y H:i';
+
+        return $this->starts_at->format('d/m/Y H:i').'–'.$this->ends_at->format($endFormat);
+    }
+
     protected function casts(): array
     {
         return [

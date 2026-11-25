@@ -35,6 +35,7 @@
         <div>
             <p class="text-xs text-slate-500">Sisa waktu</p>
             <p id="exam-timer" class="mt-1 font-mono text-xl font-semibold text-cyan-300">--:--:--</p>
+            <p class="mt-1 text-xs text-slate-400">Batas pengumpulan <time datetime="{{ $deadline->toIso8601String() }}">{{ $deadline->format('H:i') }}</time></p>
         </div>
         <div class="min-w-0 lg:border-l lg:border-white/10 lg:pl-4">
             <p class="text-[0.65rem] font-semibold uppercase tracking-widest text-cyan-300">Peserta</p>
@@ -61,7 +62,8 @@
     <section class="rounded-3xl border border-white/10 bg-white/[0.035] p-6">
         <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">{{ $attempt->assignment->assessmentSubject->assessmentPeriod->name }}</p>
         <h2 class="mt-2 text-2xl font-semibold text-white">{{ $attempt->assignment->assessmentSubject->subject->name }}</h2>
-        <p class="mt-2 text-sm text-slate-400">{{ $questions->count() }} soal · Dimulai {{ $attempt->started_at->format('H:i:s') }}</p>
+        @php($session = $attempt->assignment->examSession)
+        <p class="mt-2 text-sm text-slate-400">{{ $session->formattedWindow() }} · {{ $session->duration_minutes }} menit · {{ $questions->count() }} soal</p>
     </section>
 
     <fieldset id="exam-content" @disabled($attempt->security_enabled) @if($attempt->security_enabled) hidden @endif>

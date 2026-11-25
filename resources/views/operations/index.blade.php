@@ -68,7 +68,7 @@
                         <div>
                             <p class="font-medium text-white">{{ $session->assessmentSubject->subject->name }} · Kelas {{ $session->assessmentSubject->schoolClass->grade_level }}</p>
                             <p class="mt-1 text-xs text-slate-500">{{ $session->assessmentSubject->assessmentPeriod->name }} · {{ $session->kind->value === 'makeup' ? 'Susulan' : 'Reguler' }}</p>
-                            <p class="mt-2 text-sm text-slate-300">{{ $session->starts_at->format('d/m/Y H:i') }}–{{ $session->ends_at->format('H:i') }}</p>
+                            <p class="mt-2 text-sm text-slate-300">{{ $session->formattedWindow() }} · {{ $session->duration_minutes }} menit</p>
                             <p class="mt-1 text-xs text-slate-500">{{ $session->campus->name }}{{ $session->room_name ? ' · '.$session->room_name : '' }} · {{ $session->scheduleMembers->sum('assignments_count') }} peserta</p>
                         </div>
                         @if (in_array(auth()->user()->role->value, ['super_admin', 'committee', 'proctor'], true))
