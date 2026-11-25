@@ -14,7 +14,7 @@
         <div class="mx-auto flex max-w-5xl items-center justify-between gap-3">
             <div class="flex min-w-0 items-center gap-3">
                 <span class="grid size-10 shrink-0 place-items-center rounded-2xl bg-cyan-400 font-bold text-slate-950">U</span>
-                <div class="min-w-0"><p class="truncate font-semibold">Ujian Uji Coba</p><p class="text-xs text-slate-400">Sistem Ujian Sekolah</p></div>
+                <div class="min-w-0"><p class="truncate font-semibold">@yield('portal-label', 'Ujian Uji Coba')</p><p class="text-xs text-slate-400">Sistem Ujian Sekolah</p></div>
             </div>
             <x-theme-picker />
         </div>

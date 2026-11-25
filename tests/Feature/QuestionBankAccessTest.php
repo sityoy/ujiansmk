@@ -234,8 +234,8 @@ class QuestionBankAccessTest extends TestCase
 
         $this->travel(1)->second();
         $this->get(route('scheduling.questions.index', $assigned))->assertOk()
-            ->assertSee('Batas pembuatan soal sudah lewat')->assertSee('<fieldset disabled>', false)
-            ->assertDontSee('data-edit-toggle=', false);
+            ->assertSee('Batas pembuatan soal sudah lewat')->assertDontSee('Simpan soal')->assertDontSee('Edit soal');
+        $this->get(route('scheduling.questions.edit', [$assigned, $question]))->assertForbidden();
         $this->post($store, $payload)->assertSessionHasErrors('question');
         $this->put(route('scheduling.questions.update', [$assigned, $question]), [...$payload, 'question_text' => 'Revisi soal.'])
             ->assertSessionHasErrors('question');
@@ -466,6 +466,28 @@ class QuestionBankAccessTest extends TestCase
         $this->get(route('scheduling.questions.index', [$assigned, 'per_page' => 'all', 'page' => 999]))->assertOk()
             ->assertViewHas('questions', fn ($questions): bool => $questions->count() === 53 && $questions->currentPage() === 1 && $questions->first()->position === 1 && $questions->last()->position === 53);
         $this->get(route('scheduling.questions.index', [$other, 'per_page' => 'all']))->assertForbidden();
+        $this->get(route('scheduling.questions.preview', $other))->assertForbidden();
+
+        $store = route('scheduling.questions.store', [$assigned, 'per_page' => 15]);
+        $response = $this->post($store, ['question_type' => 'essay', 'question_text' => 'Soal baru di halaman empat', 'points' => 7]);
+        $saved = $assigned->questions()->where('position', 54)->sole();
+        $focused = route('scheduling.questions.index', [$assigned, 'page' => 4, 'per_page' => 15]).'#bank-question-'.$saved->id;
+        $response->assertRedirect($focused)->assertSessionHas('saved_question_id', $saved->id);
+        $edit = route('scheduling.questions.edit', [$assigned, $saved, 'per_page' => 15]);
+        $this->get($focused)->assertOk()->assertSee('Soal berhasil disimpan.')
+            ->assertSeeInOrder([$edit, $saved->question_text], false);
+        $this->get($edit)->assertOk()->assertSee('Edit Soal 54')->assertSee($saved->question_text);
+
+        $update = route('scheduling.questions.update', [$assigned, $saved, 'per_page' => 15]);
+        $this->from($edit)->put($update, ['question_type' => 'essay', 'question_text' => 'Draf revisi', 'points' => 0])
+            ->assertRedirect($edit)->assertSessionHasErrors('points');
+        $this->get($edit)->assertOk()->assertSee('Draf revisi');
+        $this->put($update, ['question_type' => 'essay', 'question_text' => 'Soal yang direvisi', 'points' => 7])
+            ->assertRedirect($focused)->assertSessionHasNoErrors();
+        $this->get(route('scheduling.questions.preview', $assigned))->assertOk()
+            ->assertSee('Pratinjau Ujian Inti')->assertSee('Soal yang direvisi')->assertSee('Jawaban esai')
+            ->assertDontSee('data-save-url=', false);
+
         $this->get(route('question-bank.index', ['view' => 'summary', 'per_page' => 'all']))->assertOk()
             ->assertViewHas('components', fn ($banks): bool => $banks->total() === 1 && $banks->first()->id === $assigned->id)
             ->assertDontSee($other->subject->name);

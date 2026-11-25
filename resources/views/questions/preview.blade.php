@@ -1,0 +1,86 @@
+@extends('layouts.tryout')
+
+@section('title', 'Simulasi Tampilan Peserta')
+@section('portal-label', $trial ? 'Pratinjau Ujian Uji Coba' : 'Pratinjau Ujian Inti')
+
+@section('content')
+    <section class="mb-6 rounded-2xl border border-cyan-400/30 bg-cyan-400/[0.045] p-5">
+        <a href="{{ $backUrl }}" class="text-sm font-semibold text-cyan-300">← Kembali ke bank soal</a>
+        <h1 class="mt-3 text-xl font-semibold text-white">Simulasi tampilan peserta</h1>
+        <p class="mt-2 text-sm text-slate-300">Coba jawab soal dan berpindah bagian seperti peserta. Jawaban hanya digunakan di halaman ini.</p>
+    </section>
+
+    @if ($questions->isEmpty())
+        <p class="rounded-xl border border-white/10 p-5 text-slate-400">Tambahkan soal untuk melihat pratinjau peserta.</p>
+    @else
+        <div id="preview-toolbar" class="exam-toolbar sticky top-0 z-10 mb-6 grid grid-cols-2 gap-4 rounded-2xl border border-white/10 bg-slate-950/95 p-4 shadow-xl lg:grid-cols-[1fr_1fr_auto]">
+            <div class="min-w-0">
+                <p class="text-xs text-cyan-300">{{ $trial ? 'Peserta Uji Coba' : 'Peserta' }}</p>
+                <p class="mt-1 font-semibold text-white">Contoh peserta</p>
+                <p class="text-xs text-slate-400">Kelas {{ $gradeLevel }}</p>
+            </div>
+            <div class="min-w-0">
+                <p class="text-xs text-cyan-300">Mata Pelajaran</p>
+                <p class="mt-1 font-semibold text-white">{{ $subjectName }}</p>
+                <p class="text-xs text-slate-400">{{ $examName }} · {{ $questions->count() }} soal</p>
+            </div>
+            <div>
+                <p class="text-xs text-slate-400">Sisa waktu</p>
+                <p class="mt-1 font-mono text-cyan-300">—</p>
+            </div>
+            <x-exam-text-size />
+        </div>
+
+        <div id="exam-content">
+            @php
+                $number = 0;
+                $questionSections = \App\Services\Exams\StudentQuestionSections::fromQuestions($questions);
+            @endphp
+            @foreach ($questionSections as $section)
+                @php
+                    $type = $section['type'];
+                @endphp
+                <section data-exam-section="{{ $type->value }}" data-question-count="{{ $section['questions']->count() }}"
+                    aria-labelledby="preview-section-{{ $type->value }}" class="mb-6 space-y-5">
+                    <h2 id="preview-section-{{ $type->value }}" tabindex="-1" data-exam-section-heading class="text-lg font-semibold text-white">
+                        {{ $type->label() }} <span class="text-sm font-normal text-slate-400">· Bagian {{ $loop->iteration }} dari {{ $loop->count }}</span>
+                    </h2>
+                    @foreach ($section['questions'] as $question)
+                        @php
+                            $number++;
+                            $options = collect($question->options)->keys()->shuffle()->mapWithKeys(fn ($key) => [$key => $question->options[$key]]);
+                        @endphp
+                        <x-exam-question-card :question="$question" :number="$number" :total="$questions->count()"
+                            :options="$options" :name="'preview_'.$question->id" :trial="$trial" />
+                    @endforeach
+                    @include('components.exam-section-navigation')
+                </section>
+            @endforeach
+            <div id="preview-submit-panel" class="space-y-3">
+                <button type="button" id="preview-finish" class="w-full rounded-xl bg-emerald-400 px-5 py-4 font-semibold text-slate-950">Kumpulkan jawaban</button>
+                <p id="preview-status" role="status" class="text-sm text-slate-300"></p>
+            </div>
+        </div>
+        <x-exam-image-dialog />
+        <script src="{{ asset('js/exam-submission.js') }}?v=4"></script>
+        <script>
+            (() => {
+                const answerSelector = '[data-preview-answer]';
+                window.bindExamSections({
+                    sections: [...document.querySelectorAll('[data-exam-section]')],
+                    submitPanel: document.getElementById('preview-submit-panel'),
+                    toolbar: document.getElementById('preview-toolbar'),
+                    answerSelector,
+                    flushAnswers: () => Promise.resolve(),
+                    pending: new Set(),
+                });
+                document.getElementById('preview-finish').addEventListener('click', () => {
+                    const unanswered = countUnansweredExamQuestions(document.querySelectorAll(answerSelector), {{ $questions->count() }});
+                    document.getElementById('preview-status').textContent = unanswered
+                        ? `Masih ada ${unanswered} soal yang belum dijawab.`
+                        : 'Simulasi selesai.';
+                });
+            })();
+        </script>
+    @endif
+@endsection

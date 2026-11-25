@@ -233,11 +233,20 @@ class TrialExamFlowTest extends TestCase
         $this->assertSame(ExamQuestionType::MultipleChoice, $pg->fresh()->question_type);
         $this->assertNull($essay->options);
         $this->assertNull($essay->correct_answer);
-        $this->put(route('trial-question-banks.questions.update', [$bank, $essay]), [
+        $this->get(route('trial-question-banks.questions.edit', [$bank, $essay]))->assertOk()
+            ->assertSee('Edit Soal 2')->assertSee($essay->question_text);
+        $this->put(route('trial-question-banks.questions.update', [$bank, $essay, 'per_page' => 'all']), [
             'question_type' => 'essay', 'question_text' => 'Jelaskan proses terjadinya hujan.', 'points' => 10,
-        ])->assertSessionHasNoErrors();
+        ])->assertRedirect(route('trial-question-banks.questions.index', [$bank, 'page' => 1, 'per_page' => 'all']).'#bank-question-'.$essay->id)
+            ->assertSessionHasNoErrors();
         $this->get(route('trial-question-banks.questions.index', $bank))->assertOk()->assertSee('Esai · 10 poin');
 
+        $preview = route('trial-question-banks.questions.preview', $bank);
+        $this->get($preview)->assertOk()->assertSee('Pratinjau Ujian Uji Coba')
+            ->assertSeeInOrder(['data-exam-section="multiple_choice"', 'Lanjut ke Esai', 'data-exam-section="essay"', 'Jawaban esai'], false)
+            ->assertDontSee('data-save-url=', false)->assertDontSee('data-state-url=', false);
+        $this->assertDatabaseCount('trial_attempts', 0);
+        $this->actingAs($student->user)->get($preview)->assertForbidden();
         $this->actingAs($student->user)->startTrial($trial, ['access_code' => $trial->access_code])->assertRedirect();
         $attempt = $trial->currentAttempts()->sole();
         $show = route('tryout.show', [$trial, $attempt]);

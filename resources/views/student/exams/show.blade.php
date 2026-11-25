@@ -74,37 +74,11 @@
                     {{ $type->label() }} <span class="text-sm font-normal text-slate-400">· Bagian {{ $loop->iteration }} dari {{ $loop->count }}</span>
                 </h2>
                 @foreach ($section['questions'] as $question)
-                    <article class="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
-                        <p class="text-xs font-semibold text-cyan-300">Soal {{ ++$number }} dari {{ $questions->count() }}</p>
-                        <x-question-prompt :question="$question" :multiple-choice="$type->value === 'multiple_choice'" class="mt-3" />
-                        @if ($type->value === 'multiple_choice')
-                            <div class="mt-4 grid gap-2">
-                                @foreach ($optionOrder->forQuestion($attempt, $question) as $key => $option)
-                                    @php($displayKey = chr(65 + $loop->index))
-                                    @php($optionPath = $question->option_file_paths[$key] ?? null)
-                                    <div class="rounded-xl border border-white/10 text-sm text-slate-300 transition hover:border-cyan-400/30 hover:bg-cyan-400/5">
-                                        <label class="exam-choice-label flex cursor-pointer items-start gap-3 px-4 py-3">
-                                            <input type="radio" name="question_{{ $question->id }}" value="{{ $key }}"
-                                                data-save-url="{{ route('student.exams.answer', [$attempt, $question]) }}"
-                                                @checked($answers->get($question->id)?->answer === $key) class="mt-1">
-                                            <strong class="text-cyan-300">{{ $displayKey }}.</strong>
-                                            <x-question-text :text="$option" :format="$question->text_format" />
-                                        </label>
-                                        @if ($optionPath)
-                                            <x-exam-option-attachment :path="$optionPath" :label="$displayKey" />
-                                        @endif
-                                    </div>
-                                @endforeach
-                            </div>
-                        @else
-                            <label class="mt-4 block text-xs text-slate-400">
-                                {{ $type->value === 'short_answer' ? 'Jawaban singkat' : 'Jawaban esai' }} · dikoreksi manual oleh guru
-                                <textarea name="question_{{ $question->id }}" rows="{{ $type->value === 'essay' ? 8 : 3 }}" maxlength="10000"
-                                    data-save-url="{{ route('student.exams.answer', [$attempt, $question]) }}"
-                                    class="exam-written-answer mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none focus:border-cyan-400">{{ $answers->get($question->id)?->answer }}</textarea>
-                            </label>
-                        @endif
-                    </article>
+                    @php($number++)
+                    <x-exam-question-card :question="$question" :number="$number" :total="$questions->count()"
+                        :options="$type->requiresManualGrading() ? [] : $optionOrder->forQuestion($attempt, $question)"
+                        :name="'question_'.$question->id" :answer="$answers->get($question->id)?->answer"
+                        :save-url="route('student.exams.answer', [$attempt, $question])" />
                 @endforeach
                 @include('components.exam-section-navigation')
             </section>
@@ -118,7 +92,7 @@
         <x-exam-image-dialog />
     </fieldset>
 
-    <script src="{{ asset('js/exam-submission.js') }}?v=3"></script>
+    <script src="{{ asset('js/exam-submission.js') }}?v=4"></script>
     <script>
         const csrf = document.querySelector('meta[name="csrf-token"]').content;
         // Base the countdown on server time, not the student's system clock.

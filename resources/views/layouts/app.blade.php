@@ -188,7 +188,7 @@
             try {
                 const stored = JSON.parse(sessionStorage.getItem(key) || 'null');
                 sessionStorage.removeItem(key);
-                if (stored && stored.path === currentPath && Date.now() - stored.savedAt < 120000) {
+                if (!window.location.hash && stored && stored.path === currentPath && Date.now() - stored.savedAt < 120000) {
                     if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
                     const restore = () => window.scrollTo({top: Number(stored.y) || 0, left: 0, behavior: 'auto'});
                     requestAnimationFrame(() => requestAnimationFrame(restore));

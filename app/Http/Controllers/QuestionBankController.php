@@ -14,6 +14,7 @@ use App\Services\Exams\CoreQuestionBankCatalog;
 use App\Services\Exams\ExamScoreCalculator;
 use App\Services\Exams\QuestionText;
 use App\Services\Students\StudentSpreadsheetService;
+use App\Support\QuestionBankNavigation;
 use App\Support\TablePagination;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\QueryException;
@@ -191,15 +192,47 @@ class QuestionBankController extends Controller
         $totalPoints = (float) $assessmentSubject->questions()->sum('points');
         $hasAttempts = $assessmentSubject->questionBankGroup()->whereHas('assignments.attempt')->exists();
         $isLocked = $hasAttempts || $assessmentSubject->assessmentPeriod->coreQuestionDeadlinePassed();
-        $questionTypes = $assessmentSubject->assessmentPeriod->type === AssessmentType::ATS
-            ? [ExamQuestionType::ShortAnswer, ExamQuestionType::Essay]
-            : ExamQuestionType::cases();
+        $questionTypes = $this->questionTypes($assessmentSubject);
         $gradeLevel = (int) $assessmentSubject->schoolClass->grade_level;
 
         return view('questions.index', compact(
             'assessmentSubject', 'questions', 'questionCount', 'totalPoints',
             'isLocked', 'hasAttempts', 'questionTypes', 'gradeLevel', 'rombelNames'
         ));
+    }
+
+    public function edit(Request $request, AssessmentSubject $assessmentSubject, ExamQuestion $question): View
+    {
+        $this->authorizeAccess($request, $assessmentSubject);
+        abort_unless($question->assessment_subject_id === $assessmentSubject->id, 404);
+        $assessmentSubject->load(['subject', 'assessmentPeriod']);
+        abort_if($assessmentSubject->assessmentPeriod->coreQuestionDeadlinePassed()
+            || $assessmentSubject->questionBankGroup()->whereHas('assignments.attempt')->exists(), 403, 'Bank soal sedang terkunci.');
+
+        return view('questions.edit', [
+            'subjectName' => $assessmentSubject->subject->name,
+            'question' => $question,
+            'questionTypes' => $this->questionTypes($assessmentSubject),
+            'backUrl' => QuestionBankNavigation::questionUrl($assessmentSubject, $question),
+            'action' => route('scheduling.questions.update', [$assessmentSubject, $question, 'per_page' => TablePagination::selected()]),
+            'trial' => false,
+        ]);
+    }
+
+    public function preview(Request $request, AssessmentSubject $assessmentSubject): Response
+    {
+        $this->authorizeAccess($request, $assessmentSubject);
+        $assessmentSubject = $this->banks->readableComponent($assessmentSubject);
+        $assessmentSubject->load(['subject', 'assessmentPeriod', 'schoolClass']);
+
+        return response()->view('questions.preview', [
+            'subjectName' => $assessmentSubject->subject->name,
+            'examName' => $assessmentSubject->assessmentPeriod->name,
+            'gradeLevel' => $assessmentSubject->schoolClass->grade_level,
+            'questions' => $assessmentSubject->questions()->orderBy('position')->get(),
+            'backUrl' => route('scheduling.questions.index', [$assessmentSubject, 'per_page' => TablePagination::selected(), 'page' => max(1, $request->integer('page', 1))]),
+            'trial' => false,
+        ])->header('Cache-Control', 'private, no-store');
     }
 
     public function export(
@@ -249,7 +282,7 @@ class QuestionBankController extends Controller
         $this->authorizeAccess($request, $assessmentSubject);
         $validated = $this->validateQuestion($request, $assessmentSubject);
 
-        DB::transaction(function () use ($request, $assessmentSubject, $validated): void {
+        $question = DB::transaction(function () use ($request, $assessmentSubject, $validated): ExamQuestion {
             $siblings = $this->lockedGroup($request, $assessmentSubject);
             $this->assertEditable($siblings);
             $this->banks->synchronize($siblings);
@@ -268,9 +301,12 @@ class QuestionBankController extends Controller
                     'position' => $position,
                 ]);
             }
+
+            return $assessmentSubject->questions()->where('position', $position)->firstOrFail();
         });
 
-        return back()->with('status', 'Soal berhasil ditambahkan ke bank soal ini.');
+        return redirect()->to(QuestionBankNavigation::questionUrl($assessmentSubject, $question))
+            ->with('saved_question_id', $question->id)->with('status', 'Soal berhasil ditambahkan ke bank soal ini.');
     }
 
     public function update(
@@ -333,7 +369,8 @@ class QuestionBankController extends Controller
             $this->deleteUnusedOptionFiles($oldOptionPaths);
         });
 
-        return back()->with('status', 'Soal berhasil diperbarui di bank soal ini.');
+        return redirect()->to(QuestionBankNavigation::questionUrl($assessmentSubject, $question->refresh()))
+            ->with('saved_question_id', $question->id)->with('status', 'Soal berhasil diperbarui di bank soal ini.');
     }
 
     public function destroy(Request $request, AssessmentSubject $assessmentSubject, ExamQuestion $question): RedirectResponse
@@ -403,12 +440,17 @@ class QuestionBankController extends Controller
         }
     }
 
+    private function questionTypes(AssessmentSubject $component): array
+    {
+        return $component->assessmentPeriod->type === AssessmentType::ATS
+            ? [ExamQuestionType::ShortAnswer, ExamQuestionType::Essay]
+            : ExamQuestionType::cases();
+    }
+
     private function validateQuestion(Request $request, AssessmentSubject $component): array
     {
         $component->loadMissing('assessmentPeriod');
-        $allowedTypes = $component->assessmentPeriod->type === AssessmentType::ATS
-            ? [ExamQuestionType::ShortAnswer->value, ExamQuestionType::Essay->value]
-            : array_map(fn (ExamQuestionType $type): string => $type->value, ExamQuestionType::cases());
+        $allowedTypes = array_map(fn (ExamQuestionType $type): string => $type->value, $this->questionTypes($component));
 
         $validated = $request->validate([
             'question_type' => ['required', Rule::in($allowedTypes)],

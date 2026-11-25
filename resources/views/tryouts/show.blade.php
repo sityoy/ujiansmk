@@ -67,40 +67,11 @@
                         {{ $type->label() }}
                     </h2>
                     @foreach ($section['questions'] as $question)
-                        <article class="rounded-3xl border border-white/10 bg-white/[0.035] p-6">
-                            <div class="flex gap-4"><span class="grid size-9 shrink-0 place-items-center rounded-xl bg-cyan-400/10 font-semibold text-cyan-300">{{ ++$number }}</span>
-                                <div class="min-w-0 flex-1">
-                                    <x-question-prompt :question="$question" />
-                                    @if ($type->value === 'multiple_choice')
-                                        <div class="mt-5 grid gap-3">
-                                            @foreach ($optionOrder->forQuestion($attempt, $question) as $key => $option)
-                                                @php($displayKey = chr(65 + $loop->index))
-                                                @php($optionPath = $question->option_file_paths[$key] ?? null)
-                                                <div class="tryout-option rounded-xl border border-white/10 bg-slate-950/50 hover:border-cyan-400/30">
-                                                    <label class="exam-choice-label flex cursor-pointer items-start gap-3 px-4 py-3">
-                                                        <input type="radio" name="answers[{{ $question->id }}]" value="{{ $key }}"
-                                                            data-save-url="{{ route('tryout.answer', [$trialExam, $attempt, $question]) }}"
-                                                            @checked($answers->get($question->id)?->answer === $key) class="mt-1">
-                                                        <strong class="text-cyan-300">{{ $displayKey }}.</strong>
-                                                        <x-question-text :text="$option" :format="$question->text_format" />
-                                                    </label>
-                                                    @if ($optionPath)
-                                                        <x-exam-option-attachment :path="$optionPath" :label="$displayKey" />
-                                                    @endif
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                    @else
-                                        <label class="mt-4 block text-xs text-slate-400">
-                                            {{ $type->value === 'short_answer' ? 'Jawaban singkat' : 'Jawaban esai' }} · dikoreksi manual
-                                            <textarea name="answers[{{ $question->id }}]" rows="{{ $type->value === 'short_answer' ? 3 : 8 }}" maxlength="10000"
-                                                data-save-url="{{ route('tryout.answer', [$trialExam, $attempt, $question]) }}"
-                                                class="exam-written-answer mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none focus:border-cyan-400">{{ $answers->get($question->id)?->answer }}</textarea>
-                                        </label>
-                                    @endif
-                                </div>
-                            </div>
-                        </article>
+                        @php($number++)
+                        <x-exam-question-card :question="$question" :number="$number" :total="$questions->count()"
+                            :options="$type->requiresManualGrading() ? [] : $optionOrder->forQuestion($attempt, $question)"
+                            :name="'answers['.$question->id.']'" :answer="$answers->get($question->id)?->answer"
+                            :save-url="route('tryout.answer', [$trialExam, $attempt, $question])" trial />
                     @endforeach
                     @include('components.exam-section-navigation')
                 </section>
@@ -113,7 +84,7 @@
         </fieldset>
     </form>
 
-    <script src="{{ asset('js/exam-submission.js') }}?v=3"></script>
+    <script src="{{ asset('js/exam-submission.js') }}?v=4"></script>
     <script>
         const csrf = document.querySelector('meta[name="csrf-token"]').content;
         const remainingAtLoad = {{ max(0, $deadline->getTimestamp() - now()->getTimestamp()) * 1000 }};

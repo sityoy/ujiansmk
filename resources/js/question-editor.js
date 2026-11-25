@@ -148,9 +148,9 @@ export function initializeQuestionEditors() {
     initializeVisibleEditors();
     document.addEventListener('submit', prepareSubmission, true);
     document.addEventListener('change', (event) => {
-        if (event.target.matches('#question-type, .edit-question-type')) initializeVisibleEditors();
+        if (event.target.matches('[data-question-bank-form] [name="question_type"]')) initializeVisibleEditors();
     });
-    document.addEventListener('click', (event) => {
-        if (event.target.closest('[data-edit-toggle]')) initializeVisibleEditors();
-    });
+    document.addEventListener('toggle', (event) => {
+        if (event.target.matches('details[data-question-add][open]')) initializeVisibleEditors();
+    }, true);
 }

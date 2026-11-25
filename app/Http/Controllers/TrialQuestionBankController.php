@@ -16,6 +16,8 @@ use App\Services\Exams\TrialQuestionBankArchive;
 use App\Services\Exams\TrialQuestionBankCatalog;
 use App\Services\Exams\TrialQuestionPack;
 use App\Services\Students\StudentSpreadsheetService;
+use App\Support\QuestionBankNavigation;
+use App\Support\TablePagination;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
@@ -159,6 +161,36 @@ class TrialQuestionBankController extends Controller
         ]);
     }
 
+    public function editQuestion(Request $request, TrialQuestionBank $trialQuestionBank, TrialQuestion $question): View
+    {
+        $this->authorizeBank($request, $trialQuestionBank);
+        abort_unless($question->trial_question_bank_id === $trialQuestionBank->id, 404);
+        abort_if($reason = $this->lockedReason($trialQuestionBank), 403, $reason);
+
+        return view('questions.edit', [
+            'subjectName' => $trialQuestionBank->subject->name,
+            'question' => $question,
+            'questionTypes' => ExamQuestionType::cases(),
+            'backUrl' => QuestionBankNavigation::questionUrl($trialQuestionBank, $question),
+            'action' => route('trial-question-banks.questions.update', [$trialQuestionBank, $question, 'per_page' => TablePagination::selected()]),
+            'trial' => true,
+        ]);
+    }
+
+    public function preview(Request $request, TrialQuestionBank $trialQuestionBank): Response
+    {
+        $this->authorizeBank($request, $trialQuestionBank);
+
+        return response()->view('questions.preview', [
+            'subjectName' => $trialQuestionBank->subject->name,
+            'examName' => $trialQuestionBank->name,
+            'gradeLevel' => $trialQuestionBank->grade_level,
+            'questions' => $trialQuestionBank->questions()->get(),
+            'backUrl' => route('trial-question-banks.questions.index', [$trialQuestionBank, 'per_page' => TablePagination::selected(), 'page' => max(1, $request->integer('page', 1))]),
+            'trial' => true,
+        ])->header('Cache-Control', 'private, no-store');
+    }
+
     public function updateSettings(Request $request, TrialQuestionBank $trialQuestionBank): RedirectResponse
     {
         $validated = $request->validate([
@@ -236,12 +268,12 @@ class TrialQuestionBankController extends Controller
         $this->authorizeBank($request, $trialQuestionBank);
         $validated = $this->validateQuestion($request);
 
-        DB::transaction(function () use ($request, $trialQuestionBank, $validated): void {
+        $question = DB::transaction(function () use ($request, $trialQuestionBank, $validated): TrialQuestion {
             $this->assertEditable($request, $trialQuestionBank);
             $position = (int) $trialQuestionBank->questions()->lockForUpdate()->max('position') + 1;
             $optionFilePaths = $validated['question_type'] === ExamQuestionType::MultipleChoice->value
                 ? $this->storeOptionFiles($request, 'trial-options') : [];
-            $trialQuestionBank->questions()->create([
+            return $trialQuestionBank->questions()->create([
                 ...$this->attributes($validated),
                 'question_image_path' => $request->file('question_image')?->store('trial-questions', 'public'),
                 'option_file_paths' => $optionFilePaths ?: null,
@@ -249,7 +281,8 @@ class TrialQuestionBankController extends Controller
             ]);
         });
 
-        return back()->with('status', 'Soal uji coba berhasil ditambahkan.');
+        return redirect()->to(QuestionBankNavigation::questionUrl($trialQuestionBank, $question))
+            ->with('saved_question_id', $question->id)->with('status', 'Soal uji coba berhasil ditambahkan.');
     }
 
     public function updateQuestion(
@@ -282,7 +315,8 @@ class TrialQuestionBankController extends Controller
             $this->deleteUnusedOptionFiles($oldOptionPaths);
         });
 
-        return back()->with('status', 'Soal uji coba berhasil diperbarui.');
+        return redirect()->to(QuestionBankNavigation::questionUrl($trialQuestionBank, $question->refresh()))
+            ->with('saved_question_id', $question->id)->with('status', 'Soal uji coba berhasil diperbarui.');
     }
 
     public function destroyQuestion(

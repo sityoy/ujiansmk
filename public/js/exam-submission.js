@@ -2,18 +2,18 @@ function countUnansweredExamQuestions(inputs, questionCount) {
     const answered = new Set();
     inputs.forEach(input => {
         if (input.type === 'radio' ? input.checked : input.value.trim() !== '') {
-            answered.add(input.dataset.saveUrl);
+            answered.add(input.dataset.saveUrl ?? input.name);
         }
     });
 
     return questionCount - answered.size;
 }
 
-window.bindExamSections = ({ sections, submitPanel, flushAnswers, pending, toolbar }) => {
+window.bindExamSections = ({ sections, submitPanel, flushAnswers, pending, toolbar, answerSelector = '[data-save-url]' }) => {
     if (sections.length < 2) return;
 
     const countUnanswered = section => countUnansweredExamQuestions(
-        section.querySelectorAll('[data-save-url]'),
+        section.querySelectorAll(answerSelector),
         Number(section.dataset.questionCount),
     );
     const firstUnfinished = sections.findIndex(section => countUnanswered(section) > 0);
