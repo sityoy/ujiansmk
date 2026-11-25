@@ -475,7 +475,8 @@ class QuestionBankAccessTest extends TestCase
         $response->assertRedirect($focused)->assertSessionHas('saved_question_id', $saved->id);
         $edit = route('scheduling.questions.edit', [$assigned, $saved, 'per_page' => 15]);
         $this->get($focused)->assertOk()->assertSee('Soal berhasil disimpan.')
-            ->assertSeeInOrder([$edit, $saved->question_text], false);
+            ->assertSeeInOrder(['id="tambah-soal"', 'data-question-bank-form', 'id="bank-questions-title"', $edit, $saved->question_text], false)
+            ->assertSee('Tambah soal berikutnya')->assertDontSee('data-question-add', false);
         $this->get($edit)->assertOk()->assertSee('Edit Soal 54')->assertSee($saved->question_text);
 
         $update = route('scheduling.questions.update', [$assigned, $saved, 'per_page' => 15]);
@@ -487,6 +488,10 @@ class QuestionBankAccessTest extends TestCase
         $this->get(route('scheduling.questions.preview', $assigned))->assertOk()
             ->assertSee('Pratinjau Ujian Inti')->assertSee('Soal yang direvisi')->assertSee('Jawaban esai')
             ->assertDontSee('data-save-url=', false);
+        $this->get(route('scheduling.questions.preview', [$assigned, 'soal' => $saved->id, 'per_page' => 15]))
+            ->assertOk()->assertSee('Soal nomor 54 dari bank yang dipilih.')->assertSee('Soal yang direvisi')
+            ->assertDontSee('Pertanyaan 53')->assertSee('Simulasikan seluruh soal');
+        $this->get(route('scheduling.questions.preview', [$assigned, 'soal' => $saved->id + 1000]))->assertNotFound();
 
         $this->get(route('question-bank.index', ['view' => 'summary', 'per_page' => 'all']))->assertOk()
             ->assertViewHas('components', fn ($banks): bool => $banks->total() === 1 && $banks->first()->id === $assigned->id)

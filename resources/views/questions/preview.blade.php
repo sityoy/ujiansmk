@@ -5,9 +5,19 @@
 
 @section('content')
     <section class="mb-6 rounded-2xl border border-cyan-400/30 bg-cyan-400/[0.045] p-5">
-        <a href="{{ $backUrl }}" class="text-sm font-semibold text-cyan-300">← Kembali ke bank soal</a>
+        <div class="flex flex-wrap gap-4 text-sm font-semibold text-cyan-300">
+            <a href="{{ $backUrl }}">← Kembali ke bank soal</a>
+            @if ($focusedQuestion)
+                <a href="{{ $fullPreviewUrl }}">Simulasikan seluruh soal</a>
+            @endif
+        </div>
         <h1 class="mt-3 text-xl font-semibold text-white">Simulasi tampilan peserta</h1>
-        <p class="mt-2 text-sm text-slate-300">Coba jawab soal dan berpindah bagian seperti peserta. Jawaban hanya digunakan di halaman ini.</p>
+        @if ($questions->isNotEmpty())
+            <p class="mt-2 text-sm text-slate-300">
+                {{ $focusedQuestion ? 'Soal nomor '.$focusedQuestion->position.' dari bank yang dipilih.' : $questions->count().' soal tersimpan dari bank yang dipilih.' }}
+                Jawaban yang dicoba di sini tidak masuk ke hasil ujian.
+            </p>
+        @endif
     </section>
 
     @if ($questions->isEmpty())
@@ -16,13 +26,13 @@
         <div id="preview-toolbar" class="exam-toolbar sticky top-0 z-10 mb-6 grid grid-cols-2 gap-4 rounded-2xl border border-white/10 bg-slate-950/95 p-4 shadow-xl lg:grid-cols-[1fr_1fr_auto]">
             <div class="min-w-0">
                 <p class="text-xs text-cyan-300">{{ $trial ? 'Peserta Uji Coba' : 'Peserta' }}</p>
-                <p class="mt-1 font-semibold text-white">Contoh peserta</p>
+                <p class="mt-1 font-semibold text-white">Mode pratinjau</p>
                 <p class="text-xs text-slate-400">Kelas {{ $gradeLevel }}</p>
             </div>
             <div class="min-w-0">
                 <p class="text-xs text-cyan-300">Mata Pelajaran</p>
                 <p class="mt-1 font-semibold text-white">{{ $subjectName }}</p>
-                <p class="text-xs text-slate-400">{{ $examName }} · {{ $questions->count() }} soal</p>
+                <p class="text-xs text-slate-400">{{ $examName }}</p>
             </div>
             <div>
                 <p class="text-xs text-slate-400">Sisa waktu</p>
@@ -50,7 +60,7 @@
                             $number++;
                             $options = collect($question->options)->keys()->shuffle()->mapWithKeys(fn ($key) => [$key => $question->options[$key]]);
                         @endphp
-                        <x-exam-question-card :question="$question" :number="$number" :total="$questions->count()"
+                        <x-exam-question-card :question="$question" :number="$focusedQuestion?->position ?? $number" :total="$focusedQuestion ? null : $questions->count()"
                             :options="$options" :name="'preview_'.$question->id" :trial="$trial" />
                     @endforeach
                     @include('components.exam-section-navigation')

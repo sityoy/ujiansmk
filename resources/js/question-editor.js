@@ -150,7 +150,4 @@ export function initializeQuestionEditors() {
     document.addEventListener('change', (event) => {
         if (event.target.matches('[data-question-bank-form] [name="question_type"]')) initializeVisibleEditors();
     });
-    document.addEventListener('toggle', (event) => {
-        if (event.target.matches('details[data-question-add][open]')) initializeVisibleEditors();
-    }, true);
 }

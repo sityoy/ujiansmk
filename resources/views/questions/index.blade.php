@@ -26,44 +26,50 @@
         </div>
     </section>
 
-    <div class="mt-6 space-y-6">
-        @if ($hasAttempts)
-            <p class="mt-3 text-sm text-amber-300">Bank soal terkunci karena sudah ada siswa yang mulai ujian. Isi dan bobot soal dipertahankan untuk menjaga konsistensi nilai reguler dan susulan.</p>
-        @elseif ($isLocked)
-            <p class="mt-3 text-sm text-amber-300">Batas pembuatan soal sudah lewat. Hubungi Panitia atau Super Admin untuk mengubah batas periode.</p>
-        @endif
+    @if ($hasAttempts)
+        <p class="mt-3 text-sm text-amber-300">Bank soal terkunci karena sudah ada siswa yang mulai ujian. Isi dan bobot soal dipertahankan untuk menjaga konsistensi nilai reguler dan susulan.</p>
+    @elseif ($isLocked)
+        <p class="mt-3 text-sm text-amber-300">Batas pembuatan soal sudah lewat. Hubungi Panitia atau Super Admin untuk mengubah batas periode.</p>
+    @endif
+
+    <div @class(['mt-6 grid items-start gap-6', 'xl:grid-cols-[420px_minmax(0,1fr)]' => ! $isLocked])>
         @unless ($isLocked)
-            <details data-question-add class="rounded-3xl border border-white/10 bg-white/[0.035] p-5 sm:p-6" @if ($questionCount === 0 || $errors->any()) open @endif>
-                <summary class="cursor-pointer text-base font-semibold text-cyan-300">Tambah soal</summary>
+            <section id="tambah-soal" aria-labelledby="bank-add-title" class="min-w-0 scroll-mt-24 rounded-3xl border border-white/10 bg-white/[0.035] p-5 sm:p-6">
+                <h2 id="bank-add-title" class="text-xl font-semibold text-white">Tambah soal</h2>
                 @if ($assessmentSubject->assessmentPeriod->type->value === 'ats')
                     <p class="mt-3 text-sm text-cyan-200">Khusus ATS: tersedia isian singkat dan esai. Seluruh jawaban dikoreksi manual.</p>
                     <p class="mt-2 rounded-xl border border-cyan-400/15 bg-cyan-400/[0.04] p-3 text-xs leading-5 text-slate-400">Saran 20 soal: 10 isian × 3 poin + 10 esai × 7 poin = total 100. Bobot wajib diisi dan merupakan nilai maksimal setiap soal.</p>
                 @endif
-                <div class="mt-5 max-w-3xl">
+                <div class="mt-5">
                     <x-question-bank-form :action="route('scheduling.questions.store', [$assessmentSubject, 'per_page' => $perPage])" :question-types="$questionTypes" />
                 </div>
-            </details>
+            </section>
         @endunless
 
-        <section aria-labelledby="bank-questions-title" class="space-y-3">
+        <section aria-labelledby="bank-questions-title" class="min-w-0 space-y-3">
             <h2 id="bank-questions-title" class="text-lg font-semibold text-white">Daftar soal</h2>
             @forelse ($questions as $question)
                 <article id="bank-question-{{ $question->id }}" class="scroll-mt-24 rounded-2xl border border-white/10 bg-white/[0.035] p-5 target:border-cyan-400/60">
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <p class="text-sm font-semibold text-violet-300">Soal {{ $question->position }} · {{ $question->question_type->label() }} · {{ number_format((float) $question->points, 2, ',', '.') }} poin</p>
-                        @unless ($isLocked)
-                            <div class="flex flex-wrap items-center gap-2">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <a href="{{ route('scheduling.questions.preview', [$assessmentSubject, 'soal' => $question->id, 'per_page' => $perPage, 'page' => $questions->currentPage()]) }}"
+                                class="rounded-lg border border-white/10 px-3 py-2 text-sm font-semibold text-slate-300">Lihat sebagai peserta</a>
+                            @unless ($isLocked)
                                 <a href="{{ route('scheduling.questions.edit', [$assessmentSubject, $question, 'per_page' => $perPage]) }}"
                                     class="rounded-lg border border-cyan-400/35 bg-cyan-400/10 px-3 py-2 text-sm font-semibold text-cyan-200">Edit soal</a>
                                 <form method="POST" action="{{ route('scheduling.questions.destroy', [$assessmentSubject, $question]) }}" onsubmit="return confirm('Hapus soal ini?')">
                                     @csrf @method('DELETE')
                                     <button class="px-3 py-2 text-sm text-rose-300">Hapus</button>
                                 </form>
-                            </div>
-                        @endunless
+                            @endunless
+                        </div>
                     </div>
                     @if (session('saved_question_id') === $question->id)
                         <p role="status" class="mt-2 text-sm font-semibold text-emerald-200">Soal berhasil disimpan.</p>
+                        @unless ($isLocked)
+                            <a href="#tambah-soal" class="mt-2 inline-block text-sm font-semibold text-cyan-300 underline">Tambah soal berikutnya</a>
+                        @endunless
                     @endif
                     <x-question-prompt :question="$question" :multiple-choice="$question->question_type->value === 'multiple_choice'" class="mt-3" />
                     @if ($question->question_type->value === 'multiple_choice')
@@ -84,11 +90,10 @@
             @empty
                 <div class="rounded-3xl border border-dashed border-white/10 p-12 text-center text-sm text-slate-500">Belum ada soal untuk mapel dan tingkat ini.</div>
             @endforelse
+            <div class="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
+                {{ $questions->links() }}
+            </div>
         </section>
-    </div>
-
-    <div class="mt-6 rounded-2xl border border-white/10 bg-white/[0.025] p-4">
-        {{ $questions->links() }}
     </div>
 
     <x-exam-image-dialog />

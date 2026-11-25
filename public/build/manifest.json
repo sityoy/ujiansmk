@@ -17,7 +17,7 @@
     ]
   },
   "resources/css/app.css": {
-    "file": "assets/app-PiepEKHO.css",
+    "file": "assets/app-DOvT8bWc.css",
     "name": "app",
     "names": [
       "app.css"
@@ -26,7 +26,7 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-7bmF2Mk4.js",
+    "file": "assets/app-BzRaSWbn.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -64,7 +64,7 @@
     ]
   },
   "resources/js/question-editor.js": {
-    "file": "assets/question-editor-CjUM0HAR.js",
+    "file": "assets/question-editor-8LBOcJ3k.js",
     "name": "question-editor",
     "src": "resources/js/question-editor.js",
     "isDynamicEntry": true,

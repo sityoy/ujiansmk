@@ -239,12 +239,16 @@ class TrialExamFlowTest extends TestCase
             'question_type' => 'essay', 'question_text' => 'Jelaskan proses terjadinya hujan.', 'points' => 10,
         ])->assertRedirect(route('trial-question-banks.questions.index', [$bank, 'page' => 1, 'per_page' => 'all']).'#bank-question-'.$essay->id)
             ->assertSessionHasNoErrors();
-        $this->get(route('trial-question-banks.questions.index', $bank))->assertOk()->assertSee('Esai · 10 poin');
+        $this->get(route('trial-question-banks.questions.index', $bank))->assertOk()
+            ->assertSeeInOrder(['id="tambah-soal"', 'data-question-bank-form', 'id="bank-questions-title"'], false)
+            ->assertSee('Esai · 10 poin')->assertSee('Lihat sebagai peserta');
 
         $preview = route('trial-question-banks.questions.preview', $bank);
         $this->get($preview)->assertOk()->assertSee('Pratinjau Ujian Uji Coba')
             ->assertSeeInOrder(['data-exam-section="multiple_choice"', 'Lanjut ke Esai', 'data-exam-section="essay"', 'Jawaban esai'], false)
             ->assertDontSee('data-save-url=', false)->assertDontSee('data-state-url=', false);
+        $this->get(route('trial-question-banks.questions.preview', [$bank, 'soal' => $pg->id]))->assertOk()
+            ->assertSee($pg->question_text)->assertDontSee($essay->question_text)->assertSee('Simulasikan seluruh soal');
         $this->assertDatabaseCount('trial_attempts', 0);
         $this->actingAs($student->user)->get($preview)->assertForbidden();
         $this->actingAs($student->user)->startTrial($trial, ['access_code' => $trial->access_code])->assertRedirect();

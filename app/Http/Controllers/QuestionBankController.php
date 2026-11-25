@@ -224,13 +224,19 @@ class QuestionBankController extends Controller
         $this->authorizeAccess($request, $assessmentSubject);
         $assessmentSubject = $this->banks->readableComponent($assessmentSubject);
         $assessmentSubject->load(['subject', 'assessmentPeriod', 'schoolClass']);
+        $page = ['per_page' => TablePagination::selected(), 'page' => max(1, $request->integer('page', 1))];
+        $bank = [$assessmentSubject, ...$page];
+        $questions = $assessmentSubject->questions()->orderBy('position');
+        $focusedQuestion = $request->filled('soal') ? $questions->findOrFail($request->integer('soal')) : null;
 
         return response()->view('questions.preview', [
             'subjectName' => $assessmentSubject->subject->name,
             'examName' => $assessmentSubject->assessmentPeriod->name,
             'gradeLevel' => $assessmentSubject->schoolClass->grade_level,
-            'questions' => $assessmentSubject->questions()->orderBy('position')->get(),
-            'backUrl' => route('scheduling.questions.index', [$assessmentSubject, 'per_page' => TablePagination::selected(), 'page' => max(1, $request->integer('page', 1))]),
+            'questions' => $focusedQuestion ? collect([$focusedQuestion]) : $questions->get(),
+            'focusedQuestion' => $focusedQuestion,
+            'fullPreviewUrl' => route('scheduling.questions.preview', $bank),
+            'backUrl' => $focusedQuestion ? QuestionBankNavigation::questionUrl($assessmentSubject, $focusedQuestion) : route('scheduling.questions.index', $bank),
             'trial' => false,
         ])->header('Cache-Control', 'private, no-store');
     }

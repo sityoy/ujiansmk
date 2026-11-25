@@ -7,7 +7,7 @@
             <span class="grid size-9 shrink-0 place-items-center rounded-xl bg-cyan-400/10 font-semibold text-cyan-300">{{ $number }}</span>
             <div class="min-w-0 flex-1">
     @else
-        <p class="text-xs font-semibold text-cyan-300">Soal {{ $number }} dari {{ $total }}</p>
+        <p class="text-xs font-semibold text-cyan-300">Soal {{ $number }}@if ($total !== null) dari {{ $total }}@endif</p>
     @endif
     <x-question-prompt :question="$question" :multiple-choice="$trial || $type === 'multiple_choice'" :class="$trial ? '' : 'mt-3'" />
     @if ($type === 'multiple_choice')

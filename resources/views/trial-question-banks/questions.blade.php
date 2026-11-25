@@ -55,36 +55,41 @@
         @if ($isLocked)<p class="mt-3 text-sm text-amber-300">{{ $lockedReason }}</p>@endif
     </section>
 
-    <div class="mt-6 space-y-6">
+    <div @class(['mt-6 grid items-start gap-6', 'xl:grid-cols-[420px_minmax(0,1fr)]' => ! $isLocked])>
         @unless ($isLocked)
-            <details data-question-add class="rounded-3xl border border-white/10 bg-white/[0.035] p-5 sm:p-6" @if ($questionCount === 0 || $errors->any()) open @endif>
-                <summary class="cursor-pointer text-base font-semibold text-cyan-300">Tambah soal</summary>
+            <section id="tambah-soal" aria-labelledby="bank-add-title" class="min-w-0 scroll-mt-24 rounded-3xl border border-white/10 bg-white/[0.035] p-5 sm:p-6">
+                <h2 id="bank-add-title" class="text-xl font-semibold text-white">Tambah soal</h2>
                 <p class="mt-3 text-xs leading-5 text-slate-400">Pilihan Ganda dinilai otomatis. Isian Singkat dan Esai dinilai manual sesuai bobot yang diisi.</p>
-                <div class="mt-5 max-w-3xl">
+                <div class="mt-5">
                     <x-question-bank-form :action="route('trial-question-banks.questions.store', [$bank, 'per_page' => $perPage])" :question-types="\App\Enums\ExamQuestionType::cases()" trial />
                 </div>
-            </details>
+            </section>
         @endunless
 
-        <section aria-labelledby="bank-questions-title" class="space-y-3">
+        <section aria-labelledby="bank-questions-title" class="min-w-0 space-y-3">
             <h2 id="bank-questions-title" class="text-lg font-semibold text-white">Daftar soal</h2>
             @forelse ($questions as $question)
                 <article id="bank-question-{{ $question->id }}" class="scroll-mt-24 rounded-2xl border border-white/10 bg-white/[0.035] p-5 target:border-cyan-400/60">
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <p class="text-sm font-semibold text-cyan-300">Soal {{ $question->position }} · {{ $question->question_type->label() }} · {{ (float) $question->points }} poin</p>
-                        @unless ($isLocked)
-                            <div class="flex flex-wrap items-center gap-2">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <a href="{{ route('trial-question-banks.questions.preview', [$bank, 'soal' => $question->id, 'per_page' => $perPage, 'page' => $questions->currentPage()]) }}"
+                                class="rounded-lg border border-white/10 px-3 py-2 text-sm font-semibold text-slate-300">Lihat sebagai peserta</a>
+                            @unless ($isLocked)
                                 <a href="{{ route('trial-question-banks.questions.edit', [$bank, $question, 'per_page' => $perPage]) }}"
                                     class="rounded-lg border border-cyan-400/35 bg-cyan-400/10 px-3 py-2 text-sm font-semibold text-cyan-200">Edit soal</a>
                                 <form method="POST" action="{{ route('trial-question-banks.questions.destroy', [$bank, $question]) }}" onsubmit="return confirm('Hapus soal ini?')">
                                     @csrf @method('DELETE')
                                     <button class="px-3 py-2 text-sm text-rose-300">Hapus</button>
                                 </form>
-                            </div>
-                        @endunless
+                            @endunless
+                        </div>
                     </div>
                     @if (session('saved_question_id') === $question->id)
                         <p role="status" class="mt-2 text-sm font-semibold text-emerald-200">Soal berhasil disimpan.</p>
+                        @unless ($isLocked)
+                            <a href="#tambah-soal" class="mt-2 inline-block text-sm font-semibold text-cyan-300 underline">Tambah soal berikutnya</a>
+                        @endunless
                     @endif
                     <x-question-prompt :question="$question" class="mt-3" />
                     <div class="mt-4 grid gap-2 sm:grid-cols-2">
@@ -99,8 +104,8 @@
             @empty
                 <div class="rounded-3xl border border-dashed border-white/10 p-12 text-center text-sm text-slate-500">Belum ada soal dalam bank uji coba ini.</div>
             @endforelse
+            <div class="rounded-2xl border border-white/10 p-4">{{ $questions->links() }}</div>
         </section>
     </div>
-    <div class="mt-6 rounded-2xl border border-white/10 p-4">{{ $questions->links() }}</div>
     <x-exam-image-dialog />
 @endsection

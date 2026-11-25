@@ -180,13 +180,18 @@ class TrialQuestionBankController extends Controller
     public function preview(Request $request, TrialQuestionBank $trialQuestionBank): Response
     {
         $this->authorizeBank($request, $trialQuestionBank);
+        $bank = [$trialQuestionBank, 'per_page' => TablePagination::selected(), 'page' => max(1, $request->integer('page', 1))];
+        $questions = $trialQuestionBank->questions();
+        $focusedQuestion = $request->filled('soal') ? $questions->findOrFail($request->integer('soal')) : null;
 
         return response()->view('questions.preview', [
             'subjectName' => $trialQuestionBank->subject->name,
             'examName' => $trialQuestionBank->name,
             'gradeLevel' => $trialQuestionBank->grade_level,
-            'questions' => $trialQuestionBank->questions()->get(),
-            'backUrl' => route('trial-question-banks.questions.index', [$trialQuestionBank, 'per_page' => TablePagination::selected(), 'page' => max(1, $request->integer('page', 1))]),
+            'questions' => $focusedQuestion ? collect([$focusedQuestion]) : $questions->get(),
+            'focusedQuestion' => $focusedQuestion,
+            'fullPreviewUrl' => route('trial-question-banks.questions.preview', $bank),
+            'backUrl' => $focusedQuestion ? QuestionBankNavigation::questionUrl($trialQuestionBank, $focusedQuestion) : route('trial-question-banks.questions.index', $bank),
             'trial' => true,
         ])->header('Cache-Control', 'private, no-store');
     }

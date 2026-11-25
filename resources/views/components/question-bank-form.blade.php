@@ -48,7 +48,7 @@
             class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
     </label>
     <div class="flex flex-wrap gap-2">
-        <button class="rounded-xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950">{{ $question ? 'Simpan perubahan' : 'Simpan soal' }}</button>
+        <button @class(['rounded-xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950', 'w-full' => ! $question])>{{ $question ? 'Simpan perubahan' : 'Simpan soal' }}</button>
         @if ($backUrl)
             <a href="{{ $backUrl }}" class="rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-slate-300">Batal</a>
         @endif
