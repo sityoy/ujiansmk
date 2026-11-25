@@ -93,7 +93,7 @@
                             @csrf
                             <x-attendance-feedback state="success" message="Lokasi terverifikasi. Centang pernyataan kesiapan, lalu pilih Mulai ujian." />
                             @if ($assignment->assessmentSubject->has_multiple_choice)
-                                <p class="text-sm text-slate-300">Setiap soal PG bernilai 2 poin jika pilihan sesuai kunci. Nilai PG maksimal 100.</p>
+                                <p class="text-sm text-slate-300">Setiap soal PG bernilai maksimal 2 poin. Pada PG kompleks, poin dibagi rata sesuai jumlah jawaban benar pada kunci. Nilai PG maksimal 100.</p>
                             @endif
                             <a href="#core-exam-rules-title" onclick="document.getElementById('core-exam-rules').open = true" class="inline-block text-sm font-semibold text-cyan-300 underline">Baca kembali peringatan ujian</a>
                             <label class="flex items-start gap-3 text-sm leading-6 text-slate-300">

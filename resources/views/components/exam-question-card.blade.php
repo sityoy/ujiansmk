@@ -2,7 +2,8 @@
 
 @php
     $type = $question->question_type->value;
-    $multiple = \App\Services\Exams\MultipleChoiceAnswers::allowsMultiple($question->correct_answer);
+    $limit = \App\Services\Exams\MultipleChoiceAnswers::selectionLimit($question->correct_answer);
+    $multiple = $limit > 1;
     $selected = $type === 'multiple_choice' ? str_split($answer ?? '') : [];
 @endphp
 <article @class(['border border-white/10 bg-white/[0.035]', 'rounded-3xl p-6' => $trial, 'rounded-2xl p-5' => ! $trial])>
@@ -15,10 +16,15 @@
     @endif
     <x-question-prompt :question="$question" :multiple-choice="$trial || $type === 'multiple_choice'" :class="$trial ? '' : 'mt-3'" />
     @if ($type === 'multiple_choice')
-        <fieldset @if ($multiple) data-multiple-answer @endif @class(['grid min-w-0', 'mt-5 gap-3' => $trial, 'mt-4 gap-2' => ! $trial])>
+        <fieldset @if ($multiple) data-multiple-answer data-choice-limit="{{ $limit }}" @endif @class(['grid min-w-0', 'mt-5 gap-3' => $trial, 'mt-4 gap-2' => ! $trial])>
             <legend class="mb-2 text-sm font-semibold {{ $multiple ? 'text-cyan-300' : 'text-slate-400' }}">
-                {{ $multiple ? 'Pilih semua jawaban yang benar. Centang minimal satu pilihan.' : 'Pilih satu jawaban.' }}
+                {{ $multiple ? 'Pilih 1 sampai '.$limit.' jawaban yang menurut Anda benar.' : 'Pilih satu jawaban.' }}
             </legend>
+            @if ($multiple)
+                <p data-choice-limit-message @if (count($selected) <= $limit) hidden @endif role="status" class="text-sm text-amber-200">
+                    Maksimal {{ $limit }} pilihan. Untuk mengganti jawaban, hapus dulu salah satu centang.
+                </p>
+            @endif
             @if ($multiple && $trial && $saveUrl)
                 <input type="hidden" name="{{ $name }}" value="{{ $answer }}" data-choice-value>
             @endif

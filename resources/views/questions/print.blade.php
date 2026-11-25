@@ -97,7 +97,8 @@
                         @endfor
                     @endunless
                 @else
-                    <p>{{ \App\Services\Exams\MultipleChoiceAnswers::allowsMultiple($question->correct_answer) ? 'Pilih semua jawaban yang benar.' : 'Pilih satu jawaban.' }}</p>
+                    @php($limit = \App\Services\Exams\MultipleChoiceAnswers::selectionLimit($question->correct_answer))
+                    <p>{{ $limit > 1 ? 'Pilih 1 sampai '.$limit.' jawaban yang menurut Anda benar.' : 'Pilih satu jawaban.' }}</p>
                     <div class="options">
                         @foreach (collect($question->options)->sortKeys() as $letter => $answer)
                             <div class="option">

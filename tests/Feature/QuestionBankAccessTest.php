@@ -163,7 +163,7 @@ class QuestionBankAccessTest extends TestCase
             ->assertSee('name="correct_answers[]" value="A" checked', false)
             ->assertSee('name="correct_answers[]" value="C" checked', false);
         $this->get(route('scheduling.questions.pdf', [$assigned, 'kunci' => 1]))->assertOk()
-            ->assertSee('Pilih semua jawaban yang benar.')->assertSee('<td>A, C</td>', false);
+            ->assertSee('Pilih 1 sampai 2 jawaban yang menurut Anda benar.')->assertSee('<td>A, C</td>', false);
 
         $this->put(route('scheduling.questions.update', [$assigned, $question]), $payload + ['correct_answers' => ['A']])
             ->assertSessionHasNoErrors();

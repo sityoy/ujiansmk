@@ -163,15 +163,19 @@ class ExamAttemptService
         $lookup = ['exam_attempt_id' => $attempt->id, 'exam_question_id' => $question->id];
 
         if ($choice) {
-            $multiple = MultipleChoiceAnswers::allowsMultiple($question->correct_answer);
-            if ($multiple && $answer === '') {
+            $limit = MultipleChoiceAnswers::selectionLimit($question->correct_answer);
+            if ($limit > 1 && $answer === '') {
                 ExamAnswer::query()->where($lookup)->delete();
                 $attempt->update(['last_seen_at' => now()]);
 
                 return null;
             }
 
-            $answer = MultipleChoiceAnswers::normalize($answer, $question->options ?? [], $multiple);
+            if (strlen($answer) > $limit) {
+                throw ValidationException::withMessages(['answer' => MultipleChoiceAnswers::limitMessage($limit)]);
+            }
+
+            $answer = MultipleChoiceAnswers::normalize($answer, $question->options ?? [], $limit);
             if ($answer === null) {
                 throw ValidationException::withMessages(['answer' => 'Pilihan jawaban tidak tersedia untuk soal ini.']);
             }
@@ -185,7 +189,8 @@ class ExamAttemptService
             [
                 'answer' => $answer,
                 'is_correct' => $correct,
-                'points_awarded' => $choice ? ($correct ? ExamScoreCalculator::MULTIPLE_CHOICE_POINTS : 0) : null,
+                'points_awarded' => $choice
+                    ? app(ExamScoreCalculator::class)->multipleChoicePoints($answer, $question->correct_answer) : null,
                 'graded_by_user_id' => null,
                 'graded_at' => null,
                 'answered_at' => now(),
@@ -209,21 +214,47 @@ class ExamAttemptService
             $lockedAttempt->load(['assignment.assessmentSubject.questions', 'answers']);
             $questions = $lockedAttempt->assignment->assessmentSubject->questions;
             $answers = $lockedAttempt->answers->keyBy('exam_question_id');
-            if ($requireComplete && ! $this->isExpired($lockedAttempt)) {
+            $requireValidResponses = $requireComplete && ! $this->isExpired($lockedAttempt);
+            if ($requireValidResponses) {
                 $unanswered = $questions->filter(fn (ExamQuestion $question): bool => blank($answers->get($question->id)?->answer))->count();
                 if ($unanswered > 0) {
                     throw ValidationException::withMessages(['submission' => "Masih ada {$unanswered} soal yang belum terjawab. Lengkapi semua jawaban sebelum mengumpulkan."]);
                 }
             }
 
-            $requiresManualGrading = $questions->contains(
-                fn (ExamQuestion $question): bool => $question->question_type->requiresManualGrading(),
-            );
-            $calculatedScore = app(ExamScoreCalculator::class)->score($questions, $answers);
             $automaticQuestions = $questions->filter(
                 fn (ExamQuestion $question): bool => $question->question_type === ExamQuestionType::MultipleChoice,
             );
-            $correct = $answers->where('is_correct', true)->count();
+            $calculator = app(ExamScoreCalculator::class);
+            $correct = 0;
+            foreach ($automaticQuestions as $question) {
+                $response = $answers->get($question->id);
+                if (! $response) {
+                    continue;
+                }
+
+                $limit = MultipleChoiceAnswers::selectionLimit($question->correct_answer);
+                if ($requireValidResponses && strlen($response->answer ?? '') > $limit) {
+                    throw ValidationException::withMessages([
+                        'submission' => 'Periksa soal pilihan ganda yang melebihi batas jumlah pilihan. Kurangi pilihan sebelum mengumpulkan.',
+                    ]);
+                }
+
+                // A response saved before the scoring update can still be waiting to be submitted.
+                $normalized = MultipleChoiceAnswers::normalize($response->answer ?? '', $question->options ?? [], $limit);
+                $fullCredit = $normalized !== null && $normalized === $question->correct_answer;
+                $response->fill([
+                    'is_correct' => $fullCredit,
+                    'points_awarded' => $calculator->multipleChoicePoints($normalized, $question->correct_answer),
+                ]);
+                if ($response->isDirty()) {
+                    $response->save();
+                }
+                $correct += (int) $fullCredit;
+            }
+
+            $requiresManualGrading = $automaticQuestions->count() < $questions->count();
+            $calculatedScore = $calculator->score($questions, $answers);
 
             $lockedAttempt->update([
                 'status' => AttemptStatus::Submitted,

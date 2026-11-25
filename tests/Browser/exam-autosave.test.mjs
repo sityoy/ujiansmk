@@ -23,9 +23,11 @@ function setup({trial = false, oldBrowser = false, written = false, grouped = fa
     const form = element({ hidden: false, submissions: 0, dataset: { questionCount: written ? '2' : '1' }, submit() { this.submissions++; }, querySelector: () => button });
     const inputs = ['A', 'B', 'C'].map(value => element({ type: 'radio', value, checked: value === 'A', dataset: { saveUrl: '/answer/1' } }));
     const selectionValue = { value: '' };
+    const limitMessage = element();
     if (multiple) {
         const group = {
-            querySelector: () => trial ? selectionValue : null,
+            dataset: {choiceLimit: '2'},
+            querySelector: selector => selector === '[data-choice-limit-message]' ? limitMessage : (trial ? selectionValue : null),
             querySelectorAll: () => inputs.filter(input => input.checked),
         };
         inputs.forEach(input => Object.assign(input, {type: 'checkbox', checked: false, closest: () => group}));
@@ -82,7 +84,7 @@ function setup({trial = false, oldBrowser = false, written = false, grouped = fa
         fetch: (url, options) => new Promise(resolve => requests.push({ url, options, resolve })),
     });
     const click = { preventDefault() {} };
-    return { inputs, selectionValue, nodes, form, requests, window, dialog, button, cancel, sections,
+    return { inputs, selectionValue, limitMessage, nodes, form, requests, window, dialog, button, cancel, sections,
         open: () => form.listeners.submit(click), confirm: () => confirm.listeners.click(),
         block() { blocked = true; window.listeners['examsecurity:blocked'](); },
         expire() { elapsed = 60001; tick(); } };
@@ -238,7 +240,7 @@ for (const trial of [false, true]) {
         page.open();
         assert.equal(page.dialog.hidden, true);
         assert.match(page.nodes['exam-submit-message'].textContent, /1 soal yang belum terjawab/);
-        const [first, , third] = page.inputs;
+        const [first, second, third] = page.inputs;
         third.checked = true;
         third.listeners.change();
         first.checked = true;
@@ -250,12 +252,18 @@ for (const trial of [false, true]) {
         if (trial) assert.equal(page.selectionValue.value, 'AC');
         page.requests[1].resolve(ok);
         await settle();
+        second.checked = true;
+        second.listeners.change();
+        assert.equal(second.checked, false);
+        assert.equal(page.limitMessage.hidden, false);
+        assert.equal(page.requests.length, 2);
         page.open();
         assert.equal(page.dialog.hidden, false);
         page.cancel.listeners.click({preventDefault() {}});
 
         third.checked = false;
         third.listeners.change();
+        assert.equal(page.limitMessage.hidden, true);
         first.checked = false;
         first.listeners.change();
         page.requests[2].resolve(ok);

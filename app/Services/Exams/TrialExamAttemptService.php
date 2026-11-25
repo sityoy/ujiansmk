@@ -69,6 +69,13 @@ class TrialExamAttemptService
             if (trim($answer) === '' && MultipleChoiceAnswers::allowsMultiple($question->correct_answer)) {
                 TrialAnswer::query()->where($lookup)->delete();
             } else {
+                if (! $question->question_type->requiresManualGrading()) {
+                    $limit = MultipleChoiceAnswers::selectionLimit($question->correct_answer);
+                    if (strlen(trim($answer)) > $limit) {
+                        throw ValidationException::withMessages(['answer' => MultipleChoiceAnswers::limitMessage($limit)]);
+                    }
+                }
+
                 $normalized = $this->normalizeAnswer($question, $answer);
                 if ($normalized === null && ! $question->question_type->requiresManualGrading()) {
                     throw ValidationException::withMessages(['answer' => 'Pilihan jawaban tidak tersedia untuk soal ini.']);
@@ -107,6 +114,8 @@ class TrialExamAttemptService
             $saved = $attempt->answers()->get()->keyBy('trial_question_id');
             $pgCount = 0;
             $correctAnswers = 0;
+            $pgPoints = 0.0;
+            $calculator = app(ExamScoreCalculator::class);
             $responses = [];
             $unanswered = 0;
 
@@ -121,7 +130,8 @@ class TrialExamAttemptService
                 $manual = $question->question_type->requiresManualGrading();
                 $pgCount += $manual ? 0 : 1;
                 $correct = $manual ? null : ($answer !== null && $answer === $question->correct_answer);
-                $awarded = $manual ? null : ($correct ? ExamScoreCalculator::MULTIPLE_CHOICE_POINTS : 0.0);
+                $awarded = $manual ? null : $calculator->multipleChoicePoints($answer, $question->correct_answer);
+                $pgPoints += $awarded ?? 0.0;
 
                 $responses[] = [
                     'trial_attempt_id' => $attempt->id,
@@ -146,7 +156,7 @@ class TrialExamAttemptService
                 'status' => 'submitted',
                 'submitted_at' => now(),
                 'last_seen_at' => now(),
-                'score' => $hasManual ? null : app(ExamScoreCalculator::class)->multipleChoiceScore($correctAnswers, $pgCount),
+                'score' => $hasManual ? null : $calculator->multipleChoiceScore($pgPoints),
                 'grading_status' => $hasManual ? GradingStatus::Pending : GradingStatus::Automatic,
                 'correct_answers' => $correctAnswers,
                 'total_questions' => $questions->count(),
@@ -191,7 +201,7 @@ class TrialExamAttemptService
         }
 
         return MultipleChoiceAnswers::normalize(
-            strtoupper($answer), $question->options ?? [], MultipleChoiceAnswers::allowsMultiple($question->correct_answer),
+            strtoupper($answer), $question->options ?? [], MultipleChoiceAnswers::selectionLimit($question->correct_answer),
         );
     }
 

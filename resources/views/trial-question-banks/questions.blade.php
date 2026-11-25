@@ -13,7 +13,7 @@
         <p class="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">{{ $bank->subject->name }} · Kelas {{ $bank->grade_level }}</p>
         <h2 class="mt-2 text-2xl font-semibold text-white">{{ $bank->name }}</h2>
         <p class="mt-2 text-sm text-slate-400">{{ $questionCount }} soal · Total bobot {{ number_format($totalPoints, 2, ',', '.') }}</p>
-        <p class="mt-2 text-xs text-cyan-200">Setiap soal PG bernilai 2 poin jika pilihan sesuai kunci. Nilai PG maksimal 100.</p>
+        <p class="mt-2 text-xs text-cyan-200">Setiap soal PG bernilai maksimal 2 poin. Pada PG kompleks, poin dibagi rata sesuai jumlah jawaban benar pada kunci. Nilai PG maksimal 100.</p>
         <p class="mt-2 text-sm text-slate-400">Guru {{ $bank->teacher?->name ?? 'belum ditetapkan' }}</p>
         <p class="mt-2 text-sm text-slate-400">Batas pembuatan soal · {{ $bank->questionDeadlineLabel() ?? 'Belum ditetapkan' }}</p>
         @if (auth()->user()->role !== \App\Enums\UserRole::Teacher && ! $bank->archived_at)

@@ -45,7 +45,7 @@
             </div>
             @error('correct_answers') <p class="text-xs text-rose-300" role="alert">Centang minimal satu kunci jawaban.</p> @enderror
         </fieldset>
-        <p class="text-xs text-slate-400">Setiap soal PG bernilai 2 poin jika pilihan siswa sama dengan kunci. Lampiran pilihan dapat berupa gambar atau PDF hingga 5 MB.</p>
+        <p class="text-xs text-slate-400">PG bernilai maksimal 2 poin per soal. Pada PG kompleks, poin dibagi rata di antara kunci jawaban. Jumlah pilihan siswa dibatasi sesuai jumlah kunci. Lampiran pilihan dapat berupa gambar atau PDF hingga 5 MB.</p>
     </div>
     <label data-question-manual-points @if ($multipleChoice) hidden @endif class="block text-sm text-slate-300">Bobot maksimal soal
         <input type="number" name="points" min="0.01" max="1000" step="0.01" required @disabled($multipleChoice)

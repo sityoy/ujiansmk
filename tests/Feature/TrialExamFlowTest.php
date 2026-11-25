@@ -45,16 +45,16 @@ class TrialExamFlowTest extends TestCase
         $this->travelTo(Carbon::parse('2026-11-05 10:00:00'));
     }
 
-    public function test_trial_multiple_choice_keys_work_in_bank_autosave_and_submission(): void
+    public function test_trial_multiple_choice_keys_award_partial_points_in_the_report(): void
     {
         [$trial, $question] = $this->makeTrial();
         $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
         $this->actingAs($admin)->put(route('trial-question-banks.questions.update', [$trial->questionBank, $question]), [
-            'question_type' => 'multiple_choice', 'question_text' => 'Pilih dua tanggal yang benar.',
+            'question_type' => 'multiple_choice', 'question_text' => 'Pilih tiga tanggal yang benar.',
             'option_a' => 'Tanggal A', 'option_b' => 'Tanggal B', 'option_c' => 'Tanggal C',
-            'option_d' => 'Tanggal D', 'option_e' => 'Tanggal E', 'correct_answers' => ['E', 'B'],
+            'option_d' => 'Tanggal D', 'option_e' => 'Tanggal E', 'correct_answers' => ['E', 'B', 'A'],
         ])->assertSessionHasNoErrors();
-        $this->assertSame('BE', $question->fresh()->correct_answer);
+        $this->assertSame('ABE', $question->fresh()->correct_answer);
 
         $student = Student::query()->sole()->user;
         $this->actingAs($student)->startTrial($trial, ['access_code' => $trial->access_code])->assertRedirect();
@@ -63,15 +63,22 @@ class TrialExamFlowTest extends TestCase
         $show = route('tryout.show', [$trial, $attempt]);
         $submit = route('tryout.submit', [$trial, $attempt]);
         $this->get($show)->assertOk()
-            ->assertSee('Pilih semua jawaban yang benar. Centang minimal satu pilihan.')
+            ->assertSee('Pilih 1 sampai 3 jawaban yang menurut Anda benar.')
             ->assertSee('type="checkbox" name="selection_'.$question->id.'"', false);
+        $this->putJson($answer, ['answer' => 'ABCD'])->assertUnprocessable()
+            ->assertJsonPath('errors.answer.0', 'Pilih maksimal 3 jawaban untuk soal ini.');
         $this->putJson($answer, ['answer' => 'EB'])->assertOk();
         $this->assertSame('BE', $attempt->answers()->sole()->answer);
         $this->putJson($answer, ['answer' => ''])->assertOk();
         $this->assertFalse($attempt->answers()->exists());
         $this->from($show)->post($submit, ['answers' => [$question->id => '']])->assertSessionHasErrors('submission');
-        $this->post($submit, ['answers' => [$question->id => 'EB']])->assertRedirect(route('tryout.result', [$trial, $attempt]));
-        $this->assertSame('2.00', $attempt->fresh()->score);
+        $this->post($submit, ['answers' => [$question->id => 'ABCD']])->assertSessionHasErrors('submission');
+        $this->post($submit, ['answers' => [$question->id => 'EBC']])->assertRedirect(route('tryout.result', [$trial, $attempt]));
+        $this->assertSame('1.33', $attempt->fresh()->score);
+        $this->assertSame('1.33', $attempt->answers()->sole()->points_awarded);
+        $this->assertSame(0, $attempt->fresh()->correct_answers);
+        $this->actingAs($admin)->get(route('tryouts.scores.print', $trial))->assertOk()
+            ->assertSee('PG benar penuh / total')->assertSee('1,33');
     }
 
     public function test_trial_exam_uses_strict_security_lists_participants_and_hides_scores(): void
@@ -84,7 +91,7 @@ class TrialExamFlowTest extends TestCase
             ->assertSeeInOrder(['Peringatan sebelum memulai ujian', 'Siapkan NIS atau NISN milik sendiri', 'Jangan tarik bilah notifikasi', 'Pelanggaran kedua', 'Saya sudah membaca dan memahami aturan'])
             ->assertSee('required aria-describedby="trial-exam-rules-title"', false)
             ->assertSee('Absensi lokasi sebelum ujian')
-            ->assertSee('Setiap soal PG bernilai 2 poin jika pilihan sesuai kunci')
+            ->assertSee('Setiap soal PG bernilai maksimal 2 poin.')
             ->assertSee('Nama peserta diambil otomatis dari data siswa');
 
         $this->startTrial($trial, [
@@ -248,9 +255,10 @@ class TrialExamFlowTest extends TestCase
         $this->assertNull($attempt->answers()->sole()->answer);
     }
 
-    public function test_trial_bank_essay_works_alongside_legacy_pg_and_can_be_graded_by_the_assigned_teacher(): void
+    public function test_trial_bank_essay_works_alongside_partial_pg_and_can_be_graded_by_the_assigned_teacher(): void
     {
         [$trial, $pg] = $this->makeTrial();
+        $pg->update(['correct_answer' => 'AB']);
         $bank = $trial->questionBank;
         $student = Student::query()->where('nisn', '1234567890')->firstOrFail();
         $admin = User::factory()->create(['role' => UserRole::Committee]);
@@ -309,7 +317,7 @@ class TrialExamFlowTest extends TestCase
         $this->get(route('tryout.result', [$trial, $attempt]))->assertOk()->assertDontSee($answer);
 
         $this->actingAs($admin)->get(route('tryouts.scores.print', $trial))->assertOk()
-            ->assertSee('Menunggu koreksi')->assertSee('1 / 1');
+            ->assertSee('Menunggu koreksi')->assertSee('0 / 1');
         $this->actingAs(User::factory()->create(['role' => UserRole::Teacher]))->get($grade)->assertForbidden();
         $this->actingAs($teacher)->get(route('tryouts.participants', $trial))->assertOk()->assertSee($grade);
         $this->get($grade)->assertOk()->assertSee($answer);
@@ -317,8 +325,8 @@ class TrialExamFlowTest extends TestCase
         $this->assertNull($attempt->fresh()->score);
         $this->put($update, ['scores' => [$essay->id => 8]])->assertRedirect(route('tryouts.participants', $trial));
         $this->assertSame(GradingStatus::Graded, $attempt->fresh()->grading_status);
-        $this->assertSame('41.00', $attempt->fresh()->score);
-        $this->actingAs($admin)->get(route('tryouts.scores.print', $trial))->assertOk()->assertSee('41,00');
+        $this->assertSame('40.50', $attempt->fresh()->score);
+        $this->actingAs($admin)->get(route('tryouts.scores.print', $trial))->assertOk()->assertSee('40,50');
     }
 
     public function test_trial_pdf_import_reads_a_separate_key_and_rechecks_the_deadline_before_saving(): void

@@ -55,6 +55,9 @@
                         <p>{{ $period->name }} · Tahun Ajaran {{ $period->academicYear->name }}</p>
                     @endif
                     <p>{{ $statistics['total'] }} peserta · {{ $statistics['submitted'] }} selesai · {{ $statistics['not_started'] }} belum mengerjakan · {{ $statistics['in_progress'] }} mengerjakan · {{ $statistics['locked'] }} terkunci</p>
+                    @if ($statistics['submitted'] > 0)
+                        <p>Kolom PG menghitung soal dengan poin penuh. Nilai juga mencakup poin sebagian dari PG kompleks.</p>
+                    @endif
                     @if ($statistics['submitted'] === 0)
                         <p>Belum ada peserta yang menyelesaikan simulasi.</p>
                     @endif
@@ -67,7 +70,7 @@
                             <th scope="col">Nama peserta</th>
                             <th scope="col">Kelas</th>
                             <th scope="col">Status</th>
-                            <th class="number" scope="col">PG benar / total</th>
+                            <th class="number" scope="col">PG benar penuh / total</th>
                             <th class="number" scope="col">Nilai</th>
                             <th scope="col">Waktu selesai</th>
                         </tr></thead>

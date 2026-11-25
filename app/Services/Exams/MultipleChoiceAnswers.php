@@ -27,12 +27,22 @@ class MultipleChoiceAnswers
 
     public static function allowsMultiple(?string $key): bool
     {
-        return strlen($key ?? '') > 1;
+        return self::selectionLimit($key) > 1;
     }
 
-    public static function normalize(string $answer, array $options, bool $multiple): ?string
+    public static function selectionLimit(?string $key): int
     {
-        if (! preg_match($multiple ? '/\A[A-E]{1,5}\z/' : '/\A[A-E]\z/', $answer)) {
+        return max(1, strlen($key ?? ''));
+    }
+
+    public static function limitMessage(int $limit): string
+    {
+        return "Pilih maksimal {$limit} jawaban untuk soal ini.";
+    }
+
+    public static function normalize(string $answer, array $options, int $limit): ?string
+    {
+        if (strlen($answer) > $limit || ! preg_match('/\A[A-E]{1,5}\z/', $answer)) {
             return null;
         }
 

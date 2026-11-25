@@ -2,7 +2,15 @@ function examAnswerValue(input) {
     if (input.type !== 'checkbox') return input.value;
 
     const group = input.closest('[data-multiple-answer]');
-    const answer = [...group.querySelectorAll('input[type="checkbox"]:checked')].map(choice => choice.value).sort().join('');
+    const selections = [...group.querySelectorAll('input[type="checkbox"]:checked')];
+    const overLimit = selections.length > Number(group.dataset.choiceLimit);
+    group.querySelector('[data-choice-limit-message]').hidden = !overLimit;
+    if (overLimit) {
+        if (input.checked) input.checked = false;
+        return null;
+    }
+
+    const answer = selections.map(choice => choice.value).sort().join('');
     const value = group.querySelector('[data-choice-value]');
     if (value) value.value = answer;
 
@@ -13,6 +21,10 @@ function countUnansweredExamQuestions(inputs, questionCount) {
     const answered = new Set();
     inputs.forEach(input => {
         const isChoice = input.type === 'radio' || input.type === 'checkbox';
+        if (input.type === 'checkbox' && input.checked) {
+            const group = input.closest('[data-multiple-answer]');
+            if (group.querySelectorAll('input[type="checkbox"]:checked').length > Number(group.dataset.choiceLimit)) return;
+        }
         if (isChoice ? input.checked : input.value.trim() !== '') {
             answered.add(input.dataset.saveUrl ?? input.name);
         }

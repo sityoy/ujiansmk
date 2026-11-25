@@ -72,10 +72,13 @@
             </div>
         </div>
         <x-exam-image-dialog />
-        <script src="{{ asset('js/exam-submission.js') }}?v=5"></script>
+        <script src="{{ asset('js/exam-submission.js') }}?v=6"></script>
         <script>
             (() => {
                 const answerSelector = '[data-preview-answer]';
+                document.querySelectorAll(answerSelector + '[type="checkbox"]').forEach(input => {
+                    input.addEventListener('change', () => examAnswerValue(input));
+                });
                 window.bindExamSections({
                     sections: [...document.querySelectorAll('[data-exam-section]')],
                     submitPanel: document.getElementById('preview-submit-panel'),

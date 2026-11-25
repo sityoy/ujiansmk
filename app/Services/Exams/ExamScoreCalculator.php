@@ -14,15 +14,21 @@ class ExamScoreCalculator
         return $questionCount > 0 ? self::MULTIPLE_CHOICE_POINTS : 0.0;
     }
 
-    public function multipleChoiceScore(int $correctAnswers, int $questionCount): float
+    public function multipleChoicePoints(?string $answer, ?string $key): float
     {
-        if ($questionCount <= 0) {
+        if ($answer === null || blank($key)) {
             return 0.0;
         }
 
-        $correct = max(0, min($correctAnswers, $questionCount));
+        $keys = str_split($key);
+        $correct = count(array_intersect($keys, str_split($answer)));
 
-        return round(min(100, $correct * self::MULTIPLE_CHOICE_POINTS), 2);
+        return round(self::MULTIPLE_CHOICE_POINTS * $correct / count($keys), 2);
+    }
+
+    public function multipleChoiceScore(float $points): float
+    {
+        return round(max(0, min(100, $points)), 2);
     }
 
     public function manualComponentScore(Collection $questions, Collection $answers): float
@@ -52,10 +58,13 @@ class ExamScoreCalculator
         $manualQuestions = $questions->filter(
             fn ($question): bool => $question->question_type->requiresManualGrading(),
         );
-        $correct = $multipleChoice->filter(
-            fn ($question): bool => (bool) $answers->get($question->id)?->is_correct,
-        )->count();
-        $pgScore = $this->multipleChoiceScore($correct, $multipleChoice->count());
+        $points = $multipleChoice->sum(function ($question) use ($answers): float {
+            $answer = $answers->get($question->id);
+            $awarded = $answer?->points_awarded ?? ($answer?->is_correct ? self::MULTIPLE_CHOICE_POINTS : 0.0);
+
+            return max(0, min(self::MULTIPLE_CHOICE_POINTS, (float) $awarded));
+        });
+        $pgScore = $this->multipleChoiceScore($points);
         $hasManual = $manualQuestions->isNotEmpty() || $manualScore !== null;
         $manualComponent = $manualScore !== null
             ? max(0, min(100, $manualScore))
