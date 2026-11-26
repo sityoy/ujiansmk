@@ -17,7 +17,7 @@
     ]
   },
   "resources/css/app.css": {
-    "file": "assets/app-Dce6XxDW.css",
+    "file": "assets/app-BZcxbqlx.css",
     "name": "app",
     "names": [
       "app.css"
@@ -26,7 +26,7 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-BzRaSWbn.js",
+    "file": "assets/app-C2W9FHeR.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -38,7 +38,7 @@
     ]
   },
   "resources/js/print-document.js": {
-    "file": "assets/print-document-Cg1d1fpR.js",
+    "file": "assets/print-document-D4UCYMj2.js",
     "name": "print-document",
     "src": "resources/js/print-document.js",
     "isDynamicEntry": true,
@@ -52,7 +52,7 @@
     ]
   },
   "resources/js/question-bank-report.js": {
-    "file": "assets/question-bank-report-DMCC9pdx.js",
+    "file": "assets/question-bank-report-Dokq6Mv-.js",
     "name": "question-bank-report",
     "src": "resources/js/question-bank-report.js",
     "isEntry": true,
@@ -64,7 +64,7 @@
     ]
   },
   "resources/js/question-editor.js": {
-    "file": "assets/question-editor-8LBOcJ3k.js",
+    "file": "assets/question-editor--0QbfW08.js",
     "name": "question-editor",
     "src": "resources/js/question-editor.js",
     "isDynamicEntry": true,
