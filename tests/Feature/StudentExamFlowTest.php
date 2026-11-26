@@ -186,7 +186,7 @@ class StudentExamFlowTest extends TestCase
         $this->putJson(route('student.exams.answer', [$attempt, $questions[1]]), ['answer' => '   '])->assertUnprocessable();
         $this->from($show)->post($submit)->assertSessionHasErrors('submission');
         $attempt->update(['security_locked_at' => now(), 'violation_count' => 2]);
-        $this->get($show)->assertOk()->assertSee('Masih ada soal yang belum terjawab')->assertDontSee('data-submit-cancel', false);
+        $this->get($show)->assertOk()->assertSee('Soal nomor 2 belum dijawab.')->assertDontSee('data-submit-cancel', false);
         $this->from($show)->post($submit)->assertSessionHasErrors('submission');
 
         $this->assertSame(AttemptStatus::InProgress, $attempt->fresh()->status);
@@ -1397,6 +1397,15 @@ class StudentExamFlowTest extends TestCase
                 'Tentukan operasi pertama.', 'Periksa hasil operasi.', 'Bandingkan kedua hasil.', $independent->question_text,
                 'Pernyataan atau gambar untuk nomor 5–6', 'Konteks penjelasan tertulis', 'Jelaskan bagian satu.', 'Jelaskan bagian dua.'])
             ->assertSee('Gambar pernyataan bersama');
+        $show = route('student.exams.show', $attempt);
+        foreach ([$first, $independent, $essayQuestion] as $question) {
+            $answer = $question->question_type->requiresManualGrading() ? 'Penjelasan' : 'A';
+            $this->putJson(route('student.exams.answer', [$attempt, $question]), ['answer' => $answer])->assertOk();
+        }
+        $message = 'Masih ada 3 soal yang belum dijawab. Silakan kerjakan soal nomor 2, 3, 6 terlebih dahulu.';
+        $this->from($show)->post(route('student.exams.submit', $attempt))
+            ->assertRedirect($show)->assertSessionHasErrors(['submission' => $message]);
+
         $this->actingAs($teacher)->put($update, [...$pg, 'question_text' => 'Tidak boleh diubah.',
             'question_context' => 'edit', 'context_statement' => 'Percobaan perubahan'])->assertSessionHasErrors('question');
     }

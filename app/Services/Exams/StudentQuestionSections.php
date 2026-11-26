@@ -7,8 +7,14 @@ use Illuminate\Support\Collection;
 
 class StudentQuestionSections
 {
-    public static function fromQuestions(Collection $questions): array
+    public static function fromQuestions(Collection $questions, array $previousOrder = []): array
     {
+        // Keep the numbering shown by older trial sessions.
+        if ($previousOrder !== []) {
+            $positions = array_flip($previousOrder);
+            $questions = $questions->sortBy(fn ($question) => $positions[$question->id] ?? PHP_INT_MAX);
+        }
+
         $byType = $questions->groupBy(fn ($question) => $question->question_type->value);
         $sections = [];
         $offset = 0;
@@ -31,6 +37,33 @@ class StudentQuestionSections
         }
 
         return $sections;
+    }
+
+    public static function unansweredNumbers(Collection $questions, array $unansweredIds, array $previousOrder = []): array
+    {
+        if ($unansweredIds === []) {
+            return [];
+        }
+
+        $numbers = [];
+        $number = 0;
+        $unanswered = array_fill_keys($unansweredIds, true);
+        foreach (self::fromQuestions($questions, $previousOrder) as $section) {
+            foreach ($section['questions'] as $question) {
+                $number++;
+                if (isset($unanswered[$question->id])) {
+                    $numbers[] = $number;
+                }
+            }
+        }
+
+        return $numbers;
+    }
+
+    public static function unansweredMessage(array $numbers): string
+    {
+        return 'Masih ada '.count($numbers).' soal yang belum dijawab. Silakan kerjakan soal nomor '
+            .implode(', ', $numbers).' terlebih dahulu.';
     }
 
     public static function contexts(Collection $questions, ?int $numberOffset = null): array

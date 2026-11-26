@@ -1,4 +1,6 @@
-<p id="exam-submit-message" role="status" class="mb-3 text-sm text-rose-300" @if (! $errors->has('submission')) hidden @endif>{{ $errors->first('submission') }}</p>
+@props(['showServerError' => true])
+
+<p id="exam-submit-message" role="status" class="mb-3 text-sm text-rose-300" @if (! $showServerError || ! $errors->has('submission')) hidden @endif>{{ $showServerError ? $errors->first('submission') : '' }}</p>
 <div id="exam-submit-backdrop" hidden aria-hidden="true" class="fixed inset-0 z-30 bg-slate-950/85"></div>
 <dialog id="exam-submit-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="exam-submit-title" aria-describedby="exam-submit-description"
     class="fixed inset-0 z-40 m-auto max-h-[calc(100%_-_2rem)] w-[calc(100%_-_2rem)] max-w-md overflow-y-auto rounded-2xl border border-slate-500 bg-slate-900 p-5 text-white shadow-xl backdrop:bg-slate-950/85 sm:p-6">

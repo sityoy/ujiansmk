@@ -79,7 +79,7 @@
             </div>
         </div>
         <x-exam-image-dialog />
-        <script src="{{ asset('js/exam-submission.js') }}?v=6"></script>
+        <script src="{{ asset('js/exam-submission.js') }}?v=7"></script>
         <script>
             (() => {
                 const answerSelector = '[data-preview-answer]';
@@ -95,9 +95,10 @@
                     pending: new Set(),
                 });
                 document.getElementById('preview-finish').addEventListener('click', () => {
-                    const unanswered = countUnansweredExamQuestions(document.querySelectorAll(answerSelector), {{ $questions->count() }});
-                    document.getElementById('preview-status').textContent = unanswered
-                        ? `Masih ada ${unanswered} soal yang belum dijawab.`
+                    const questions = document.querySelectorAll('[data-exam-question-number]');
+                    const unanswered = unansweredExamQuestionNumbers(questions, answerSelector);
+                    document.getElementById('preview-status').textContent = unanswered.length > 0
+                        ? unansweredExamMessage(unanswered)
                         : 'Simulasi selesai.';
                 });
             })();

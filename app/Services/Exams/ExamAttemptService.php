@@ -216,9 +216,10 @@ class ExamAttemptService
             $answers = $lockedAttempt->answers->keyBy('exam_question_id');
             $requireValidResponses = $requireComplete && ! $this->isExpired($lockedAttempt);
             if ($requireValidResponses) {
-                $unanswered = $questions->filter(fn (ExamQuestion $question): bool => blank($answers->get($question->id)?->answer))->count();
-                if ($unanswered > 0) {
-                    throw ValidationException::withMessages(['submission' => "Masih ada {$unanswered} soal yang belum terjawab. Lengkapi semua jawaban sebelum mengumpulkan."]);
+                $unanswered = $questions->filter(fn (ExamQuestion $question): bool => blank($answers->get($question->id)?->answer));
+                if ($unanswered->isNotEmpty()) {
+                    $numbers = StudentQuestionSections::unansweredNumbers($questions, $unanswered->modelKeys());
+                    throw ValidationException::withMessages(['submission' => StudentQuestionSections::unansweredMessage($numbers)]);
                 }
             }
 

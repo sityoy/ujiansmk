@@ -17,30 +17,31 @@ function examAnswerValue(input) {
     return answer;
 }
 
-function countUnansweredExamQuestions(inputs, questionCount) {
-    const answered = new Set();
-    inputs.forEach(input => {
-        const isChoice = input.type === 'radio' || input.type === 'checkbox';
-        if (input.type === 'checkbox' && input.checked) {
-            const group = input.closest('[data-multiple-answer]');
-            if (group.querySelectorAll('input[type="checkbox"]:checked').length > Number(group.dataset.choiceLimit)) return;
+function unansweredExamQuestionNumbers(questions, answerSelector = '[data-save-url]') {
+    return Array.from(questions).filter(question => {
+        const inputs = Array.from(question.querySelectorAll(answerSelector));
+        const choices = inputs.filter(input => input.type === 'checkbox' && input.checked);
+        if (choices.length > 0) {
+            const group = choices[0].closest('[data-multiple-answer]');
+            return choices.length > Number(group.dataset.choiceLimit);
         }
-        if (isChoice ? input.checked : input.value.trim() !== '') {
-            answered.add(input.dataset.saveUrl ?? input.name);
-        }
-    });
 
-    return questionCount - answered.size;
+        return !inputs.some(input => input.type === 'radio' ? input.checked
+            : input.type !== 'checkbox' && input.value.trim() !== '');
+    }).map(question => question.dataset.examQuestionNumber);
+}
+
+function unansweredExamMessage(numbers) {
+    return `Masih ada ${numbers.length} soal yang belum dijawab. Silakan kerjakan soal nomor ${numbers.join(', ')} terlebih dahulu.`;
 }
 
 window.bindExamSections = ({ sections, submitPanel, flushAnswers, pending, toolbar, answerSelector = '[data-save-url]' }) => {
     if (sections.length < 2) return;
 
-    const countUnanswered = section => countUnansweredExamQuestions(
-        section.querySelectorAll(answerSelector),
-        Number(section.dataset.questionCount),
+    const unansweredIn = section => unansweredExamQuestionNumbers(
+        section.querySelectorAll('[data-exam-question-number]'), answerSelector,
     );
-    const firstUnfinished = sections.findIndex(section => countUnanswered(section) > 0);
+    const firstUnfinished = sections.findIndex(section => unansweredIn(section).length > 0);
     let active = firstUnfinished === -1 ? sections.length - 1 : firstUnfinished;
     const blocked = () => window.examAutoSubmit || window.examSecurity?.isBlocked();
 
@@ -65,9 +66,9 @@ window.bindExamSections = ({ sections, submitPanel, flushAnswers, pending, toolb
         });
         next?.addEventListener('click', async () => {
             if (blocked()) return;
-            const unanswered = countUnanswered(section);
-            if (unanswered > 0) {
-                message.textContent = `Masih ada ${unanswered} soal yang belum dijawab di bagian ini.`;
+            const unanswered = unansweredIn(section);
+            if (unanswered.length > 0) {
+                message.textContent = unansweredExamMessage(unanswered);
                 message.hidden = false;
                 return;
             }
@@ -100,7 +101,7 @@ window.bindExamSubmission = ({ form, inputs = [], flushAnswers, pending, allowBl
     const opener = form.querySelector('[type="submit"]');
     const cancel = dialog.querySelector('[data-submit-cancel]');
     const confirm = dialog.querySelector('[data-submit-confirm]');
-    const questionCount = Number(form.dataset.questionCount || 0);
+    const questions = document.querySelectorAll('[data-exam-question-number]');
     const supportsModal = typeof dialog.showModal === 'function';
     let submitting = false;
 
@@ -130,9 +131,9 @@ window.bindExamSubmission = ({ form, inputs = [], flushAnswers, pending, allowBl
         event.preventDefault();
         if (!canSubmit() || !dialog.hidden) return;
 
-        const unanswered = countUnansweredExamQuestions(inputs, questionCount);
-        if (unanswered > 0) {
-            showMessage(`Masih ada ${unanswered} soal yang belum terjawab. Lengkapi semua jawaban sebelum mengumpulkan.`);
+        const unanswered = unansweredExamQuestionNumbers(questions);
+        if (unanswered.length > 0) {
+            showMessage(unansweredExamMessage(unanswered));
             return;
         }
 

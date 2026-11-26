@@ -18,6 +18,19 @@ function element(extra = {}) {
         addEventListener(name, listener) { this.listeners[name] = listener; }, ...extra };
 }
 
+function questionCards(inputs) {
+    const byQuestion = new Map();
+    for (const input of inputs) {
+        const number = input.dataset.saveUrl.split('/').at(-1);
+        if (!byQuestion.has(number)) byQuestion.set(number, []);
+        byQuestion.get(number).push(input);
+    }
+
+    return Array.from(byQuestion, ([examQuestionNumber, answers]) => ({
+        dataset: { examQuestionNumber }, querySelectorAll: () => answers,
+    }));
+}
+
 function setup({trial = false, oldBrowser = false, written = false, grouped = false, essayOnlyAfterPg = false, resumed = false, multiple = false} = {}) {
     const button = element();
     const form = element({ hidden: false, submissions: 0, dataset: { questionCount: written ? '2' : '1' }, submit() { this.submissions++; }, querySelector: () => button });
@@ -50,7 +63,7 @@ function setup({trial = false, oldBrowser = false, written = false, grouped = fa
             return element({
                 dataset: { questionCount: '1' },
                 querySelector: selector => controls[selector],
-                querySelectorAll: () => group,
+                querySelectorAll: () => questionCards(group),
             });
         }));
         inputs.push(...groups.slice(1).flat());
@@ -78,7 +91,12 @@ function setup({trial = false, oldBrowser = false, written = false, grouped = fa
     vm.runInNewContext(submissionScript + '\n' + examScript(trial ? trialTemplate : coreTemplate), {
         document: { ...element(),
             querySelector: selector => selector === '.exam-toolbar' ? { getBoundingClientRect: () => ({ height: 80 }) } : { content: 'csrf' },
-            querySelectorAll: selector => selector === '[data-exam-section]' ? sections : inputs, getElementById: id => nodes[id] },
+            querySelectorAll: selector => {
+                if (selector === '[data-exam-section]') return sections;
+                if (selector === '[data-exam-question-number]') return questionCards(inputs);
+                return inputs;
+            },
+            getElementById: id => nodes[id] },
         window, performance: { now: () => elapsed },
         setInterval: callback => { tick = callback; }, setTimeout, clearTimeout, AbortController: oldBrowser ? undefined : AbortController,
         fetch: (url, options) => new Promise(resolve => requests.push({ url, options, resolve })),
@@ -102,7 +120,7 @@ test('core proceeds from multiple choice to short answers to essay after saving 
     assert.equal(page.form.hidden, true);
 
     await pgNext.listeners.click();
-    assert.match(pg.querySelector('[data-exam-section-message]').textContent, /1 soal/);
+    assert.match(pg.querySelector('[data-exam-section-message]').textContent, /1 soal yang belum dijawab. Silakan kerjakan soal nomor 1 terlebih dahulu/);
     assert.deepEqual(show(), [true, false, false]);
 
     page.inputs[0].checked = true;
@@ -172,6 +190,31 @@ test('trial moves to essay while keeping the exam form and timer visible and sav
     assert.equal(page.form.submissions, 1);
 });
 
+test('manual submission lists exactly the unanswered numbers across exam sections', () => {
+    const page = setup({grouped: true});
+    page.inputs.at(-2).value = 'Jawaban isian';
+    page.open();
+    assert.equal(page.dialog.hidden, true);
+    assert.match(page.nodes['exam-submit-message'].textContent, /2 soal yang belum dijawab. Silakan kerjakan soal nomor 1, 3 terlebih dahulu/);
+});
+
+test('student preview uses the displayed number when previewing one bank question', () => {
+    const preview = readFileSync(new URL('../../resources/views/questions/preview.blade.php', import.meta.url), 'utf8');
+    const finish = element();
+    const status = element();
+    const answer = { type: 'textarea', value: '  ', dataset: { saveUrl: '/answer/54' } };
+    const document = {
+        getElementById: id => id === 'preview-finish' ? finish : status,
+        querySelectorAll: selector => selector === '[data-exam-question-number]' ? questionCards([answer]) : [],
+    };
+    vm.runInNewContext(submissionScript + '\n' + examScript(preview), { document, window: {} });
+    finish.listeners.click();
+    assert.match(status.textContent, /Silakan kerjakan soal nomor 54 terlebih dahulu/);
+    answer.value = 'Jawaban esai';
+    finish.listeners.click();
+    assert.equal(status.textContent, 'Simulasi selesai.');
+});
+
 test('rapid changes serialize writes and retain the latest choice', async () => {
     const page = setup();
     page.inputs[0].listeners.change();
@@ -220,7 +263,7 @@ for (const trial of [false, true]) {
         const page = setup({trial, oldBrowser: trial});
         page.inputs[0].checked = false;
         page.open();
-        assert.match(page.nodes['exam-submit-message'].textContent, /1 soal yang belum terjawab/);
+        assert.match(page.nodes['exam-submit-message'].textContent, /1 soal yang belum dijawab/);
         assert.equal(page.dialog.hidden, true);
         page.inputs[1].checked = true;
         page.open();
@@ -239,7 +282,7 @@ for (const trial of [false, true]) {
         const page = setup({trial, multiple: true});
         page.open();
         assert.equal(page.dialog.hidden, true);
-        assert.match(page.nodes['exam-submit-message'].textContent, /1 soal yang belum terjawab/);
+        assert.match(page.nodes['exam-submit-message'].textContent, /1 soal yang belum dijawab/);
         const [first, second, third] = page.inputs;
         third.checked = true;
         third.listeners.change();
@@ -274,7 +317,7 @@ for (const trial of [false, true]) {
         await settle();
         page.open();
         assert.equal(page.dialog.hidden, true);
-        assert.match(page.nodes['exam-submit-message'].textContent, /1 soal yang belum terjawab/);
+        assert.match(page.nodes['exam-submit-message'].textContent, /1 soal yang belum dijawab/);
     });
 
     test(`${trial ? 'trial' : 'core'} saves answers when AbortController is unavailable`, async () => {
@@ -321,7 +364,7 @@ test('trial keeps pending answers after a failed save and permits retry before s
 test('a blank written answer blocks manual submission and a security warning dismisses the confirmation', async () => {
     const page = setup({written: true});
     page.open();
-    assert.match(page.nodes['exam-submit-message'].textContent, /1 soal yang belum terjawab/);
+    assert.match(page.nodes['exam-submit-message'].textContent, /1 soal yang belum dijawab/);
     assert.equal(page.dialog.hidden, true);
     page.inputs[3].value = '0';
     page.open();

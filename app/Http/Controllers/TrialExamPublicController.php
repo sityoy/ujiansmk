@@ -232,6 +232,7 @@ class TrialExamPublicController extends Controller
     }
 
     public function show(
+        Request $request,
         TrialExam $trialExam,
         TrialAttempt $trialAttempt,
         TrialExamAttemptService $attempts,
@@ -248,18 +249,13 @@ class TrialExamPublicController extends Controller
 
         $trialAttempt->load('answers');
         $questions = $this->questions($trialExam);
-        // Attempts started before fixed ordering keep the numbering already shown to students.
-        $order = session()->get($this->orderKey($trialAttempt), []);
-        if ($order !== []) {
-            $positions = array_flip($order);
-            $questions = $questions->sortBy(fn ($question) => $positions[$question->id] ?? PHP_INT_MAX)->values();
-        }
+        $order = $request->session()->get($this->orderKey($trialAttempt), []);
 
         return view('tryouts.show', [
             'trialExam' => $trialExam,
             'attempt' => $trialAttempt,
             'questions' => $questions,
-            'questionSections' => StudentQuestionSections::fromQuestions($questions),
+            'questionSections' => StudentQuestionSections::fromQuestions($questions, $order),
             'answers' => $trialAttempt->answers->keyBy('trial_question_id'),
             'deadline' => $attempts->deadline($trialAttempt),
         ]);
@@ -290,8 +286,14 @@ class TrialExamPublicController extends Controller
             'answers' => ['nullable', 'array'],
             'answers.*' => ['nullable', 'string', 'max:10000'],
         ]);
-        $attempts->submit($trialAttempt, $validated['answers'] ?? [], requireComplete: true);
-        session()->forget($this->orderKey($trialAttempt));
+        $orderKey = $this->orderKey($trialAttempt);
+        $attempts->submit(
+            $trialAttempt,
+            $validated['answers'] ?? [],
+            requireComplete: true,
+            previousOrder: $request->session()->get($orderKey, []),
+        );
+        $request->session()->forget($orderKey);
 
         return redirect()->route('tryout.result', [$trialExam, $trialAttempt]);
     }

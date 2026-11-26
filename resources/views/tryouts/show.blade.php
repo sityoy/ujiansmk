@@ -58,6 +58,9 @@
         </div>
 
         <fieldset id="exam-content" disabled hidden>
+            @error('submission')
+                <p role="alert" class="mb-3 text-sm text-rose-300">{{ $message }}</p>
+            @enderror
             @php($number = 0)
             @foreach ($questionSections as $section)
                 @php($type = $section['type'])
@@ -84,14 +87,14 @@
                 </section>
             @endforeach
             <div id="trial-submit-panel" class="mt-6">
-                <x-exam-submit-confirmation />
+                <x-exam-submit-confirmation :show-server-error="false" />
                 <button type="submit" class="w-full rounded-xl bg-cyan-400 px-4 py-4 font-semibold text-slate-950">Kumpulkan jawaban</button>
             </div>
             <x-exam-image-dialog />
         </fieldset>
     </form>
 
-    <script src="{{ asset('js/exam-submission.js') }}?v=6"></script>
+    <script src="{{ asset('js/exam-submission.js') }}?v=7"></script>
     <script>
         const csrf = document.querySelector('meta[name="csrf-token"]').content;
         const remainingAtLoad = {{ max(0, $deadline->getTimestamp() - now()->getTimestamp()) * 1000 }};

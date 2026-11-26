@@ -68,6 +68,9 @@
     </section>
 
     <fieldset id="exam-content" @disabled($attempt->security_enabled) @if($attempt->security_enabled) hidden @endif>
+        @error('submission')
+            <p role="alert" class="mb-3 text-sm text-rose-300">{{ $message }}</p>
+        @enderror
         @php($number = 0)
         @foreach ($questionSections as $section)
             @php($type = $section['type'])
@@ -96,13 +99,13 @@
 
         <form id="submit-exam" method="POST" action="{{ route('student.exams.submit', $attempt) }}" data-question-count="{{ $questions->count() }}" class="mt-6">
             @csrf
-            <x-exam-submit-confirmation />
+            <x-exam-submit-confirmation :show-server-error="false" />
             <button type="submit" class="w-full rounded-xl bg-emerald-400 px-5 py-4 font-semibold text-slate-950">Selesai dan kumpulkan jawaban</button>
         </form>
         <x-exam-image-dialog />
     </fieldset>
 
-    <script src="{{ asset('js/exam-submission.js') }}?v=6"></script>
+    <script src="{{ asset('js/exam-submission.js') }}?v=7"></script>
     <script>
         const csrf = document.querySelector('meta[name="csrf-token"]').content;
         // Base the countdown on server time, not the student's system clock.

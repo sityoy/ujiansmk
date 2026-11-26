@@ -359,6 +359,20 @@ class TrialExamFlowTest extends TestCase
         $this->get(route('tryout.show', [$trial, $attempt]))->assertOk()
             ->assertSeeInOrder([$first->question_text, 'Pernyataan atau gambar untuk nomor 2–3',
                 'Bacaan percobaan', 'Bagian uraian pertama', 'Bagian uraian kedua']);
+        $show = route('tryout.show', [$trial, $attempt]);
+        $this->from($show)->post(route('tryout.submit', [$trial, $attempt]), ['answers' => [$first->id => 'A']])
+            ->assertRedirect($show)->assertSessionHasErrors([
+                'submission' => 'Masih ada 2 soal yang belum dijawab. Silakan kerjakan soal nomor 2, 3 terlebih dahulu.',
+            ]);
+
+        $written = $bank->questions()->where('question_type', 'essay')->get();
+        $this->withSession(['trial_question_order_'.$attempt->id => [$first->id, $written[1]->id, $written[0]->id]])
+            ->get($show)->assertOk()->assertSeeInOrder(['Bagian uraian kedua', 'Bagian uraian pertama']);
+        $this->from($show)->post(route('tryout.submit', [$trial, $attempt]), [
+            'answers' => [$first->id => 'A', $written[0]->id => 'Jawaban pertama'],
+        ])->assertSessionHasErrors([
+            'submission' => 'Masih ada 1 soal yang belum dijawab. Silakan kerjakan soal nomor 2 terlebih dahulu.',
+        ]);
         $this->actingAs($admin)->patch(route('academic.students.toggle', $student), [
             'is_active' => '0', 'roster_revision' => 0, 'inactive_reason' => 'Status pindahan sedang diverifikasi.',
         ])->assertSessionHasNoErrors();

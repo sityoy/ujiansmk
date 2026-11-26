@@ -14,18 +14,19 @@
             <p id="security-network" aria-live="polite" class="mt-3 text-sm text-amber-300"></p>
         </section>
     </div>
-    @if ($questions->every(fn ($question) => filled($answers->get($question->id)?->answer)))
+    @php($unanswered = $questions->filter(fn ($question) => blank($answers->get($question->id)?->answer)))
+    @if ($unanswered->isEmpty())
         <form id="submit-locked-exam" action="{{ route('student.exams.submit', $attempt) }}" method="POST" class="mt-5">
             @csrf
             <x-exam-submit-confirmation />
             <button type="submit" class="rounded-xl border border-white/20 px-4 py-3 text-sm">Kumpulkan jawaban</button>
         </form>
-        <script src="{{ asset('js/exam-submission.js') }}?v=1"></script>
+        <script src="{{ asset('js/exam-submission.js') }}?v=7"></script>
         <script>
             window.bindExamSubmission({ form: document.getElementById('submit-locked-exam'), allowBlocked: true });
         </script>
     @else
-        <p class="mt-5 text-sm text-slate-300">Masih ada soal yang belum terjawab. Hubungi pengawas untuk melanjutkan ujian.</p>
+        <p class="mt-5 text-sm text-slate-300">Soal nomor {{ implode(', ', \App\Services\Exams\StudentQuestionSections::unansweredNumbers($questions, $unanswered->modelKeys())) }} belum dijawab. Hubungi pengawas agar Anda bisa melanjutkan dan mengerjakan soal tersebut.</p>
     @endif
     <script src="{{ asset('js/exam-security.js') }}?v=20261119-1" defer></script>
 @endsection

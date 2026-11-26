@@ -93,8 +93,9 @@ class TrialExamAttemptService
         array $submittedAnswers = [],
         bool $allowLocked = false,
         bool $requireComplete = false,
+        array $previousOrder = [],
     ): TrialAttempt {
-        return DB::transaction(function () use ($attempt, $submittedAnswers, $allowLocked, $requireComplete): TrialAttempt {
+        return DB::transaction(function () use ($attempt, $submittedAnswers, $allowLocked, $requireComplete, $previousOrder): TrialAttempt {
             $attempt = TrialAttempt::query()->lockForUpdate()
                 ->with('trialExam.questionBank')->findOrFail($attempt->id);
 
@@ -117,7 +118,7 @@ class TrialExamAttemptService
             $pgPoints = 0.0;
             $calculator = app(ExamScoreCalculator::class);
             $responses = [];
-            $unanswered = 0;
+            $unanswered = [];
 
             foreach ($questions as $question) {
                 $raw = array_key_exists($question->id, $submittedAnswers)
@@ -125,7 +126,7 @@ class TrialExamAttemptService
                     : $saved->get($question->id)?->answer;
                 $answer = $this->normalizeAnswer($question, $raw);
                 if ($requireComplete && ! $expired && $answer === null) {
-                    $unanswered++;
+                    $unanswered[] = $question->id;
                 }
                 $manual = $question->question_type->requiresManualGrading();
                 $pgCount += $manual ? 0 : 1;
@@ -143,8 +144,9 @@ class TrialExamAttemptService
                 $correctAnswers += $correct ? 1 : 0;
             }
 
-            if ($unanswered > 0) {
-                throw ValidationException::withMessages(['submission' => "Masih ada {$unanswered} soal yang belum terjawab. Lengkapi semua jawaban sebelum mengumpulkan."]);
+            if ($unanswered !== []) {
+                $numbers = StudentQuestionSections::unansweredNumbers($questions, $unanswered, $previousOrder);
+                throw ValidationException::withMessages(['submission' => StudentQuestionSections::unansweredMessage($numbers)]);
             }
 
             foreach (array_chunk($responses, 100) as $batch) {

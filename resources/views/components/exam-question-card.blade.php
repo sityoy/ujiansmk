@@ -6,7 +6,7 @@
     $multiple = $limit > 1;
     $selected = $type === 'multiple_choice' ? str_split($answer ?? '') : [];
 @endphp
-<article @class(['border border-white/10 bg-white/[0.035]', 'rounded-3xl p-6' => $trial, 'rounded-2xl p-5' => ! $trial])>
+<article data-exam-question-number="{{ $number }}" @class(['border border-white/10 bg-white/[0.035]', 'rounded-3xl p-6' => $trial, 'rounded-2xl p-5' => ! $trial])>
     @if ($trial)
         <div class="flex gap-4">
             <span class="grid size-9 shrink-0 place-items-center rounded-xl bg-cyan-400/10 font-semibold text-cyan-300">{{ $number }}</span>
