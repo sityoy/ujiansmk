@@ -146,17 +146,20 @@ class ExamResultController extends Controller
             return $row;
         });
 
+        $subjectGroups = $this->subjectGroups($subjects, $componentsBySubject);
+
         return view('reports.exam-results.print', [
             'period' => $assessmentPeriod->loadMissing('academicYear'),
             'schoolClass' => $schoolClass->loadMissing('homeroomTeacher'),
-            'subjectPages' => $this->subjectPages($subjects, $componentsBySubject),
+            'subjectGroups' => $subjectGroups,
+            'subjectPages' => $this->subjectPages($subjectGroups),
             'rows' => $rows,
             'school' => SchoolProfile::query()->first(),
             'letterheadData' => $this->letterheadData(),
         ]);
     }
 
-    private function subjectPages(Collection $subjects, array $componentsBySubject): array
+    private function subjectGroups(Collection $subjects, array $componentsBySubject): array
     {
         $labels = [
             ExamQuestionType::MultipleChoice->value => 'PG',
@@ -165,20 +168,28 @@ class ExamResultController extends Controller
             ExamScoreCalculator::COMBINED_WRITTEN => 'Nilai Tertulis Gabungan',
         ];
 
-        $pages = [];
-        $page = [];
-        $width = 0;
-        foreach ($subjects as $subject) {
+        return $subjects->map(function (AssessmentSubject $subject) use ($labels, $componentsBySubject): array {
             $types = $subject->questions->map(fn ($question) => $question->question_type->value)->all();
             $columns = array_intersect_key($labels, array_fill_keys($types, true) + ($componentsBySubject[$subject->id] ?? []));
             $columns['final'] = 'Nilai Akhir';
-            if ($width + count($columns) > 7) {
+            return ['subject' => $subject, 'columns' => $columns];
+        })->all();
+    }
+
+    private function subjectPages(array $subjectGroups): array
+    {
+        $pages = [];
+        $page = [];
+        $columnCount = 0;
+        foreach ($subjectGroups as $group) {
+            $groupSize = count($group['columns']);
+            if ($columnCount + $groupSize > 10) {
                 $pages[] = $page;
                 $page = [];
-                $width = 0;
+                $columnCount = 0;
             }
-            $page[] = ['subject' => $subject, 'columns' => $columns];
-            $width += count($columns);
+            $page[] = $group;
+            $columnCount += $groupSize;
         }
         $pages[] = $page;
 

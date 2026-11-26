@@ -1307,7 +1307,7 @@ class StudentExamFlowTest extends TestCase
         $this->assertSame(2, $after->viewData('rows')->firstWhere('student.id', $secondStudent->student_id)['rank']);
     }
 
-    public function test_core_score_print_groups_many_subjects_and_keeps_all_subjects_visible(): void
+    public function test_core_score_report_shows_subjects_in_one_screen_table_and_groups_them_in_print(): void
     {
         [, $assignment] = $this->makeExam();
         $component = $assignment->assessmentSubject;
@@ -1325,16 +1325,26 @@ class StudentExamFlowTest extends TestCase
         $dom = new \DOMDocument;
         @$dom->loadHTML('<?xml encoding="UTF-8">'.$response->getContent());
         $xpath = new \DOMXPath($dom);
+        $screenTables = $xpath->query('//div[@role="region"]//table');
+        $this->assertCount(1, $screenTables);
+        $this->assertCount(20, $xpath->query('.//tbody/tr[1]/td', $screenTables[0]));
+        $this->assertCount(1, $xpath->query('.//tbody/tr', $screenTables[0]));
+        $this->assertStringContainsString('S-001', $screenTables[0]->textContent);
+        $this->assertStringContainsString('Informatika', $screenTables[0]->textContent);
+        $this->assertStringContainsString('Rata-rata', $screenTables[0]->textContent);
+        $this->assertStringContainsString('Rank', $screenTables[0]->textContent);
+
         $tables = $xpath->query('//*[@data-print-content]//table');
-        $this->assertCount(3, $tables);
+        $this->assertCount(2, $tables);
         foreach ($tables as $table) {
             $columns = $xpath->query('.//tbody/tr[1]/td', $table);
-            $this->assertLessThanOrEqual(12, $columns->length);
+            $this->assertLessThanOrEqual(15, $columns->length);
             $this->assertStringContainsString('Nama Peserta Didik', $table->textContent);
             $this->assertStringContainsString('Peserta Uji', $table->textContent);
         }
         foreach (range(1, 14) as $index) {
-            $response->assertSee('>Mapel Cetak '.$index.'</th>', false);
+            $this->assertCount(1, $xpath->query('.//th[text()="Mapel Cetak '.$index.'"]', $screenTables[0]));
+            $this->assertCount(1, $xpath->query('//*[@data-print-content]//th[text()="Mapel Cetak '.$index.'"]'));
         }
     }
 
