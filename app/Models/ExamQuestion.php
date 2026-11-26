@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['assessment_subject_id', 'question_text', 'text_format', 'statement', 'question_image_path', 'question_type', 'options', 'option_file_paths', 'correct_answer', 'points', 'position'])]
+#[Fillable(['assessment_subject_id', 'question_text', 'text_format', 'statement', 'question_image_path', 'question_context_id', 'question_type', 'options', 'option_file_paths', 'correct_answer', 'points', 'position'])]
 #[Hidden(['correct_answer'])]
 class ExamQuestion extends Model
 {
@@ -19,6 +19,7 @@ class ExamQuestion extends Model
     {
         return [
             'question_type' => ExamQuestionType::class,
+            'question_context_id' => 'integer',
             'options' => 'array',
             'option_file_paths' => 'array',
             'points' => 'decimal:2',
@@ -28,6 +29,11 @@ class ExamQuestion extends Model
     public function assessmentSubject(): BelongsTo
     {
         return $this->belongsTo(AssessmentSubject::class);
+    }
+
+    public function context(): BelongsTo
+    {
+        return $this->belongsTo(QuestionContext::class, 'question_context_id');
     }
 
     public function answers(): HasMany

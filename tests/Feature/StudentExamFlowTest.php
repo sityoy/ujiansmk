@@ -33,6 +33,7 @@ use App\Services\Exams\ExamAttemptService;
 use App\Services\Exams\ExamSessionService;
 use App\Services\Exams\StudentOptionOrder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -1346,6 +1347,58 @@ class StudentExamFlowTest extends TestCase
             $this->assertCount(1, $xpath->query('.//th[text()="Mapel Cetak '.$index.'"]', $screenTables[0]));
             $this->assertCount(1, $xpath->query('//*[@data-print-content]//th[text()="Mapel Cetak '.$index.'"]'));
         }
+    }
+
+    public function test_shared_core_passages_are_grouped_and_numbered_in_the_actual_exam(): void
+    {
+        [$student, $assignment, [$first, $independent]] = $this->makeExam();
+        $bank = $assignment->assessmentSubject;
+        $teacher = User::factory()->create(['role' => UserRole::Teacher]);
+        $bank->update(['teacher_user_id' => $teacher->id]);
+        Storage::fake('public');
+        $this->actingAs($teacher);
+
+        $pg = [
+            'question_type' => 'multiple_choice', 'option_a' => 'Satu', 'option_b' => 'Dua',
+            'option_c' => 'Tiga', 'option_d' => 'Empat', 'option_e' => 'Lima', 'correct_answer' => 'A',
+        ];
+        $store = route('scheduling.questions.store', $bank);
+        $update = route('scheduling.questions.update', [$bank, $first]);
+        $this->put($update, [...$pg, 'question_text' => 'Tentukan operasi pertama.', 'question_context' => 'new',
+            'context_statement' => 'Pernyataan bersama PG', 'context_image' => UploadedFile::fake()->image('ilustrasi.png')])
+            ->assertSessionHasNoErrors();
+        $context = $first->fresh()->context;
+        Storage::disk('public')->assertExists($context->image_path);
+        $this->post($store, [...$pg, 'question_text' => 'Periksa hasil operasi.', 'question_context' => (string) $context->id])
+            ->assertSessionHasNoErrors()->assertSessionHas('saved_context_id', $context->id);
+        $this->post($store, [...$pg, 'question_text' => 'Bandingkan kedua hasil.', 'question_context' => (string) $context->id])
+            ->assertSessionHasNoErrors();
+        $essay = ['question_type' => 'essay', 'points' => 5];
+        $this->post($store, [...$essay, 'question_text' => 'Jelaskan bagian satu.', 'question_context' => 'new',
+            'text_format' => 'html', 'context_statement' => '<p>Konteks penjelasan tertulis</p><script>alert(1)</script>'])
+            ->assertSessionHasNoErrors();
+        $essayQuestion = $bank->questions()->where('question_type', 'essay')->sole();
+        $this->post($store, [...$essay, 'question_text' => 'Jelaskan bagian dua.',
+            'question_context' => (string) $essayQuestion->question_context_id])->assertSessionHasNoErrors();
+
+        $this->get(route('scheduling.questions.pdf', $bank))->assertOk()
+            ->assertSee('Pernyataan atau gambar untuk nomor 1, 3, 4')->assertSee('Pernyataan atau gambar untuk nomor 5–6')
+            ->assertDontSee('<script>alert(1)</script>', false);
+        $this->put($update, [...$pg, 'question_text' => 'Tentukan operasi pertama.', 'question_context' => 'edit',
+            'context_statement' => 'Pernyataan PG yang diperbarui'])->assertSessionHasNoErrors();
+        $newContext = $first->fresh()->context;
+        $this->assertSame($context->image_path, $newContext->image_path);
+        $this->assertSame(3, $bank->questions()->where('question_context_id', $newContext->id)->count());
+
+        $attempt = $this->startAttempt($assignment);
+        $this->actingAs($student)->withSession(['exam_device_token' => str_repeat('a', 64)])
+            ->get(route('student.exams.show', $attempt))->assertOk()
+            ->assertSeeInOrder(['Pernyataan atau gambar untuk nomor 1–3', 'Pernyataan PG yang diperbarui',
+                'Tentukan operasi pertama.', 'Periksa hasil operasi.', 'Bandingkan kedua hasil.', $independent->question_text,
+                'Pernyataan atau gambar untuk nomor 5–6', 'Konteks penjelasan tertulis', 'Jelaskan bagian satu.', 'Jelaskan bagian dua.'])
+            ->assertSee('Gambar pernyataan bersama');
+        $this->actingAs($teacher)->put($update, [...$pg, 'question_text' => 'Tidak boleh diubah.',
+            'question_context' => 'edit', 'context_statement' => 'Percobaan perubahan'])->assertSessionHasErrors('question');
     }
 
     private function makeExam(): array

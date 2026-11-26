@@ -16,7 +16,7 @@
             </div>
         @endif
         <div class="mt-5">
-            <x-question-bank-form :action="$action" :question-types="$questionTypes" :question="$question" :back-url="$backUrl" :trial="$trial" />
+            <x-question-bank-form :action="$action" :question-types="$questionTypes" :question="$question" :available-contexts="$availableContexts" :back-url="$backUrl" :trial="$trial" />
         </div>
     </section>
     <x-exam-image-dialog />

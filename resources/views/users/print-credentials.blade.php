@@ -84,6 +84,7 @@
         @foreach ($credentials as $credential)
             <section class="card" data-print-block>
                 <header class="head">
+                    <x-school-logo :school="$school" custom-only width="42" height="42" />
                     <div class="school">{{ $school?->name ?? config('app.name') }}</div>
                     <div class="title">KARTU AKUN SISTEM UJIAN SEKOLAH</div>
                 </header>

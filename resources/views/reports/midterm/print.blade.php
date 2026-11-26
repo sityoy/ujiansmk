@@ -59,10 +59,11 @@
 
     <main class="sheet" data-print-content>
         <header class="header">
-            @if ($letterheadData)
+            @if ($letterheadData && ! $schoolProfile?->logo_path)
                 <img src="{{ $letterheadData }}" alt="KOP {{ $schoolProfile?->name }}" class="letterhead">
             @else
                 <div class="fallback-header">
+                    <x-school-logo :school="$schoolProfile" width="48" height="48" />
                     <h1>{{ $schoolProfile?->name ?? 'Nama Sekolah' }}</h1>
                     @if ($schoolProfile?->address)
                         <p>{{ $schoolProfile->address }}{{ $schoolProfile->city ? ', '.$schoolProfile->city : '' }}</p>

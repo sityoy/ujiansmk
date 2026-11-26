@@ -1,4 +1,4 @@
-@props(['action', 'questionTypes', 'question' => null, 'backUrl' => null, 'trial' => false])
+@props(['action', 'questionTypes', 'question' => null, 'backUrl' => null, 'trial' => false, 'availableContexts'])
 
 @php
     $typeValue = old('question_type', $question?->question_type->value ?? $questionTypes[0]->value);
@@ -9,7 +9,7 @@
 @endphp
 
 <form method="POST" action="{{ $action }}" enctype="multipart/form-data"
-    data-question-bank-form @if (! $trial) data-core-question-form @endif class="space-y-4">
+    data-question-bank-form class="space-y-4">
     @csrf
     @if ($question) @method('PUT') @endif
     <label class="block text-sm text-slate-300">Jenis soal
@@ -19,7 +19,8 @@
             @endforeach
         </select>
     </label>
-    <x-question-prompt-fields :question="$question" :multiple-choice="$trial || $multipleChoice" />
+    <x-question-context-fields :question="$question" :contexts="$availableContexts" :format="$format" />
+    <x-question-prompt-fields :question="$question" />
     <div data-question-choice-fields @if (! $multipleChoice) hidden @endif class="space-y-3">
         @foreach (['A', 'B', 'C', 'D', 'E'] as $option)
             @php($optionName = 'option_'.strtolower($option))
@@ -59,4 +60,4 @@
         @endif
     </div>
 </form>
-<script src="{{ asset('js/question-bank-form.js') }}?v=2" defer></script>
+<script src="{{ asset('js/question-bank-form.js') }}?v=3" defer></script>

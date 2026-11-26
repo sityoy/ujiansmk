@@ -48,6 +48,7 @@
             @endphp
             <section class="score-sheet" data-print-break>
                 <header>
+                    <x-school-logo :school="$school" custom-only width="42" height="42" />
                     <p><strong>{{ $school?->name ?? config('app.name') }}</strong></p>
                     <h1>Rekap Nilai Simulasi Ujian</h1>
                     <p>{{ $trialExam->title }} · {{ $trialExam->questionBank->subject->name }} · Kelas {{ $trialExam->questionBank->grade_level }}</p>

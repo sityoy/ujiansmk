@@ -66,7 +66,7 @@
                 <h2 id="bank-add-title" class="text-xl font-semibold text-white">Tambah soal</h2>
                 <p class="mt-3 text-xs leading-5 text-slate-400">Pilihan Ganda dinilai otomatis. Isian Singkat dan Esai dinilai manual sesuai bobot yang diisi.</p>
                 <div class="mt-5">
-                    <x-question-bank-form :action="route('trial-question-banks.questions.store', [$bank, 'per_page' => $perPage])" :question-types="\App\Enums\ExamQuestionType::cases()" trial />
+                    <x-question-bank-form :action="route('trial-question-banks.questions.store', [$bank, 'per_page' => $perPage])" :question-types="\App\Enums\ExamQuestionType::cases()" :available-contexts="$availableContexts" trial />
                 </div>
             </section>
         @endunless

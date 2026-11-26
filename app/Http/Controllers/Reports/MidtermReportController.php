@@ -12,7 +12,6 @@ use App\Services\Reports\MidtermReportAccess;
 use App\Services\Reports\MidtermReportService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use InvalidArgumentException;
 
@@ -88,29 +87,9 @@ class MidtermReportController extends Controller
         return view('reports.midterm.print', [
             ...$report,
             'row' => $row,
-            'letterheadData' => $this->letterheadData(),
+            'letterheadData' => SchoolProfile::letterheadData(SchoolProfile::query()->first()),
             'printLayout' => $service->printLayout($assessmentPeriod),
         ]);
-    }
-
-    private function letterheadData(): ?string
-    {
-        $profile = SchoolProfile::query()->first();
-        $path = $profile?->letterhead_path && Storage::exists($profile->letterhead_path)
-            ? Storage::path($profile->letterhead_path)
-            : public_path('images/kop-surat-smk-islam-bahagia.png');
-
-        if (! is_file($path) || ! is_readable($path)) {
-            return null;
-        }
-
-        $mime = match (strtolower(pathinfo($path, PATHINFO_EXTENSION))) {
-            'jpg', 'jpeg' => 'image/jpeg',
-            'webp' => 'image/webp',
-            default => 'image/png',
-        };
-
-        return 'data:'.$mime.';base64,'.base64_encode((string) file_get_contents($path));
     }
 
     private function reportOrFail(

@@ -10,12 +10,12 @@
         </div>
         <div>
             <dt class="font-semibold text-slate-200">Urutan penulisan</dt>
-            <dd>Isi pertanyaan untuk setiap soal. Jika perlu, sertakan {{ $trial ? 'pernyataan atau bacaan pendukung' : 'pernyataan pendukung pada soal pilihan ganda' }} dan lampiran. Pada pilihan ganda, naskah menampilkan pernyataan, lampiran, pertanyaan, lalu pilihan jawaban.</dd>
+            <dd>Isi pertanyaan untuk setiap soal. Untuk satu bacaan atau gambar yang dipakai beberapa nomor, buat pernyataan bersama pada soal pertama lalu pilih kelompok yang sama pada soal selanjutnya.</dd>
         </div>
         @if ($allowsChoices)
             <div>
                 <dt class="font-semibold text-slate-200">Pilihan ganda</dt>
-                <dd>Isi pilihan A sampai E dan pilih satu kunci. Jawaban benar bernilai 2 poin, dengan nilai PG maksimal 100. Urutan pilihan di ujian daring dapat berbeda dari naskah PDF.</dd>
+                <dd>Isi pilihan A sampai E dan centang semua kunci yang benar. Jawaban benar bernilai 2 poin, dengan nilai PG maksimal 100. Urutan pilihan di ujian daring dapat berbeda dari naskah PDF.</dd>
             </div>
         @endif
         <div>

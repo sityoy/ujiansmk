@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['trial_question_bank_id', 'question_type', 'question_text', 'text_format', 'statement', 'question_image_path', 'options', 'option_file_paths', 'correct_answer', 'points', 'position'])]
+#[Fillable(['trial_question_bank_id', 'question_type', 'question_text', 'text_format', 'statement', 'question_image_path', 'question_context_id', 'options', 'option_file_paths', 'correct_answer', 'points', 'position'])]
 #[Hidden(['correct_answer'])]
 class TrialQuestion extends Model
 {
@@ -19,6 +19,7 @@ class TrialQuestion extends Model
     {
         return [
             'question_type' => ExamQuestionType::class,
+            'question_context_id' => 'integer',
             'options' => 'array',
             'option_file_paths' => 'array',
             'points' => 'decimal:2',
@@ -28,6 +29,11 @@ class TrialQuestion extends Model
     public function bank(): BelongsTo
     {
         return $this->belongsTo(TrialQuestionBank::class, 'trial_question_bank_id');
+    }
+
+    public function context(): BelongsTo
+    {
+        return $this->belongsTo(QuestionContext::class, 'question_context_id');
     }
 
     public function answers(): HasMany

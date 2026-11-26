@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -38,10 +39,18 @@ class LoginController extends Controller
             ->orWhere('username', $login)
             ->first();
 
-        if (! $user || ! $user->is_active || ! Hash::check($validated['password'], $user->password)) {
+        if (! $user || ! Hash::check($validated['password'], $user->password)) {
             return back()
                 ->withErrors(['login' => 'Email/NISN/NIS, kata sandi, atau status akun tidak sesuai.'])
                 ->onlyInput('login');
+        }
+
+        $student = $user->role === UserRole::Student ? $user->student : null;
+        if ($student && ! $student->is_active) {
+            return back()->withErrors(['login' => $student->inactiveNotice()])->onlyInput('login');
+        }
+        if (! $user->is_active) {
+            return back()->withErrors(['login' => 'Akun Anda sedang dinonaktifkan. Hubungi panitia ujian.'])->onlyInput('login');
         }
 
         Auth::login($user, $request->boolean('remember'));

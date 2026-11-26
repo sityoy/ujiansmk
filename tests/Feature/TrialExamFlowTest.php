@@ -329,6 +329,45 @@ class TrialExamFlowTest extends TestCase
         $this->actingAs($admin)->get(route('tryouts.scores.print', $trial))->assertOk()->assertSee('40,50');
     }
 
+    public function test_trial_passage_reuse_and_deactivated_students_are_checked_in_the_live_exam(): void
+    {
+        [$trial, $first] = $this->makeTrial();
+        $bank = $trial->questionBank;
+        $student = Student::query()->where('nisn', '1234567890')->firstOrFail();
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $store = route('trial-question-banks.questions.store', $bank);
+        $this->actingAs($admin)->post($store, [
+            'question_type' => 'essay', 'question_text' => 'Bagian uraian pertama', 'points' => 5,
+            'question_context' => 'new', 'context_statement' => 'Bacaan percobaan',
+        ])->assertSessionHasNoErrors();
+        $contextId = $bank->questions()->where('question_type', 'essay')->sole()->question_context_id;
+        $this->post($store, [
+            'question_type' => 'essay', 'question_text' => 'Bagian uraian kedua',
+            'points' => 7, 'question_context' => (string) $contextId,
+        ])->assertSessionHasNoErrors();
+
+        $otherBank = $bank->replicate();
+        $otherBank->name = 'Bank terpisah';
+        $otherBank->save();
+        $this->post(route('trial-question-banks.questions.store', $otherBank), [
+            'question_type' => 'essay', 'question_text' => 'Soal bank lain', 'points' => 5,
+            'question_context' => (string) $contextId,
+        ])->assertSessionHasErrors('question_context');
+
+        $this->actingAs($student->user)->startTrial($trial, ['access_code' => $trial->access_code])->assertSessionHasNoErrors();
+        $attempt = $trial->currentAttempts()->sole();
+        $this->get(route('tryout.show', [$trial, $attempt]))->assertOk()
+            ->assertSeeInOrder([$first->question_text, 'Pernyataan atau gambar untuk nomor 2–3',
+                'Bacaan percobaan', 'Bagian uraian pertama', 'Bagian uraian kedua']);
+        $this->actingAs($admin)->patch(route('academic.students.toggle', $student), [
+            'is_active' => '0', 'roster_revision' => 0, 'inactive_reason' => 'Status pindahan sedang diverifikasi.',
+        ])->assertSessionHasNoErrors();
+        $this->actingAs($student->user->fresh())->get(route('tryout.show', [$trial, $attempt]))->assertForbidden();
+        $this->putJson(route('tryout.answer', [$trial, $attempt, $first]), ['answer' => 'A'])->assertForbidden();
+        $this->get(route('student.exams.index'))->assertRedirect(route('login'))
+            ->assertSessionHasErrors(['login' => $student->fresh()->inactiveNotice()]);
+    }
+
     public function test_trial_pdf_import_reads_a_separate_key_and_rechecks_the_deadline_before_saving(): void
     {
         [$trial] = $this->makeTrial();

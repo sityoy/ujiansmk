@@ -79,7 +79,7 @@ class ExamGradingController extends Controller
     {
         $this->authorizeGrader($request, $attempt);
         $attempt->load(['assignment.student', 'assignment.assessmentSubject.subject',
-            'assignment.assessmentSubject.schoolClass', 'assignment.assessmentSubject.questions', 'answers']);
+            'assignment.assessmentSubject.schoolClass', 'assignment.assessmentSubject.questions.context', 'answers']);
 
         $questions = $attempt->assignment->assessmentSubject->questions;
         $answers = $attempt->answers->keyBy('exam_question_id');

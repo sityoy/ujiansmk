@@ -40,6 +40,7 @@ class AcademicDataController extends Controller
             ->orderByDesc('academic_year_id')
             ->orderBy('name');
 
+        $studentStatus = $request->validate(['student_status' => ['nullable', 'in:active,inactive']])['student_status'] ?? null;
         $studentSearch = trim($request->string('student_search')->toString());
         $studentClassId = $request->filled('student_class') ? $request->integer('student_class') : null;
         $studentPerPage = TablePagination::selected('student_page');
@@ -60,6 +61,7 @@ class AcademicDataController extends Controller
                 });
             })
             ->when($studentClassId, fn ($query) => $query->where('school_class_id', $studentClassId))
+            ->when($studentStatus, fn ($query) => $query->where('is_active', $studentStatus === 'active'))
             ->orderBy('full_name')->orderBy('id');
 
         return view('academic.index', [
@@ -83,6 +85,7 @@ class AcademicDataController extends Controller
             'classYearId' => $classYearId,
             'students' => $studentQuery->paginateForDisplay('student_page')->fragment('student-list'),
             'studentSearch' => $studentSearch,
+            'studentStatus' => $studentStatus,
             'studentClassId' => $studentClassId,
             'rosterRevision' => $rosterRevision,
             'rosterTotals' => $rosterTotals,
@@ -313,12 +316,24 @@ class AcademicDataController extends Controller
 
     public function toggleStudent(Request $request, Student $student, StudentRosterRevision $roster): RedirectResponse
     {
-        $roster->withCurrent(function () use ($student): void {
-            $student->update(['is_active' => ! $student->is_active]);
-            $student->user?->update(['is_active' => $student->is_active]);
+        $validated = $request->validate([
+            'is_active' => ['nullable', 'boolean'],
+            'inactive_reason' => ['required_if:is_active,0', 'nullable', 'string', 'max:500'],
+        ], ['inactive_reason.required_if' => 'Tuliskan alasan penonaktifan yang akan ditampilkan kepada siswa.']);
+
+        $active = $roster->withCurrent(function () use ($student, $validated): bool {
+            $current = Student::query()->lockForUpdate()->findOrFail($student->id);
+            $active = (bool) ($validated['is_active'] ?? ! $current->is_active);
+            $current->update([
+                'is_active' => $active,
+                'inactive_reason' => $active ? null : ($validated['inactive_reason'] ?? null),
+            ]);
+            $current->user?->update(['is_active' => $active]);
+
+            return $active;
         }, $request->integer('roster_revision'));
 
-        return back()->with('status', 'Status siswa berhasil diperbarui.');
+        return back()->with('status', $active ? 'Siswa diaktifkan kembali.' : 'Siswa dinonaktifkan. Alasan ditampilkan saat siswa mencoba masuk.');
     }
 
     public function destroyStudents(Request $request, StudentDeletionService $deletion): RedirectResponse

@@ -46,7 +46,7 @@
                     <p class="mt-2 rounded-xl border border-cyan-400/15 bg-cyan-400/[0.04] p-3 text-xs leading-5 text-slate-400">Saran 20 soal: 10 isian × 3 poin + 10 esai × 7 poin = total 100. Bobot wajib diisi dan merupakan nilai maksimal setiap soal.</p>
                 @endif
                 <div class="mt-5">
-                    <x-question-bank-form :action="route('scheduling.questions.store', [$assessmentSubject, 'per_page' => $perPage])" :question-types="$questionTypes" />
+                    <x-question-bank-form :action="route('scheduling.questions.store', [$assessmentSubject, 'per_page' => $perPage])" :question-types="$questionTypes" :available-contexts="$availableContexts" />
                 </div>
             </section>
         @endunless
@@ -76,7 +76,7 @@
                             <a href="#tambah-soal" class="mt-2 inline-block text-sm font-semibold text-cyan-300 underline">Tambah soal berikutnya</a>
                         @endunless
                     @endif
-                    <x-question-prompt :question="$question" :multiple-choice="$question->question_type->value === 'multiple_choice'" class="mt-3" />
+                    <x-question-prompt :question="$question" class="mt-3" />
                     @if ($question->question_type->value === 'multiple_choice')
                         <div class="mt-4 grid gap-2 sm:grid-cols-2">
                             @foreach (collect($question->options)->sortKeys() as $key => $option)

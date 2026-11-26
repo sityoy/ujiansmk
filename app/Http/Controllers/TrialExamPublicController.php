@@ -114,7 +114,7 @@ class TrialExamPublicController extends Controller
             }
             $student = Student::query()
                 ->with('schoolClass')
-                ->where('is_active', true)
+                ->orderByDesc('is_active')
                 ->whereHas('schoolClass', fn ($query) => $query->where('grade_level', $trialExam->questionBank->grade_level))
                 ->where(function ($query) use ($identifier): void {
                     $query->where('student_number', $identifier)
@@ -127,6 +127,9 @@ class TrialExamPublicController extends Controller
                     'participant_identifier' => 'NIS/NISN tidak ditemukan sebagai siswa aktif pada tingkat kelas ujian ini.',
                 ]);
             }
+            if (! $student->is_active || $student->user?->is_active === false) {
+                throw ValidationException::withMessages(['participant_identifier' => Student::INACTIVE_NOTICE]);
+            }
         }
 
         return [$student, $accessCode];
@@ -134,7 +137,12 @@ class TrialExamPublicController extends Controller
 
     private function validateGrade(Student $student, TrialExam $trialExam): void
     {
-        if (! $student->is_active || $student->schoolClass?->grade_level !== $trialExam->questionBank->grade_level) {
+        if (! $student->is_active || $student->user?->is_active === false) {
+            throw ValidationException::withMessages([
+                'participant_identifier' => $student->is_active ? Student::INACTIVE_NOTICE : $student->inactiveNotice(),
+            ]);
+        }
+        if ($student->schoolClass?->grade_level !== $trialExam->questionBank->grade_level) {
             throw ValidationException::withMessages([
                 'participant_identifier' => 'Data atau tingkat kelas siswa tidak sesuai dengan ujian ini. Hubungi panitia.',
             ]);
@@ -340,7 +348,7 @@ class TrialExamPublicController extends Controller
 
     private function questions(TrialExam $trialExam)
     {
-        return $trialExam->questionBank->questions()->get();
+        return $trialExam->questionBank->questions()->with('context')->get();
     }
 
     private function authorizeAttempt(TrialExam $trialExam, TrialAttempt $trialAttempt): void
@@ -348,6 +356,9 @@ class TrialExamPublicController extends Controller
         abort_unless($trialAttempt->trial_exam_id === $trialExam->id && $trialAttempt->status !== TrialAttempt::RESET_STATUS, 404);
 
         $authenticatedStudent = auth()->user()?->student;
+        $student = $trialAttempt->student;
+        abort_if($authenticatedStudent && (! $authenticatedStudent->is_active || ! auth()->user()->is_active), 403, Student::INACTIVE_NOTICE);
+        abort_if($student && (! $student->is_active || $student->user?->is_active === false), 403, Student::INACTIVE_NOTICE);
         if ($authenticatedStudent && (
             $trialAttempt->student_id === $authenticatedStudent->id
             || in_array($trialAttempt->participant_identifier, array_filter([

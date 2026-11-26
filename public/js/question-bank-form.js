@@ -26,16 +26,20 @@ document.querySelectorAll('[data-question-bank-form]').forEach(form => {
         points.disabled = multipleChoice;
         if (!multipleChoice && !pointsEdited) points.value = type.value === 'essay' ? '7' : '3';
 
-        if (form.hasAttribute('data-core-question-form')) {
-            const statement = form.querySelector('[data-question-statement]');
-            const attachment = form.querySelector('[data-question-attachment]');
-            const prompt = form.querySelector('[data-question-text]');
-            statement.hidden = !multipleChoice;
-            statement.querySelector('textarea').disabled = !multipleChoice;
-            if (multipleChoice) attachment.after(prompt);
-            else attachment.before(prompt);
-        }
     };
+
+    const context = form.querySelector('[data-context-select]');
+    const contextFields = form.querySelector('[data-context-fields]');
+    const existingAttachment = form.querySelector('[data-context-current]');
+    const syncContext = () => {
+        const editing = context.value === 'edit';
+        const visible = editing || context.value === 'new';
+        existingAttachment.hidden = !editing;
+        contextFields.hidden = !visible;
+        contextFields.querySelectorAll('textarea, input').forEach(field => { field.disabled = !visible; });
+    };
+    context.addEventListener('change', syncContext);
+    syncContext();
 
     type.addEventListener('change', syncType);
     syncType();

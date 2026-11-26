@@ -70,6 +70,7 @@
     <div class="toolbar"><span>{{ $period->name }} · {{ $schoolClass->name }}</span><x-print-actions filename="rekap-nilai-ujian-inti" landscape :margin="10" /></div>
 
     <main class="screen-results report-sheet" aria-labelledby="screen-results-title">
+        <x-school-logo :school="$school" custom-only width="38" height="38" />
         <h1 id="screen-results-title">Rekap Hasil Ujian</h1>
         <p>{{ $school?->name ?? config('app.name') }} · {{ $period->academicYear->name }} · {{ $period->type->label() }}</p>
         <p class="note">Geser tabel ke samping untuk melihat mapel lain. Rata-rata memakai nilai akhir yang tersedia. Peringkat muncul setelah nilai semua mapel lengkap.</p>
@@ -81,7 +82,11 @@
     <div class="print-results report-sheet" data-print-content>
     @foreach ($subjectPages as $subjectPage)
         <section class="results-section" data-print-break>
-            @if ($letterheadData)<img src="{{ $letterheadData }}" alt="Kop sekolah" class="letterhead">@endif
+            @if ($letterheadData && ! $school?->logo_path)
+                <img src="{{ $letterheadData }}" alt="Kop sekolah" class="letterhead">
+            @else
+                <x-school-logo :school="$school" width="44" height="44" style="display:block;margin:0 auto 4px" />
+            @endif
             <h1>REKAP HASIL {{ strtoupper($period->name) }}</h1>
             <div class="meta">
                 <strong>Sekolah</strong><span>: {{ $school?->name ?? config('app.name') }}</span>

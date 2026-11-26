@@ -462,11 +462,11 @@ XML);
         $this->put(route('scheduling.questions.update', [$sibling, $question]), [
             'question_type' => ExamQuestionType::ShortAnswer->value,
             'question_text' => 'Soal revisi guru yang sama.',
-            'statement' => 'Khusus PG.',
+            'statement' => 'Bacaan untuk isian singkat.',
             'points' => 3,
         ])->assertSessionHasNoErrors();
         $this->assertSame('Soal revisi guru yang sama.', $assigned->questions()->firstOrFail()->question_text);
-        $this->assertNull($question->fresh()->statement);
+        $this->assertSame('Bacaan untuk isian singkat.', $question->fresh()->statement);
         $this->assertSame('Soal khusus X-3.', $otherQuestion->fresh()->question_text);
 
         $this->delete(route('scheduling.questions.destroy', [$sibling, $question]))->assertSessionHasNoErrors();

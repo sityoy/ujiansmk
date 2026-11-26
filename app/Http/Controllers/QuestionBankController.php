@@ -14,6 +14,7 @@ use App\Services\Exams\CoreQuestionBankCatalog;
 use App\Services\Exams\ExamScoreCalculator;
 use App\Services\Exams\MultipleChoiceAnswers;
 use App\Services\Exams\QuestionPdfImport;
+use App\Services\Exams\QuestionContextManager;
 use App\Services\Exams\QuestionText;
 use App\Services\Students\StudentSpreadsheetService;
 use App\Support\QuestionBankNavigation;
@@ -34,7 +35,11 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class QuestionBankController extends Controller
 {
-    public function __construct(private readonly CoreQuestionBank $banks, private readonly QuestionText $questionText) {}
+    public function __construct(
+        private readonly CoreQuestionBank $banks,
+        private readonly QuestionText $questionText,
+        private readonly QuestionContextManager $contexts,
+    ) {}
 
     public function catalog(Request $request, CoreQuestionBankCatalog $catalog): View
     {
@@ -186,7 +191,7 @@ class QuestionBankController extends Controller
             ->pluck('schoolClass.name')->sort(SORT_NATURAL)->join(', ');
         $assessmentSubject = $this->banks->readableComponent($assessmentSubject);
         $assessmentSubject->load(['assessmentPeriod.academicYear', 'subject', 'schoolClass', 'teacher']);
-        $questions = $assessmentSubject->questions()
+        $questions = $assessmentSubject->questions()->with('context')
             ->orderBy('position')
             ->paginateForDisplay()
             ->withQueryString();
@@ -196,10 +201,11 @@ class QuestionBankController extends Controller
         $isLocked = $hasAttempts || $assessmentSubject->assessmentPeriod->coreQuestionDeadlinePassed();
         $questionTypes = $this->questionTypes($assessmentSubject);
         $gradeLevel = (int) $assessmentSubject->schoolClass->grade_level;
+        $availableContexts = $isLocked ? collect() : $this->contexts->available($assessmentSubject->questions());
 
         return view('questions.index', compact(
             'assessmentSubject', 'questions', 'questionCount', 'totalPoints',
-            'isLocked', 'hasAttempts', 'questionTypes', 'gradeLevel', 'rombelNames'
+            'isLocked', 'hasAttempts', 'questionTypes', 'gradeLevel', 'rombelNames', 'availableContexts'
         ));
     }
 
@@ -213,7 +219,8 @@ class QuestionBankController extends Controller
 
         return view('questions.edit', [
             'subjectName' => $assessmentSubject->subject->name,
-            'question' => $question,
+            'question' => $question->load('context'),
+            'availableContexts' => $this->contexts->available($assessmentSubject->questions()),
             'questionTypes' => $this->questionTypes($assessmentSubject),
             'backUrl' => QuestionBankNavigation::questionUrl($assessmentSubject, $question),
             'action' => route('scheduling.questions.update', [$assessmentSubject, $question, 'per_page' => TablePagination::selected()]),
@@ -228,7 +235,7 @@ class QuestionBankController extends Controller
         $assessmentSubject->load(['subject', 'assessmentPeriod', 'schoolClass']);
         $page = ['per_page' => TablePagination::selected(), 'page' => max(1, $request->integer('page', 1))];
         $bank = [$assessmentSubject, ...$page];
-        $questions = $assessmentSubject->questions()->orderBy('position');
+        $questions = $assessmentSubject->questions()->with('context')->orderBy('position');
         $focusedQuestion = $request->filled('soal') ? $questions->findOrFail($request->integer('soal')) : null;
 
         return response()->view('questions.preview', [
@@ -265,7 +272,7 @@ class QuestionBankController extends Controller
         $assessmentSubject->loadMissing('assessmentPeriod');
         if (! $request->has('import_token')) {
             return $this->importPdfForm($request, $assessmentSubject,
-                fn () => $import->prepare($request, 'core:'.$assessmentSubject->id, $this->questionTypes($assessmentSubject), allowWrittenStatement: false));
+                fn () => $import->prepare($request, 'core:'.$assessmentSubject->id, $this->questionTypes($assessmentSubject)));
         }
 
         [$question, $count] = $import->confirm($request, 'core:'.$assessmentSubject->id, 'exam-questions',
@@ -311,7 +318,7 @@ class QuestionBankController extends Controller
             'bankType' => 'Ujian Inti',
             'title' => $subject,
             'details' => [$period->name, 'Tahun ajaran '.$period->academicYear->name, 'Kelas '.$grade, 'Rombel '.$group],
-            'questions' => $assessmentSubject->questions()->get(),
+            'questions' => $assessmentSubject->questions()->with('context')->get(),
             'withKey' => $withKey,
             'trial' => false,
             'filename' => 'bank-soal-inti-'.Str::slug($subject).'-kelas-'.$grade.($withKey ? '-kunci' : ''),
@@ -329,7 +336,7 @@ class QuestionBankController extends Controller
         $this->authorizeAccess($request, $assessmentSubject);
         $assessmentSubject = $this->banks->readableComponent($assessmentSubject);
         $assessmentSubject->load(['assessmentPeriod.academicYear', 'subject', 'schoolClass']);
-        $questions = $assessmentSubject->questions()
+        $questions = $assessmentSubject->questions()->with('context')
             ->where('question_type', ExamQuestionType::MultipleChoice->value)
             ->orderBy('position')
             ->get();
@@ -345,11 +352,12 @@ class QuestionBankController extends Controller
             MultipleChoiceAnswers::label($question->correct_answer),
             number_format($weight, 4, '.', ''),
             $question->question_image_path ? Storage::url($question->question_image_path) : '',
-            $this->questionText->plainText($question->statement, $question->text_format),
+            $this->contexts->exportStatement($question),
+            $question->context?->image_path ? Storage::url($question->context->image_path) : '',
         ])->all();
 
         $path = $spreadsheet->createWorkbook(
-            ['No', 'Pertanyaan', 'Pilihan A', 'Pilihan B', 'Pilihan C', 'Pilihan D', 'Pilihan E', 'Kunci', 'Bobot PG', 'Gambar', 'Pernyataan'],
+            ['No', 'Pertanyaan', 'Pilihan A', 'Pilihan B', 'Pilihan C', 'Pilihan D', 'Pilihan E', 'Kunci', 'Bobot PG', 'Gambar', 'Pernyataan', 'Gambar Pernyataan Bersama'],
             $rows,
             'PG Ujian Inti',
         );
@@ -371,16 +379,16 @@ class QuestionBankController extends Controller
             $siblings = $this->lockedGroup($request, $assessmentSubject);
             $this->assertEditable($siblings);
             $this->banks->synchronize($siblings);
+            $scope = ExamQuestion::query()->whereIn('assessment_subject_id', $siblings->modelKeys());
+            $contextId = $this->contexts->resolve($validated, $scope);
             $imagePath = $request->file('question_image')?->store('exam-questions', 'public');
             $optionFilePaths = $this->storeOptionFiles($request, 'exam-options');
-            $position = (int) ExamQuestion::query()
-                ->whereIn('assessment_subject_id', $siblings->modelKeys())
-                ->lockForUpdate()
-                ->max('position') + 1;
+            $position = (int) $scope->lockForUpdate()->max('position') + 1;
 
             foreach ($siblings as $component) {
                 $component->questions()->create([
                     ...$this->questionAttributes($validated),
+                    'question_context_id' => $contextId,
                     'question_image_path' => $imagePath,
                     'option_file_paths' => $optionFilePaths ?: null,
                     'position' => $position,
@@ -391,7 +399,7 @@ class QuestionBankController extends Controller
         });
 
         return redirect()->to(QuestionBankNavigation::questionUrl($assessmentSubject, $question))
-            ->with('saved_question_id', $question->id)->with('status', 'Soal berhasil ditambahkan ke bank soal ini.');
+            ->with('saved_question_id', $question->id)->with('saved_context_id', $question->question_context_id)->with('status', 'Soal berhasil ditambahkan ke bank soal ini.');
     }
 
     public function update(
@@ -410,7 +418,10 @@ class QuestionBankController extends Controller
             $this->assertEditable($siblings);
             $question = $assessmentSubject->questions()->findOrFail($question->id);
             $this->banks->synchronize($siblings);
+            $scope = ExamQuestion::query()->whereIn('assessment_subject_id', $siblings->modelKeys());
+            $previousContext = $question->question_context_id;
             $attributes = $this->questionAttributes($validated);
+            $attributes['question_context_id'] = $this->contexts->resolve($validated, $scope, $previousContext);
             $oldOptionPaths = collect($question->option_file_paths ?? [])->filter()->values()->all();
             $attributes['option_file_paths'] = $validated['question_type'] === ExamQuestionType::MultipleChoice->value
                 ? ($this->mergeOptionFiles($request, $question->option_file_paths ?? [], 'exam-options') ?: null)
@@ -452,10 +463,13 @@ class QuestionBankController extends Controller
                 }
             }
             $this->deleteUnusedOptionFiles($oldOptionPaths);
+            if ($previousContext !== $attributes['question_context_id']) {
+                $this->contexts->release($previousContext);
+            }
         });
 
         return redirect()->to(QuestionBankNavigation::questionUrl($assessmentSubject, $question->refresh()))
-            ->with('saved_question_id', $question->id)->with('status', 'Soal berhasil diperbarui di bank soal ini.');
+            ->with('saved_question_id', $question->id)->with('saved_context_id', $question->question_context_id)->with('status', 'Soal berhasil diperbarui di bank soal ini.');
     }
 
     public function destroy(Request $request, AssessmentSubject $assessmentSubject, ExamQuestion $question): RedirectResponse
@@ -504,6 +518,7 @@ class QuestionBankController extends Controller
                     }
                 }
                 $this->deleteUnusedOptionFiles($optionPaths->all());
+                $this->contexts->release($question->question_context_id);
             });
         } catch (QueryException) {
             return back()->withErrors(['question' => 'Soal tidak dapat dihapus karena sudah digunakan.']);
@@ -541,7 +556,8 @@ class QuestionBankController extends Controller
             'question_type' => ['required', Rule::in($allowedTypes)],
             'text_format' => ['nullable', Rule::in(['plain', 'html'])],
             'question_text' => ['required', 'string', 'max:20000'],
-            'statement' => ['exclude_unless:question_type,multiple_choice', 'nullable', 'string', 'max:20000'],
+            'statement' => ['nullable', 'string', 'max:20000'],
+            ...$this->contexts->rules(),
             'option_a' => ['required_if:question_type,multiple_choice', 'nullable', 'string', 'max:20000'],
             'option_b' => ['required_if:question_type,multiple_choice', 'nullable', 'string', 'max:20000'],
             'option_c' => ['required_if:question_type,multiple_choice', 'nullable', 'string', 'max:20000'],

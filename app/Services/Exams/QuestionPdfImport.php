@@ -26,7 +26,7 @@ class QuestionPdfImport
 
     public function __construct(private readonly QuestionPdfImages $pdfImages) {}
 
-    public function prepare(Request $request, string $bank, array $allowedTypes, bool $allowWrittenStatement = true): array
+    public function prepare(Request $request, string $bank, array $allowedTypes): array
     {
         $request->validate([
             'pdf' => ['required', 'file', 'mimes:pdf', 'max:5120'],
@@ -35,13 +35,6 @@ class QuestionPdfImport
         $keys = $request->hasFile('key_pdf') ? $this->parseKey($this->extract($request->file('key_pdf'))) : [];
         $pdf = $request->file('pdf');
         $questions = $this->parse($this->extract($pdf), $keys, $allowedTypes);
-        if (! $allowWrittenStatement) {
-            foreach ($questions as $number => $question) {
-                if ($question['question_type'] !== ExamQuestionType::MultipleChoice->value && $question['statement'] !== null) {
-                    $this->invalid($number, 'Untuk soal tertulis Ujian Inti, masukkan bacaan pendukung dalam bagian Pertanyaan.');
-                }
-            }
-        }
         ['images' => $images, 'warnings' => $imageWarnings] = $this->pdfImages->extract($pdf, self::HEADING_PATTERN, array_keys($questions));
         $this->finish($request);
 

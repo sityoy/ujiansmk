@@ -1,4 +1,4 @@
-@props(['question', 'number', 'total', 'options', 'name', 'answer' => null, 'saveUrl' => null, 'trial' => false])
+@props(['question', 'number', 'total', 'options', 'name', 'answer' => null, 'saveUrl' => null, 'trial' => false, 'showContext' => true, 'contextReference' => null])
 
 @php
     $type = $question->question_type->value;
@@ -14,7 +14,10 @@
     @else
         <p class="text-xs font-semibold text-cyan-300">Soal {{ $number }}@if ($total !== null) dari {{ $total }}@endif</p>
     @endif
-    <x-question-prompt :question="$question" :multiple-choice="$trial || $type === 'multiple_choice'" :class="$trial ? '' : 'mt-3'" />
+    @if ($contextReference)
+        <a href="#{{ $contextReference['id'] }}" class="mt-2 inline-block text-sm font-medium text-cyan-300 underline">Lihat pernyataan untuk nomor {{ $contextReference['label'] }}</a>
+    @endif
+    <x-question-prompt :question="$question" :show-context="$showContext" :class="$trial ? '' : 'mt-3'" />
     @if ($type === 'multiple_choice')
         <fieldset @if ($multiple) data-multiple-answer data-choice-limit="{{ $limit }}" @endif @class(['grid min-w-0', 'mt-5 gap-3' => $trial, 'mt-4 gap-2' => ! $trial])>
             <legend class="mb-2 text-sm font-semibold {{ $multiple ? 'text-cyan-300' : 'text-slate-400' }}">

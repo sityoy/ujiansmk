@@ -30,6 +30,7 @@
     </div>
     <main class="report-sheet" data-print-content>
     <header>
+        <x-school-logo :school="$school" custom-only width="42" height="42" />
         <p><strong>{{ $school?->name ?? config('app.name') }}</strong></p>
         <h1>Laporan Absensi Simulasi</h1>
         <p>{{ $trialExam->title }} · {{ $trialExam->questionBank->subject->name }} · Kelas {{ $trialExam->questionBank->grade_level }}</p>

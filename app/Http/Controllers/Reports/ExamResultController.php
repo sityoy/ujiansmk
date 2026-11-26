@@ -19,7 +19,6 @@ use App\Models\User;
 use App\Services\Exams\ExamScoreCalculator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -148,14 +147,16 @@ class ExamResultController extends Controller
 
         $subjectGroups = $this->subjectGroups($subjects, $componentsBySubject);
 
+        $school = SchoolProfile::query()->first();
+
         return view('reports.exam-results.print', [
             'period' => $assessmentPeriod->loadMissing('academicYear'),
             'schoolClass' => $schoolClass->loadMissing('homeroomTeacher'),
             'subjectGroups' => $subjectGroups,
             'subjectPages' => $this->subjectPages($subjectGroups),
             'rows' => $rows,
-            'school' => SchoolProfile::query()->first(),
-            'letterheadData' => $this->letterheadData(),
+            'school' => $school,
+            'letterheadData' => SchoolProfile::letterheadData($school),
         ]);
     }
 
@@ -200,25 +201,5 @@ class ExamResultController extends Controller
     {
         return in_array($user->role, [UserRole::SuperAdmin, UserRole::Committee], true)
             || ($user->role === UserRole::Teacher && $schoolClass->homeroom_teacher_user_id === $user->id);
-    }
-
-    private function letterheadData(): ?string
-    {
-        $profile = SchoolProfile::query()->first();
-        $path = $profile?->letterhead_path && Storage::exists($profile->letterhead_path)
-            ? Storage::path($profile->letterhead_path)
-            : public_path('images/kop-surat-smk-islam-bahagia.png');
-
-        if (! is_file($path) || ! is_readable($path)) {
-            return null;
-        }
-
-        $mime = match (strtolower(pathinfo($path, PATHINFO_EXTENSION))) {
-            'jpg', 'jpeg' => 'image/jpeg',
-            'webp' => 'image/webp',
-            default => 'image/png',
-        };
-
-        return 'data:'.$mime.';base64,'.base64_encode((string) file_get_contents($path));
     }
 }

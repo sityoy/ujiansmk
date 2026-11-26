@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\UserRole;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -11,14 +12,19 @@ class EnsureUserIsActive
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->user() && ! $request->user()->is_active) {
+        $user = $request->user();
+        $student = $user?->role === UserRole::Student ? $user->student : null;
+        if ($user && (! $user->is_active || ($student && ! $student->is_active))) {
+            $notice = $student && ! $student->is_active
+                ? $student->inactiveNotice() : 'Akun Anda sedang dinonaktifkan. Hubungi panitia ujian.';
             Auth::logout();
 
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
-            return redirect()->route('login')
-                ->withErrors(['login' => 'Akun Anda sedang dinonaktifkan. Hubungi panitia ujian.']);
+            return $request->expectsJson()
+                ? response()->json(['message' => $notice], 403)
+                : redirect()->route('login')->withErrors(['login' => $notice]);
         }
 
         return $next($request);

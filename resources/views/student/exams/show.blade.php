@@ -60,6 +60,7 @@
     </div>
 
     <section class="rounded-3xl border border-white/10 bg-white/[0.035] p-6">
+        <x-school-logo :school="$schoolProfile" custom-only class="mb-3 rounded-lg bg-white p-1" width="44" height="44" />
         <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">{{ $attempt->assignment->assessmentSubject->assessmentPeriod->name }}</p>
         <h2 class="mt-2 text-2xl font-semibold text-white">{{ $attempt->assignment->assessmentSubject->subject->name }}</h2>
         @php($session = $attempt->assignment->examSession)
@@ -77,7 +78,14 @@
                 </h2>
                 @foreach ($section['questions'] as $question)
                     @php($number++)
+                    @php($contextRange = $section['contexts'][$question->question_context_id] ?? null)
+                    @php($contextAnchor = 'exam-context-'.$type->value.'-'.$question->question_context_id)
+                    @if ($contextRange && $question->context && $contextRange['first'] === $number)
+                        <x-question-context-block :context="$question->context" :label="$contextRange['label']" :id="$contextAnchor" class="scroll-mt-32" />
+                    @endif
                     <x-exam-question-card :question="$question" :number="$number" :total="$questions->count()"
+                        :show-context="false"
+                        :context-reference="$contextRange && $contextRange['first'] !== $number ? ['id' => $contextAnchor, 'label' => $contextRange['label']] : null"
                         :options="$type->requiresManualGrading() ? [] : $optionOrder->forQuestion($attempt, $question)"
                         :name="'question_'.$question->id" :answer="$answers->get($question->id)?->answer"
                         :save-url="route('student.exams.answer', [$attempt, $question])" />

@@ -124,7 +124,12 @@ function paragraph(context, text, x, y, width, size, bold = false) {
 }
 function header(context, data, group, logo) {
     context.fillStyle = '#fff'; context.fillRect(0, 0, WIDTH, HEIGHT); context.textBaseline = 'top';
-    if (logo?.complete && logo.naturalWidth) context.drawImage(logo, MARGIN, 45, 76, 76);
+    if (logo?.complete && logo.naturalWidth) {
+        const scale = 76 / Math.max(logo.naturalWidth, logo.naturalHeight);
+        const width = logo.naturalWidth * scale;
+        const height = logo.naturalHeight * scale;
+        context.drawImage(logo, MARGIN + (76 - width) / 2, 45 + (76 - height) / 2, width, height);
+    }
     context.fillStyle = '#0f172a';
     let y = paragraph(context, data.school, MARGIN + 100, 45, WIDTH - MARGIN * 2 - 100, 27, true);
     y = paragraph(context, `REKAP PEMBUATAN SOAL · ${(data.reportKind ?? 'Bank Soal Inti').toUpperCase()}`, MARGIN + 100, y + 3, WIDTH - MARGIN * 2 - 100, 21, true);

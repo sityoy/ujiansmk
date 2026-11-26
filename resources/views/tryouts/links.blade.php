@@ -66,6 +66,7 @@
 
     <main class="report-sheet" data-print-content>
         <header>
+            <x-school-logo :school="$school" custom-only width="42" height="42" />
             <p><strong>{{ $school?->name ?? config('app.name') }}</strong></p>
             <h1>Daftar Tautan Ujian Uji Coba</h1>
             <p>Masuk menggunakan NIS atau NISN dan kode akses sesuai ujian.</p>

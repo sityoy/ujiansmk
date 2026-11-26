@@ -105,7 +105,7 @@ class TrialExamController extends Controller
     {
         $this->authorizeGrading($request, $trialExam, $trialAttempt);
         $trialExam->loadMissing('questionBank.subject');
-        $trialAttempt->load(['answers.question']);
+        $trialAttempt->load(['answers.question.context']);
         $answers = $trialAttempt->answers
             ->filter(fn ($answer) => $answer->question->question_type->requiresManualGrading())
             ->sortBy('question.position');

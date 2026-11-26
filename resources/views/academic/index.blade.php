@@ -268,10 +268,10 @@
                 </span>
             </div>
 
-            <form method="GET" action="{{ route('academic.index') }}#student-list" class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(220px,1fr)_minmax(200px,280px)_150px_auto]">
+            <form method="GET" action="{{ route('academic.index') }}#student-list" class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(180px,1fr)_minmax(160px,240px)_140px_130px_auto]">
                 <input type="hidden" name="class_year" value="{{ $classYearId }}">
                 <input type="hidden" name="class_per_page" value="{{ $classPerPage }}">
-                <x-assessment-period-select :periods="$assessmentPeriods" :selected="$roomPeriod?->id" name="room_period_id" label="Periode pengaturan ruangan" class="sm:col-span-2 xl:col-span-4" />
+                <x-assessment-period-select :periods="$assessmentPeriods" :selected="$roomPeriod?->id" name="room_period_id" label="Periode pengaturan ruangan" class="sm:col-span-2 xl:col-span-5" />
                 <label class="text-xs font-medium text-slate-400">
                     Pencarian siswa
                     <input name="student_search" value="{{ $studentSearch }}" placeholder="Nama, NIS, NISN, ruangan..."
@@ -284,6 +284,14 @@
                         @foreach ($classOptions as $class)
                             <option value="{{ $class->id }}" @selected($studentClassId === $class->id)>{{ $class->name }} · {{ $class->academicYear->name }}</option>
                         @endforeach
+                    </select>
+                </label>
+                <label class="text-xs font-medium text-slate-400">
+                    Status siswa
+                    <select name="student_status" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
+                        <option value="">Semua status</option>
+                        <option value="active" @selected($studentStatus === 'active')>Aktif</option>
+                        <option value="inactive" @selected($studentStatus === 'inactive')>Nonaktif</option>
                     </select>
                 </label>
                 <label class="text-xs font-medium text-slate-400">
@@ -356,7 +364,7 @@
         <div class="overflow-x-auto">
             <table class="data-grid responsive-data-table min-w-full text-left text-sm">
                 <thead class="bg-slate-950/60 text-xs uppercase tracking-wider text-slate-500">
-                    <tr><th class="px-5 py-4"><input type="checkbox" data-room-select-all aria-label="Pilih semua siswa pada halaman ini"></th><th class="px-5 py-4">No.</th><th class="px-5 py-4">NIS</th><th class="px-5 py-4">NISN</th><th class="px-5 py-4">Nama</th><th class="px-5 py-4">Kelas</th><th class="px-5 py-4">Ruangan</th><th class="px-5 py-4">Login</th><th class="px-5 py-4 text-right">Aksi</th></tr>
+                    <tr><th class="px-5 py-4"><input type="checkbox" data-room-select-all aria-label="Pilih semua siswa pada halaman ini"></th><th class="px-5 py-4">No.</th><th class="px-5 py-4">NIS</th><th class="px-5 py-4">NISN</th><th class="px-5 py-4">Nama</th><th class="px-5 py-4">Kelas</th><th class="px-5 py-4">Ruangan</th><th class="px-5 py-4">Login</th><th class="px-5 py-4">Status</th><th class="px-5 py-4 text-right">Aksi</th></tr>
                 </thead>
                 <tbody class="divide-y divide-white/5">
                     @forelse ($students as $student)
@@ -385,12 +393,37 @@
                                 <span class="block">{{ $student->user?->username ?? 'Belum dibuat' }}</span>
                                 @if ($student->user?->email)<span class="mt-1 block text-xs text-slate-600">{{ $student->user->email }}</span>@endif
                             </td>
+                            <td data-label="Status" class="px-5 py-4">
+                                @if ($student->is_active)
+                                    <span class="font-semibold text-emerald-300">Aktif</span>
+                                @else
+                                    <span class="font-semibold text-amber-200">Nonaktif</span>
+                                    <p class="mt-1 max-w-xs break-words text-xs text-slate-300">{{ $student->inactive_reason ?: 'Alasan belum dicatat.' }}</p>
+                                @endif
+                            </td>
                             <td data-label="Aksi" class="px-5 py-4">
-                                <div class="flex justify-end gap-3">
-                                    <form method="POST" action="{{ route('academic.students.toggle', $student) }}">@csrf @method('PATCH')
-                                        <input type="hidden" name="roster_revision" value="{{ $rosterRevision }}">
-                                        <button class="text-xs {{ $student->is_active ? 'text-emerald-300' : 'text-slate-500' }}">{{ $student->is_active ? 'Aktif' : 'Nonaktif' }}</button>
-                                    </form>
+                                <div class="flex flex-wrap items-start justify-end gap-3">
+                                    @if ($student->is_active)
+                                        <details class="min-w-28 text-left">
+                                            <summary class="cursor-pointer text-xs font-semibold text-amber-200">Nonaktifkan</summary>
+                                            <form method="POST" action="{{ route('academic.students.toggle', $student) }}" class="mt-2 space-y-2">
+                                                @csrf @method('PATCH')
+                                                <input type="hidden" name="roster_revision" value="{{ $rosterRevision }}">
+                                                <input type="hidden" name="is_active" value="0">
+                                                <label class="block text-xs text-slate-300">Alasan untuk siswa
+                                                    <textarea name="inactive_reason" required maxlength="500" rows="3" class="mt-1 w-full min-w-36 rounded-lg border border-white/10 bg-slate-950/70 p-2 text-xs"></textarea>
+                                                </label>
+                                                <button class="text-xs font-semibold text-amber-200">Simpan status</button>
+                                            </form>
+                                        </details>
+                                    @else
+                                        <form method="POST" action="{{ route('academic.students.toggle', $student) }}">
+                                            @csrf @method('PATCH')
+                                            <input type="hidden" name="roster_revision" value="{{ $rosterRevision }}">
+                                            <input type="hidden" name="is_active" value="1">
+                                            <button class="text-xs font-semibold text-emerald-300">Aktifkan</button>
+                                        </form>
+                                    @endif
                                     <form method="POST" action="{{ route('academic.students.destroy', [...request()->query(), 'student' => $student]) }}" onsubmit="return confirm('Hapus permanen siswa ini beserta akun, ruangan, absensi, nilai, dan riwayat ujian terkait?')">@csrf @method('DELETE')
                                         <input type="hidden" name="roster_revision" value="{{ $rosterRevision }}">
                                         <button class="text-xs text-rose-300">Hapus</button>
@@ -399,7 +432,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="9" class="px-6 py-12 text-center text-slate-500">Data siswa tidak ditemukan.</td></tr>
+                        <tr><td colspan="10" class="px-6 py-12 text-center text-slate-500">Data siswa tidak ditemukan.</td></tr>
                     @endforelse
                 </tbody>
             </table>

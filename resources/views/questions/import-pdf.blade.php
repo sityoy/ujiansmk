@@ -76,7 +76,7 @@
             </form>
             <section class="space-y-3" aria-labelledby="format-impor">
                 <h3 id="format-impor" class="font-semibold text-slate-200">Ketentuan &amp; Format Impor PDF</h3>
-                <p class="text-sm text-slate-300">Salin contoh ke Word atau Google Docs, ganti isinya, lalu simpan sebagai PDF dengan nomor soal yang unik. Gunakan judul dan pilihan seperti contoh pada baris tersendiri. Periksa gambar di pratinjau sebelum menyimpan. Gambar yang dilewati bisa ditambahkan melalui Edit Soal.</p>
+                <p class="text-sm text-slate-300">Salin contoh ke Word atau Google Docs, ganti isinya, lalu simpan sebagai PDF dengan nomor soal yang unik. Gunakan judul dan pilihan seperti contoh pada baris tersendiri. Periksa gambar di pratinjau sebelum menyimpan. Gambar yang dilewati dan kelompok pernyataan bersama dapat diatur melalui Edit Soal setelah impor.</p>
                 @if ($allowsChoices)
                     <p class="text-sm text-slate-300">Untuk soal dengan beberapa jawaban benar, tulis kunci seperti <strong>Kunci: A, C</strong>.</p>
                     <pre class="overflow-auto rounded-xl border border-white/10 p-4 text-sm text-slate-200">Soal 1 · Pilihan Ganda

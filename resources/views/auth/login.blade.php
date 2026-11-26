@@ -20,8 +20,11 @@
                 <div class="login-logos">
                     <div class="login-identity">
                         <div class="login-logo-tile">
-                            <img src="{{ asset('images/logo-ypmi-bahagia.jpeg') }}" alt="Logo YPMI Bahagia"
-                                width="1222" height="1198">
+                            @if (\App\Models\SchoolProfile::logoUrl($schoolProfile))
+                                <x-school-logo :school="$schoolProfile" width="120" height="120" />
+                            @else
+                                <span class="text-xl font-semibold text-slate-700">{{ str($schoolName)->substr(0, 1)->upper() }}</span>
+                            @endif
                         </div>
                         <p>{{ $schoolName }}</p>
                     </div>

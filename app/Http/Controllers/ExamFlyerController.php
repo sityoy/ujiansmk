@@ -8,6 +8,7 @@ use App\Enums\SessionKind;
 use App\Enums\SessionStatus;
 use App\Models\AssessmentPeriod;
 use App\Models\ExamSession;
+use App\Models\SchoolProfile;
 use App\Models\TrialExam;
 use App\Services\Exams\ExamResetAllowance;
 use Illuminate\Http\Request;
@@ -128,11 +129,15 @@ class ExamFlyerController extends Controller
 
     private function renderPages(Collection $flyers, string $printTitle, string $toolbarLabel): Response
     {
+        $school = SchoolProfile::query()->first();
+        $schoolName = SchoolProfile::usesLegacyBrand($school) && ! $school?->logo_path
+            ? 'SMK ISLAM BAHAGIA' : mb_strtoupper($school?->name ?? config('app.name'));
+
         return response()->view('flyers.exam', [
             'trial' => false, 'locationRequired' => true,
             'notice' => null, 'schedule' => collect(),
             'flyers' => $flyers, 'printTitle' => $printTitle, 'toolbarLabel' => $toolbarLabel,
-            'resetLimit' => ExamResetAllowance::LIMIT, 'schoolName' => 'SMK ISLAM BAHAGIA',
+            'resetLimit' => ExamResetAllowance::LIMIT, 'schoolName' => $schoolName, 'school' => $school,
         ])
             ->header('Cache-Control', 'no-store, private')->header('X-Robots-Tag', 'noindex, nofollow');
     }

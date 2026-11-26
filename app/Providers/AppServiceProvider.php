@@ -69,7 +69,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         View::composer(
-            ['auth.login', 'auth.change-password', 'dashboard', 'layouts.app', 'reports.midterm.print'],
+            ['auth.login', 'auth.change-password', 'dashboard', 'layouts.app', 'layouts.tryout', 'student.exams.show', 'reports.midterm.print'],
             function ($view): void {
                 $schoolProfile = null;
 

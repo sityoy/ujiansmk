@@ -27,6 +27,8 @@
         .question-rich-text :is(p, ol, ul) { margin: 0 0 5px; }
         .question-rich-text :is(ul, ol) { padding-inline-start: 22px; }
         .question-prompt { font-weight: 700; }
+        .shared-statement { padding: 8px; margin: 0 0 8px; border: 1px solid #94a3b8; break-after: avoid; }
+        .shared-statement p:first-child { font-weight: 700; margin: 0 0 4px; }
         .statement { margin-bottom: 6px; }
         .options { display: grid; gap: 4px; margin-top: 6px; }
         .option { display: grid; grid-template-columns: 20px minmax(0, 1fr); }
@@ -59,6 +61,7 @@
     </div>
     <main data-print-content class="report-sheet">
         <header class="cover" data-print-block>
+            <x-school-logo :school="$school" custom-only width="42" height="42" />
             <p class="school">{{ $school?->name ?? config('app.name') }} · {{ $bankType }}</p>
             <h1>{{ $title }}</h1>
             <p>{{ implode(' · ', $details) }}</p>
@@ -79,10 +82,18 @@
             @endif
         </header>
 
+        @php($contextRanges = \App\Services\Exams\StudentQuestionSections::contexts($questions))
         @forelse ($questions as $question)
+            @php($range = $contextRanges[$question->question_context_id] ?? null)
+            @if ($range && $range['first'] === $question->position)
+                <x-question-context-block :context="$question->context" :label="$range['label']" print />
+            @endif
             <article class="question" data-print-block>
                 <h2>Soal {{ $question->position }} · {{ $question->question_type->label() }}</h2>
-                @if (filled($question->statement) && ($trial || ! $question->question_type->requiresManualGrading()))
+                @if ($range && $range['first'] !== $question->position)
+                    <p class="attachment-reference">Gunakan pernyataan atau gambar untuk nomor {{ $range['label'] }}.</p>
+                @endif
+                @if (filled($question->statement))
                     <x-question-text :text="$question->statement" :format="$question->text_format" class="statement" />
                 @endif
                 @if ($question->question_image_path)

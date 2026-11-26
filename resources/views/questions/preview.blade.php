@@ -60,7 +60,14 @@
                             $number++;
                             $options = collect($question->options)->keys()->shuffle()->mapWithKeys(fn ($key) => [$key => $question->options[$key]]);
                         @endphp
+                        @php($contextRange = $section['contexts'][$question->question_context_id] ?? null)
+                        @php($contextAnchor = 'exam-context-'.$type->value.'-'.$question->question_context_id)
+                        @if ($contextRange && $question->context && $contextRange['first'] === $number && ! $focusedQuestion)
+                            <x-question-context-block :context="$question->context" :label="$contextRange['label']" :id="$contextAnchor" class="scroll-mt-32" />
+                        @endif
                         <x-exam-question-card :question="$question" :number="$focusedQuestion?->position ?? $number" :total="$focusedQuestion ? null : $questions->count()"
+                            :show-context="$focusedQuestion !== null"
+                            :context-reference="$contextRange && $contextRange['first'] !== $number && ! $focusedQuestion ? ['id' => $contextAnchor, 'label' => $contextRange['label']] : null"
                             :options="$options" :name="'preview_'.$question->id" :trial="$trial" />
                     @endforeach
                     @include('components.exam-section-navigation')

@@ -138,7 +138,7 @@ class StudentExamController extends Controller
         $attempt->load([
             'assignment.assessmentSubject.assessmentPeriod',
             'assignment.assessmentSubject.subject',
-            'assignment.assessmentSubject.questions',
+            'assignment.assessmentSubject.questions.context',
             'answers',
         ]);
 

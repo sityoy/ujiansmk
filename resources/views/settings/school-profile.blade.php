@@ -11,7 +11,7 @@
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Branding & Rapor</p>
                 <h2 class="mt-2 text-2xl font-semibold text-white">Lengkapi data sekolah</h2>
                 <p class="mt-3 text-sm leading-6 text-slate-400">
-                    Nama sekolah digunakan pada halaman masuk, dashboard, dan kepala rapor ATS.
+                    Nama dan logo sekolah digunakan pada halaman masuk, ujian, kartu peserta, flyer, dan dokumen sekolah.
                 </p>
             </div>
 
@@ -33,9 +33,21 @@
                 </div>
 
                 <div class="md:col-span-2 rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                    <label for="logo" class="mb-2 block text-sm font-medium text-slate-200">Logo sekolah</label>
+                    <p class="mb-3 text-xs text-slate-400">JPG, PNG, atau WebP. Maksimal 2 MB.</p>
+                    @if ($logoUrl)
+                        <img src="{{ $logoUrl }}" alt="Logo sekolah saat ini" class="mb-4 h-20 w-20 rounded-xl bg-white object-contain p-2">
+                    @endif
+                    <input id="logo" type="file" name="logo" accept="image/jpeg,image/png,image/webp"
+                        class="block w-full rounded-xl border border-dashed border-white/15 bg-slate-950/50 px-3 py-2 text-xs text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-400 file:px-3 file:py-2 file:font-semibold file:text-slate-950">
+                </div>
+
+                <div class="md:col-span-2 rounded-2xl border border-white/10 bg-slate-950/40 p-4">
                     <label for="letterhead" class="mb-2 block text-sm font-medium text-slate-200">KOP rapor ATS</label>
-                    <p class="mb-4 text-xs leading-5 text-slate-500">KOP SMK Islam Bahagia digunakan sebagai bawaan. Unggah JPG/PNG/WebP maksimal 2 MB untuk menggantinya.</p>
-                    <img src="{{ route('settings.school.letterhead') }}" alt="KOP rapor ATS" class="mb-4 max-h-36 w-full rounded-xl bg-white object-contain p-2">
+                    <p class="mb-4 text-xs leading-5 text-slate-500">Unggah kop resmi dalam JPG, PNG, atau WebP maksimal 2 MB. Jika logo sekolah diunggah, rapor dan rekap memakai kop otomatis dari logo dan identitas sekolah.</p>
+                    @if ($hasLetterhead)
+                        <img src="{{ route('settings.school.letterhead') }}" alt="KOP rapor ATS" class="mb-4 max-h-36 w-full rounded-xl bg-white object-contain p-2">
+                    @endif
                     <input id="letterhead" type="file" name="letterhead" accept="image/jpeg,image/png,image/webp"
                         class="block w-full rounded-xl border border-dashed border-white/15 bg-slate-950/50 px-3 py-2 text-xs text-slate-400 file:mr-2 file:rounded-lg file:border-0 file:bg-cyan-400 file:px-3 file:py-2 file:font-semibold file:text-slate-950">
                 </div>

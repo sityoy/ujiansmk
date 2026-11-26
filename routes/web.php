@@ -36,6 +36,7 @@ Route::get('/health', fn () => response()->json([
 ]));
 
 Route::redirect('/', '/login');
+Route::get('/school/logo', [SchoolProfileController::class, 'logo'])->name('school.logo');
 
 Route::prefix('tryout')->name('tryout.')->group(function (): void {
     Route::get('/{trialExam:slug}', [TrialExamPublicController::class, 'entry'])->name('entry');

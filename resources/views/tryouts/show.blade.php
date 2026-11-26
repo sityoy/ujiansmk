@@ -68,7 +68,14 @@
                     </h2>
                     @foreach ($section['questions'] as $question)
                         @php($number++)
+                        @php($contextRange = $section['contexts'][$question->question_context_id] ?? null)
+                        @php($contextAnchor = 'exam-context-'.$type->value.'-'.$question->question_context_id)
+                        @if ($contextRange && $question->context && $contextRange['first'] === $number)
+                            <x-question-context-block :context="$question->context" :label="$contextRange['label']" :id="$contextAnchor" class="scroll-mt-32" />
+                        @endif
                         <x-exam-question-card :question="$question" :number="$number" :total="$questions->count()"
+                            :show-context="false"
+                            :context-reference="$contextRange && $contextRange['first'] !== $number ? ['id' => $contextAnchor, 'label' => $contextRange['label']] : null"
                             :options="$type->requiresManualGrading() ? [] : $optionOrder->forQuestion($attempt, $question)"
                             :name="'answers['.$question->id.']'" :answer="$answers->get($question->id)?->answer"
                             :save-url="route('tryout.answer', [$trialExam, $attempt, $question])" trial />

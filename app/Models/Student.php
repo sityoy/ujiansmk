@@ -10,13 +10,22 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Hash;
 
-#[Fillable(['user_id', 'school_class_id', 'student_number', 'nisn', 'card_uid_hash', 'full_name', 'is_active'])]
-#[Hidden(['card_uid_hash'])]
+#[Fillable(['user_id', 'school_class_id', 'student_number', 'nisn', 'card_uid_hash', 'full_name', 'is_active', 'inactive_reason'])]
+#[Hidden(['card_uid_hash', 'inactive_reason'])]
 class Student extends Model
 {
     protected function casts(): array
     {
         return ['is_active' => 'boolean'];
+    }
+
+    public const INACTIVE_NOTICE = 'Status siswa Anda nonaktif. Hubungi panitia atau tata usaha sekolah.';
+
+    public function inactiveNotice(): string
+    {
+        return $this->inactive_reason
+            ? 'Status siswa Anda nonaktif. Alasan: '.$this->inactive_reason.' Hubungi panitia atau tata usaha sekolah.'
+            : self::INACTIVE_NOTICE;
     }
 
     public function printablePassword(): ?string

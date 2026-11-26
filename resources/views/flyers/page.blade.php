@@ -1,6 +1,6 @@
 <article class="flyer" data-print-break data-print-block>
     <header class="brand">
-        <img class="logo" src="{{ asset('images/logo-ypmi-bahagia.jpeg') }}" alt="Logo YPMI Bahagia" width="64" height="64">
+        <x-school-logo :school="$school" class="logo" width="64" height="64" />
         <div class="school">{{ $schoolName }}</div>
     </header>
     <p class="eyebrow">{{ $trial ? 'FLYER SIMULASI UJIAN' : 'FLYER ASESMEN' }}</p>

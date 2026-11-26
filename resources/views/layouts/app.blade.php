@@ -7,6 +7,7 @@
 
     <title>@yield('title', 'Dashboard') — {{ $schoolProfile?->name ?? 'Sistem Ujian Sekolah' }}</title>
 
+    @if ($schoolProfile?->logo_path)<link rel="icon" href="{{ \App\Models\SchoolProfile::logoUrl($schoolProfile) }}">@endif
     <script src="{{ asset('js/theme.js') }}?v=2"></script>
     @fonts
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -34,7 +35,11 @@
             <div class="flex items-center justify-between gap-3">
                 <a href="{{ route('dashboard') }}" class="flex min-w-0 items-center gap-3">
                     <span class="grid size-11 shrink-0 place-items-center rounded-2xl bg-cyan-400 text-lg font-bold text-slate-950 shadow-lg shadow-cyan-500/20">
-                        {{ str($schoolName)->substr(0, 1)->upper() }}
+                        @if ($schoolProfile?->logo_path)
+                            <x-school-logo :school="$schoolProfile" class="size-full rounded-2xl bg-white p-1" width="44" height="44" />
+                        @else
+                            {{ str($schoolName)->substr(0, 1)->upper() }}
+                        @endif
                     </span>
                     <span class="min-w-0">
                         <span class="block truncate text-base font-semibold tracking-wide">{{ $schoolName }}</span>
