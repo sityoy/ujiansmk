@@ -97,7 +97,7 @@
                     <x-question-text :text="$question->statement" :format="$question->text_format" class="statement" />
                 @endif
                 @if ($question->question_image_path)
-                    <x-print-question-attachment :path="$question->question_image_path" :label="'Lampiran soal '.$question->position" />
+                    <x-print-question-attachment :path="$question->question_image_path" :caption="$question->question_image_caption" :label="'Lampiran soal '.$question->position" />
                 @endif
                 <x-question-text :text="$question->question_text" :format="$question->text_format" class="question-prompt" />
 
@@ -117,7 +117,7 @@
                                 <div>
                                     <x-question-text :text="$answer" :format="$question->text_format" />
                                     @if ($question->option_file_paths[$letter] ?? null)
-                                        <x-print-question-attachment :path="$question->option_file_paths[$letter]" :label="'Lampiran pilihan '.$letter" />
+                                        <x-print-question-attachment :path="$question->option_file_paths[$letter]" :caption="$question->option_file_captions[$letter] ?? null" :label="'Lampiran pilihan '.$letter" />
                                     @endif
                                 </div>
                             </div>

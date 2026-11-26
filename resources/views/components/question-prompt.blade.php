@@ -8,7 +8,7 @@
         <x-question-text :text="$question->statement" :format="$question->text_format" />
     @endif
     @if ($question->question_image_path)
-        <x-question-attachment :path="$question->question_image_path" :alt="'Gambar soal '.$question->position" link-label="Buka file soal" />
+        <x-question-attachment :path="$question->question_image_path" :caption="$question->question_image_caption" :alt="'Gambar soal '.$question->position" link-label="Buka file soal" />
     @endif
     <x-question-text :text="$question->question_text" :format="$question->text_format" />
 </div>

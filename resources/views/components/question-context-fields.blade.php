@@ -25,23 +25,17 @@
             @endforeach
         </select>
     </label>
-    <p class="text-xs leading-5 text-slate-400">Buat kelompok saat menulis soal pertama. Pilih kelompok yang sama pada soal berikutnya. Nomor kelompok tampil otomatis pada ujian peserta.</p>
-    <div data-context-fields @if (! $showFields) hidden @endif class="space-y-3">
+    <p class="text-xs leading-5 text-slate-400">Buat kelompok saat menulis soal pertama. Pilih kelompok yang sama pada soal berikutnya. Pilih Buat atau Edit pernyataan bersama untuk mengunggah gambar bagi seluruh soal dalam kelompok tersebut.</p>
+    <div data-context-fields @if (! $showFields) hidden @endif data-saved-caption="{{ $context?->image_caption }}" class="space-y-3">
         <x-question-text-editor name="context_statement"
             :value="old('context_statement', $context?->statement)"
             :format="$contextFormat" label="Pernyataan bersama" :disabled="! $showFields"
             placeholder="Tulis bacaan, daftar pernyataan, atau petunjuk untuk beberapa soal." />
-        <x-question-file-input name="context_image" label="Lampiran bersama (gambar/PDF, maks. 5 MB)"
-            alt="Gambar pernyataan bersama" :disabled="! $showFields"
-            class="mt-2 block w-full text-xs text-slate-400" />
-        <div data-context-current @if (! $editSelected || ! $context?->image_path) hidden @endif>
-            @if ($context?->image_path)
-                <p class="text-xs text-slate-400">Lampiran bersama saat ini</p>
-                <x-question-attachment :path="$context->image_path" alt="Gambar pernyataan bersama" />
-            @endif
-        </div>
+        <x-question-file-input name="context_image" label="Gambar bersama untuk kelompok ini (gambar/PDF, maks. 5 MB)"
+            alt="Gambar pernyataan bersama" :path="$context?->image_path" :show-saved="$editSelected"
+            :caption="$editSelected ? $context?->image_caption : null" :disabled="! $showFields" />
     </div>
-    @if ($errors->hasAny(['question_context', 'context_statement', 'context_image']))
-        <p class="text-xs text-rose-300" role="alert">{{ $errors->first(['question_context', 'context_statement', 'context_image']) }}</p>
+    @if ($errors->hasAny(['question_context', 'context_statement', 'context_image', 'context_image_caption']))
+        <p class="text-xs text-rose-300" role="alert">{{ $errors->first(['question_context', 'context_statement', 'context_image', 'context_image_caption']) }}</p>
     @endif
 </div>

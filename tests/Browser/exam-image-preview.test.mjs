@@ -20,7 +20,7 @@ function element(properties = {}) {
     };
 }
 
-function setup(nativeDialog = true, authoring = false) {
+function setup(nativeDialog = true, authoring = false, uploadFields = []) {
     const content = element();
     const close = element();
     const preview = element({clientWidth: 240, style: {removeProperty(name) { delete this[name]; }}});
@@ -60,7 +60,7 @@ function setup(nativeDialog = true, authoring = false) {
         createObjectURL: file => 'blob:'+file.name,
         revokeObjectURL: url => revoked.push(url),
     }} : { examSecurity: { isBlocked: () => content.hidden } });
-    const doc = element({ getElementById: id => ({
+    const doc = element({ querySelectorAll: () => uploadFields, getElementById: id => ({
         'exam-image-dialog': dialog,
         'exam-image-backdrop': backdrop,
         'exam-content': authoring ? null : content,
@@ -178,10 +178,16 @@ test('Safari pinch gestures inside the open image viewer are cancelled while its
 });
 
 test('a bank previews a selected image, opens it in the shared viewer and clears the preview on replacement', () => {
-    const page = setup(true, true);
     const image = element({ alt: 'Gambar soal' });
     const panel = element({ hidden: true, querySelector: () => image });
-    const input = { type: 'file', files: [{ name: 'soal.png', type: 'image/png' }], closest: () => ({ querySelector: () => panel }), form: {} };
+    const clear = element({ hidden: true });
+    const field = element({ querySelector: selector => ({
+        'input[type="file"]': input,
+        '[data-question-file-preview]': panel,
+        '[data-question-file-clear]': clear,
+    })[selector] });
+    const input = element({ type: 'file', value: 'soal.png', files: [{ name: 'soal.png', type: 'image/png' }], closest: () => field, form: {} });
+    const page = setup(true, true, [field]);
     const select = () => page.doc.fire('change', { target: input });
     select();
     assert.equal(panel.hidden, false);
@@ -201,6 +207,11 @@ test('a bank previews a selected image, opens it in the shared viewer and clears
     assert.equal(panel.hidden, true);
     assert.equal(image.src, undefined);
     assert.deepEqual(page.revoked, ['blob:soal.png', 'blob:pengganti.webp']);
+    assert.equal(clear.hidden, false);
+    clear.fire('click');
+    assert.equal(input.value, '');
+    assert.equal(input.focused, true);
+    assert.equal(clear.hidden, true);
     page.open();
     assert.equal(page.preview.src, '/storage/a.png');
 });

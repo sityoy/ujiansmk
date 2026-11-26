@@ -117,7 +117,7 @@
         preview.src = source;
     });
 
-    if (!content && window.URL?.createObjectURL) {
+    if (!content) {
         const previews = new Map();
         const clearUpload = input => {
             const previous = previews.get(input);
@@ -128,6 +128,18 @@
             previews.delete(input);
         };
 
+        const uploadFields = document.querySelectorAll('[data-question-file]');
+        uploadFields.forEach(field => {
+            const input = field.querySelector('input[type="file"]');
+            const clear = field.querySelector('[data-question-file-clear]');
+            clear.addEventListener('click', () => {
+                input.value = '';
+                clearUpload(input);
+                clear.hidden = true;
+                input.focus();
+            });
+        });
+
         document.addEventListener('change', event => {
             const input = event.target;
             if (input.type !== 'file') return;
@@ -136,7 +148,8 @@
 
             clearUpload(input);
             const file = input.files?.[0];
-            if (!file) return;
+            field.querySelector('[data-question-file-clear]').hidden = !file;
+            if (!file || !window.URL?.createObjectURL) return;
             const isImage = file.type
                 ? /^image\/(jpeg|png|webp)$/i.test(file.type)
                 : /\.(jpe?g|png|webp)$/i.test(file.name);
@@ -150,9 +163,13 @@
             panel.hidden = false;
         });
         document.addEventListener('reset', event => {
-            for (const input of previews.keys()) {
-                if (input.form === event.target) clearUpload(input);
-            }
+            uploadFields.forEach(field => {
+                const input = field.querySelector('input[type="file"]');
+                if (input.form === event.target) {
+                    clearUpload(input);
+                    field.querySelector('[data-question-file-clear]').hidden = true;
+                }
+            });
         });
         window.addEventListener('pagehide', event => {
             if (!event.persisted) previews.forEach(({ url }) => window.URL.revokeObjectURL(url));

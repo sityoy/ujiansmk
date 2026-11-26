@@ -19,4 +19,4 @@
     </div>
 </dialog>
 
-<script src="{{ asset('js/exam-image-preview.js') }}?v=20261123-3" defer></script>
+<script src="{{ asset('js/exam-image-preview.js') }}?v=20261127-1" defer></script>

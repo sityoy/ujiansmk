@@ -44,7 +44,7 @@
                         <x-question-text :text="$option" :format="$question->text_format" />
                     </label>
                     @if ($optionPath)
-                        <x-exam-option-attachment :path="$optionPath" :label="$displayKey" />
+                        <x-exam-option-attachment :path="$optionPath" :caption="$question->option_file_captions[$key] ?? null" :label="$displayKey" />
                     @endif
                 </div>
             @endforeach

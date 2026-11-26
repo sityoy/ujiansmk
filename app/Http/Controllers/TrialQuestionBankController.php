@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\Exams\ExamScoreCalculator;
 use App\Services\Exams\MultipleChoiceAnswers;
 use App\Services\Exams\QuestionPdfImport;
+use App\Services\Exams\QuestionAttachments;
 use App\Services\Exams\QuestionContextManager;
 use App\Services\Exams\QuestionText;
 use App\Services\Exams\TrialQuestionBankArchive;
@@ -40,6 +41,7 @@ class TrialQuestionBankController extends Controller
     public function __construct(
         private readonly QuestionText $questionText,
         private readonly QuestionContextManager $contexts,
+        private readonly QuestionAttachments $attachments,
     ) {}
 
     public function index(Request $request, TrialQuestionPack $pack, TrialQuestionBankCatalog $catalog): View
@@ -321,10 +323,12 @@ class TrialQuestionBankController extends Controller
             $this->contexts->exportStatement($question),
             $question->question_type->label(),
             $question->context?->image_path ? Storage::url($question->context->image_path) : '',
+            $question->question_image_caption,
+            $question->context?->image_caption,
         ])->all();
 
         $path = $spreadsheet->createWorkbook(
-            ['No', 'Pertanyaan', 'Pilihan A', 'Pilihan B', 'Pilihan C', 'Pilihan D', 'Pilihan E', 'Kunci', 'Bobot', 'Gambar', 'Pernyataan', 'Jenis Soal', 'Gambar Pernyataan Bersama'],
+            ['No', 'Pertanyaan', 'Pilihan A', 'Pilihan B', 'Pilihan C', 'Pilihan D', 'Pilihan E', 'Kunci', 'Bobot', 'Gambar', 'Pernyataan', 'Jenis Soal', 'Gambar Pernyataan Bersama', 'Keterangan Gambar Soal', 'Keterangan Gambar Bersama'],
             $rows,
             'Soal Uji Coba',
         );
@@ -342,18 +346,15 @@ class TrialQuestionBankController extends Controller
         $this->authorizeBank($request, $trialQuestionBank);
         $validated = $this->validateQuestion($request);
 
-        $question = DB::transaction(function () use ($request, $trialQuestionBank, $validated): TrialQuestion {
+        $question = $this->attachments->save(function () use ($request, $trialQuestionBank, $validated): TrialQuestion {
             $this->assertEditable($request, $trialQuestionBank);
             $scope = TrialQuestion::query()->where('trial_question_bank_id', $trialQuestionBank->id);
-            $contextId = $this->contexts->resolve($validated, $scope);
+            $contextId = $this->contexts->resolve($validated, $scope, $this->attachments);
             $position = (int) $scope->lockForUpdate()->max('position') + 1;
-            $optionFilePaths = $validated['question_type'] === ExamQuestionType::MultipleChoice->value
-                ? $this->storeOptionFiles($request, 'trial-options') : [];
             return $trialQuestionBank->questions()->create([
                 ...$this->attributes($validated),
                 'question_context_id' => $contextId,
-                'question_image_path' => $request->file('question_image')?->store('trial-questions', 'public'),
-                'option_file_paths' => $optionFilePaths ?: null,
+                ...$this->attachments->questionAttributes($validated, 'trial'),
                 'position' => $position,
             ]);
         });
@@ -371,28 +372,23 @@ class TrialQuestionBankController extends Controller
         abort_unless($question->trial_question_bank_id === $trialQuestionBank->id, 404);
         $validated = $this->validateQuestion($request);
 
-        DB::transaction(function () use ($request, $trialQuestionBank, $question, $validated): void {
+        $this->attachments->save(function () use ($request, $trialQuestionBank, $question, $validated): void {
             $this->assertEditable($request, $trialQuestionBank);
             $question = $trialQuestionBank->questions()->findOrFail($question->id);
             $scope = TrialQuestion::query()->where('trial_question_bank_id', $trialQuestionBank->id);
             $previousContext = $question->question_context_id;
             $attributes = $this->attributes($validated);
-            $attributes['question_context_id'] = $this->contexts->resolve($validated, $scope, $previousContext);
-            $oldOptionPaths = $question->option_file_paths ?? [];
-            $attributes['option_file_paths'] = $validated['question_type'] === ExamQuestionType::MultipleChoice->value
-                ? ($this->mergeOptionFiles($request, $oldOptionPaths, 'trial-options') ?: null) : null;
-            $oldImage = $question->question_image_path;
-            if ($request->hasFile('question_image')) {
-                $attributes['question_image_path'] = $request->file('question_image')->store('trial-questions', 'public');
-            }
+            $attributes['question_context_id'] = $this->contexts->resolve($validated, $scope, $this->attachments, $previousContext);
+            $attachments = $this->attachments->questionAttributes($validated, 'trial', $question);
+            $oldPaths = [$question->question_image_path, ...array_values($question->option_file_paths ?? [])];
 
-            $question->update($attributes);
-            if (isset($attributes['question_image_path']) && $oldImage) {
-                Storage::disk('public')->delete($oldImage);
-            }
-            $this->deleteUnusedOptionFiles($oldOptionPaths);
+            $question->update($attributes + $attachments);
+            $this->attachments->cleanAfterCommit(
+                $oldPaths,
+                [$attachments['question_image_path'], ...array_values($attachments['option_file_paths'] ?? [])],
+            );
             if ($previousContext !== $attributes['question_context_id']) {
-                $this->contexts->release($previousContext);
+                $this->contexts->release($previousContext, $this->attachments);
             }
         });
 
@@ -420,11 +416,8 @@ class TrialQuestionBankController extends Controller
                 $imagePath = $question->question_image_path;
                 $optionPaths = $question->option_file_paths ?? [];
                 $question->delete();
-                $this->contexts->release($question->question_context_id);
-                if ($imagePath) {
-                    Storage::disk('public')->delete($imagePath);
-                }
-                $this->deleteUnusedOptionFiles($optionPaths);
+                $this->contexts->release($question->question_context_id, $this->attachments);
+                $this->attachments->cleanAfterCommit([$imagePath, ...array_values($optionPaths)]);
                 $trialQuestionBank->questions()->lockForUpdate()->get()
                     ->each(function (TrialQuestion $remaining, int $index): void {
                         if ((int) $remaining->position !== $index + 1) {
@@ -488,12 +481,7 @@ class TrialQuestionBankController extends Controller
             'option_d' => ['exclude_unless:question_type,multiple_choice', 'required', 'string', 'max:20000'],
             'option_e' => ['exclude_unless:question_type,multiple_choice', 'required', 'string', 'max:20000'],
             ...MultipleChoiceAnswers::bankRules(),
-            'question_image' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
-            'option_file_a' => ['exclude_unless:question_type,multiple_choice', 'nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
-            'option_file_b' => ['exclude_unless:question_type,multiple_choice', 'nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
-            'option_file_c' => ['exclude_unless:question_type,multiple_choice', 'nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
-            'option_file_d' => ['exclude_unless:question_type,multiple_choice', 'nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
-            'option_file_e' => ['exclude_unless:question_type,multiple_choice', 'nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
+            ...QuestionAttachments::questionRules(),
         ]);
 
         return $this->questionText->normalize($validated);
@@ -519,35 +507,6 @@ class TrialQuestionBankController extends Controller
                 ? MultipleChoiceAnswers::key($validated['correct_answers'] ?? [$validated['correct_answer']]) : null,
             'points' => $multipleChoice ? ExamScoreCalculator::MULTIPLE_CHOICE_POINTS : $validated['points'],
         ];
-    }
-
-    private function storeOptionFiles(Request $request, string $directory): array
-    {
-        $paths = [];
-        foreach (['A', 'B', 'C', 'D', 'E'] as $option) {
-            $file = $request->file('option_file_'.strtolower($option));
-            if ($file) {
-                $paths[$option] = $file->store($directory, 'public');
-            }
-        }
-
-        return $paths;
-    }
-
-    private function mergeOptionFiles(Request $request, array $existing, string $directory): array
-    {
-        return array_replace($existing, $this->storeOptionFiles($request, $directory));
-    }
-
-    private function deleteUnusedOptionFiles(array $paths): void
-    {
-        foreach (array_unique(array_filter($paths)) as $path) {
-            $inUse = TrialQuestion::query()->whereNotNull('option_file_paths')->get(['option_file_paths'])
-                ->contains(fn (TrialQuestion $question): bool => in_array($path, $question->option_file_paths ?? [], true));
-            if (! $inUse) {
-                Storage::disk('public')->delete($path);
-            }
-        }
     }
 
     private function authorizeBank(Request $request, TrialQuestionBank $bank): void

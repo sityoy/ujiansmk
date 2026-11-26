@@ -30,7 +30,7 @@
                     :required="$multipleChoice" :disabled="! $multipleChoice" placeholder="Pilihan {{ $option }}" />
                 <x-question-file-input :name="'option_file_'.strtolower($option)" :label="'Lampiran pilihan '.$option"
                     :alt="'Gambar pilihan '.$option" :path="$question?->option_file_paths[$option] ?? null"
-                    :disabled="! $multipleChoice" class="w-full text-xs text-slate-400" />
+                    :caption="$question?->option_file_captions[$option] ?? null" :disabled="! $multipleChoice" />
             </div>
         @endforeach
         <fieldset class="space-y-2 rounded-xl border border-white/10 p-3">
@@ -60,4 +60,4 @@
         @endif
     </div>
 </form>
-<script src="{{ asset('js/question-bank-form.js') }}?v=3" defer></script>
+<script src="{{ asset('js/question-bank-form.js') }}?v=4" defer></script>

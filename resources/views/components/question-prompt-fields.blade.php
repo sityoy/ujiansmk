@@ -10,8 +10,7 @@
         <p class="mt-2 text-xs text-slate-400">Gunakan baris terpisah untuk setiap butir bernomor.</p>
     </div>
     <div data-question-attachment>
-        <x-question-file-input name="question_image" label="Gambar atau PDF (opsional, maks. 5 MB)" alt="Gambar soal" :path="$question?->question_image_path"
-            class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-400 file:px-3 file:py-2 file:font-semibold file:text-slate-950" />
+        <x-question-file-input name="question_image" label="Gambar atau PDF (opsional, maks. 5 MB)" alt="Gambar soal" :path="$question?->question_image_path" :caption="$question?->question_image_caption" />
         <p class="mt-2 text-xs text-slate-400">Soal Bahasa Arab disarankan memakai gambar agar huruf dan harakat tetap rapi.</p>
     </div>
     <div data-question-text>

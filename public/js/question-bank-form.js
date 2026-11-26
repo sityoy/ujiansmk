@@ -17,7 +17,7 @@ document.querySelectorAll('[data-question-bank-form]').forEach(form => {
         choices.hidden = !multipleChoice;
         choices.querySelectorAll('input[name], select[name], textarea[name]').forEach(field => {
             field.disabled = !multipleChoice;
-            const required = multipleChoice && !['file', 'checkbox'].includes(field.type);
+            const required = multipleChoice && !field.closest('[data-question-file]') && field.type !== 'checkbox';
             field.required = required && !field.dataset.editorInitialized;
             if (field.matches('[data-question-editor]')) field.dataset.editorRequired = String(required);
         });
@@ -30,13 +30,32 @@ document.querySelectorAll('[data-question-bank-form]').forEach(form => {
 
     const context = form.querySelector('[data-context-select]');
     const contextFields = form.querySelector('[data-context-fields]');
-    const existingAttachment = form.querySelector('[data-context-current]');
+    const existingAttachment = contextFields.querySelector('[data-question-file-saved]');
+    const contextCaption = form.elements.context_image_caption;
+    let mode = context.value;
+    let editCaption = mode === 'edit' ? contextCaption.value : contextFields.dataset.savedCaption;
+    let newCaption = mode === 'new' ? contextCaption.value : '';
     const syncContext = () => {
-        const editing = context.value === 'edit';
-        const visible = editing || context.value === 'new';
-        existingAttachment.hidden = !editing;
+        const next = context.value;
+        const editing = next === 'edit';
+        const visible = editing || next === 'new';
+        if (next !== mode) {
+            if (mode === 'edit') editCaption = contextCaption.value;
+            if (mode === 'new') newCaption = contextCaption.value;
+            contextCaption.value = editing ? editCaption : newCaption;
+            const input = form.elements.context_image;
+            if (input.value) {
+                input.value = '';
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
         contextFields.hidden = !visible;
         contextFields.querySelectorAll('textarea, input').forEach(field => { field.disabled = !visible; });
+        if (existingAttachment) {
+            existingAttachment.hidden = !editing;
+            existingAttachment.querySelector('input').disabled = !editing;
+        }
+        mode = next;
     };
     context.addEventListener('change', syncContext);
     syncContext();

@@ -601,6 +601,82 @@ class TrialExamFlowTest extends TestCase
         $this->actingAs($admin)->get(route('scheduling.index'))->assertOk()->assertSee('ASAS')->assertDontSee('>AAS<', false);
     }
 
+    public function test_trial_attachments_can_be_captioned_replaced_and_removed_for_participants(): void
+    {
+        Storage::fake('public');
+        [$trial, $first] = $this->makeTrial();
+        $bank = $trial->questionBank;
+        $student = Student::query()->where('nisn', '1234567890')->firstOrFail();
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $this->actingAs($admin);
+        $edit = route('trial-question-banks.questions.edit', [$bank, $first]);
+        $update = route('trial-question-banks.questions.update', [$bank, $first]);
+        $store = route('trial-question-banks.questions.store', $bank);
+        $data = [
+            'question_type' => 'multiple_choice', 'question_text' => 'Soal ilustrasi pertama',
+            'option_a' => 'Benar', 'option_b' => 'Salah', 'option_c' => 'Pilihan C',
+            'option_d' => 'Pilihan D', 'option_e' => 'Pilihan E', 'correct_answer' => 'A',
+        ];
+        $this->put($update, $data + [
+            'question_context' => 'new', 'context_statement' => 'Pernyataan untuk dua soal',
+            'context_image' => UploadedFile::fake()->image('kelompok.png'), 'context_image_caption' => 'Keterangan awal untuk kelompok',
+            'question_image' => UploadedFile::fake()->image('soal.png'), 'question_image_caption' => 'Gambar khusus soal pertama',
+            'option_file_a' => UploadedFile::fake()->image('opsi.png'), 'option_file_a_caption' => 'Gambar jawaban A',
+        ])->assertSessionHasNoErrors();
+        $first->refresh();
+        $oldQuestionPath = $first->question_image_path;
+        $oldGroup = $first->context;
+        $oldOptionPath = $first->option_file_paths['A'];
+        $this->get(route('trial-question-banks.questions.preview', [$bank, 'soal' => $first->id]))
+            ->assertOk()->assertSeeInOrder(['Keterangan awal untuk kelompok', 'Gambar khusus soal pertama', 'Gambar jawaban A']);
+        $this->get($edit)->assertOk()->assertSee('name="question_image_caption"', false)
+            ->assertSee('name="remove_question_image"', false)
+            ->assertSee('name="remove_context_image"', false)
+            ->assertSee('name="remove_option_file_a"', false);
+        $this->post($store, array_replace($data, [
+            'question_text' => 'Soal ilustrasi kedua', 'question_context' => (string) $oldGroup->id,
+        ]))->assertSessionHasNoErrors();
+        $second = $bank->questions()->where('position', 2)->sole();
+
+        $this->put($update, $data + [
+            'remove_question_image' => '1', 'question_image_caption' => 'Keterangan yang ikut dihapus',
+            'question_context' => 'edit', 'context_statement' => 'Pernyataan untuk dua soal',
+            'context_image' => UploadedFile::fake()->image('kelompok-baru.png'), 'context_image_caption' => 'Diagram baru untuk soal 1 dan 2',
+            'option_file_a' => UploadedFile::fake()->image('opsi-baru.png'), 'option_file_a_caption' => 'Keterangan opsi baru',
+        ])->assertSessionHasNoErrors();
+        $first->refresh();
+        $this->assertNull($first->question_image_path);
+        $this->assertNull($first->question_image_caption);
+        $this->assertNotSame($oldGroup->id, $first->question_context_id);
+        $this->assertSame($first->question_context_id, $second->fresh()->question_context_id);
+        Storage::disk('public')->assertMissing([$oldQuestionPath, $oldOptionPath, $oldGroup->image_path]);
+        Storage::disk('public')->assertExists([$first->context->image_path, $first->option_file_paths['A']]);
+
+        $outsideData = array_replace($data, ['question_text' => 'Soal di luar kelompok']);
+        $this->post($store, $outsideData + [
+            'question_context' => 'new', 'context_image' => UploadedFile::fake()->image('gambar-saja.png'),
+        ])->assertSessionHasNoErrors();
+        $outside = $bank->questions()->where('position', 3)->sole();
+        $imageOnlyPath = $outside->context->image_path;
+        $this->put(route('trial-question-banks.questions.update', [$bank, $outside]), $outsideData + [
+            'question_context' => 'edit', 'remove_context_image' => '1',
+        ])->assertSessionHasNoErrors();
+        $this->assertNull($outside->fresh()->question_context_id);
+        Storage::disk('public')->assertMissing($imageOnlyPath);
+        $preview = route('trial-question-banks.questions.preview', $bank);
+        $this->get($preview)->assertOk()->assertSeeInOrder([
+            'Pernyataan atau gambar untuk nomor 1–2', 'Diagram baru untuk soal 1 dan 2',
+            'Soal ilustrasi pertama', 'Soal ilustrasi kedua', 'Soal di luar kelompok',
+        ])->assertDontSee('Keterangan yang ikut dihapus');
+
+        $this->actingAs($student->user)->startTrial($trial, ['access_code' => $trial->access_code])->assertRedirect();
+        $attempt = $trial->currentAttempts()->sole();
+        $this->get(route('tryout.show', [$trial, $attempt]))->assertOk()->assertSeeInOrder([
+            'Pernyataan atau gambar untuk nomor 1–2', 'Diagram baru untuk soal 1 dan 2',
+            'Soal ilustrasi pertama', 'Keterangan opsi baru', 'Soal ilustrasi kedua', 'Soal di luar kelompok',
+        ])->assertDontSee('Gambar khusus soal pertama');
+    }
+
     public function test_trial_options_keep_order_attachments_checked_answer_and_correct_score(): void
     {
         [$trial] = $this->makeTrial();

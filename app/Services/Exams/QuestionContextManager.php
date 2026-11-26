@@ -8,8 +8,6 @@ use App\Models\TrialQuestion;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class QuestionContextManager
@@ -21,7 +19,7 @@ class QuestionContextManager
         return [
             'question_context' => ['nullable', 'string', 'regex:/^(?:new|edit|[1-9][0-9]{0,17})$/D'],
             'context_statement' => ['exclude_unless:question_context,new,edit', 'nullable', 'string', 'max:20000'],
-            'context_image' => ['exclude_unless:question_context,new,edit', 'nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
+            ...QuestionAttachments::rules('context_image', 'exclude_unless:question_context,new,edit'),
         ];
     }
 
@@ -33,7 +31,7 @@ class QuestionContextManager
             ->get();
     }
 
-    public function resolve(array $data, Builder $scope, ?int $currentId = null): ?int
+    public function resolve(array $data, Builder $scope, QuestionAttachments $attachments, ?int $currentId = null): ?int
     {
         if (! array_key_exists('question_context', $data)) {
             return $currentId;
@@ -59,26 +57,33 @@ class QuestionContextManager
             $this->invalid('question_context', 'Soal ini belum menggunakan pernyataan bersama.');
         }
 
-        $format = $data['text_format'];
-        // Use the same rich-text sanitization and length limits as other statements.
-        try {
-            $statement = $this->text->normalize([
-                'statement' => $data['context_statement'] ?? null,
-                'text_format' => $format,
-            ])['statement'];
-        } catch (ValidationException $exception) {
-            $this->invalid('context_statement', $exception->validator->errors()->first('statement'));
+        $format = $current?->text_format ?? $data['text_format'];
+        $statement = $current?->statement;
+        if (array_key_exists('context_statement', $data)) {
+            $format = $data['text_format'];
+            try {
+                $statement = $this->text->normalize([
+                    'statement' => $data['context_statement'],
+                    'text_format' => $format,
+                ])['statement'];
+            } catch (ValidationException $exception) {
+                $this->invalid('context_statement', $exception->validator->errors()->first('statement'));
+            }
         }
-        $file = $data['context_image'] ?? null;
-        if ($statement === null && ! $file && ! $current?->image_path) {
-            $this->invalid('context_statement', 'Isi pernyataan atau unggah gambar untuk membuat kelompok soal.');
-        }
-        $imagePath = $file ? $file->store('question-contexts', 'public') : $current?->image_path;
-        if ($file && ! $imagePath) {
-            $this->invalid('context_image', 'Lampiran pernyataan tidak dapat disimpan.');
+        [$imagePath, $imageCaption] = $attachments->resolve(
+            $data, 'context_image', 'question-contexts', $current?->image_path, $current?->image_caption,
+        );
+        if ($statement === null && $imagePath === null) {
+            if ($current && ($data['remove_context_image'] ?? false)) {
+                (clone $scope)->where('question_context_id', $current->id)->update(['question_context_id' => null]);
+
+                return null;
+            }
+            $this->invalid('context_statement', 'Isi pernyataan atau unggah gambar untuk kelompok soal ini.');
         }
 
-        if ($current && $current->statement === $statement && $current->text_format === $format && $current->image_path === $imagePath) {
+        if ($current && $current->statement === $statement && $current->text_format === $format
+            && $current->image_path === $imagePath && $current->image_caption === $imageCaption) {
             return $current->id;
         }
 
@@ -86,6 +91,7 @@ class QuestionContextManager
             'statement' => $statement,
             'text_format' => $format,
             'image_path' => $imagePath,
+            'image_caption' => $imageCaption,
         ]);
         if ($current) {
             // Rombel that were reassigned after sharing this bank keep their own exam material.
@@ -95,7 +101,7 @@ class QuestionContextManager
         return $context->id;
     }
 
-    public function release(?int $id): void
+    public function release(?int $id, QuestionAttachments $attachments): void
     {
         if ($id === null) {
             return;
@@ -108,13 +114,7 @@ class QuestionContextManager
 
         $path = $context->image_path;
         $context->delete();
-        if ($path) {
-            DB::afterCommit(function () use ($path): void {
-                if (! QuestionContext::query()->where('image_path', $path)->exists()) {
-                    Storage::disk('public')->delete($path);
-                }
-            });
-        }
+        $attachments->cleanAfterCommit([$path]);
     }
 
     public function exportStatement(ExamQuestion|TrialQuestion $question): string

@@ -9,9 +9,9 @@
     @endif
     @if ($context->image_path)
         @if ($print)
-            <x-print-question-attachment :path="$context->image_path" label="Lampiran pernyataan bersama" />
+            <x-print-question-attachment :path="$context->image_path" :caption="$context->image_caption" label="Lampiran pernyataan bersama" />
         @else
-            <x-question-attachment :path="$context->image_path" alt="Gambar pernyataan bersama" link-label="Buka lampiran pernyataan bersama" />
+            <x-question-attachment :path="$context->image_path" :caption="$context->image_caption" alt="Gambar pernyataan bersama" link-label="Buka lampiran pernyataan bersama" />
         @endif
     @endif
 </div>
