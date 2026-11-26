@@ -8,10 +8,10 @@ use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\User;
 use App\Services\Students\StudentExamRoomService;
+use App\Services\Students\StudentRosterRevision;
 use App\Services\Students\StudentSpreadsheetService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
@@ -33,10 +33,15 @@ class StudentSpreadsheetController extends Controller
 
     public function export(Request $request, StudentSpreadsheetService $spreadsheet): BinaryFileResponse
     {
-        $validated = $request->validate(['assessment_period_id' => ['nullable', 'integer', 'exists:assessment_periods,id']]);
+        $validated = $request->validate([
+            'assessment_period_id' => ['nullable', 'integer', 'exists:assessment_periods,id'],
+            'student_status' => ['nullable', 'in:active,inactive'],
+        ]);
+        $status = $validated['student_status'] ?? null;
         $period = filled($validated['assessment_period_id'] ?? null) ? AssessmentPeriod::findOrFail($validated['assessment_period_id']) : null;
         $students = Student::query()
             ->with(['schoolClass.academicYear', 'user'])
+            ->when($status, fn ($query) => $query->where('is_active', $status === 'active'))
             ->when($period, fn ($query) => $query
                 ->with(['examRooms' => fn ($rooms) => $rooms->where('assessment_period_id', $period->id)])
                 ->whereHas('schoolClass', fn ($classes) => $classes->where('academic_year_id', $period->academic_year_id)))
@@ -52,8 +57,13 @@ class StudentSpreadsheetController extends Controller
             ->deleteFileAfterSend(true);
     }
 
-    public function import(Request $request, StudentSpreadsheetService $spreadsheet, StudentExamRoomService $rooms): RedirectResponse
-    {
+    public function import(
+        Request $request,
+        StudentSpreadsheetService $spreadsheet,
+        StudentExamRoomService $rooms,
+        StudentRosterRevision $roster,
+    ): RedirectResponse {
+        $revision = $roster->current();
         // Creating many student accounts requires one secure password hash per new user.
         // Keep the normal PHP limit for other pages, but allow this bulk operation to finish.
         if (function_exists('set_time_limit')) {
@@ -111,7 +121,8 @@ class StudentSpreadsheetController extends Controller
                 'email' => filled($row['email'] ?? null) ? Str::lower(trim((string) $row['email'])) : null,
                 'password' => filled($row['password'] ?? null) ? (string) $row['password'] : null,
                 'card_uid' => filled($row['uid_kartu'] ?? null) ? trim((string) $row['uid_kartu']) : null,
-                'status' => strtolower(trim((string) ($row['status'] ?? 'aktif'))),
+                'status' => filled($row['status'] ?? null) ? strtolower(trim((string) $row['status'])) : null,
+                'alasan_nonaktif' => filled($row['alasan_nonaktif'] ?? null) ? trim((string) $row['alasan_nonaktif']) : null,
                 'kelas' => filled($row['kelas'] ?? null) ? trim((string) $row['kelas']) : null,
                 'tahun_ajaran' => filled($row['tahun_ajaran'] ?? null) ? trim((string) $row['tahun_ajaran']) : null,
                 'ruangan' => filled($row['ruangan'] ?? null) ? trim((string) $row['ruangan']) : null,
@@ -124,10 +135,14 @@ class StudentSpreadsheetController extends Controller
                 'email' => ['nullable', 'email', 'max:255'],
                 'password' => ['nullable', Password::min(8)->letters()->numbers()],
                 'card_uid' => ['nullable', 'string', 'max:255'],
-                'status' => ['required', 'in:aktif,nonaktif,active,inactive,1,0'],
+                'status' => ['nullable', 'in:aktif,nonaktif,active,inactive,1,0'],
+                'alasan_nonaktif' => ['nullable', 'string', 'max:500'],
                 'kelas' => ['nullable', 'string', 'max:100'],
                 'tahun_ajaran' => ['nullable', 'string', 'max:30'],
                 'ruangan' => ['nullable', 'string', 'max:80'],
+            ], [
+                'status.in' => 'Isi Status dengan Aktif, Nonaktif, atau biarkan kosong.',
+                'alasan_nonaktif.max' => 'Alasan Nonaktif maksimal 500 karakter.',
             ]);
 
             if ($validator->fails()) {
@@ -235,7 +250,7 @@ class StudentSpreadsheetController extends Controller
                 $seenCards[$cardHash] = true;
             }
 
-            $preparedRows[] = [$data, $existing, $rowSchoolClass];
+            $preparedRows[] = [$data, $rowSchoolClass];
         }
 
         if ($errors !== []) {
@@ -246,10 +261,11 @@ class StudentSpreadsheetController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($preparedRows, $period, $rooms): void {
-            foreach ($preparedRows as [$data, $existing, $schoolClass]) {
-                $student = $existing ?? new Student;
+        $roster->withCurrent(function () use ($preparedRows, $period, $rooms): void {
+            foreach ($preparedRows as [$data, $schoolClass]) {
+                $student = Student::query()->where('student_number', $data['nis'])->lockForUpdate()->first() ?? new Student;
                 $user = $student->user;
+                $active = $data['status'] === null ? ($student->is_active ?? true) : $this->isActive($data['status']);
                 $username = $data['nisn'] ?: $data['nis'];
 
                 if (! $user) {
@@ -267,7 +283,7 @@ class StudentSpreadsheetController extends Controller
                     'name' => $data['nama_lengkap'],
                     'username' => $username,
                     'email' => $data['email'] ?: $user->email,
-                    'is_active' => $this->isActive($data['status']),
+                    'is_active' => $active && ($data['status'] !== null || ! $user->exists || $user->is_active),
                 ])->save();
 
                 $student->fill([
@@ -279,13 +295,14 @@ class StudentSpreadsheetController extends Controller
                     'card_uid_hash' => $data['card_uid']
                         ? hash('sha256', $data['card_uid'])
                         : $student->card_uid_hash,
-                    'is_active' => $this->isActive($data['status']),
+                    'is_active' => $active,
+                    'inactive_reason' => $active ? null : ($data['alasan_nonaktif'] ?? $student->inactive_reason),
                 ])->save();
                 if ($period && $data['update_room']) {
                     $rooms->assign($period, [$student->id], $data['ruangan']);
                 }
             }
-        });
+        }, $revision);
 
         return back()->with('status', count($preparedRows).' data siswa berhasil diimpor atau diperbarui.');
     }

@@ -230,9 +230,16 @@
                     <x-assessment-period-select :periods="$assessmentPeriods"
                         :selected="$roomPeriod?->id ?? ($assessmentPeriods->count() === 1 ? $assessmentPeriods->first()->id : null)"
                         label="Periode ruangan untuk ekspor" empty-label="Semua tahun ajaran (Ruangan kosong)" />
-                    <p class="text-xs leading-5 text-slate-400">Pilih periode untuk mengunduh seluruh siswa pada tahun ajaran periode tersebut beserta ruangannya. Untuk mengunduh siswa dari semua tahun ajaran, kolom Ruangan tersedia dan dibiarkan kosong.</p>
+                    <label class="block text-xs font-medium text-slate-400">Status siswa untuk ekspor
+                        <select name="student_status" class="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm">
+                            <option value="">Semua status</option>
+                            <option value="active" @selected($studentStatus === 'active')>Aktif</option>
+                            <option value="inactive" @selected($studentStatus === 'inactive')>Nonaktif</option>
+                        </select>
+                    </label>
+                    <p class="text-xs leading-5 text-slate-400">Pilih periode untuk mengunduh siswa pada tahun ajaran tersebut beserta ruangannya. Untuk mengunduh siswa dari semua tahun ajaran, kolom Ruangan tersedia dan dibiarkan kosong.</p>
                     <div class="flex flex-wrap gap-3">
-                        <button type="submit" class="rounded-xl border border-cyan-400/30 px-4 py-2.5 text-sm font-medium text-cyan-200 hover:bg-cyan-400/10">Ekspor seluruh siswa (Excel)</button>
+                        <button type="submit" class="rounded-xl border border-cyan-400/30 px-4 py-2.5 text-sm font-medium text-cyan-200 hover:bg-cyan-400/10">Ekspor data siswa (Excel)</button>
                         <a href="{{ route('academic.students.template') }}" class="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-medium text-slate-200 hover:bg-white/5">Unduh template Excel</a>
                     </div>
                 </form>
@@ -250,6 +257,7 @@
                 <button class="w-full rounded-xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950">Impor data siswa</button>
                 <p class="text-xs leading-5 text-slate-400">Pilih periode saat mengimpor isi kolom Ruangan atau file dengan Kode Periode. Pada file ekspor berperiode, Ruangan yang dikosongkan menghapus penempatan siswa pada periode tersebut. Saat memakai template, pilih periode untuk menerapkan penempatan, termasuk pengosongan ruangan.</p>
                 <p class="text-xs text-slate-500">Format XLSX atau CSV. Maksimal 10 MB dan 2.000 siswa sekali impor. Biarkan pilihan kelas pada mode otomatis untuk membaca kelas dari file ekspor.</p>
+                <p class="text-xs leading-5 text-slate-400">Isi kolom <strong>Status</strong> dengan Aktif atau Nonaktif. Untuk siswa yang sudah terdaftar, kosongkan Status untuk mempertahankan statusnya. Kolom <strong>Alasan Nonaktif</strong> dapat diisi dengan keterangan yang dibaca siswa saat login.</p>
                 <p class="text-xs leading-5 text-cyan-200/80">Impor siswa baru dapat memerlukan beberapa menit karena sistem membuat dan mengenkripsi password setiap akun. Jangan menutup atau memuat ulang halaman selama proses berjalan.</p>
                 <p class="text-xs leading-5 text-amber-200/80">Password tidak ikut diekspor. Saat impor ulang, password lama tetap dipertahankan jika kolom Password kosong.</p>
             </form>
@@ -308,6 +316,45 @@
                         class="rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-slate-300 hover:bg-white/5">Reset</a>
                 </div>
             </form>
+
+            <section aria-labelledby="student-bulk-status-title" class="mt-5 space-y-4 rounded-2xl border border-cyan-400/25 p-4">
+                <h3 id="student-bulk-status-title" class="text-sm font-semibold text-cyan-200">Aktifkan atau nonaktifkan siswa</h3>
+                <form id="student-bulk-status" data-student-status-form method="POST" action="{{ route('academic.students.bulk-status', request()->query()) }}" class="space-y-3">
+                    @csrf @method('PATCH')
+                    <input type="hidden" name="scope" value="selected">
+                    <input type="hidden" name="roster_revision" value="{{ $rosterRevision }}">
+                    <div data-selected-students></div>
+                    <p class="text-xs text-slate-400">Centang siswa pada tabel, lalu pilih status baru. Maksimal 500 siswa terpilih sekaligus.</p>
+                    <div class="grid items-end gap-3 sm:grid-cols-[minmax(9rem,12rem)_minmax(0,1fr)]">
+                        @include('academic.student-status-controls')
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <button type="submit" disabled class="rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950 disabled:opacity-50">Simpan status siswa terpilih</button>
+                        <span data-student-selection-count class="text-xs text-slate-400" aria-live="polite">0 siswa terpilih.</span>
+                    </div>
+                </form>
+                @if ($rosterTotals->student_count > 0)
+                    <details class="border-t border-white/10 pt-3" @if ($errors->has('confirm_all') || $errors->has('expected_count') || $errors->has('expected_last_id')) open @endif>
+                        <summary class="cursor-pointer text-sm font-semibold text-cyan-200">Ubah status semua siswa ({{ $rosterTotals->student_count }})</summary>
+                        <form data-student-status-form method="POST" action="{{ route('academic.students.bulk-status', request()->query()) }}" class="mt-3 space-y-3">
+                            @csrf @method('PATCH')
+                            <input type="hidden" name="scope" value="all">
+                            <input type="hidden" name="roster_revision" value="{{ $rosterRevision }}">
+                            <input type="hidden" name="expected_count" value="{{ $rosterTotals->student_count }}">
+                            <input type="hidden" name="expected_last_id" value="{{ $rosterTotals->last_id }}">
+                            <p class="text-xs text-slate-400">Berlaku untuk semua siswa di seluruh kelas dan tahun ajaran. Siswa nonaktif kehilangan akses login dan ujian sampai diaktifkan kembali.</p>
+                            <div class="grid items-end gap-3 sm:grid-cols-[minmax(9rem,12rem)_minmax(0,1fr)]">
+                                @include('academic.student-status-controls')
+                            </div>
+                            <label class="flex items-start gap-2 text-xs text-slate-300">
+                                <input type="checkbox" name="confirm_all" value="1" required>
+                                <span>Saya ingin menerapkan status ini pada semua {{ $rosterTotals->student_count }} siswa.</span>
+                            </label>
+                            <button type="submit" class="rounded-xl border border-cyan-400/30 px-4 py-2.5 text-sm font-semibold text-cyan-200">Simpan status semua siswa</button>
+                        </form>
+                    </details>
+                @endif
+            </section>
 
             <form id="student-bulk-delete" method="POST" action="{{ route('academic.students.bulk-destroy', request()->query()) }}"
                 class="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-rose-400/25 bg-rose-400/[0.04] p-4">

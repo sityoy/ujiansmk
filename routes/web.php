@@ -126,6 +126,7 @@ Route::middleware(['auth', 'active'])->group(function (): void {
             Route::post('/students/participant-cards', [ParticipantCardController::class, 'generate'])->name('students.participant-cards');
             Route::patch('/students/rooms', [AcademicDataController::class, 'updateStudentRooms'])->name('students.rooms');
             Route::patch('/students/{student}/room', [AcademicDataController::class, 'updateStudentRoom'])->name('students.room');
+            Route::patch('/students/status', [AcademicDataController::class, 'updateStudentStatuses'])->name('students.bulk-status');
             Route::patch('/students/{student}/toggle', [AcademicDataController::class, 'toggleStudent'])->name('students.toggle');
             Route::delete('/students/all', [AcademicDataController::class, 'destroyAllStudents'])->name('students.destroy-all');
             Route::delete('/students/bulk', [AcademicDataController::class, 'destroyStudents'])->name('students.bulk-destroy');

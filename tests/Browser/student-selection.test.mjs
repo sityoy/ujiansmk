@@ -12,14 +12,20 @@ function setup({rooms=false,count=3,confirm=true}={}) {
     const all=element(),counts=[element(),element()],ids=element(),warning=element(),button=element(),roomButton=element();
     const deletion=element({querySelector:selector=>selector==='[data-selected-students]'?ids:button});
     const room=rooms?element({querySelector:()=>roomButton}):null;
+    const statusIds=element(), statusButton=element(), select=element({value:''}), field=element();
+    const reason=element({querySelector:()=>field});
+    const status=element({querySelector:selector=>({
+        '[data-selected-students]':statusIds, 'button[type="submit"]':statusButton,
+        '[data-student-status]':select, '[data-student-reason]':reason,
+    }[selector])});
     const browser=element(),questions=[];
-    const root={getElementById:id=>id==='student-bulk-delete'?deletion:room,
+    const root={getElementById:id=>({'student-bulk-delete':deletion, 'student-room-bulk':room, 'student-bulk-status':status}[id]),
         querySelector:selector=>selector==='[data-room-select-all]'?all:warning,
-        querySelectorAll:selector=>selector==='[data-room-student]'?students:counts,
+        querySelectorAll:selector=>selector==='[data-student-status-form]'?[status]:selector==='[data-room-student]'?students:counts,
         createElement:()=>element(),defaultView:browser};
     initializeStudentSelection(root,message=>{questions.push(message);return confirm;});
     const submit=()=>{const event={prevented:false,preventDefault(){this.prevented=true;}};deletion.listeners.submit(event);return event;};
-    return {students,all,counts,ids,warning,button,roomButton,browser,questions,submit};
+    return {students,all,counts,ids,warning,button,roomButton,browser,questions,submit,statusIds,statusButton,select,reason,field};
 }
 
 test('students can be selected and deleted without choosing a room period',()=>{
@@ -62,4 +68,18 @@ test('empty or oversized selections are blocked with no partial hidden selection
     assert.equal(p.submit().prevented,true);assert.equal(p.questions.length,0);
     p.students[0].checked=false;p.students[0].listeners.change();
     assert.equal(p.button.disabled,false);assert.equal(p.warning.hidden,true);assert.equal(p.ids.children.length,500);
+});
+
+test('status actions reuse the selected rows and show the reason only for nonactive status',()=>{
+    const p=setup();assert.equal(p.statusButton.disabled,true);
+    p.students[1].checked=true;p.students[1].listeners.change();
+    assert.equal(p.statusButton.disabled,false);
+    assert.deepEqual(p.statusIds.children.map(input=>input.value),['2']);
+    assert.equal(p.reason.hidden,true);
+    p.select.value='0';p.select.listeners.change();
+    assert.equal(p.reason.hidden,false);
+    assert.equal(p.field.required,true);
+    p.select.value='1';p.select.listeners.change();
+    assert.equal(p.reason.hidden,true);
+    assert.equal(p.field.disabled,true);
 });

@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\Students\StudentDeletionService;
 use App\Services\Students\StudentExamRoomService;
 use App\Services\Students\StudentRosterRevision;
+use App\Services\Students\StudentStatusService;
 use App\Support\TablePagination;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
@@ -21,6 +22,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class AcademicDataController extends Controller
@@ -314,26 +316,78 @@ class AcademicDataController extends Controller
         return back()->with('status', 'Ruangan untuk '.count($validated['student_ids']).' siswa terpilih berhasil diperbarui.');
     }
 
-    public function toggleStudent(Request $request, Student $student, StudentRosterRevision $roster): RedirectResponse
-    {
+    public function toggleStudent(
+        Request $request,
+        Student $student,
+        StudentRosterRevision $roster,
+        StudentStatusService $statuses,
+    ): RedirectResponse {
         $validated = $request->validate([
             'is_active' => ['nullable', 'boolean'],
-            'inactive_reason' => ['required_if:is_active,0', 'nullable', 'string', 'max:500'],
+            'inactive_reason' => ['required_if:is_active,0,false', 'nullable', 'string', 'max:500'],
         ], ['inactive_reason.required_if' => 'Tuliskan alasan penonaktifan yang akan ditampilkan kepada siswa.']);
 
-        $active = $roster->withCurrent(function () use ($student, $validated): bool {
-            $current = Student::query()->lockForUpdate()->findOrFail($student->id);
-            $active = (bool) ($validated['is_active'] ?? ! $current->is_active);
-            $current->update([
-                'is_active' => $active,
-                'inactive_reason' => $active ? null : ($validated['inactive_reason'] ?? null),
-            ]);
-            $current->user?->update(['is_active' => $active]);
+        $active = $roster->withCurrent(function () use ($student, $validated, $statuses): bool {
+            $students = Student::query()->whereKey($student->id)->lockForUpdate()->get();
+            abort_if($students->isEmpty(), 404);
+            $active = (bool) ($validated['is_active'] ?? ! $students->first()->is_active);
+            $statuses->update($students, $active, $validated['inactive_reason'] ?? $students->first()->inactive_reason);
 
             return $active;
         }, $request->integer('roster_revision'));
 
         return back()->with('status', $active ? 'Siswa diaktifkan kembali.' : 'Siswa dinonaktifkan. Alasan ditampilkan saat siswa mencoba masuk.');
+    }
+
+    public function updateStudentStatuses(
+        Request $request,
+        StudentRosterRevision $roster,
+        StudentStatusService $statuses,
+    ): RedirectResponse {
+        $validated = $request->validate([
+            'scope' => ['required', 'in:selected,all'],
+            'is_active' => ['required', 'boolean'],
+            'inactive_reason' => ['required_if:is_active,0,false', 'nullable', 'string', 'max:500'],
+            'student_ids' => ['exclude_unless:scope,selected', 'required', 'array', 'min:1', 'max:500'],
+            'student_ids.*' => ['integer', 'distinct'],
+            'confirm_all' => ['exclude_unless:scope,all', 'accepted'],
+            'expected_count' => ['exclude_unless:scope,all', 'required', 'integer', 'min:1'],
+            'expected_last_id' => ['exclude_unless:scope,all', 'required', 'integer', 'min:1'],
+        ], [
+            'inactive_reason.required_if' => 'Tuliskan alasan penonaktifan yang akan ditampilkan kepada siswa.',
+            'student_ids.required' => 'Centang siswa yang statusnya ingin diubah.',
+            'confirm_all.accepted' => 'Konfirmasi perubahan status seluruh siswa.',
+        ]);
+        $active = (bool) $validated['is_active'];
+        $reason = $validated['inactive_reason'] ?? null;
+
+        $count = $roster->withCurrent(function () use ($validated, $active, $reason, $statuses): int {
+            $query = Student::query()->select(['id', 'user_id'])->lockForUpdate();
+            if ($validated['scope'] === 'selected') {
+                $students = $query->whereKey($validated['student_ids'])->orderBy('id')->get();
+                if ($students->count() !== count($validated['student_ids'])) {
+                    throw ValidationException::withMessages(['student_ids' => 'Sebagian siswa sudah tidak tersedia. Muat ulang daftar siswa.']);
+                }
+                $statuses->update($students, $active, $reason);
+
+                return $students->count();
+            }
+
+            $total = Student::query()->selectRaw('COUNT(*) AS student_count, MAX(id) AS last_id')->first();
+            if ((int) $total->student_count !== (int) $validated['expected_count']
+                || (int) $total->last_id !== (int) $validated['expected_last_id']) {
+                throw ValidationException::withMessages(['student_ids' => 'Daftar siswa berubah. Muat ulang dan pastikan jumlah siswa sebelum mengubah status semua siswa.']);
+            }
+
+            $query->where('id', '<=', $total->last_id)
+                ->chunkById(500, fn ($students) => $statuses->update($students, $active, $reason));
+
+            return (int) $total->student_count;
+        }, $request->integer('roster_revision'));
+
+        $message = $active ? ' siswa diaktifkan.' : ' siswa dinonaktifkan. Alasan ditampilkan saat siswa mencoba masuk.';
+
+        return $this->studentListRedirect($request)->with('status', $count.$message);
     }
 
     public function destroyStudents(Request $request, StudentDeletionService $deletion): RedirectResponse
@@ -394,12 +448,11 @@ class AcademicDataController extends Controller
     private function studentListRedirect(Request $request): RedirectResponse
     {
         $query = array_intersect_key($request->query(), array_flip([
-            'student_search', 'student_class', 'student_per_page', 'room_period_id',
+            'student_search', 'student_class', 'student_status', 'student_per_page', 'room_period_id',
             'class_year', 'class_per_page', 'class_page',
         ]));
 
-        // Restart the student list after deletion so removing the last row on
-        // the last page never strands the user on an empty, stale page.
+        // A deletion or status change can empty the last page in the current filter.
         return redirect()->to(route('academic.index', $query).'#student-list');
     }
 

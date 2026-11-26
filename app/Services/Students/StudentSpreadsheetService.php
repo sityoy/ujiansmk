@@ -9,7 +9,7 @@ use ZipArchive;
 
 class StudentSpreadsheetService
 {
-    private const IMPORT_HEADERS = ['NIS', 'NISN', 'Nama Lengkap', 'Kelas', 'Tahun Ajaran', 'Email', 'Password', 'UID Kartu', 'Status', 'Ruangan'];
+    private const IMPORT_HEADERS = ['NIS', 'NISN', 'Nama Lengkap', 'Kelas', 'Tahun Ajaran', 'Email', 'Password', 'UID Kartu', 'Status', 'Ruangan', 'Alasan Nonaktif'];
 
     /** @return array<int, array<string, string|null>> */
     public function read(UploadedFile $file): array
@@ -80,6 +80,7 @@ class StudentSpreadsheetService
             '',
             'aktif',
             'Ruang 01',
+            '',
         ]], 'Template Siswa');
     }
 
@@ -92,7 +93,7 @@ class StudentSpreadsheetService
     /** @param iterable<int, Student> $students */
     public function createExport(iterable $students, ?string $periodCode = null): string
     {
-        $headers = ['NIS', 'NISN', 'Nama Lengkap', 'Kelas', 'Tahun Ajaran', 'Email', 'Username', 'Status', 'Ruangan', 'Kode Periode'];
+        $headers = ['NIS', 'NISN', 'Nama Lengkap', 'Kelas', 'Tahun Ajaran', 'Email', 'Username', 'Status', 'Ruangan', 'Kode Periode', 'Alasan Nonaktif'];
         $rows = [];
 
         foreach ($students as $student) {
@@ -107,6 +108,7 @@ class StudentSpreadsheetService
                 $student->is_active ? 'aktif' : 'nonaktif',
                 $periodCode !== null ? $student->examRooms->first()?->room_name : null,
                 $periodCode,
+                $student->is_active ? null : $student->inactive_reason,
             ];
         }
 

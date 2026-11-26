@@ -108,12 +108,61 @@ class StudentSpreadsheetTest extends TestCase
         try {
             [$example] = app(StudentSpreadsheetService::class)->read(new UploadedFile($path, 'template.xlsx', null, null, true));
             $this->assertSame('Ruang 01', $example['ruangan']);
+            $this->assertSame('aktif', $example['status']);
+            $this->assertArrayHasKey('alasan_nonaktif', $example);
             $this->assertSame('X AK 1', $example['kelas']);
             $this->assertSame('2026/2027', $example['tahun_ajaran']);
             $this->assertSame('0123456789', $example['nisn']);
         } finally {
             unlink($path);
         }
+    }
+
+    public function test_excel_round_trip_preserves_or_updates_status_and_reason(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $class = $this->makeClass();
+        $spreadsheet = app(StudentSpreadsheetService::class);
+        $this->actingAs($admin);
+        $import = function (array $rows) use ($class, $spreadsheet): void {
+            $path = $spreadsheet->createWorkbook(['NIS', 'Nama Lengkap', 'Status', 'Alasan Nonaktif'], $rows, 'Siswa');
+            try {
+                $this->post(route('academic.students.import'), [
+                    'school_class_id' => $class->id,
+                    'spreadsheet' => new UploadedFile($path, 'status-siswa.xlsx', null, null, true),
+                ])->assertSessionHasNoErrors();
+            } finally {
+                unlink($path);
+            }
+        };
+
+        $import([
+            ['2026001', 'Siswa Pertama', 'Nonaktif', 'Sudah pindah sekolah.'],
+            ['2026002', 'Siswa Kedua', '', ''],
+        ]);
+        $first = Student::where('student_number', '2026001')->sole();
+        $this->assertFalse($first->user->is_active);
+        $this->assertSame('Sudah pindah sekolah.', $first->inactive_reason);
+        $this->assertTrue(Student::where('student_number', '2026002')->sole()->is_active);
+
+        $import([['2026001', 'Nama Diperbarui', '', '']]);
+        $this->assertFalse($first->fresh()->is_active);
+        $this->assertSame('Sudah pindah sekolah.', $first->fresh()->inactive_reason);
+        $download = $this->get(route('academic.students.export', ['student_status' => 'inactive']))->assertOk();
+        $path = $download->baseResponse->getFile()->getPathname();
+        try {
+            $exported = $spreadsheet->read(new UploadedFile($path, 'siswa.xlsx', null, null, true));
+            $this->assertCount(1, $exported);
+            $this->assertSame('2026001', $exported[0]['nis']);
+            $this->assertSame('nonaktif', $exported[0]['status']);
+            $this->assertSame('Sudah pindah sekolah.', $exported[0]['alasan_nonaktif']);
+        } finally {
+            unlink($path);
+        }
+
+        $import([['2026001', 'Nama Diperbarui', 'Aktif', 'Sudah pindah sekolah.']]);
+        $this->assertTrue($first->fresh()->user->is_active);
+        $this->assertNull($first->fresh()->inactive_reason);
     }
 
     public function test_imported_rooms_can_be_updated_cleared_and_preserved_with_an_old_template(): void

@@ -266,6 +266,52 @@ class StudentBulkDeleteTest extends TestCase
         $this->assertDatabaseCount('users', 1);
     }
 
+    public function test_student_status_can_be_changed_for_selection_or_entire_roster_without_deleting_history(): void
+    {
+        [$admin, $students] = $this->students();
+        [$attempt] = $this->exam($students[0], 'in_progress');
+        $route = route('academic.students.bulk-status', ['student_status' => 'active']);
+        $selected = ['scope' => 'selected', 'is_active' => '0', 'roster_revision' => 0, 'student_ids' => [$students[0]->id, $students[2]->id]];
+        $reason = 'Penyelesaian administrasi sekolah.';
+
+        $this->actingAs($students[0]->user)->patch($route, $selected + ['inactive_reason' => $reason])->assertForbidden();
+        $this->actingAs($admin)->get(route('academic.index'))->assertOk()
+            ->assertSee('Simpan status siswa terpilih')->assertSee('Ubah status semua siswa (3)');
+        $this->patch($route, $selected)->assertSessionHasErrors('inactive_reason');
+        $this->patch($route, array_replace($selected, ['student_ids' => [$students[0]->id, 99999], 'inactive_reason' => $reason]))
+            ->assertSessionHasErrors('student_ids');
+        $this->assertSame(3, Student::where('is_active', true)->count());
+        $this->patch($route, $selected + ['inactive_reason' => $reason])
+            ->assertRedirect(route('academic.index', ['student_status' => 'active']).'#student-list')->assertSessionHasNoErrors();
+        $this->assertSame([$students[1]->id], Student::where('is_active', true)->pluck('id')->all());
+        $this->assertSame($reason, $students[0]->fresh()->inactive_reason);
+        $this->assertFalse($students[0]->user->fresh()->is_active);
+        $this->assertTrue($students[1]->user->fresh()->is_active);
+        $this->assertDatabaseHas('exam_attempts', ['id' => $attempt->id, 'status' => 'in_progress']);
+
+        // The whole-school action also handles rosters larger than one selection batch.
+        foreach (array_chunk(range(4, 501), 100) as $batch) {
+            Student::query()->insert(array_map(fn (int $i) => [
+                'school_class_id' => $students[0]->school_class_id, 'student_number' => 'STATUS-'.$i, 'full_name' => 'Siswa '.$i,
+            ], $batch));
+        }
+        $all = [
+            'scope' => 'all', 'is_active' => '0', 'roster_revision' => 0, 'expected_count' => 501,
+            'expected_last_id' => Student::max('id'), 'inactive_reason' => $reason,
+        ];
+        $this->patch($route, $all)->assertSessionHasErrors('confirm_all');
+        $this->patch($route, array_replace($all, ['confirm_all' => '1', 'expected_count' => 500]))->assertSessionHasErrors('student_ids');
+        $this->patch($route, $all + ['confirm_all' => '1'])->assertSessionHasNoErrors();
+        $this->assertSame(501, Student::where('is_active', false)->where('inactive_reason', $reason)->count());
+        $this->assertTrue($admin->fresh()->is_active);
+        $this->assertFalse($students[1]->user->fresh()->is_active);
+
+        $this->patch($route, array_replace($all, ['confirm_all' => '1', 'is_active' => '1']))->assertSessionHasNoErrors();
+        $this->assertSame(501, Student::where('is_active', true)->whereNull('inactive_reason')->count());
+        $this->assertTrue($students[0]->user->fresh()->is_active);
+        $this->assertDatabaseHas('exam_attempts', ['id' => $attempt->id]);
+    }
+
     private function students(int $count = 3): array
     {
         $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
