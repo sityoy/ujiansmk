@@ -136,7 +136,7 @@ class AuthenticationTest extends TestCase
         SchoolProfile::create(['name' => 'SMK Islam Bahagia']);
 
         $this->get(route('login'))->assertOk()
-            ->assertSeeInOrder(['logo-ypmi-bahagia.jpeg', 'SMK Islam Bahagia', 'logo-pt-sityoy.png', 'PT Sityoy IT Solutions', 'Masuk ke sistem'])
+            ->assertSeeInOrder(['logo-ypmi-bahagia.jpeg', 'SMK Islam Bahagia', 'logo-pt-sityoy.png', 'Dikembangkan oleh PT SITYOY IT SOLUTIONS', 'Masuk ke sistem'])
             ->assertSee('data-password-toggle', false);
         $this->assertFileExists(public_path('images/logo-pt-sityoy.png'));
     }

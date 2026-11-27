@@ -2,6 +2,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="light">
 <head>
     <meta charset="utf-8">
+    <meta name="author" content="PT SITYOY IT SOLUTIONS">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
@@ -33,7 +34,7 @@
                             <img src="{{ asset('images/logo-pt-sityoy.png') }}" alt="Logo SIS"
                                 width="1024" height="768">
                         </div>
-                        <p>PT Sityoy IT Solutions</p>
+                        <p>Dikembangkan oleh PT SITYOY IT SOLUTIONS</p>
                     </div>
                 </div>
                 <p id="login-brand-title" class="login-brand-title">Sistem Ujian Sekolah</p>
