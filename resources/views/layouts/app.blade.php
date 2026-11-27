@@ -2,6 +2,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="light">
 <head>
     <meta charset="utf-8">
+    <meta name="author" content="PT SITYOY IT SOLUTIONS">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
@@ -126,7 +127,7 @@
             </nav>
 
             <div class="mt-8 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs leading-5 text-slate-400">
-                Menu ditampilkan sesuai hak akses setiap pengguna.
+                Dikembangkan oleh PT SITYOY IT SOLUTIONS
             </div>
         </aside>
 
