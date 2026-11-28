@@ -32,6 +32,7 @@
         th, td { padding: 7px 8px; border: 1px solid #94a3b8; text-align: left; vertical-align: top; }
         .report-sheet th.period { padding: 8px; background: #cbd5e1; font-size: 13px; }
         .num { text-align: center; }
+        .location + .location { margin-top: 4px; }
         .room { display: block; color: #475569; }
         .is-draft { color: #854d0e; font-weight: 700; }
         .note { margin-bottom: 0; color: #475569; }
@@ -67,11 +68,11 @@
                     @endforeach
                 </select>
             </label>
-            <label>Rombel
-                <select name="session_class_id">
-                    <option value="">Semua rombel</option>
-                    @foreach ($classes as $class)
-                        <option value="{{ $class->id }}" @selected((int) ($filters['session_class_id'] ?? 0) === $class->id)>{{ $class->name }} · {{ $class->academicYear->name }}</option>
+            <label>Kelas
+                <select name="session_grade_level">
+                    <option value="">Semua kelas</option>
+                    @foreach ($gradeOptions as $level => $label)
+                        <option value="{{ $level }}" @selected($gradeLevel === $level)>{{ $label }}</option>
                     @endforeach
                 </select>
             </label>
@@ -135,15 +136,15 @@
             <div class="table-wrap" role="region" aria-label="{{ $group['period'] }}" tabindex="0">
                 <table aria-label="{{ $group['period'] }}">
                     <colgroup>
-                        <col style="width:4%"><col style="width:14%"><col style="width:14%"><col style="width:17%">
-                        <col style="width:8%"><col style="width:8%"><col style="width:15%"><col style="width:7%">
+                        <col style="width:4%"><col style="width:13%"><col style="width:13%"><col style="width:17%">
+                        <col style="width:11%"><col style="width:7%"><col style="width:15%"><col style="width:7%">
                         <col style="width:6%"><col style="width:7%">
                     </colgroup>
                     <thead>
                         <tr><th colspan="10" class="period">{{ $group['period'] }}</th></tr>
                         <tr>
                             <th scope="col" class="num">No.</th><th scope="col">Hari dan tanggal</th><th scope="col">Jam (WIB)</th>
-                            <th scope="col">Mata pelajaran</th><th scope="col">Rombel</th><th scope="col">Jenis sesi</th>
+                            <th scope="col">Mata pelajaran</th><th scope="col">Kelas</th><th scope="col">Jenis sesi</th>
                             <th scope="col">Lokasi dan ruangan</th><th scope="col" class="num">Durasi</th>
                             <th scope="col" class="num">Peserta</th><th scope="col">Status</th>
                         </tr>
@@ -152,8 +153,12 @@
                         @foreach ($group['rows'] as $row)
                             <tr>
                                 <td class="num">{{ $loop->iteration }}</td><td>{{ $row['date'] }}</td><td>{{ $row['time'] }}</td>
-                                <td>{{ $row['subject'] }}</td><td>{{ $row['class'] }}</td><td>{{ $row['kind'] }}</td>
-                                <td>{{ $row['campus'] }}<span class="room">{{ $row['room'] }}</span></td>
+                                <td>{{ $row['subject'] }}</td><td>{{ $row['grade'] }}</td><td>{{ $row['kind'] }}</td>
+                                <td>
+                                    @foreach ($row['locations'] as $location)
+                                        <div class="location">{{ $location['campus'] }}<span class="room">{{ $location['rooms'] }}</span></div>
+                                    @endforeach
+                                </td>
                                 <td class="num">{{ $row['duration'] }} mnt</td><td class="num">{{ $row['participants'] }}</td>
                                 <td @class(['is-draft' => $row['draft']])>{{ $row['status'] }}</td>
                             </tr>
@@ -165,7 +170,7 @@
             <p>Belum ada sesi ujian sesuai filter.</p>
         @endforelse
         @if ($sessionCount)
-            <p class="note" data-print-block>Satu baris untuk setiap sesi dan rombel. Jumlah peserta mengikuti penempatan pada sesi tersebut.</p>
+            <p class="note" data-print-block>Jadwal dengan mapel, waktu, durasi, jenis, dan status yang sama digabung per kelas. Jumlah peserta mencakup semua sesi yang digabung.</p>
         @endif
     </main>
     @if ($sessionCount)

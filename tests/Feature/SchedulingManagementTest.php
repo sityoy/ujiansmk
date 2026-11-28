@@ -146,6 +146,81 @@ class SchedulingManagementTest extends TestCase
             ->assertOk()->assertSee('Belum ada sesi ujian sesuai filter.');
     }
 
+    public function test_schedule_recap_combines_matching_sessions_by_grade(): void
+    {
+        $this->withoutVite();
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        [$component, $regular, $makeup] = $this->makeSchedule();
+        $component->schoolClass->update(['name' => 'X AK 1', 'grade_level' => 10]);
+        $regular->update(['room_name' => 'Lab A']);
+        $makeup->update([
+            'kind' => SessionKind::Regular,
+            'source_session_id' => null,
+            'room_name' => 'Lab Jadwal Berikutnya',
+        ]);
+
+        $sessions = collect([$regular]);
+        foreach ([
+            ['X AK 2', 10, 'Lab A'],
+            ['X AK 3', 10, 'Lab B'],
+            ['XI AK 1', 11, 'Lab XI'],
+            ['XII AK 1', 12, 'Lab XII'],
+        ] as [$name, $level, $room]) {
+            $class = $component->schoolClass->replicate()->fill(['name' => $name, 'grade_level' => $level]);
+            $class->save();
+            $classComponent = $component->replicate()->fill(['school_class_id' => $class->id]);
+            $classComponent->save();
+            $session = $regular->replicate()->fill([
+                'assessment_subject_id' => $classComponent->id,
+                'room_name' => $room,
+            ]);
+            $session->save();
+            $sessions->push($session);
+        }
+        foreach ($sessions->take(3) as $session) {
+            $student = Student::create([
+                'school_class_id' => $session->assessmentSubject->school_class_id,
+                'student_number' => 'S-'.$session->id,
+                'full_name' => 'Peserta Ujian',
+                'is_active' => true,
+            ]);
+            ExamAssignment::create([
+                'assessment_subject_id' => $session->assessment_subject_id,
+                'student_id' => $student->id,
+                'exam_session_id' => $session->id,
+                'status' => AssignmentStatus::Scheduled,
+                'assigned_at' => now(),
+            ]);
+        }
+
+        $this->actingAs($committee)->get(route('scheduling.recap'))
+            ->assertOk()
+            ->assertViewHas('sessionCount', 4)
+            ->assertSee('Kelas XI / 11')
+            ->assertSee('Kelas XII / 12')
+            ->assertDontSee('X AK 1')
+            ->assertDontSee('X AK 2')
+            ->assertDontSee('X AK 3');
+
+        foreach (['session_grade_level' => 10, 'session_class_id' => $component->school_class_id] as $filter => $value) {
+            $this->get(route('scheduling.recap', [$filter => $value]))
+                ->assertOk()
+                ->assertViewHas('sessionCount', 2)
+                ->assertViewHas('groups', function ($groups): bool {
+                    $row = $groups->sole()['rows']->first();
+
+                    return $row['grade'] === 'Kelas X / 10'
+                        && $row['locations']->sole()['rooms'] === 'Lab A, Lab B'
+                        && $row['participants'] === 3;
+                })
+                ->assertViewHas('shareText', fn (string $text) => substr_count($text, 'Kelas X / 10') === 2
+                    && str_contains($text, 'Lab A, Lab B') && ! str_contains($text, 'Kelas XI / 11'))
+                ->assertSee('Lab Jadwal Berikutnya')
+                ->assertDontSee('Lab XI')
+                ->assertDontSee('Lab XII');
+        }
+    }
+
     public function test_schedule_recap_filters_the_table_and_share_text_by_start_day_in_wib(): void
     {
         $this->withoutVite();

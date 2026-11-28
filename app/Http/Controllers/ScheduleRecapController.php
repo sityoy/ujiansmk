@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 
 class ScheduleRecapController extends Controller
@@ -43,6 +44,7 @@ class ScheduleRecapController extends Controller
         $filters = $request->validate([
             'session_period_id' => ['nullable', 'integer', 'min:1'],
             'session_class_id' => ['nullable', 'integer', 'min:1'],
+            'session_grade_level' => ['nullable', 'integer', 'min:1'],
             'session_weekday' => ['nullable', 'integer', 'between:1,7'],
             'session_search' => ['nullable', 'string', 'max:255'],
             'session_kind' => ['nullable', Rule::enum(SessionKind::class)],
@@ -50,6 +52,9 @@ class ScheduleRecapController extends Controller
         ]);
         $periodId = $filters['session_period_id'] ?? null;
         $classId = $filters['session_class_id'] ?? null;
+        $gradeLevel = $filters['session_grade_level']
+            ?? ($classId ? SchoolClass::whereKey($classId)->value('grade_level') : null);
+        $gradeLevel = $gradeLevel === null ? null : (int) $gradeLevel;
         $weekday = isset($filters['session_weekday']) ? (int) $filters['session_weekday'] : null;
         $weekdayLabel = $weekday === null ? null : self::WEEKDAYS[$weekday];
         $search = trim($filters['session_search'] ?? '');
@@ -57,9 +62,11 @@ class ScheduleRecapController extends Controller
         $status = $filters['session_status'] ?? null;
 
         $sessions = ExamSession::query()
-            ->whereHas('assessmentSubject', function (Builder $query) use ($periodId, $classId, $search): void {
+            ->whereHas('assessmentSubject', function (Builder $query) use ($periodId, $classId, $gradeLevel, $search): void {
                 $query->when($periodId, fn (Builder $subjects) => $subjects->where('assessment_period_id', $periodId))
-                    ->when($classId, fn (Builder $subjects) => $subjects->where('school_class_id', $classId));
+                    ->when($gradeLevel !== null, fn (Builder $subjects) => $subjects
+                        ->whereHas('schoolClass', fn (Builder $classes) => $classes->where('grade_level', $gradeLevel)))
+                    ->when($classId && $gradeLevel === null, fn (Builder $subjects) => $subjects->where('school_class_id', $classId));
 
                 if ($search !== '') {
                     $query->whereHas('subject', fn (Builder $subject) => $subject
@@ -81,9 +88,9 @@ class ScheduleRecapController extends Controller
                 ->filter(fn (ExamSession $session) => $session->starts_at->copy()->timezone(self::TIMEZONE)->isoWeekday() === $weekday));
 
         $periods = AssessmentPeriod::with('academicYear')->orderByDesc('starts_on')->get();
-        $classes = SchoolClass::with('academicYear')->orderBy('name')->get();
         $period = $periods->find($periodId);
-        $schoolClass = $classes->find($classId);
+        $gradeOptions = SchoolClass::query()->distinct()->orderBy('grade_level')->pluck('grade_level')
+            ->mapWithKeys(fn (int $level) => [$level => $this->gradeLabel($level)]);
         $school = SchoolProfile::query()->first();
         $schoolName = $school?->name ?? config('app.name');
         $statuses = ['ready' => 'Terbit atau aktif', ...self::STATUSES];
@@ -95,10 +102,11 @@ class ScheduleRecapController extends Controller
         ])->filter()->implode(' · ');
         $hasDraft = $sessions->contains('status', SessionStatus::Draft);
         $groups = $sessions->groupBy('assessmentSubject.assessment_period_id')
-            ->map(fn ($group) => [
+            ->map(fn (Collection $group) => [
                 'period' => $this->periodLabel($group->first()->assessmentSubject->assessmentPeriod),
-                'rows' => $group->map(fn (ExamSession $session) => $this->row($session)),
+                'rows' => $group->groupBy($this->scheduleKey(...))->map($this->row(...)),
             ]);
+        $rows = $groups->flatMap(fn (array $group) => $group['rows']->values());
 
         $shareLines = ['*Jadwal Ujian*', $schoolName];
         if ($hasDraft) {
@@ -106,10 +114,13 @@ class ScheduleRecapController extends Controller
         }
         foreach ($groups as $group) {
             $shareLines[] = "\n*".$group['period'].'*';
-            foreach ($group['rows']->groupBy('date') as $date => $rows) {
+            foreach ($group['rows']->groupBy('date') as $date => $dateRows) {
                 $shareLines[] = "*{$date}*";
-                foreach ($rows as $row) {
-                    $shareLines[] = "• {$row['time']} WIB · {$row['subject']} · {$row['class']} · {$row['kind']} ({$row['status']})\n  {$row['campus']} · {$row['room']} · {$row['duration']} menit";
+                foreach ($dateRows as $row) {
+                    $shareLines[] = "• {$row['time']} WIB · {$row['subject']} · {$row['grade']} · {$row['kind']} ({$row['status']}) · {$row['duration']} menit";
+                    foreach ($row['locations'] as $location) {
+                        $shareLines[] = "  {$location['campus']} · {$location['rooms']}";
+                    }
                 }
             }
         }
@@ -117,7 +128,8 @@ class ScheduleRecapController extends Controller
         return response()->view('scheduling.recap', [
             'school' => $school,
             'periods' => $periods,
-            'classes' => $classes,
+            'gradeOptions' => $gradeOptions,
+            'gradeLevel' => $gradeLevel,
             'weekdays' => self::WEEKDAYS,
             'weekday' => $weekday,
             'filename' => 'rekap-jadwal-ujian'.($weekdayLabel ? '-'.strtolower($weekdayLabel) : ''),
@@ -127,10 +139,10 @@ class ScheduleRecapController extends Controller
             'filterLabel' => $filterLabel,
             'backUrl' => route('scheduling.index', Arr::only($filters, ['session_period_id', 'session_class_id', 'session_search'])).'#sesi-ujian',
             'groups' => $groups,
-            'scope' => ($period ? $this->periodLabel($period) : 'Semua periode').' · '.($schoolClass ? $schoolClass->name.' · '.$schoolClass->academicYear->name : 'Semua rombel'),
+            'scope' => ($period ? $this->periodLabel($period) : 'Semua periode').' · '.($gradeLevel === null ? 'Semua kelas' : $this->gradeLabel($gradeLevel)),
             'hasDraft' => $hasDraft,
-            'sessionCount' => $sessions->count(),
-            'makeupCount' => $sessions->where('kind', SessionKind::Makeup)->count(),
+            'sessionCount' => $rows->count(),
+            'makeupCount' => $rows->where('kind', self::KINDS[SessionKind::Makeup->value])->count(),
             'shareText' => implode("\n", $shareLines),
             'generatedAt' => now()->timezone(self::TIMEZONE)->format('d/m/Y H:i').' WIB',
         ])->header('Cache-Control', 'private, no-store')->header('X-Robots-Tag', 'noindex, nofollow');
@@ -141,8 +153,32 @@ class ScheduleRecapController extends Controller
         return $period->name.' · '.$period->academicYear->name;
     }
 
-    private function row(ExamSession $session): array
+    private function gradeLabel(int $level): string
     {
+        return 'Kelas '.match ($level) {
+            10 => 'X / 10',
+            11 => 'XI / 11',
+            12 => 'XII / 12',
+            default => (string) $level,
+        };
+    }
+
+    private function scheduleKey(ExamSession $session): string
+    {
+        return implode('|', [
+            $session->assessmentSubject->subject_id,
+            $session->assessmentSubject->schoolClass->grade_level,
+            $session->starts_at->getTimestamp(),
+            $session->ends_at->getTimestamp(),
+            $session->duration_minutes,
+            $session->kind->value,
+            $session->status->value,
+        ]);
+    }
+
+    private function row(Collection $sessions): array
+    {
+        $session = $sessions->first();
         $start = $session->starts_at->copy()->timezone(self::TIMEZONE);
         $end = $session->ends_at->copy()->timezone(self::TIMEZONE);
         $endFormat = $start->isSameDay($end) ? 'H:i' : 'd/m/Y H:i';
@@ -151,14 +187,17 @@ class ScheduleRecapController extends Controller
             'date' => $start->locale('id')->isoFormat('dddd, D MMMM YYYY'),
             'time' => $start->format('H:i').' – '.$end->format($endFormat),
             'subject' => $session->assessmentSubject->subject->name,
-            'class' => $session->assessmentSubject->schoolClass->name,
+            'grade' => $this->gradeLabel($session->assessmentSubject->schoolClass->grade_level),
             'kind' => self::KINDS[$session->kind->value],
             'status' => self::STATUSES[$session->status->value],
             'draft' => $session->status === SessionStatus::Draft,
-            'campus' => $session->campus->name,
-            'room' => filled($session->room_name) ? $session->room_name : 'Ruangan belum ditetapkan',
+            'locations' => $sessions->groupBy('campus_id')->map(fn (Collection $campusSessions) => [
+                'campus' => $campusSessions->first()->campus->name,
+                'rooms' => $campusSessions->map(fn (ExamSession $item) => filled($item->room_name)
+                    ? $item->room_name : 'Ruangan belum ditetapkan')->unique()->sort(SORT_NATURAL)->implode(', '),
+            ])->sortBy('campus', SORT_NATURAL)->values(),
             'duration' => $session->duration_minutes,
-            'participants' => $session->participant_count,
+            'participants' => $sessions->sum('participant_count'),
         ];
     }
 }
