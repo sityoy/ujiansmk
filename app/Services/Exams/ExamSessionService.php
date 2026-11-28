@@ -60,7 +60,7 @@ class ExamSessionService
             // No new assignment/attempt is created for participants who never started.
             // A session cancelled before its start does not imply student absence.
             if (now()->gte($locked->starts_at)) {
-                $locked->assignments()->where('status', AssignmentStatus::Scheduled)
+                $locked->assignments()->forActiveStudents()->where('status', AssignmentStatus::Scheduled)
                     ->whereDoesntHave('attempt')->update(['status' => AssignmentStatus::Absent]);
             }
         }

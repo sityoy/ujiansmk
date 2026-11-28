@@ -56,9 +56,10 @@ class SchedulingController extends Controller
                     ->withExists('makeupSessions')
                     ->withCount([
                         'assignments',
-                        'assignments as finished_count' => fn ($assignments) => $assignments->whereHas('attempt', fn ($attempts) => $attempts->where('status', 'submitted')),
-                        'assignments as working_count' => fn ($assignments) => $assignments->whereHas('attempt', fn ($attempts) => $attempts->where('status', 'in_progress')),
-                        'assignments as pending_count' => fn ($assignments) => $assignments->whereDoesntHave('attempt')->where('status', '!=', 'cancelled'),
+                        'assignments as participant_count' => fn ($assignments) => $assignments->visibleInRoster(),
+                        'assignments as finished_count' => fn ($assignments) => $assignments->visibleInRoster()->whereHas('attempt', fn ($attempts) => $attempts->where('status', 'submitted')),
+                        'assignments as working_count' => fn ($assignments) => $assignments->visibleInRoster()->whereHas('attempt', fn ($attempts) => $attempts->where('status', 'in_progress')),
+                        'assignments as pending_count' => fn ($assignments) => $assignments->visibleInRoster()->whereDoesntHave('attempt')->where('status', '!=', 'cancelled'),
                         'assignments as deletion_blocker_count' => $this->withUnresetAttempts(...),
                         'assignments as reset_participant_count' => fn ($assignments) => $assignments->whereHas('attemptResets'),
                     ])
@@ -355,7 +356,8 @@ class SchedulingController extends Controller
                 ]));
             }
 
-            if ($wholeGrade && $created->first()->kind === SessionKind::Regular) {
+            $first = $created->first();
+            if ($first->kind === SessionKind::Regular && $first->status !== SessionStatus::Closed && $first->ends_at->isFuture()) {
                 $this->assignStudents($created, app(ExamAssignmentService::class));
             }
         }, 3);

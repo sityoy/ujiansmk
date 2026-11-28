@@ -44,7 +44,7 @@ class ExamOperationsController extends Controller
 
         $groups = (clone $sessions)
             ->with(['assessmentSubject.assessmentPeriod', 'assessmentSubject.subject', 'assessmentSubject.schoolClass', 'campus'])
-            ->withCount('assignments')->orderByDesc('starts_at')->get()
+            ->withCount(['assignments' => fn ($query) => $query->visibleInRoster()])->orderByDesc('starts_at')->get()
             ->groupBy(fn (ExamSession $session): string => $session->schedule_group_id ?? 'class-'.$session->id)
             ->map(function ($members): ExamSession {
                 $representative = clone $members->first();
@@ -100,7 +100,7 @@ class ExamOperationsController extends Controller
         $examSession->load(['assessmentSubject.assessmentPeriod.academicYear',
             'assessmentSubject.subject', 'assessmentSubject.schoolClass', 'campus']);
         $examSession->assessmentSubject->loadCount('questions');
-        $roster = $examSession->assignments();
+        $roster = $examSession->assignments()->visibleInRoster();
         $statistics = [
             'total' => (clone $roster)->count(),
             'scheduled' => (clone $roster)->whereDoesntHave('attempt')->where('status', AssignmentStatus::Scheduled)->count(),
@@ -151,7 +151,7 @@ class ExamOperationsController extends Controller
             'assignment_ids.*' => ['integer'],
         ]);
 
-        $roster = $examSession->assignments();
+        $roster = $examSession->assignments()->visibleInRoster();
         $statistics = [
             'total' => (clone $roster)->count(),
             'scheduled' => (clone $roster)->whereDoesntHave('attempt')->where('status', AssignmentStatus::Scheduled)->count(),
@@ -161,7 +161,7 @@ class ExamOperationsController extends Controller
             'absent' => (clone $roster)->whereDoesntHave('attempt')->where('status', AssignmentStatus::Absent)->count(),
         ];
 
-        $participants = $examSession->assignments()
+        $participants = (clone $roster)
             ->whereIn('id', $validated['assignment_ids'])
             ->with(['attempt' => fn ($query) => $query->withCount('answers')])
             ->get()

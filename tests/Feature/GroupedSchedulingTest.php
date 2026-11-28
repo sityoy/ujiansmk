@@ -190,6 +190,44 @@ class GroupedSchedulingTest extends TestCase
         $this->assertDatabaseCount('exam_assignments', 3);
     }
 
+    public function test_regular_roster_follows_student_status_without_losing_exam_history(): void
+    {
+        [$components, $campus] = $this->makeComponents();
+        $this->post(route('scheduling.sessions.store'), $this->scheduleData($components[0], $campus))
+            ->assertSessionHasNoErrors();
+        $session = $components[0]->examSessions()->sole();
+        $original = $session->assignments()->sole();
+        $student = Student::query()->where('student_number', 'INACTIVE')->sole();
+        $attempt = ExamAttempt::create([
+            'exam_assignment_id' => $original->id, 'status' => AttemptStatus::Submitted,
+            'started_at' => now(), 'submitted_at' => now(), 'score' => 80, 'device_session_hash' => str_repeat('a', 64),
+        ]);
+        $activate = route('academic.students.toggle', $student);
+        $this->patch($activate, ['is_active' => '1', 'roster_revision' => 0])->assertSessionHasNoErrors();
+        $this->patch($activate, ['is_active' => '1', 'roster_revision' => 0])->assertSessionHasNoErrors();
+        $this->assertSame($session->id, $student->examAssignments()->sole()->exam_session_id);
+        $this->assertSame(2, $session->assignments()->visibleInRoster()->count());
+
+        $this->patch(route('academic.students.bulk-status'), [
+            'scope' => 'selected', 'is_active' => '0', 'roster_revision' => 0, 'inactive_reason' => 'Tidak mengikuti ujian.',
+            'student_ids' => [$student->id, $original->student_id],
+        ])->assertSessionHasNoErrors();
+        $this->assertFalse($student->examAssignments()->exists());
+        $this->assertModelExists($attempt);
+        $this->assertSame(0, $session->assignments()->visibleInRoster()->count());
+        $this->get(route('operations.sessions.show', $session))->assertOk()
+            ->assertViewHas('statistics', fn (array $statistics) => $statistics['total'] === 0);
+
+        // Deployment reconciles existing placements, and a repeated sync is safe.
+        $student->update(['is_active' => true]);
+        $migration = require database_path('migrations/2026_11_28_000200_sync_regular_exam_student_rosters.php');
+        $migration->up();
+        $this->artisan('exams:sync-student-roster')->assertSuccessful();
+        $this->assertSame($session->id, $student->examAssignments()->sole()->exam_session_id);
+        $this->assertSame(1, $session->assignments()->visibleInRoster()->count());
+        $this->assertSame('80.00', $attempt->fresh()->score);
+    }
+
     public function test_conflict_in_last_class_rolls_back_sessions_and_participants_in_all_classes(): void
     {
         [$components, $campus] = $this->makeComponents();

@@ -46,6 +46,13 @@ class ExamSession extends Model
             : self::query()->whereKey($this->id);
     }
 
+    public function scopeAcceptsRegularRoster(Builder $query): Builder
+    {
+        return $query->where('kind', SessionKind::Regular)
+            ->where('status', '!=', SessionStatus::Closed)
+            ->where('ends_at', '>', now());
+    }
+
     public function assessmentSubject(): BelongsTo
     {
         return $this->belongsTo(AssessmentSubject::class);

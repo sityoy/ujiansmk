@@ -64,7 +64,7 @@
                             @foreach ($sessions->sortBy('assessmentSubject.schoolClass.name', SORT_NATURAL) as $classSession)
                                 <tr class="border-t border-white/10">
                                     <td class="p-2 text-white">{{ $classSession->assessmentSubject->schoolClass->name }}<span class="block text-xs text-slate-500">{{ $classSession->room_name ?? 'Ruangan belum diisi' }}</span></td>
-                                    <td class="p-2">{{ $classSession->assignments_count }}</td>
+                                    <td class="p-2">{{ $classSession->participant_count }}</td>
                                     <td class="p-2 text-amber-300">{{ $classSession->pending_count }}</td>
                                     <td class="p-2 text-cyan-300">{{ $classSession->working_count }}</td>
                                     <td class="p-2 text-emerald-300">{{ $classSession->finished_count }}</td>
@@ -85,10 +85,7 @@
                 </details>
                 <div class="mt-4 flex flex-wrap justify-between gap-3">
                     @if ($session->kind->value === 'regular' && $session->status->value !== 'closed')
-                        <form method="POST" action="{{ route('scheduling.assign-class', [$session->assessmentSubject, $session]) }}">
-                            @csrf
-                            <button class="text-xs font-semibold text-emerald-300">Tempatkan siswa aktif semua rombel</button>
-                        </form>
+                        <p class="text-xs text-slate-400">Daftar peserta mengikuti status siswa di rombel secara otomatis.</p>
                     @endif
                     @if ($canDelete)
                         <form method="POST" action="{{ route('scheduling.sessions.destroy', $session) }}"

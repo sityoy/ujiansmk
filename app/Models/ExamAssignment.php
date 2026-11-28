@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Enums\AssignmentStatus;
+use App\Enums\SessionStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -24,6 +26,18 @@ class ExamAssignment extends Model
     public function assessmentSubject(): BelongsTo
     {
         return $this->belongsTo(AssessmentSubject::class);
+    }
+
+    public function scopeForActiveStudents(Builder $query): Builder
+    {
+        return $query->whereHas('student', fn (Builder $students) => $students->where('is_active', true));
+    }
+
+    public function scopeVisibleInRoster(Builder $query): Builder
+    {
+        return $query->where(fn (Builder $roster) => $roster->forActiveStudents()
+            ->orWhereHas('examSession', fn (Builder $sessions) => $sessions
+                ->where('status', SessionStatus::Closed)->orWhere('ends_at', '<=', now())));
     }
 
     public function student(): BelongsTo

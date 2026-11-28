@@ -10,6 +10,7 @@ use App\Models\Student;
 use App\Models\StudentExamRoom;
 use App\Models\Subject;
 use App\Models\User;
+use App\Services\Exams\ExamStudentRoster;
 use App\Services\Students\StudentDeletionService;
 use App\Services\Students\StudentExamRoomService;
 use App\Services\Students\StudentRosterRevision;
@@ -220,7 +221,7 @@ class AcademicDataController extends Controller
         return back()->with('status', 'Wali kelas berhasil diperbarui.');
     }
 
-    public function storeStudent(Request $request): RedirectResponse
+    public function storeStudent(Request $request, ExamStudentRoster $examRoster): RedirectResponse
     {
         $request->merge([
             'nisn' => $request->filled('nisn') ? trim((string) $request->input('nisn')) : null,
@@ -256,7 +257,7 @@ class AcademicDataController extends Controller
             return back()->withErrors(['card_uid' => 'UID kartu sudah digunakan siswa lain.'])->withInput();
         }
 
-        DB::transaction(function () use ($validated): void {
+        DB::transaction(function () use ($validated, $examRoster): void {
             $username = $validated['nisn'] ?: trim($validated['student_number']);
             $user = new User([
                 'name' => $validated['full_name'],
@@ -268,7 +269,7 @@ class AcademicDataController extends Controller
             $user->setStudentPassword($validated['password'] ?? trim($validated['student_number']));
             $user->save();
 
-            Student::create([
+            $student = Student::create([
                 'user_id' => $user->id,
                 'school_class_id' => $validated['school_class_id'],
                 'student_number' => trim($validated['student_number']),
@@ -277,7 +278,8 @@ class AcademicDataController extends Controller
                 'card_uid_hash' => $validated['card_uid'] ? hash('sha256', $validated['card_uid']) : null,
                 'is_active' => true,
             ]);
-        });
+            $examRoster->sync(collect([$student]));
+        }, 3);
 
         return back()->with('status', 'Data siswa berhasil ditambahkan.');
     }
@@ -362,7 +364,7 @@ class AcademicDataController extends Controller
         $reason = $validated['inactive_reason'] ?? null;
 
         $count = $roster->withCurrent(function () use ($validated, $active, $reason, $statuses): int {
-            $query = Student::query()->select(['id', 'user_id'])->lockForUpdate();
+            $query = Student::query()->select(['id', 'user_id', 'school_class_id'])->lockForUpdate();
             if ($validated['scope'] === 'selected') {
                 $students = $query->whereKey($validated['student_ids'])->orderBy('id')->get();
                 if ($students->count() !== count($validated['student_ids'])) {

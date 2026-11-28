@@ -80,7 +80,7 @@ class ScheduleRecapController extends Controller
                 : $query->where('status', $status))
             ->with(['assessmentSubject.assessmentPeriod.academicYear', 'assessmentSubject.schoolClass', 'assessmentSubject.subject', 'campus'])
             ->withCount(['assignments as participant_count' => fn (Builder $query) => $query
-                ->where('status', '!=', AssignmentStatus::Cancelled)])
+                ->visibleInRoster()->where('status', '!=', AssignmentStatus::Cancelled)])
             ->orderBy('starts_at')
             ->orderBy('id')
             ->get()

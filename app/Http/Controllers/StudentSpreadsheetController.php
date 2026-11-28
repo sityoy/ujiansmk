@@ -7,6 +7,7 @@ use App\Models\AssessmentPeriod;
 use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\User;
+use App\Services\Exams\ExamStudentRoster;
 use App\Services\Students\StudentExamRoomService;
 use App\Services\Students\StudentRosterRevision;
 use App\Services\Students\StudentSpreadsheetService;
@@ -62,6 +63,7 @@ class StudentSpreadsheetController extends Controller
         StudentSpreadsheetService $spreadsheet,
         StudentExamRoomService $rooms,
         StudentRosterRevision $roster,
+        ExamStudentRoster $examRoster,
     ): RedirectResponse {
         $revision = $roster->current();
         // Creating many student accounts requires one secure password hash per new user.
@@ -261,7 +263,8 @@ class StudentSpreadsheetController extends Controller
             ]);
         }
 
-        $roster->withCurrent(function () use ($preparedRows, $period, $rooms): void {
+        $roster->withCurrent(function () use ($preparedRows, $period, $rooms, $examRoster): void {
+            $imported = collect();
             foreach ($preparedRows as [$data, $schoolClass]) {
                 $student = Student::query()->where('student_number', $data['nis'])->lockForUpdate()->first() ?? new Student;
                 $user = $student->user;
@@ -301,6 +304,10 @@ class StudentSpreadsheetController extends Controller
                 if ($period && $data['update_room']) {
                     $rooms->assign($period, [$student->id], $data['ruangan']);
                 }
+                $imported->push($student);
+            }
+            foreach ($imported->chunk(100) as $chunk) {
+                $examRoster->sync($chunk);
             }
         }, $revision);
 
