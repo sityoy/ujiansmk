@@ -138,10 +138,12 @@ class ExamFlyerTest extends TestCase
         $regular = ExamSession::create([...$settings, 'kind' => 'regular', 'starts_at' => $this->wib('2026-09-03 07:30'), 'ends_at' => $this->wib('2026-09-03 08:45')]);
         $makeup = ExamSession::create([...$settings, 'kind' => 'makeup', 'starts_at' => $this->wib('2026-09-05 10:00'), 'ends_at' => $this->wib('2026-09-05 11:15')]);
         $draft = ExamSession::create([...$settings, 'status' => 'draft', 'kind' => 'regular', 'starts_at' => $this->wib('2026-09-08 09:00'), 'ends_at' => $this->wib('2026-09-08 10:15')]);
-        foreach ([['XI-2', 11, 'Lab 2'], ['X-1', 10, 'Lab 1']] as [$name, $grade, $room]) {
+        $branch = $campus->replicate()->fill(['name' => 'Gedung Cabang']);
+        $branch->save();
+        foreach ([['XI-2', 11, 'Lab 2', $campus], ['X-1', 10, 'Lab 1', $campus], ['XI-1', 11, 'Lab 3', $branch]] as [$name, $grade, $room, $location]) {
             $extraClass = SchoolClass::create(['academic_year_id' => $year->id, 'name' => $name, 'grade_level' => $grade]);
             $extra = AssessmentSubject::create(['assessment_period_id' => $period->id, 'school_class_id' => $extraClass->id, 'subject_id' => $subject->id]);
-            ExamSession::create([...$settings, 'assessment_subject_id' => $extra->id, 'room_name' => $room, 'kind' => 'regular',
+            ExamSession::create([...$settings, 'assessment_subject_id' => $extra->id, 'campus_id' => $location->id, 'room_name' => $room, 'kind' => 'regular',
                 'starts_at' => $regular->starts_at, 'ends_at' => $regular->ends_at]);
         }
         $this->actingAs(User::factory()->create(['role' => UserRole::Committee]));
@@ -151,16 +153,19 @@ class ExamFlyerTest extends TestCase
             ->assertSeeInOrder(['Jadwal per mapel dan rombel', 'Kelas 10', 'X-1', 'Jadwal per mapel dan rombel', 'Kelas 11', 'XI-2, XI-3'])
             ->assertViewHas('flyers', function ($flyers): bool {
                 $schedule = $flyers->sole()['schedule'];
-                $rooms = $schedule[11]->first()['rooms']->values();
+                $regular = $schedule[11]->where('kind', 'Reguler');
 
-                return $schedule[10]->count() === 1 && $schedule[11]->count() === 2
-                    && $rooms->pluck('rombel', 'name')->all() === ['Gedung Utama · Lab 1' => 'XI-3', 'Gedung Utama · Lab 2' => 'XI-2'];
-            })->assertSee('03/09/2026 07:30 – 08:45 WIB')
-            ->assertSee('05/09/2026 10:00 – 11:15 WIB')->assertDontSee('08/09/2026 09:00');
+                return $schedule[10]->count() === 1 && $schedule[11]->count() === 3
+                    && $regular->pluck('rombel', 'location')->all() === ['Gedung Utama' => 'XI-2, XI-3', 'Gedung Cabang' => 'XI-1'];
+            })->assertSee('<th scope="col">Lokasi</th>', false)
+            ->assertSee('Gedung Utama')->assertSee('Gedung Cabang')
+            ->assertSee('03/09/2026 07:30 – 08:45 WIB')
+            ->assertSee('05/09/2026 10:00 – 11:15 WIB')->assertDontSee('08/09/2026 09:00')
+            ->assertDontSee('Lab 1')->assertDontSee('Lab 2')->assertDontSee('Lab 3');
         $this->get(route('operations.index'))->assertOk()->assertSee(route('exam-flyers.core-session', $regular))
             ->assertSee('Cetak Flyer Asesmen')->assertSee('Pilih Flyer Simulasi Ujian')->assertDontSee('Cetak flyer peringatan');
         $this->get(route('exam-flyers.core-session', $makeup))->assertOk()
-            ->assertSeeInOrder(['Matematika', 'Kelas 11', 'Rombel', 'XI-3'])->assertSee('Susulan')->assertSee('75 menit')->assertSee('Gedung Utama · Lab 1')
+            ->assertSeeInOrder(['Matematika', 'Kelas 11', 'Rombel', 'XI-3'])->assertSee('Susulan')->assertSee('75 menit')->assertSeeInOrder(['Lokasi', 'Gedung Utama'])->assertDontSee('Lab 1')
             ->assertSee('05/09/2026 10:00 – 11:15 WIB')->assertDontSee('03/09/2026 07:30')
             ->assertSee('Tata tertib peserta')->assertSee('Peringatan pelanggaran');
         $this->get(route('exam-flyers.core-session', $draft))->assertOk()->assertSee('Draf jadwal');

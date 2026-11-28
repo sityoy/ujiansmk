@@ -38,7 +38,6 @@
         .report-sheet th.period { padding: 8px; background: #cbd5e1; font-size: 13px; }
         .num { text-align: center; }
         .location + .location { margin-top: 4px; }
-        .room { display: block; color: #475569; }
         .is-draft { color: #854d0e; font-weight: 700; }
         .note { margin-bottom: 0; color: #475569; }
         tr { break-inside: avoid; }
@@ -149,7 +148,7 @@
                         <tr>
                             <th scope="col" class="num">No.</th><th scope="col">Jadwal (WIB)</th>
                             <th scope="col">Mata pelajaran</th><th scope="col">Kelas</th><th scope="col">Jenis sesi</th>
-                            <th scope="col">Lokasi dan ruangan</th>
+                            <th scope="col">Lokasi</th>
                             <th scope="col" class="num">Peserta</th><th scope="col">Status</th>
                         </tr>
                     </thead>
@@ -165,7 +164,7 @@
                                 <td class="session-subject">{{ $row['subject'] }}</td><td>{{ $row['grade'] }}</td><td>{{ $row['kind'] }}</td>
                                 <td>
                                     @foreach ($row['locations'] as $location)
-                                        <div class="location">{{ $location['campus'] }}<span class="room">{{ $location['rooms'] }}</span></div>
+                                        <div class="location">{{ $location }}</div>
                                     @endforeach
                                 </td>
                                 <td class="num">{{ $row['participants'] }}</td>

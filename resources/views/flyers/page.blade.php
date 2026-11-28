@@ -40,7 +40,7 @@
                             <span class="schedule-period">{{ $schoolName }} · {{ $period->name }} · {{ $period->academicYear->name }}</span>
                         </th>
                     </tr>
-                    <tr><th scope="col">Mata pelajaran</th><th scope="col">Rombel</th><th scope="col">Jadwal (WIB)</th><th scope="col">Lokasi dan ruangan</th></tr>
+                    <tr><th scope="col">Mata pelajaran</th><th scope="col">Rombel</th><th scope="col">Jadwal (WIB)</th><th scope="col">Lokasi</th></tr>
                 </thead>
                 <tbody>
                     @foreach ($rows as $row)
@@ -51,14 +51,7 @@
                                 <strong class="session-time">{{ $row['time'] }}</strong>
                                 <span class="session-meta">{{ $row['kind'] }} · {{ $row['duration'] }} menit</span>
                             </td>
-                            <td>
-                                @foreach ($row['rooms'] as $room)
-                                    <div class="room">
-                                        {{ $room['name'] }}
-                                        @if ($row['rooms']->count() > 1)<span class="session-meta">{{ $room['rombel'] }}</span>@endif
-                                    </div>
-                                @endforeach
-                            </td>
+                            <td>{{ $row['location'] }}</td>
                         </tr>
                     @endforeach
                 </tbody>

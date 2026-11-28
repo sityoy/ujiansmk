@@ -120,8 +120,9 @@ class SchedulingManagementTest extends TestCase
         }
 
         $this->actingAs($committee)->get(route('scheduling.recap'))->assertOk()
-            ->assertSeeInOrder(['Lab 1', 'Lab Rombel Lain', 'Lab 2'])
-            ->assertSee('Rekap memuat jadwal draf.');
+            ->assertViewHas('sessionCount', 3)
+            ->assertSee('Rekap memuat jadwal draf.')
+            ->assertDontSee('Lab 1')->assertDontSee('Lab Rombel Lain')->assertDontSee('Lab 2');
 
         $this->get(route('scheduling.recap', [
             'session_period_id' => $component->assessment_period_id,
@@ -132,14 +133,16 @@ class SchedulingManagementTest extends TestCase
             'session_page' => 20,
         ]))->assertOk()
             ->assertViewHas('groups', fn ($groups) => $groups->first()['rows']->sole()['participants'] === 1)
-            ->assertViewHas('shareText', fn (string $text) => str_contains($text, '23:30 – 13/09/2026 01:00 WIB'))
+            ->assertViewHas('shareText', fn (string $text) => str_contains($text, '23:30 – 13/09/2026 01:00 WIB')
+                && str_contains($text, 'Kampus Utama') && ! str_contains($text, 'Lab 2'))
             ->assertSeeInOrder(['Jadwal (WIB)', 'Sabtu, 12 September 2026', '23:30 – 13/09/2026 01:00', '90 menit', 'Kampus Utama'])
             ->assertSee('A4 lanskap (297 × 210 mm)')
             ->assertSee('data-print-content data-print-table-pages', false)
             ->assertSee('data-paper-width="297"', false)
             ->assertSee('data-paper-height="210"', false)
-            ->assertSee('Lab 2')
+            ->assertSee('<th scope="col">Lokasi</th>', false)
             ->assertSee('Unduh gambar PNG')
+            ->assertDontSee('Lab 2')
             ->assertDontSee('Rekap memuat jadwal draf.')
             ->assertDontSee('Lab 1')
             ->assertDontSee('Lab Rombel Lain')
@@ -162,6 +165,8 @@ class SchedulingManagementTest extends TestCase
             'room_name' => 'Lab Jadwal Berikutnya',
         ]);
 
+        $branch = $regular->campus->replicate()->fill(['name' => 'Kampus Timur']);
+        $branch->save();
         $sessions = collect([$regular]);
         foreach ([
             ['X AK 2', 10, 'Lab A'],
@@ -175,6 +180,7 @@ class SchedulingManagementTest extends TestCase
             $classComponent->save();
             $session = $regular->replicate()->fill([
                 'assessment_subject_id' => $classComponent->id,
+                'campus_id' => $name === 'X AK 3' ? $branch->id : $regular->campus_id,
                 'room_name' => $room,
             ]);
             $session->save();
@@ -213,14 +219,13 @@ class SchedulingManagementTest extends TestCase
                     $row = $groups->sole()['rows']->first();
 
                     return $row['grade'] === 'Kelas X / 10'
-                        && $row['locations']->sole()['rooms'] === 'Lab A, Lab B'
+                        && $row['locations']->all() === ['Kampus Timur', 'Kampus Utama']
                         && $row['participants'] === 3;
                 })
                 ->assertViewHas('shareText', fn (string $text) => substr_count($text, 'Kelas X / 10') === 2
-                    && str_contains($text, 'Lab A, Lab B') && ! str_contains($text, 'Kelas XI / 11'))
-                ->assertSee('Lab Jadwal Berikutnya')
-                ->assertDontSee('Lab XI')
-                ->assertDontSee('Lab XII');
+                    && str_contains($text, 'Kampus Timur') && ! str_contains($text, 'Kelas XI / 11'))
+                ->assertSee('Kampus Utama')->assertSee('Kampus Timur')
+                ->assertDontSee('Lab Jadwal Berikutnya')->assertDontSee('Lab A')->assertDontSee('Lab B');
         }
     }
 
@@ -246,10 +251,10 @@ class SchedulingManagementTest extends TestCase
             ->assertViewHas('sessionCount', 2)
             ->assertViewHas('filename', 'rekap-jadwal-ujian-senin')
             ->assertViewHas('shareText', fn (string $text) => str_contains($text, '00:30 – 02:00 WIB')
-                && str_contains($text, 'Lab Senin Dua') && ! str_contains($text, 'Lab Selasa'))
+                && str_contains($text, '08:00 – 10:00 WIB') && ! str_contains($text, 'Lab Senin Dua'))
             ->assertSee('Hari Senin')
-            ->assertSeeInOrder(['Senin, 7 September 2026', 'Lab Senin Satu', 'Senin, 14 September 2026', 'Lab Senin Dua'])
-            ->assertDontSee('Lab Selasa');
+            ->assertSeeInOrder(['Senin, 7 September 2026', '00:30 – 02:00', 'Senin, 14 September 2026', '08:00 – 10:00'])
+            ->assertDontSee('Lab Selasa')->assertDontSee('Lab Senin Satu')->assertDontSee('Lab Senin Dua');
 
         $this->get(route('scheduling.recap', ['session_weekday' => 3]))
             ->assertOk()

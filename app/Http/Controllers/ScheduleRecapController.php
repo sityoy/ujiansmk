@@ -119,7 +119,7 @@ class ScheduleRecapController extends Controller
                 foreach ($dateRows as $row) {
                     $shareLines[] = "• {$row['time']} WIB · {$row['subject']} · {$row['grade']} · {$row['kind']} ({$row['status']}) · {$row['duration']} menit";
                     foreach ($row['locations'] as $location) {
-                        $shareLines[] = "  {$location['campus']} · {$location['rooms']}";
+                        $shareLines[] = "  {$location}";
                     }
                 }
             }
@@ -191,11 +191,7 @@ class ScheduleRecapController extends Controller
             'kind' => self::KINDS[$session->kind->value],
             'status' => self::STATUSES[$session->status->value],
             'draft' => $session->status === SessionStatus::Draft,
-            'locations' => $sessions->groupBy('campus_id')->map(fn (Collection $campusSessions) => [
-                'campus' => $campusSessions->first()->campus->name,
-                'rooms' => $campusSessions->map(fn (ExamSession $item) => filled($item->room_name)
-                    ? $item->room_name : 'Ruangan belum ditetapkan')->unique()->sort(SORT_NATURAL)->implode(', '),
-            ])->sortBy('campus', SORT_NATURAL)->values(),
+            'locations' => $sessions->pluck('campus.name')->unique()->sort(SORT_NATURAL | SORT_FLAG_CASE)->values(),
             'duration' => $session->duration_minutes,
             'participants' => $sessions->sum('participant_count'),
         ];

@@ -33,7 +33,7 @@ class ExamFlyerController extends Controller
             'subtitle' => 'UJIAN BERBASIS KOMPUTER', 'entryUrl' => route('login'), 'code' => null,
             'details' => [
                 ['Pelaksanaan', $period->starts_on->translatedFormat('d F Y').' – '.$period->ends_on->translatedFormat('d F Y')],
-                ['Jadwal dan ruangan', $sessions->isEmpty() ? 'Jadwal mapel belum diterbitkan.' : 'Lihat lampiran jadwal. Ikuti rombel dan ruangan pada kartu peserta.'],
+                ['Jadwal', $sessions->isEmpty() ? 'Jadwal mapel belum diterbitkan.' : 'Lihat jadwal sesuai kelas dan rombel pada lampiran.'],
             ],
             'schedule' => $this->scheduleByGrade($sessions),
         ]);
@@ -55,7 +55,7 @@ class ExamFlyerController extends Controller
                 ['Rombel', $component->schoolClass->name],
                 ['Jadwal sesi', $this->window($examSession->starts_at, $examSession->ends_at)],
                 ['Durasi', $examSession->duration_minutes.' menit'],
-                ['Lokasi dan ruangan', $this->sessionLocation($examSession)],
+                ['Lokasi', $examSession->campus->name],
             ],
             'notice' => $examSession->status === SessionStatus::Draft ? 'Draf jadwal. Tunggu jadwal resmi dari panitia.' : null,
         ]);
@@ -118,6 +118,7 @@ class ExamFlyerController extends Controller
                     $session->ends_at->getTimestamp(),
                     $session->kind->value,
                     $session->duration_minutes,
+                    $session->campus_id,
                 ]))
                 ->map($this->scheduleRow(...)));
     }
@@ -125,11 +126,6 @@ class ExamFlyerController extends Controller
     private function scheduleRow(Collection $sessions): array
     {
         $session = $sessions->first();
-        $rooms = $sessions->groupBy(fn (ExamSession $item) => $item->campus_id.'|'.$item->room_name)
-            ->map(fn (Collection $location) => [
-                'name' => $this->sessionLocation($location->first()),
-                'rombel' => $this->rombelNames($location),
-            ]);
 
         return [
             'subject' => $session->assessmentSubject->subject->name,
@@ -137,7 +133,7 @@ class ExamFlyerController extends Controller
             'time' => $this->window($session->starts_at, $session->ends_at),
             'duration' => $session->duration_minutes,
             'kind' => $this->sessionKind($session),
-            'rooms' => $rooms,
+            'location' => $session->campus->name,
         ];
     }
 
@@ -204,10 +200,5 @@ class ExamFlyerController extends Controller
     private function sessionKind(ExamSession $session): string
     {
         return $session->kind === SessionKind::Makeup ? 'Susulan' : 'Reguler';
-    }
-
-    private function sessionLocation(ExamSession $session): string
-    {
-        return $session->campus->name.' · '.($session->room_name ?: 'Ruangan belum ditetapkan');
     }
 }

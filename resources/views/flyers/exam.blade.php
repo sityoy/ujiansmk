@@ -53,7 +53,6 @@
         .schedule tbody tr:nth-child(even) { background: #f1f7f3; }
         .session-time { font-variant-numeric: tabular-nums; }
         .session-meta { color: #445e50; margin-top: 3px; }
-        .room + .room { margin-top: 6px; padding-top: 6px; border-top: 1px solid #bed2c6; }
         @media screen and (max-width: 600px) {
             .flyer { margin: 0 auto 12px; padding: 14px; }
             h1 { font-size: 26px; }
