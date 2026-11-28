@@ -17,7 +17,7 @@
     ]
   },
   "resources/css/app.css": {
-    "file": "assets/app-BH46UvCx.css",
+    "file": "assets/app-Bh4aIHlo.css",
     "name": "app",
     "names": [
       "app.css"
@@ -38,7 +38,7 @@
     ]
   },
   "resources/js/print-document.js": {
-    "file": "assets/print-document-D4UCYMj2.js",
+    "file": "assets/print-document-mKExxfdk.js",
     "name": "print-document",
     "src": "resources/js/print-document.js",
     "isDynamicEntry": true,
@@ -52,7 +52,7 @@
     ]
   },
   "resources/js/question-bank-report.js": {
-    "file": "assets/question-bank-report-Dokq6Mv-.js",
+    "file": "assets/question-bank-report-sG1TntBV.js",
     "name": "question-bank-report",
     "src": "resources/js/question-bank-report.js",
     "isEntry": true,
