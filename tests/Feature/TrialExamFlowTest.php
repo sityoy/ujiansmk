@@ -1555,6 +1555,66 @@ class TrialExamFlowTest extends TestCase
         $this->assertNull($third->security_locked_at);
     }
 
+    public function test_removing_a_used_trial_question_preserves_existing_attempts_and_hides_it_from_new_ones(): void
+    {
+        [$trial, $pg] = $this->makeTrial();
+        $bank = $trial->questionBank;
+        $student = Student::query()->where('nisn', '1234567890')->firstOrFail();
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $essay = $bank->questions()->create([
+            'question_type' => 'essay', 'question_text' => 'Uraikan sejarah proklamasi.', 'points' => 5, 'position' => 2,
+        ]);
+        Storage::fake('public');
+        Storage::disk('public')->put('trial-questions/peta.png', 'test attachment');
+        $essay->update(['question_image_path' => 'trial-questions/peta.png']);
+        $payload = ['access_code' => $trial->access_code];
+
+        $this->actingAs($student->user)->startTrial($trial, $payload)->assertRedirect();
+        $existing = $trial->currentAttempts()->sole();
+        $this->putJson(route('tryout.answer', [$trial, $existing, $essay]), ['answer' => 'Jawaban awal'])->assertOk();
+
+        $bankPage = route('trial-question-banks.questions.index', $bank);
+        $remove = route('trial-question-banks.questions.destroy', [$bank, $essay]);
+        $this->actingAs($committee)->get($bankPage)->assertOk()->assertSee('Hapus untuk peserta baru');
+        $this->from($bankPage)->delete($remove)->assertRedirect($bankPage)->assertSessionHasNoErrors();
+        $this->from($bankPage)->delete($remove)->assertSessionHasNoErrors();
+        $this->get($bankPage)->assertOk()->assertDontSee($essay->question_text)->assertSee($pg->question_text);
+        $this->get(route('trial-question-banks.questions.preview', $bank))->assertOk()->assertDontSee($essay->question_text);
+        $this->assertSame($existing->id, $essay->fresh()->retired_after_attempt_id);
+        $this->assertSame('Jawaban awal', $existing->answers()->sole()->answer);
+        Storage::disk('public')->assertExists('trial-questions/peta.png');
+
+        $newUser = User::factory()->create(['role' => UserRole::Student, 'is_active' => true, 'must_change_password' => false]);
+        $newStudent = Student::create([
+            'user_id' => $newUser->id, 'school_class_id' => $student->school_class_id,
+            'student_number' => '1234', 'full_name' => 'Peserta Baru', 'is_active' => true,
+        ]);
+        $this->actingAs($newUser)->startTrial($trial, $payload)->assertRedirect();
+        $newAttempt = $trial->currentAttempts()->where('student_id', $newStudent->id)->sole();
+        $this->assertSame(1, $newAttempt->total_questions);
+        $this->get(route('tryout.show', [$trial, $newAttempt]))->assertOk()
+            ->assertDontSee($essay->question_text)->assertSee($pg->question_text);
+        $this->putJson(route('tryout.answer', [$trial, $newAttempt, $essay]), ['answer' => 'Jawaban baru'])->assertNotFound();
+        $this->post(route('tryout.submit', [$trial, $newAttempt]), ['answers' => [$pg->id => 'A']])
+            ->assertRedirect(route('tryout.result', [$trial, $newAttempt]));
+        $this->assertSame(GradingStatus::Automatic, $newAttempt->fresh()->grading_status);
+
+        $this->actingAs($student->user)->get(route('tryout.show', [$trial, $existing]))->assertOk()
+            ->assertSee($essay->question_text)->assertSee('Jawaban awal');
+        $this->putJson(route('tryout.answer', [$trial, $existing, $essay]), ['answer' => 'Jawaban akhir'])->assertOk();
+        $this->post(route('tryout.submit', [$trial, $existing]), ['answers' => [$pg->id => 'A']])
+            ->assertRedirect(route('tryout.result', [$trial, $existing]));
+        $this->assertSame(2, $existing->fresh()->total_questions);
+        $this->assertSame(GradingStatus::Pending, $existing->fresh()->grading_status);
+
+        $this->actingAs($committee)->get(route('tryouts.attempts.grade.edit', [$trial, $existing]))->assertOk()
+            ->assertSee($essay->question_text)->assertSee('Jawaban akhir');
+        $this->put(route('tryouts.attempts.grade.update', [$trial, $existing]), ['scores' => [$essay->id => 3]])
+            ->assertSessionHasNoErrors();
+        $this->assertSame(GradingStatus::Graded, $existing->fresh()->grading_status);
+        $this->assertSame('3.00', $existing->answers()->where('trial_question_id', $essay->id)->sole()->points_awarded);
+    }
+
     private function startTrial(TrialExam $trial, array $credentials): TestResponse
     {
         $this->postJson(route('tryout.attendance', $trial), [

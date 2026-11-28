@@ -36,6 +36,11 @@ class TrialQuestionBank extends Model
 
     public function questions(): HasMany
     {
+        return $this->allQuestions()->whereNull('retired_after_attempt_id');
+    }
+
+    public function allQuestions(): HasMany
+    {
         return $this->hasMany(TrialQuestion::class)->orderBy('position');
     }
 

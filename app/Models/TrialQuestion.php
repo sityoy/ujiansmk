@@ -20,6 +20,7 @@ class TrialQuestion extends Model
         return [
             'question_type' => ExamQuestionType::class,
             'question_context_id' => 'integer',
+            'retired_after_attempt_id' => 'integer',
             'options' => 'array',
             'option_file_paths' => 'array',
             'option_file_captions' => 'array',

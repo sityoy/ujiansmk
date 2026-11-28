@@ -7,6 +7,7 @@ use App\Enums\UserRole;
 use App\Models\AssessmentSubject;
 use App\Models\SchoolProfile;
 use App\Models\Subject;
+use App\Models\TrialAttempt;
 use App\Models\TrialQuestion;
 use App\Models\TrialQuestionBank;
 use App\Models\User;
@@ -163,6 +164,7 @@ class TrialQuestionBankController extends Controller
             'questionCount' => $trialQuestionBank->questions()->count(),
             'totalPoints' => (float) $trialQuestionBank->questions()->sum('points'),
             'isLocked' => $lockedReason !== null,
+            'canDeleteQuestion' => $this->lockedReason($trialQuestionBank, allowAttemptHistory: true) === null,
             'lockedReason' => $lockedReason,
             'teachers' => $request->user()->role !== UserRole::Teacher
                 ? User::query()->where('role', UserRole::Teacher)->whereIn('id', $this->eligibleTeachers($trialQuestionBank))
@@ -173,7 +175,7 @@ class TrialQuestionBankController extends Controller
     public function editQuestion(Request $request, TrialQuestionBank $trialQuestionBank, TrialQuestion $question): View
     {
         $this->authorizeBank($request, $trialQuestionBank);
-        abort_unless($question->trial_question_bank_id === $trialQuestionBank->id, 404);
+        abort_unless($question->trial_question_bank_id === $trialQuestionBank->id && $question->retired_after_attempt_id === null, 404);
         abort_if($reason = $this->lockedReason($trialQuestionBank), 403, $reason);
 
         return view('questions.edit', [
@@ -266,7 +268,7 @@ class TrialQuestionBankController extends Controller
         [$question, $count] = $import->confirm($request, 'trial:'.$trialQuestionBank->id, 'trial-questions',
             function (array $questions) use ($request, $trialQuestionBank): array {
                 $this->assertEditable($request, $trialQuestionBank);
-                $position = (int) $trialQuestionBank->questions()->max('position') + 1;
+                $position = (int) $trialQuestionBank->allQuestions()->reorder()->max('position') + 1;
                 $next = $position;
                 foreach ($questions as $attributes) {
                     $trialQuestionBank->questions()->create($attributes + ['position' => $next++]);
@@ -286,13 +288,17 @@ class TrialQuestionBankController extends Controller
         $grade = $trialQuestionBank->grade_level;
         $withKey = $request->boolean('kunci');
         $returnPage = ['per_page' => TablePagination::selected(), 'page' => max(1, $request->integer('page', 1))];
+        $questions = $trialQuestionBank->questions()->with('context')->get();
+        foreach ($questions as $index => $question) {
+            $question->position = $index + 1;
+        }
 
         return response()->view('questions.print', [
             'school' => SchoolProfile::first(),
             'bankType' => 'Ujian Uji Coba',
             'title' => $trialQuestionBank->name,
             'details' => [$subject, 'Kelas '.$grade],
-            'questions' => $trialQuestionBank->questions()->with('context')->get(),
+            'questions' => $questions,
             'withKey' => $withKey,
             'trial' => true,
             'filename' => 'bank-soal-uji-coba-'.Str::slug($trialQuestionBank->name).($withKey ? '-kunci' : ''),
@@ -348,9 +354,9 @@ class TrialQuestionBankController extends Controller
 
         $question = $this->attachments->save(function () use ($request, $trialQuestionBank, $validated): TrialQuestion {
             $this->assertEditable($request, $trialQuestionBank);
-            $scope = TrialQuestion::query()->where('trial_question_bank_id', $trialQuestionBank->id);
+            $scope = $trialQuestionBank->questions()->getQuery();
             $contextId = $this->contexts->resolve($validated, $scope, $this->attachments);
-            $position = (int) $scope->lockForUpdate()->max('position') + 1;
+            $position = (int) $trialQuestionBank->allQuestions()->reorder()->max('position') + 1;
             return $trialQuestionBank->questions()->create([
                 ...$this->attributes($validated),
                 'question_context_id' => $contextId,
@@ -375,7 +381,7 @@ class TrialQuestionBankController extends Controller
         $this->attachments->save(function () use ($request, $trialQuestionBank, $question, $validated): void {
             $this->assertEditable($request, $trialQuestionBank);
             $question = $trialQuestionBank->questions()->findOrFail($question->id);
-            $scope = TrialQuestion::query()->where('trial_question_bank_id', $trialQuestionBank->id);
+            $scope = $trialQuestionBank->questions()->getQuery();
             $previousContext = $question->question_context_id;
             $attributes = $this->attributes($validated);
             $attributes['question_context_id'] = $this->contexts->resolve($validated, $scope, $this->attachments, $previousContext);
@@ -403,33 +409,49 @@ class TrialQuestionBankController extends Controller
     ): RedirectResponse {
         $this->authorizeBank($request, $trialQuestionBank);
         abort_unless($question->trial_question_bank_id === $trialQuestionBank->id, 404);
-        if ($question->answers()->exists()) {
-            throw ValidationException::withMessages([
-                'question' => 'Soal tidak dapat dihapus karena sudah memiliki jawaban peserta.',
-            ]);
-        }
 
         try {
-            DB::transaction(function () use ($request, $trialQuestionBank, $question): void {
-                $this->assertEditable($request, $trialQuestionBank);
-                $question = $trialQuestionBank->questions()->findOrFail($question->id);
+            $retired = DB::transaction(function () use ($request, $trialQuestionBank, $question): bool {
+                $bank = $this->assertEditable($request, $trialQuestionBank, allowAttemptHistory: true);
+                $question = $bank->allQuestions()->findOrFail($question->id);
+                if ($question->retired_after_attempt_id !== null) {
+                    return true;
+                }
+
+                // Starts take the same bank lock. Later attempts receive larger IDs and omit this question.
+                $lastAttemptId = TrialAttempt::query()->whereIn('trial_exam_id', $bank->trialExams()->select('id'))->max('id');
+                if ($lastAttemptId !== null) {
+                    $question->forceFill(['retired_after_attempt_id' => $lastAttemptId])->save();
+
+                    return true;
+                }
+
+                if ($question->answers()->exists()) {
+                    throw ValidationException::withMessages(['question' => 'Soal masih terhubung ke jawaban dari sesi lain.']);
+                }
                 $imagePath = $question->question_image_path;
                 $optionPaths = $question->option_file_paths ?? [];
                 $question->delete();
                 $this->contexts->release($question->question_context_id, $this->attachments);
                 $this->attachments->cleanAfterCommit([$imagePath, ...array_values($optionPaths)]);
-                $trialQuestionBank->questions()->lockForUpdate()->get()
-                    ->each(function (TrialQuestion $remaining, int $index): void {
-                        if ((int) $remaining->position !== $index + 1) {
-                            $remaining->update(['position' => $index + 1]);
-                        }
-                    });
-            });
+                if ($bank->allQuestions()->whereNotNull('retired_after_attempt_id')->doesntExist()) {
+                    $bank->questions()->lockForUpdate()->get()
+                        ->each(function (TrialQuestion $remaining, int $index): void {
+                            if ((int) $remaining->position !== $index + 1) {
+                                $remaining->update(['position' => $index + 1]);
+                            }
+                        });
+                }
+
+                return false;
+            }, 3);
         } catch (QueryException) {
             return back()->withErrors(['question' => 'Soal tidak dapat dihapus karena sudah digunakan.']);
         }
 
-        return back()->with('status', 'Soal dihapus dan nomor soal telah dirapikan.');
+        return back()->with('status', $retired
+            ? 'Soal dihapus dari bank aktif untuk peserta baru. Riwayat jawaban tetap tersimpan.'
+            : 'Soal dihapus dan nomor soal telah dirapikan.');
     }
 
     public function importPack(Request $request, TrialQuestionPack $pack): RedirectResponse
@@ -516,13 +538,13 @@ class TrialQuestionBankController extends Controller
         }
     }
 
-    private function lockedReason(TrialQuestionBank $bank): ?string
+    private function lockedReason(TrialQuestionBank $bank, bool $allowAttemptHistory = false): ?string
     {
         if ($bank->archived_at !== null) {
             return 'Bank sudah diarsipkan. Pulihkan sebelum mengelola soal.';
         }
-        if ($bank->trialExams()->whereHas('attempts')->exists()) {
-            return 'Bank terkunci karena sudah ada peserta yang memulai uji coba.';
+        if (! $allowAttemptHistory && $bank->trialExams()->whereHas('attempts')->exists()) {
+            return 'Penambahan dan pengeditan soal dikunci karena sudah ada peserta yang memulai uji coba.';
         }
         if ($bank->question_deadline_at?->lte(now())) {
             return 'Batas pembuatan soal sudah lewat. Hubungi Panitia atau Super Admin untuk mengubah batas bank ini.';
@@ -531,12 +553,14 @@ class TrialQuestionBankController extends Controller
         return null;
     }
 
-    private function assertEditable(Request $request, TrialQuestionBank $bank): void
+    private function assertEditable(Request $request, TrialQuestionBank $bank, bool $allowAttemptHistory = false): TrialQuestionBank
     {
         $bank = TrialQuestionBank::query()->lockForUpdate()->findOrFail($bank->id);
         $this->authorizeBank($request, $bank);
-        if ($reason = $this->lockedReason($bank)) {
+        if ($reason = $this->lockedReason($bank, $allowAttemptHistory)) {
             throw ValidationException::withMessages(['question' => $reason]);
         }
+
+        return $bank;
     }
 }

@@ -248,7 +248,7 @@ class TrialExamPublicController extends Controller
         }
 
         $trialAttempt->load('answers');
-        $questions = $this->questions($trialExam);
+        $questions = $trialAttempt->setRelation('trialExam', $trialExam)->questionQuery()->with('context')->get();
         $order = $request->session()->get($this->orderKey($trialAttempt), []);
 
         return view('tryouts.show', [
@@ -346,11 +346,6 @@ class TrialExamPublicController extends Controller
         abort_unless($trialAttempt->status === 'submitted', 404);
 
         return view('tryouts.result', compact('trialExam', 'trialAttempt'));
-    }
-
-    private function questions(TrialExam $trialExam)
-    {
-        return $trialExam->questionBank->questions()->with('context')->get();
     }
 
     private function authorizeAttempt(TrialExam $trialExam, TrialAttempt $trialAttempt): void

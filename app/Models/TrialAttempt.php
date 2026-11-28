@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\GradingStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -50,6 +51,13 @@ class TrialAttempt extends Model
     public function answers(): HasMany
     {
         return $this->hasMany(TrialAnswer::class);
+    }
+
+    public function questionQuery(): Builder
+    {
+        return $this->trialExam->questionBank->allQuestions()->getQuery()->where(fn (Builder $query) => $query
+            ->whereNull('retired_after_attempt_id')
+            ->orWhere('retired_after_attempt_id', '>=', $this->id));
     }
 
     public function securityIncidents(): HasMany

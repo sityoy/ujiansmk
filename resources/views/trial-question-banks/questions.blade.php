@@ -58,6 +58,9 @@
         </div>
         <x-question-bank-format :types="\App\Enums\ExamQuestionType::cases()" trial />
         @if ($isLocked)<p class="mt-3 text-sm text-amber-300">{{ $lockedReason }}</p>@endif
+        @if ($isLocked && $canDeleteQuestion)
+            <p class="mt-2 text-sm text-slate-300">Soal yang dihapus hanya dilewati peserta yang belum memulai. Jawaban dan nilai peserta yang sudah mulai tetap tersimpan.</p>
+        @endif
     </section>
 
     <div @class(['mt-6 grid items-start gap-6', 'xl:grid-cols-[420px_minmax(0,1fr)]' => ! $isLocked])>
@@ -76,18 +79,20 @@
             @forelse ($questions as $question)
                 <article id="bank-question-{{ $question->id }}" class="scroll-mt-24 rounded-2xl border border-white/10 bg-white/[0.035] p-5 target:border-cyan-400/60">
                     <div class="flex flex-wrap items-center justify-between gap-3">
-                        <p class="text-sm font-semibold text-cyan-300">Soal {{ $question->position }} · {{ $question->question_type->label() }} · {{ (float) $question->points }} poin</p>
+                        <p class="text-sm font-semibold text-cyan-300">Soal {{ $questions->firstItem() + $loop->index }} · {{ $question->question_type->label() }} · {{ (float) $question->points }} poin</p>
                         <div class="flex flex-wrap items-center gap-2">
                             <a href="{{ route('trial-question-banks.questions.preview', [$bank, 'soal' => $question->id, 'per_page' => $perPage, 'page' => $questions->currentPage()]) }}"
                                 class="rounded-lg border border-white/10 px-3 py-2 text-sm font-semibold text-slate-300">Lihat sebagai peserta</a>
                             @unless ($isLocked)
                                 <a href="{{ route('trial-question-banks.questions.edit', [$bank, $question, 'per_page' => $perPage]) }}"
                                     class="rounded-lg border border-cyan-400/35 bg-cyan-400/10 px-3 py-2 text-sm font-semibold text-cyan-200">Edit soal</a>
-                                <form method="POST" action="{{ route('trial-question-banks.questions.destroy', [$bank, $question]) }}" onsubmit="return confirm('Hapus soal ini?')">
-                                    @csrf @method('DELETE')
-                                    <button class="px-3 py-2 text-sm text-rose-300">Hapus</button>
-                                </form>
                             @endunless
+                            @if ($canDeleteQuestion)
+                                <form method="POST" action="{{ route('trial-question-banks.questions.destroy', [$bank, $question]) }}" onsubmit="return confirm('{{ $isLocked ? 'Hapus soal dari bank aktif untuk peserta baru?' : 'Hapus soal ini?' }}')">
+                                    @csrf @method('DELETE')
+                                    <button class="px-3 py-2 text-sm text-rose-300">{{ $isLocked ? 'Hapus untuk peserta baru' : 'Hapus' }}</button>
+                                </form>
+                            @endif
                         </div>
                     </div>
                     @if (session('saved_question_id') === $question->id)

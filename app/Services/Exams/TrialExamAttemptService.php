@@ -61,7 +61,8 @@ class TrialExamAttemptService
             $this->assertWritable($attempt);
 
             abort_unless(
-                $question->trial_question_bank_id === $attempt->trialExam->trial_question_bank_id,
+                $question->trial_question_bank_id === $attempt->trialExam->trial_question_bank_id
+                    && ($question->retired_after_attempt_id === null || $attempt->id <= $question->retired_after_attempt_id),
                 404
             );
 
@@ -111,7 +112,7 @@ class TrialExamAttemptService
                 throw ValidationException::withMessages(['security' => 'Ujian terkunci. Hubungi panitia untuk pemeriksaan.']);
             }
 
-            $questions = $attempt->trialExam->questionBank->questions()->orderBy('position')->get();
+            $questions = $attempt->questionQuery()->get();
             $saved = $attempt->answers()->get()->keyBy('trial_question_id');
             $pgCount = 0;
             $correctAnswers = 0;
@@ -173,7 +174,7 @@ class TrialExamAttemptService
     {
         DB::transaction(function () use ($exam, $attempt, $scores): void {
             $attempt = $exam->currentAttempts()->lockForUpdate()->where('status', 'submitted')->findOrFail($attempt->id);
-            $questions = $exam->questionBank->questions()->get();
+            $questions = $attempt->setRelation('trialExam', $exam)->questionQuery()->get();
             $manualQuestions = $questions->filter(fn (TrialQuestion $question) => $question->question_type->requiresManualGrading());
             abort_if($manualQuestions->isEmpty(), 404);
 

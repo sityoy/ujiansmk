@@ -106,7 +106,7 @@ class TrialQuestionPack
         if ($bank->source_pack_key !== $set['id']) {
             throw ValidationException::withMessages(['pack_key' => 'Nama bank ini sudah dipakai bank buatan pengelola. Ubah nama bank tersebut sebelum menambahkan paket.']);
         }
-        if ($bank->archived_at || $bank->questions()->exists() || $bank->trialExams()->whereHas('attempts')->exists()) {
+        if ($bank->archived_at || $bank->allQuestions()->exists() || $bank->trialExams()->whereHas('attempts')->exists()) {
             return ['bank' => $bank, 'created' => false];
         }
         foreach ($set['questions'] as $index => $question) {
