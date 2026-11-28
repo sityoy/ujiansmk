@@ -17,6 +17,7 @@ use App\Services\Exams\QuestionPdfImport;
 use App\Services\Exams\QuestionAttachments;
 use App\Services\Exams\QuestionContextManager;
 use App\Services\Exams\QuestionText;
+use App\Services\Exams\StudentQuestionSections;
 use App\Services\Students\StudentSpreadsheetService;
 use App\Support\QuestionBankNavigation;
 use App\Support\TablePagination;
@@ -237,15 +238,24 @@ class QuestionBankController extends Controller
         $assessmentSubject->load(['subject', 'assessmentPeriod', 'schoolClass']);
         $page = ['per_page' => TablePagination::selected(), 'page' => max(1, $request->integer('page', 1))];
         $bank = [$assessmentSubject, ...$page];
-        $questions = $assessmentSubject->questions()->with('context')->orderBy('position');
-        $focusedQuestion = $request->filled('soal') ? $questions->findOrFail($request->integer('soal')) : null;
+        $questions = $assessmentSubject->questions();
+        $focusedQuestion = $request->filled('soal')
+            ? (clone $questions)->with('context')->findOrFail($request->integer('soal'))
+            : null;
+        $focusedNumber = $focusedQuestion
+            ? StudentQuestionSections::numbersFor(
+                $questions->get(['id', 'question_type', 'question_context_id']),
+                [$focusedQuestion->id],
+            )[0] ?? $focusedQuestion->position
+            : null;
 
         return response()->view('questions.preview', [
-            'subjectName' => $assessmentSubject->subject->name,
+            'subject' => $assessmentSubject->subject,
             'examName' => $assessmentSubject->assessmentPeriod->name,
             'gradeLevel' => $assessmentSubject->schoolClass->grade_level,
-            'questions' => $focusedQuestion ? collect([$focusedQuestion]) : $questions->get(),
+            'questions' => $focusedQuestion ? collect([$focusedQuestion]) : $questions->with('context')->get(),
             'focusedQuestion' => $focusedQuestion,
+            'focusedNumber' => $focusedNumber,
             'fullPreviewUrl' => route('scheduling.questions.preview', $bank),
             'backUrl' => $focusedQuestion ? QuestionBankNavigation::questionUrl($assessmentSubject, $focusedQuestion) : route('scheduling.questions.index', $bank),
             'trial' => false,

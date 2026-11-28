@@ -39,19 +39,19 @@ class StudentQuestionSections
         return $sections;
     }
 
-    public static function unansweredNumbers(Collection $questions, array $unansweredIds, array $previousOrder = []): array
+    public static function numbersFor(Collection $questions, array $questionIds, array $previousOrder = []): array
     {
-        if ($unansweredIds === []) {
+        if ($questionIds === []) {
             return [];
         }
 
         $numbers = [];
         $number = 0;
-        $unanswered = array_fill_keys($unansweredIds, true);
+        $selected = array_fill_keys($questionIds, true);
         foreach (self::fromQuestions($questions, $previousOrder) as $section) {
             foreach ($section['questions'] as $question) {
                 $number++;
-                if (isset($unanswered[$question->id])) {
+                if (isset($selected[$question->id])) {
                     $numbers[] = $number;
                 }
             }

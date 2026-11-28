@@ -146,7 +146,7 @@ class TrialExamAttemptService
             }
 
             if ($unanswered !== []) {
-                $numbers = StudentQuestionSections::unansweredNumbers($questions, $unanswered, $previousOrder);
+                $numbers = StudentQuestionSections::numbersFor($questions, $unanswered, $previousOrder);
                 throw ValidationException::withMessages(['submission' => StudentQuestionSections::unansweredMessage($numbers)]);
             }
 

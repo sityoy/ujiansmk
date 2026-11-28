@@ -3,7 +3,12 @@
 @section('title', 'Simulasi Tampilan Peserta')
 @section('portal-label', $trial ? 'Pratinjau Ujian Uji Coba' : 'Pratinjau Ujian Inti')
 
+@inject('optionOrder', 'App\Services\Exams\StudentOptionOrder')
+
 @section('content')
+    @php
+        $shuffleOptions = $optionOrder->shouldShuffle($subject);
+    @endphp
     <section class="mb-6 rounded-2xl border border-cyan-400/30 bg-cyan-400/[0.045] p-5">
         <div class="flex flex-wrap gap-4 text-sm font-semibold text-cyan-300">
             <a href="{{ $backUrl }}">← Kembali ke bank soal</a>
@@ -14,7 +19,7 @@
         <h1 class="mt-3 text-xl font-semibold text-white">Simulasi tampilan peserta</h1>
         @if ($questions->isNotEmpty())
             <p class="mt-2 text-sm text-slate-300">
-                {{ $focusedQuestion ? 'Soal nomor '.$focusedQuestion->position.' dari bank yang dipilih.' : $questions->count().' soal tersimpan dari bank yang dipilih.' }}
+                {{ $focusedQuestion ? 'Soal nomor '.$focusedNumber.' pada tampilan peserta.' : $questions->count().' soal tersimpan dari bank yang dipilih.' }}
                 Jawaban yang dicoba di sini tidak masuk ke hasil ujian.
             </p>
         @endif
@@ -31,7 +36,7 @@
             </div>
             <div class="min-w-0">
                 <p class="text-xs text-cyan-300">Mata Pelajaran</p>
-                <p class="mt-1 font-semibold text-white">{{ $subjectName }}</p>
+                <p class="mt-1 font-semibold text-white">{{ $subject->name }}</p>
                 <p class="text-xs text-slate-400">{{ $examName }}</p>
             </div>
             <div>
@@ -56,19 +61,18 @@
                         {{ $type->label() }} <span class="text-sm font-normal text-slate-400">· Bagian {{ $loop->iteration }} dari {{ $loop->count }}</span>
                     </h2>
                     @foreach ($section['questions'] as $question)
-                        @php
-                            $number++;
-                            $options = collect($question->options)->keys()->shuffle()->mapWithKeys(fn ($key) => [$key => $question->options[$key]]);
-                        @endphp
+                        @php($number++)
                         @php($contextRange = $section['contexts'][$question->question_context_id] ?? null)
                         @php($contextAnchor = 'exam-context-'.$type->value.'-'.$question->question_context_id)
                         @if ($contextRange && $question->context && $contextRange['first'] === $number && ! $focusedQuestion)
                             <x-question-context-block :context="$question->context" :label="$contextRange['label']" :id="$contextAnchor" class="scroll-mt-32" />
                         @endif
-                        <x-exam-question-card :question="$question" :number="$focusedQuestion?->position ?? $number" :total="$focusedQuestion ? null : $questions->count()"
+                        <x-exam-question-card :question="$question" :number="$focusedNumber ?? $number" :total="$focusedQuestion ? null : $questions->count()"
                             :show-context="$focusedQuestion !== null"
                             :context-reference="$contextRange && $contextRange['first'] !== $number && ! $focusedQuestion ? ['id' => $contextAnchor, 'label' => $contextRange['label']] : null"
-                            :options="$options" :name="'preview_'.$question->id" :trial="$trial" />
+                            :relabel-options="$shuffleOptions"
+                            :options="$type->requiresManualGrading() ? [] : $optionOrder->forPreview($question, $shuffleOptions)"
+                            :name="'preview_'.$question->id" :trial="$trial" />
                     @endforeach
                     @include('components.exam-section-navigation')
                 </section>

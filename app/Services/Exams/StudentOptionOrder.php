@@ -21,7 +21,7 @@ class StudentOptionOrder
     }
 
     /**
-     * Keep original keys for saving/scoring; the view labels rows A–E by position.
+     * Keep the original option keys when saving and grading answers.
      * A keyed hash provides a stable permutation per attempt without database writes
      * or session state, including after refresh or an authorized device change.
      */
@@ -30,12 +30,24 @@ class StudentOptionOrder
         ExamQuestion|TrialQuestion $question,
         bool $shuffle = true,
     ): Collection {
+        $seed = implode('|', [$attempt->getTable(), $attempt->id, $attempt->started_at?->getTimestamp(), $question->id]);
+
+        return $this->orderedOptions($question, $seed, $shuffle);
+    }
+
+    public function forPreview(ExamQuestion|TrialQuestion $question, bool $shuffle): Collection
+    {
+        $seed = implode('|', ['preview', $question->getTable(), $question->id]);
+
+        return $this->orderedOptions($question, $seed, $shuffle);
+    }
+
+    private function orderedOptions(ExamQuestion|TrialQuestion $question, string $seed, bool $shuffle): Collection
+    {
         $options = collect($question->options ?? []);
         if (! $shuffle) {
             return $options->sortKeys();
         }
-
-        $seed = implode('|', [$attempt->getTable(), $attempt->id, $attempt->started_at?->getTimestamp(), $question->id]);
 
         return $options->sortBy(
             fn ($text, $key): string => hash_hmac('sha256', $seed.'|'.$key, (string) config('app.key')),

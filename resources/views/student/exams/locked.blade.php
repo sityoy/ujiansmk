@@ -26,7 +26,7 @@
             window.bindExamSubmission({ form: document.getElementById('submit-locked-exam'), allowBlocked: true });
         </script>
     @else
-        <p class="mt-5 text-sm text-slate-300">Soal nomor {{ implode(', ', \App\Services\Exams\StudentQuestionSections::unansweredNumbers($questions, $unanswered->modelKeys())) }} belum dijawab. Hubungi pengawas agar Anda bisa melanjutkan dan mengerjakan soal tersebut.</p>
+        <p class="mt-5 text-sm text-slate-300">Soal nomor {{ implode(', ', \App\Services\Exams\StudentQuestionSections::numbersFor($questions, $unanswered->modelKeys())) }} belum dijawab. Hubungi pengawas agar Anda bisa melanjutkan dan mengerjakan soal tersebut.</p>
     @endif
     <script src="{{ asset('js/exam-security.js') }}?v=20261119-1" defer></script>
 @endsection

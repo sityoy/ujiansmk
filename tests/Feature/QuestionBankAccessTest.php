@@ -13,6 +13,7 @@ use App\Models\AssessmentSubject;
 use App\Models\SchoolClass;
 use App\Models\Subject;
 use App\Models\User;
+use App\Services\Exams\StudentOptionOrder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
@@ -599,13 +600,49 @@ XML);
             ->assertSee('54 soal')->assertSee('Pertanyaan 1')->assertSee('Soal yang direvisi')
             ->assertDontSee('Pilih satu jawaban yang paling tepat');
         $this->get(route('scheduling.questions.preview', [$assigned, 'soal' => $saved->id, 'per_page' => 15]))
-            ->assertOk()->assertSee('Soal nomor 54 dari bank yang dipilih.')->assertSee('Soal yang direvisi')
+            ->assertOk()->assertSee('Soal nomor 54 pada tampilan peserta.')->assertSee('Soal yang direvisi')
             ->assertDontSee('Pertanyaan 53')->assertSee('Simulasikan seluruh soal');
         $this->get(route('scheduling.questions.preview', [$assigned, 'soal' => $saved->id + 1000]))->assertNotFound();
 
         $this->get(route('question-bank.index', ['view' => 'summary', 'per_page' => 'all']))->assertOk()
             ->assertViewHas('components', fn ($banks): bool => $banks->total() === 1 && $banks->first()->id === $assigned->id)
             ->assertDontSee($other->subject->name);
+    }
+
+    public function test_student_previews_use_the_subject_option_order_and_exam_numbers(): void
+    {
+        $this->withoutVite();
+        [$teacher, , $bank] = $this->makeComponents();
+        $essay = $bank->questions()->create([
+            'question_text' => 'Soal esai di posisi pertama bank',
+            'question_type' => ExamQuestionType::Essay,
+            'position' => 1,
+            'points' => 5,
+        ]);
+        $pg = $bank->questions()->create([
+            'question_text' => 'Soal pilihan ganda di posisi kedua bank',
+            'question_type' => ExamQuestionType::MultipleChoice,
+            'options' => ['A' => 'Opsi apel', 'B' => 'Opsi pisang', 'C' => 'Opsi jeruk', 'D' => 'Opsi anggur', 'E' => 'Opsi mangga'],
+            'correct_answer' => 'A',
+            'position' => 2,
+            'points' => 2,
+        ]);
+        $full = route('scheduling.questions.preview', $bank);
+        $focused = route('scheduling.questions.preview', [$bank, 'soal' => $pg->id]);
+        $this->actingAs($teacher);
+
+        $shuffled = app(StudentOptionOrder::class)->forPreview($pg, true)->values()->all();
+        $this->get($full)->assertOk()->assertSeeInOrder([
+            'data-exam-question-number="1"', $pg->question_text, ...$shuffled,
+            'data-exam-question-number="2"', $essay->question_text,
+        ], false);
+        $this->get($focused)->assertOk()->assertSee('Soal nomor 1 pada tampilan peserta.')
+            ->assertSeeInOrder($shuffled)->assertDontSee($essay->question_text);
+
+        $bank->subject()->update(['name' => 'Bahasa Inggris (Kelas X)']);
+        $original = array_values($pg->options);
+        $this->get($full)->assertOk()->assertSeeInOrder($original);
+        $this->get($focused)->assertOk()->assertSeeInOrder($original);
     }
 
     /** @return array{User, User, AssessmentSubject, AssessmentSubject} */

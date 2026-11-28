@@ -17,6 +17,7 @@ use App\Services\Exams\QuestionPdfImport;
 use App\Services\Exams\QuestionAttachments;
 use App\Services\Exams\QuestionContextManager;
 use App\Services\Exams\QuestionText;
+use App\Services\Exams\StudentQuestionSections;
 use App\Services\Exams\TrialQuestionBankArchive;
 use App\Services\Exams\TrialQuestionBankCatalog;
 use App\Services\Exams\TrialQuestionPack;
@@ -193,15 +194,24 @@ class TrialQuestionBankController extends Controller
     {
         $this->authorizeBank($request, $trialQuestionBank);
         $bank = [$trialQuestionBank, 'per_page' => TablePagination::selected(), 'page' => max(1, $request->integer('page', 1))];
-        $questions = $trialQuestionBank->questions()->with('context');
-        $focusedQuestion = $request->filled('soal') ? $questions->findOrFail($request->integer('soal')) : null;
+        $questions = $trialQuestionBank->questions();
+        $focusedQuestion = $request->filled('soal')
+            ? (clone $questions)->with('context')->findOrFail($request->integer('soal'))
+            : null;
+        $focusedNumber = $focusedQuestion
+            ? StudentQuestionSections::numbersFor(
+                $questions->get(['id', 'question_type', 'question_context_id']),
+                [$focusedQuestion->id],
+            )[0] ?? $focusedQuestion->position
+            : null;
 
         return response()->view('questions.preview', [
-            'subjectName' => $trialQuestionBank->subject->name,
+            'subject' => $trialQuestionBank->subject,
             'examName' => $trialQuestionBank->name,
             'gradeLevel' => $trialQuestionBank->grade_level,
-            'questions' => $focusedQuestion ? collect([$focusedQuestion]) : $questions->get(),
+            'questions' => $focusedQuestion ? collect([$focusedQuestion]) : $questions->with('context')->get(),
             'focusedQuestion' => $focusedQuestion,
+            'focusedNumber' => $focusedNumber,
             'fullPreviewUrl' => route('trial-question-banks.questions.preview', $bank),
             'backUrl' => $focusedQuestion ? QuestionBankNavigation::questionUrl($trialQuestionBank, $focusedQuestion) : route('trial-question-banks.questions.index', $bank),
             'trial' => true,

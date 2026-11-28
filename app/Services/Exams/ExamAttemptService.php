@@ -218,7 +218,7 @@ class ExamAttemptService
             if ($requireValidResponses) {
                 $unanswered = $questions->filter(fn (ExamQuestion $question): bool => blank($answers->get($question->id)?->answer));
                 if ($unanswered->isNotEmpty()) {
-                    $numbers = StudentQuestionSections::unansweredNumbers($questions, $unanswered->modelKeys());
+                    $numbers = StudentQuestionSections::numbersFor($questions, $unanswered->modelKeys());
                     throw ValidationException::withMessages(['submission' => StudentQuestionSections::unansweredMessage($numbers)]);
                 }
             }

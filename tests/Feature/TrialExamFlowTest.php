@@ -677,6 +677,34 @@ class TrialExamFlowTest extends TestCase
         ])->assertDontSee('Gambar khusus soal pertama');
     }
 
+    public function test_trial_previews_keep_english_letters_and_use_the_same_number_for_a_single_question(): void
+    {
+        [$trial, $pg] = $this->makeTrial();
+        $bank = $trial->questionBank;
+        $bank->subject()->update(['code' => 'BIG', 'name' => 'Bahasa Inggris']);
+        $pg->update([
+            'options' => ['E' => 'Opsi terakhir', 'A' => 'Opsi pertama', 'C' => 'Opsi tengah'],
+            'position' => 2,
+        ]);
+        $essay = $bank->questions()->create([
+            'question_text' => 'Esai pertama di bank uji coba',
+            'question_type' => ExamQuestionType::Essay,
+            'position' => 1,
+            'points' => 5,
+        ]);
+        $admin = User::factory()->create(['role' => UserRole::Committee]);
+        $full = route('trial-question-banks.questions.preview', $bank);
+        $focused = route('trial-question-banks.questions.preview', [$bank, 'soal' => $pg->id]);
+        $expected = ['>A.</strong>', 'Opsi pertama', '>C.</strong>', 'Opsi tengah', '>E.</strong>', 'Opsi terakhir'];
+
+        $this->actingAs($admin)->get($full)->assertOk()->assertSeeInOrder([
+            'data-exam-question-number="1"', ...$expected, 'data-exam-question-number="2"', $essay->question_text,
+        ], false);
+        $this->get($focused)->assertOk()->assertSee('Soal nomor 1 pada tampilan peserta.')
+            ->assertSeeInOrder($expected, false)->assertDontSee($essay->question_text);
+        $this->assertDatabaseCount('trial_attempts', 0);
+    }
+
     #[\PHPUnit\Framework\Attributes\TestWith([false])]
     #[\PHPUnit\Framework\Attributes\TestWith([true])]
     public function test_trial_options_keep_expected_order_attachments_checked_answer_and_correct_score(bool $english): void
