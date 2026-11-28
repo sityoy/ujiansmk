@@ -63,11 +63,11 @@ class ExamFlyerTest extends TestCase
             ->assertSee('FLYER SIMULASI UJIAN')->assertSee('Cek koneksi internet dan sinyal di HP Anda sebelum mulai.')
             ->assertSeeInOrder(['Uji Coba Bahasa Indonesia', 'Mata pelajaran', 'Bahasa Indonesia', 'Kelas 10', 'Semua rombel pada tingkat ini'])
             ->assertSee('BIN-COBA')->assertSee('60 menit')->assertSee(route('tryout.entry', $trial))
-            ->assertSee('03/09/2026 22:00 – 04/09/2026 01:00 WIB')->assertSee('Kampus Simulasi')->assertSee('lokasi simulasi')
+            ->assertSee('Kamis, 03/09/2026 22:00 – Jumat, 04/09/2026 01:00 WIB')->assertSee('Kampus Simulasi')->assertSee('lokasi simulasi')
             ->assertSee('Tata tertib peserta')->assertSee('Peringatan pelanggaran')
             ->assertSee('images/logo-ypmi-bahagia.jpeg');
         $trial->update(['starts_at' => null, 'ends_at' => $this->wib('2026-09-04 01:00'), 'trial_location_id' => null]);
-        $this->get(route('exam-flyers.trial', $trial))->assertOk()->assertSee('Sampai 04/09/2026 01:00 WIB')->assertDontSee('absensi GPS');
+        $this->get(route('exam-flyers.trial', $trial))->assertOk()->assertSee('Sampai Jumat, 04/09/2026 01:00 WIB')->assertDontSee('absensi GPS');
     }
 
     public function test_group_print_includes_all_simulations_across_grades_and_periods_without_pagination(): void
@@ -109,7 +109,7 @@ class ExamFlyerTest extends TestCase
             $exam = $trials[$index];
             $this->assertStringContainsString($exam->title, $page->textContent);
             $this->assertStringContainsString($exam->access_code, $page->textContent);
-            $this->assertStringContainsString($exam->starts_at->timezone('Asia/Jakarta')->format('d/m/Y H:i').' WIB', $page->textContent);
+            $this->assertStringContainsString($exam->starts_at->timezone('Asia/Jakarta')->locale('id')->isoFormat('dddd, DD/MM/YYYY HH:mm').' WIB', $page->textContent);
             $this->assertSame(route('tryout.entry', $exam), $xpath->query('.//a[@class="url"]', $page)->item(0)->getAttribute('href'));
             $this->assertSame(1, $xpath->query('//*[@id="rules-title-'.($index + 1).'"]')->length);
         }
@@ -159,14 +159,14 @@ class ExamFlyerTest extends TestCase
                     && $regular->pluck('rombel', 'location')->all() === ['Gedung Utama' => 'XI-2, XI-3', 'Gedung Cabang' => 'XI-1'];
             })->assertSee('<th scope="col">Lokasi</th>', false)
             ->assertSee('Gedung Utama')->assertSee('Gedung Cabang')
-            ->assertSee('03/09/2026 07:30 – 08:45 WIB')
-            ->assertSee('05/09/2026 10:00 – 11:15 WIB')->assertDontSee('08/09/2026 09:00')
+            ->assertSee('Kamis, 03/09/2026 07:30 – 08:45 WIB')
+            ->assertSee('Sabtu, 05/09/2026 10:00 – 11:15 WIB')->assertDontSee('08/09/2026 09:00')
             ->assertDontSee('Lab 1')->assertDontSee('Lab 2')->assertDontSee('Lab 3');
         $this->get(route('operations.index'))->assertOk()->assertSee(route('exam-flyers.core-session', $regular))
             ->assertSee('Cetak Flyer Asesmen')->assertSee('Pilih Flyer Simulasi Ujian')->assertDontSee('Cetak flyer peringatan');
         $this->get(route('exam-flyers.core-session', $makeup))->assertOk()
             ->assertSeeInOrder(['Matematika', 'Kelas 11', 'Rombel', 'XI-3'])->assertSee('Susulan')->assertSee('75 menit')->assertSeeInOrder(['Lokasi', 'Gedung Utama'])->assertDontSee('Lab 1')
-            ->assertSee('05/09/2026 10:00 – 11:15 WIB')->assertDontSee('03/09/2026 07:30')
+            ->assertSee('Sabtu, 05/09/2026 10:00 – 11:15 WIB')->assertDontSee('03/09/2026 07:30')
             ->assertSee('Tata tertib peserta')->assertSee('Peringatan pelanggaran');
         $this->get(route('exam-flyers.core-session', $draft))->assertOk()->assertSee('Draf jadwal');
         $this->actingAs(User::factory()->create(['role' => UserRole::Student]))

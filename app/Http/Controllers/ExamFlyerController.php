@@ -179,19 +179,20 @@ class ExamFlyerController extends Controller
 
     private function window(?Carbon $start, ?Carbon $end): string
     {
-        $start = $start?->copy()->timezone('Asia/Jakarta');
-        $end = $end?->copy()->timezone('Asia/Jakarta');
+        $start = $start?->copy()->timezone('Asia/Jakarta')->locale('id');
+        $end = $end?->copy()->timezone('Asia/Jakarta')->locale('id');
+        $dateTimeFormat = 'dddd, DD/MM/YYYY HH:mm';
 
         if ($start && $end) {
-            $endFormat = $end->isSameDay($start) ? 'H:i' : 'd/m/Y H:i';
+            $endFormat = $end->isSameDay($start) ? 'HH:mm' : $dateTimeFormat;
 
-            return $start->format('d/m/Y H:i').' – '.$end->format($endFormat).' WIB';
+            return $start->isoFormat($dateTimeFormat).' – '.$end->isoFormat($endFormat).' WIB';
         }
         if ($start) {
-            return 'Mulai '.$start->format('d/m/Y H:i').' WIB';
+            return 'Mulai '.$start->isoFormat($dateTimeFormat).' WIB';
         }
         if ($end) {
-            return 'Sampai '.$end->format('d/m/Y H:i').' WIB';
+            return 'Sampai '.$end->isoFormat($dateTimeFormat).' WIB';
         }
 
         return 'Tanggal dan jam belum ditetapkan.';
