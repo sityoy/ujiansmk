@@ -502,16 +502,15 @@ class SchedulingController extends Controller
         }
 
         if (! empty($validated['room_name'])) {
-            $roomConflict = ExamSession::query()->lockForUpdate()
+            $overlappingRoomSessions = ExamSession::query()->lockForUpdate()
                 ->whereNotIn('id', $excludedSessionIds)
                 ->when($currentSession, fn ($query) => $query->where('id', '!=', $currentSession->id))
                 ->where('campus_id', $validated['campus_id'])
                 ->whereRaw('LOWER(room_name) = ?', [Str::lower(trim($validated['room_name']))])
                 ->where('starts_at', '<', $endsAt)
-                ->where('ends_at', '>', $startsAt)
-                ->exists();
+                ->where('ends_at', '>', $startsAt);
 
-            if ($roomConflict) {
+            if ($this->hasRoomConflict($overlappingRoomSessions, $component, $isMakeup)) {
                 throw ValidationException::withMessages([
                     'room_name' => 'Ruangan tersebut sudah dipakai oleh sesi lain pada waktu yang sama.',
                 ]);
@@ -556,6 +555,31 @@ class SchedulingController extends Controller
         $validated['duration_minutes'] = $duration;
 
         return $validated;
+    }
+
+    private function hasRoomConflict(Builder $overlappingSessions, AssessmentSubject $component, bool $isMakeup): bool
+    {
+        // A trailing variant label identifies parallel versions of the same mapel.
+        $pattern = '/^(.+) \(([^()]*[^()\s][^()]*)\)$/u';
+        $normalizedName = fn (string $name): string => Str::lower(Str::squish($name));
+
+        if ($isMakeup || preg_match($pattern, $normalizedName($component->subject->name), $requestedVariant) !== 1) {
+            return $overlappingSessions->exists();
+        }
+
+        return $overlappingSessions->with(['assessmentSubject.schoolClass', 'assessmentSubject.subject'])->get()
+            ->contains(function (ExamSession $session) use ($component, $pattern, $normalizedName, $requestedVariant): bool {
+                $other = $session->assessmentSubject;
+
+                return $session->kind !== SessionKind::Regular
+                    || $other->assessment_period_id !== $component->assessment_period_id
+                    || $other->school_class_id === $component->school_class_id
+                    || $other->schoolClass->grade_level !== $component->schoolClass->grade_level
+                    || $other->subject_id === $component->subject_id
+                    || preg_match($pattern, $normalizedName($other->subject->name), $existingVariant) !== 1
+                    || $existingVariant[1] !== $requestedVariant[1]
+                    || trim($existingVariant[2]) === trim($requestedVariant[2]);
+            });
     }
 
     public function assignClass(

@@ -144,6 +144,52 @@ class GroupedSchedulingTest extends TestCase
         $this->assertDatabaseCount('exam_assignments', 3);
     }
 
+    public function test_parallel_subject_variants_can_share_a_room_only_with_other_classes_at_the_same_grade(): void
+    {
+        [$components, $campus] = $this->makeComponents();
+        $jenni = Subject::create(['name' => 'Akuntansi Dasar (Jenni)', 'code' => 'AKD-JENNI', 'is_active' => true]);
+        $aziz = Subject::create(['name' => 'Akuntansi Dasar (Aziz)', 'code' => 'AKD-AZIZ', 'is_active' => true]);
+        $otherVariant = Subject::create(['name' => 'Akuntansi Dasar (Dina)', 'code' => 'AKD-DINA', 'is_active' => true]);
+        $components[0]->update(['subject_id' => $jenni->id]);
+        $components[1]->update(['subject_id' => $jenni->id]);
+        $components[2]->update(['subject_id' => $aziz->id]);
+        $components[3]->update(['subject_id' => $otherVariant->id]);
+        $components[4]->subject->update(['name' => 'Administrasi Pajak (Dina)']);
+        $components[4]->schoolClass->update(['name' => 'X-4', 'grade_level' => 10]);
+
+        $this->post(route('scheduling.sessions.store'), [
+            ...$this->scheduleData($components[0], $campus),
+            'rooms' => [$components[0]->id => 'Lab A', $components[1]->id => 'Lab B'],
+        ])->assertSessionHasNoErrors();
+
+        $parallel = $this->scheduleData($components[2], $campus);
+        $this->post(route('scheduling.sessions.store'), [
+            ...$parallel, 'room_name' => 'lab a',
+        ])->assertSessionHasNoErrors();
+        $azizSession = $components[2]->examSessions()->sole();
+        $this->assertSame('08:00', $azizSession->starts_at->format('H:i'));
+        $this->assertSame($components[2]->school_class_id, $azizSession->assignments()->sole()->student->school_class_id);
+
+        $this->patch(route('scheduling.sessions.update', $azizSession), [
+            ...$parallel, 'starts_at' => '2026-11-11 08:15:00', 'room_name' => 'Lab B',
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('Lab B', $azizSession->fresh()->room_name);
+
+        $sameClass = $components[0]->replicate()->fill(['subject_id' => $aziz->id]);
+        $sameClass->save();
+        $this->post(route('scheduling.sessions.store'), [
+            ...$this->scheduleData($sameClass, $campus), 'scope' => 'class', 'room_name' => 'Lab C',
+        ])->assertSessionHasErrors('starts_at');
+
+        foreach ([$components[3], $components[4]] as $blockedComponent) {
+            $this->post(route('scheduling.sessions.store'), [
+                ...$this->scheduleData($blockedComponent, $campus), 'scope' => 'class', 'room_name' => 'Lab A',
+            ])->assertSessionHasErrors('room_name');
+        }
+        $this->assertDatabaseCount('exam_sessions', 3);
+        $this->assertDatabaseCount('exam_assignments', 3);
+    }
+
     public function test_conflict_in_last_class_rolls_back_sessions_and_participants_in_all_classes(): void
     {
         [$components, $campus] = $this->makeComponents();
