@@ -258,6 +258,68 @@ html[data-theme='light'] .exam-text-controls button { color: #0f172a; background
     overflow-wrap: anywhere;
 }
 
+/* Keep the passage distinct from the question and its answer choices. */
+.exam-statement,
+.exam-context-link {
+    --statement-surface: #102b40;
+    --statement-text: #f1f5f9;
+    --statement-accent: #67e8f9;
+    --statement-border: #51809a;
+    color: var(--statement-text);
+    background: var(--statement-surface);
+    border: 1px solid var(--statement-border);
+}
+
+html[data-theme='light'] :is(.exam-statement, .exam-context-link) {
+    --statement-surface: #edf7fc;
+    --statement-text: #0f172a;
+    --statement-accent: #155e75;
+    --statement-border: #53859e;
+}
+
+.exam-statement {
+    display: grid;
+    gap: .75rem;
+    min-inline-size: 0;
+    padding: .875rem clamp(.875rem, 3vw, 1.25rem);
+    border-radius: .875rem;
+    border-inline-start: 4px solid var(--statement-accent);
+}
+
+.exam-statement-title {
+    color: var(--statement-accent);
+    font-weight: 700;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+#exam-content .exam-statement .question-rich-text {
+    font-size: calc(var(--exam-reading-size) * 1.0625);
+    line-height: 1.65;
+}
+
+#exam-content :is(.exam-statement-title, .exam-context-link) {
+    font-size: var(--exam-reading-size);
+}
+
+.exam-context-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    margin-block: .5rem;
+    padding: .45rem .75rem;
+    border-radius: .625rem;
+    font-weight: 600;
+    line-height: 1.4;
+    text-decoration: underline;
+    text-underline-offset: .15em;
+}
+
+:is(.exam-statement, .exam-context-link):focus-visible {
+    outline: 2px solid var(--statement-accent);
+    outline-offset: 3px;
+}
+
 /* Keep written-answer fields readable without focus zoom on mobile Safari. */
 #exam-content .exam-written-answer { font-size: max(1rem, var(--exam-reading-size)); }
 

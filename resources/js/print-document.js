@@ -1,4 +1,4 @@
-import { buildPdf, buildZip, download } from './question-bank-report.js';
+import { buildPdf, buildZip, crc32, download } from './question-bank-report.js';
 
 const cssPerMm = 96 / 25.4;
 const pointsPerMm = 72 / 25.4;
@@ -71,6 +71,39 @@ const imageBlob = (canvas, type) => new Promise((resolve, reject) => {
     canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Gambar halaman gagal dibuat.')), type, .96);
 });
 
+export function setPngDensity(bytes, pixelsPerMeter) {
+    const input = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const afterHeader = 33; // PNG signature and IHDR chunk.
+    let insertionPoint = afterHeader;
+    let replacedLength = 0;
+    for (let offset = afterHeader; offset + 12 <= bytes.length;) {
+        const length = input.getUint32(offset) + 12;
+        const type = input.getUint32(offset + 4);
+        if (type === 0x70485973) { // pHYs
+            insertionPoint = offset;
+            replacedLength = length;
+            break;
+        }
+        if (type === 0x49444154) break; // IDAT
+        offset += length;
+    }
+
+    const chunk = new Uint8Array(21);
+    const info = new DataView(chunk.buffer);
+    info.setUint32(0, 9);
+    info.setUint32(4, 0x70485973);
+    info.setUint32(8, pixelsPerMeter);
+    info.setUint32(12, pixelsPerMeter);
+    info.setUint8(16, 1); // Meter.
+    info.setUint32(17, crc32(chunk.subarray(4, 17)));
+
+    const updated = new Uint8Array(bytes.length + chunk.length - replacedLength);
+    updated.set(bytes.subarray(0, insertionPoint));
+    updated.set(chunk, insertionPoint);
+    updated.set(bytes.subarray(insertionPoint + replacedLength), insertionPoint + chunk.length);
+    return updated;
+}
+
 async function renderDocument(source, settings, format, progress) {
     const { default: capture } = await import('html2canvas');
     const paperWidth = Number(settings.paperWidth), paperHeight = Number(settings.paperHeight);
@@ -133,9 +166,10 @@ async function renderDocument(source, settings, format, progress) {
             body.width = 1;
             body.height = 1;
             const blob = await imageBlob(canvas, format === 'pdf' ? 'image/jpeg' : 'image/png');
+            const bytes = new Uint8Array(await blob.arrayBuffer());
             output.push({
                 name: `${settings.filename}-halaman-${String(index + 1).padStart(2, '0')}.png`,
-                bytes: new Uint8Array(await blob.arrayBuffer()),
+                bytes: format === 'png' ? setPngDensity(bytes, Math.round(cssPerMm * pixelScale * 1000)) : bytes,
                 width: canvas.width,
                 height: canvas.height,
                 paperWidth: Math.round(paperWidth * pointsPerMm),

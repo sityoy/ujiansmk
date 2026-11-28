@@ -35,6 +35,23 @@ function unansweredExamMessage(numbers) {
     return `Masih ada ${numbers.length} soal yang belum dijawab. Silakan kerjakan soal nomor ${numbers.join(', ')} terlebih dahulu.`;
 }
 
+document.addEventListener('click', event => {
+    const link = event.target.closest?.('[data-exam-context-link]');
+    if (!link || event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+    const target = document.getElementById(link.hash.slice(1));
+    const toolbar = document.querySelector('.exam-toolbar');
+    if (!target || !toolbar) return;
+
+    event.preventDefault();
+    const header = toolbar.closest('.app-main')?.querySelector(':scope > header');
+    const stickyTop = Number.parseFloat(window.getComputedStyle(toolbar).top) || 0;
+    const topInset = Math.max(stickyTop + toolbar.getBoundingClientRect().height, header?.getBoundingClientRect().height ?? 0);
+    const top = window.scrollY + target.getBoundingClientRect().top - topInset - 16;
+    target.focus({ preventScroll: true });
+    window.scrollTo(0, Math.max(0, top));
+});
+
 window.bindExamSections = ({ sections, submitPanel, flushAnswers, pending, toolbar, answerSelector = '[data-save-url]' }) => {
     if (sections.length < 2) return;
 

@@ -667,14 +667,16 @@ class TrialExamFlowTest extends TestCase
         $this->get($preview)->assertOk()->assertSeeInOrder([
             'Pernyataan atau gambar untuk nomor 1–2', 'Diagram baru untuk soal 1 dan 2',
             'Soal ilustrasi pertama', 'Soal ilustrasi kedua', 'Soal di luar kelompok',
-        ])->assertDontSee('Keterangan yang ikut dihapus');
+        ])->assertSee('class="exam-statement', false)->assertSee('data-exam-context-link', false)
+            ->assertDontSee('Keterangan yang ikut dihapus');
 
         $this->actingAs($student->user)->startTrial($trial, ['access_code' => $trial->access_code])->assertRedirect();
         $attempt = $trial->currentAttempts()->sole();
         $this->get(route('tryout.show', [$trial, $attempt]))->assertOk()->assertSeeInOrder([
             'Pernyataan atau gambar untuk nomor 1–2', 'Diagram baru untuk soal 1 dan 2',
             'Soal ilustrasi pertama', 'Keterangan opsi baru', 'Soal ilustrasi kedua', 'Soal di luar kelompok',
-        ])->assertDontSee('Gambar khusus soal pertama');
+        ])->assertSee('class="exam-statement', false)->assertSee('data-exam-context-link', false)
+            ->assertDontSee('Gambar khusus soal pertama');
     }
 
     public function test_trial_previews_keep_english_letters_and_use_the_same_number_for_a_single_question(): void

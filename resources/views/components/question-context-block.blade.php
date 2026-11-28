@@ -1,7 +1,8 @@
 @props(['context', 'label' => null, 'print' => false])
 
-<div {{ $attributes->class($print ? 'shared-statement' : 'rounded-xl border border-cyan-400/30 bg-cyan-400/[0.06] p-3 space-y-2') }}>
-    <p class="text-sm font-semibold {{ $print ? '' : 'text-cyan-300' }}">
+<div {{ $attributes->class($print ? 'shared-statement' : 'exam-statement') }}
+    @if (! $print && $attributes->has('id')) tabindex="-1" @endif>
+    <p class="{{ $print ? 'text-sm font-semibold' : 'exam-statement-title' }}">
         {{ $label === null ? 'Pernyataan bersama' : 'Pernyataan atau gambar untuk nomor '.$label }}
     </p>
     @if (filled($context->statement))

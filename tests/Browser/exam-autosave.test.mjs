@@ -108,6 +108,32 @@ function setup({trial = false, oldBrowser = false, written = false, grouped = fa
         expire() { elapsed = 60001; tick(); } };
 }
 
+test('a shared passage stays below the sticky exam toolbar when opened from another question', () => {
+    const passage = element({ getBoundingClientRect: () => ({ top: -300 }) });
+    const link = { hash: '#exam-context-1' };
+    const stickyHeader = { getBoundingClientRect: () => ({ height: 65 }) };
+    const toolbar = {
+        getBoundingClientRect: () => ({ height: 180 }),
+        closest: () => ({ querySelector: () => stickyHeader }),
+    };
+    const document = element({
+        getElementById: id => id === 'exam-context-1' ? passage : null,
+        querySelector: () => toolbar,
+    });
+    let position;
+    const window = { scrollY: 900, scrollTo: (x, y) => { position = [x, y]; }, getComputedStyle: () => ({ top: '12px' }) };
+    vm.runInNewContext(submissionScript, { document, window });
+
+    let prevented = false;
+    document.listeners.click({
+        target: { closest: () => link },
+        preventDefault: () => { prevented = true; },
+    });
+    assert.equal(prevented, true);
+    assert.equal(passage.focused, true);
+    assert.deepEqual(position, [0, 392]);
+});
+
 const settle = () => new Promise(resolve => setImmediate(resolve));
 const ok = { ok: true, json: async () => ({ saved: true, saved_at: '10:00:00' }) };
 
@@ -203,10 +229,10 @@ test('student preview uses the displayed number when previewing one bank questio
     const finish = element();
     const status = element();
     const answer = { type: 'textarea', value: '  ', dataset: { saveUrl: '/answer/54' } };
-    const document = {
+    const document = element({
         getElementById: id => id === 'preview-finish' ? finish : status,
         querySelectorAll: selector => selector === '[data-exam-question-number]' ? questionCards([answer]) : [],
-    };
+    });
     vm.runInNewContext(submissionScript + '\n' + examScript(preview), { document, window: {} });
     finish.listeners.click();
     assert.match(status.textContent, /Silakan kerjakan soal nomor 54 terlebih dahulu/);

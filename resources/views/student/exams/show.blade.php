@@ -107,7 +107,7 @@
         <x-exam-image-dialog />
     </fieldset>
 
-    <script src="{{ asset('js/exam-submission.js') }}?v=7"></script>
+    <script src="{{ asset('js/exam-submission.js') }}?v=8"></script>
     <script>
         const csrf = document.querySelector('meta[name="csrf-token"]').content;
         // Base the countdown on server time, not the student's system clock.

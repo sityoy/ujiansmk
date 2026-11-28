@@ -15,7 +15,7 @@
         <p class="text-xs font-semibold text-cyan-300">Soal {{ $number }}@if ($total !== null) dari {{ $total }}@endif</p>
     @endif
     @if ($contextReference)
-        <a href="#{{ $contextReference['id'] }}" class="mt-2 inline-block text-sm font-medium text-cyan-300 underline">Lihat pernyataan untuk nomor {{ $contextReference['label'] }}</a>
+        <a href="#{{ $contextReference['id'] }}" class="exam-context-link" data-exam-context-link>Lihat pernyataan untuk nomor {{ $contextReference['label'] }}</a>
     @endif
     <x-question-prompt :question="$question" :show-context="$showContext" :class="$trial ? '' : 'mt-3'" />
     @if ($type === 'multiple_choice')

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { paginateDocument } from '../../resources/js/print-document.js';
-import { buildPdf } from '../../resources/js/question-bank-report.js';
+import { paginateDocument, setPngDensity } from '../../resources/js/print-document.js';
+import { buildPdf, crc32 } from '../../resources/js/question-bank-report.js';
 
 test('named sections and repeated table headers retain every point of the print document', () => {
     const pages = paginateDocument(250, 100, {
@@ -40,4 +40,17 @@ test('the PDF can keep the original print paper size in portrait, landscape and 
         assert.ok(pdf.includes(`/MediaBox [0 0 ${width} ${height}]`));
         assert.ok(pdf.includes(`q ${width} 0 0 ${height} 0 0 cm /Image Do Q`));
     }
+});
+
+test('PNG replaces browser density with the resolution of the selected paper', () => {
+    const plainPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jNukAAAAASUVORK5CYII=', 'base64');
+    const browserPng = setPngDensity(plainPng, 3780);
+    const printPng = Buffer.from(setPngDensity(browserPng, 7559));
+    assert.equal(printPng.length, plainPng.length + 21);
+    assert.equal(printPng.toString('ascii', 37, 41), 'pHYs');
+    assert.equal(printPng.readUInt32BE(41), 7559);
+    assert.equal(printPng.readUInt32BE(45), 7559);
+    assert.equal(printPng[49], 1);
+    assert.equal(printPng.readUInt32BE(50), crc32(printPng.subarray(37, 50)));
+    assert.deepEqual(printPng.subarray(54), plainPng.subarray(33));
 });

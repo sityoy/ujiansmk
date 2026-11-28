@@ -10,6 +10,7 @@
         .tools, .sheet { max-width: 1180px; margin: 16px auto; padding: 16px; border: 1px solid #94a3b8; background: white; }
         .tools { border-radius: 12px; }
         .tools > p, .tools details { margin: 12px 0 0; }
+        .paper-size { color: #475569; font-size: 12px; font-weight: 600; }
         .toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
         .filters { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; padding: 12px 0; margin-top: 6px; border-bottom: 1px solid #cbd5e1; }
         label { display: grid; gap: 4px; min-width: 12ch; max-width: 100%; font-weight: 600; }
@@ -18,7 +19,7 @@
         .primary { background: #334155; color: white; }
         summary { font-weight: 600; cursor: pointer; }
         textarea { width: 100%; resize: vertical; margin: 8px 0; }
-        .sheet { padding: 24px; }
+        .sheet { max-width: calc(277mm + 34px); padding: 16px; font-size: 12px; line-height: 1.45; }
         .brand { display: flex; align-items: center; gap: 14px; border-bottom: 3px solid #334155; padding-bottom: 12px; }
         .brand-logo { flex: none; width: 50px; height: 50px; }
         .brand .school { font-weight: 700; font-size: 19px; }
@@ -29,7 +30,11 @@
         .draft-note { padding: 8px 10px; border: 1px solid #c08744; background: #fff5df; color: #713f12; }
         .table-wrap { overflow-x: auto; margin-top: 14px; }
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        th, td { padding: 7px 8px; border: 1px solid #94a3b8; text-align: left; vertical-align: top; }
+        th, td { padding: 6px 7px; border: 1px solid #94a3b8; text-align: left; vertical-align: top; }
+        .session-date, .session-time { display: block; }
+        .session-time { margin-top: 2px; font-weight: 600; font-variant-numeric: tabular-nums; }
+        .session-duration { display: block; color: #475569; }
+        .session-subject { font-weight: 600; }
         .report-sheet th.period { padding: 8px; background: #cbd5e1; font-size: 13px; }
         .num { text-align: center; }
         .location + .location { margin-top: 4px; }
@@ -43,11 +48,10 @@
         }
         @page { size: A4 landscape; margin: 10mm; }
         @media print {
-            body { padding: 0; background: white; font-size: 11px; }
+            body { padding: 0; background: white; }
             .tools { display: none; }
             .sheet { margin: 0; padding: 0; border: 0; max-width: none; }
             .table-wrap { overflow: visible; }
-            th, td { padding: 5px 6px; }
         }
     </style>
 </head>
@@ -57,6 +61,7 @@
             <a class="button" href="{{ $backUrl }}">Kembali ke Penjadwalan</a>
             @if ($sessionCount)
                 <x-print-actions :filename="$filename" landscape :margin="10" />
+                <span class="paper-size">A4 lanskap (297 × 210 mm)</span>
             @endif
         </div>
         <form method="GET" action="{{ route('scheduling.recap') }}" class="filters">
@@ -136,30 +141,34 @@
             <div class="table-wrap" role="region" aria-label="{{ $group['period'] }}" tabindex="0">
                 <table aria-label="{{ $group['period'] }}">
                     <colgroup>
-                        <col style="width:4%"><col style="width:13%"><col style="width:13%"><col style="width:17%">
-                        <col style="width:11%"><col style="width:7%"><col style="width:15%"><col style="width:7%">
-                        <col style="width:6%"><col style="width:7%">
+                        <col style="width:4%"><col style="width:21%"><col style="width:22%"><col style="width:9%">
+                        <col style="width:8%"><col style="width:21%"><col style="width:7%"><col style="width:8%">
                     </colgroup>
                     <thead>
-                        <tr><th colspan="10" class="period">{{ $group['period'] }}</th></tr>
+                        <tr><th colspan="8" class="period">{{ $group['period'] }}</th></tr>
                         <tr>
-                            <th scope="col" class="num">No.</th><th scope="col">Hari dan tanggal</th><th scope="col">Jam (WIB)</th>
+                            <th scope="col" class="num">No.</th><th scope="col">Jadwal (WIB)</th>
                             <th scope="col">Mata pelajaran</th><th scope="col">Kelas</th><th scope="col">Jenis sesi</th>
-                            <th scope="col">Lokasi dan ruangan</th><th scope="col" class="num">Durasi</th>
+                            <th scope="col">Lokasi dan ruangan</th>
                             <th scope="col" class="num">Peserta</th><th scope="col">Status</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach ($group['rows'] as $row)
                             <tr>
-                                <td class="num">{{ $loop->iteration }}</td><td>{{ $row['date'] }}</td><td>{{ $row['time'] }}</td>
-                                <td>{{ $row['subject'] }}</td><td>{{ $row['grade'] }}</td><td>{{ $row['kind'] }}</td>
+                                <td class="num">{{ $loop->iteration }}</td>
+                                <td>
+                                    <strong class="session-date">{{ $row['date'] }}</strong>
+                                    <span class="session-time">{{ $row['time'] }}</span>
+                                    <span class="session-duration">{{ $row['duration'] }} menit</span>
+                                </td>
+                                <td class="session-subject">{{ $row['subject'] }}</td><td>{{ $row['grade'] }}</td><td>{{ $row['kind'] }}</td>
                                 <td>
                                     @foreach ($row['locations'] as $location)
                                         <div class="location">{{ $location['campus'] }}<span class="room">{{ $location['rooms'] }}</span></div>
                                     @endforeach
                                 </td>
-                                <td class="num">{{ $row['duration'] }} mnt</td><td class="num">{{ $row['participants'] }}</td>
+                                <td class="num">{{ $row['participants'] }}</td>
                                 <td @class(['is-draft' => $row['draft']])>{{ $row['status'] }}</td>
                             </tr>
                         @endforeach

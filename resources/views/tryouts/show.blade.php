@@ -96,7 +96,7 @@
         </fieldset>
     </form>
 
-    <script src="{{ asset('js/exam-submission.js') }}?v=7"></script>
+    <script src="{{ asset('js/exam-submission.js') }}?v=8"></script>
     <script>
         const csrf = document.querySelector('meta[name="csrf-token"]').content;
         const remainingAtLoad = {{ max(0, $deadline->getTimestamp() - now()->getTimestamp()) * 1000 }};
