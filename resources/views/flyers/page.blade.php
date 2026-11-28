@@ -1,12 +1,16 @@
-<article class="flyer" data-print-break data-print-block>
-    <header class="brand">
-        <x-school-logo :school="$school" class="logo" width="64" height="64" />
-        <div class="school">{{ $schoolName }}</div>
+<article class="flyer" data-print-break>
+    <header class="cover">
+        <div class="brand">
+            <x-school-logo :school="$school" class="logo" width="64" height="64" />
+            <div class="school">{{ $schoolName }}</div>
+        </div>
+        <p class="eyebrow">{{ $trial ? 'FLYER SIMULASI UJIAN' : 'FLYER ASESMEN' }}</p>
+        <h1>{{ $kind }}</h1>
+        <div class="cover-meta">
+            <span class="year">TAHUN AJARAN {{ $period->academicYear->name }}</span>
+            <span class="subtitle">{{ $subtitle }}</span>
+        </div>
     </header>
-    <p class="eyebrow">{{ $trial ? 'FLYER SIMULASI UJIAN' : 'FLYER ASESMEN' }}</p>
-    <h1>{{ $kind }}</h1>
-    <div class="year">TAHUN AJARAN {{ $period->academicYear->name }}</div>
-    <p class="subtitle">{{ $subtitle }}</p>
     @if ($notice)<p class="notice">{{ $notice }}</p>@endif
     <section class="details">
         <h2>{{ $headline }}</h2>
@@ -23,19 +27,42 @@
     </section>
     @include('flyers.rules')
 </article>
-@if ($schedule->isNotEmpty())
-    <section class="flyer schedule" data-print-break aria-labelledby="schedule-title">
-        <h2 id="schedule-title">Jadwal per mapel dan rombel</h2>
-        <p class="subtitle schedule-heading">{{ $period->name }} · {{ $period->academicYear->name }}</p>
+@foreach ($schedule as $grade => $rows)
+    <section class="flyer schedule" data-print-break aria-labelledby="schedule-{{ $pageNumber }}-{{ $grade }}">
         <div class="table-wrap">
             <table>
-                <thead><tr><th scope="col">Mata pelajaran dan rombel</th><th scope="col">Sesi</th><th scope="col">Tanggal dan waktu</th><th scope="col">Lokasi dan ruangan</th></tr></thead>
+                <colgroup><col style="width:21%"><col style="width:18%"><col style="width:30%"><col style="width:31%"></colgroup>
+                <thead>
+                    <tr>
+                        <th colspan="4" class="schedule-banner">
+                            <span class="schedule-label">Jadwal per mapel dan rombel</span>
+                            <h2 id="schedule-{{ $pageNumber }}-{{ $grade }}">Kelas {{ $grade }}</h2>
+                            <span class="schedule-period">{{ $schoolName }} · {{ $period->name }} · {{ $period->academicYear->name }}</span>
+                        </th>
+                    </tr>
+                    <tr><th scope="col">Mata pelajaran</th><th scope="col">Rombel</th><th scope="col">Jadwal (WIB)</th><th scope="col">Lokasi dan ruangan</th></tr>
+                </thead>
                 <tbody>
-                    @foreach ($schedule as $row)
-                        <tr>@foreach ($row as $value)<td>{{ $value }}</td>@endforeach</tr>
+                    @foreach ($rows as $row)
+                        <tr>
+                            <th scope="row">{{ $row['subject'] }}</th>
+                            <td>{{ $row['rombel'] }}</td>
+                            <td>
+                                <strong class="session-time">{{ $row['time'] }}</strong>
+                                <span class="session-meta">{{ $row['kind'] }} · {{ $row['duration'] }} menit</span>
+                            </td>
+                            <td>
+                                @foreach ($row['rooms'] as $room)
+                                    <div class="room">
+                                        {{ $room['name'] }}
+                                        @if ($row['rooms']->count() > 1)<span class="session-meta">{{ $room['rombel'] }}</span>@endif
+                                    </div>
+                                @endforeach
+                            </td>
+                        </tr>
                     @endforeach
                 </tbody>
             </table>
         </div>
     </section>
-@endif
+@endforeach

@@ -61,7 +61,7 @@ class ExamFlyerTest extends TestCase
         $this->actingAs($committee)->get(route('exam-flyers.trial', $trial))
             ->assertOk()->assertSee('Simulasi Asesmen Sumatif Akhir Semester Ganjil')->assertSee('TAHUN AJARAN 2026/2027')
             ->assertSee('FLYER SIMULASI UJIAN')->assertSee('Cek koneksi internet dan sinyal di HP Anda sebelum mulai.')
-            ->assertSee('Uji Coba Bahasa Indonesia')->assertSee('Bahasa Indonesia · Kelas 10')
+            ->assertSeeInOrder(['Uji Coba Bahasa Indonesia', 'Mata pelajaran', 'Bahasa Indonesia', 'Kelas 10', 'Semua rombel pada tingkat ini'])
             ->assertSee('BIN-COBA')->assertSee('60 menit')->assertSee(route('tryout.entry', $trial))
             ->assertSee('03/09/2026 22:00 – 04/09/2026 01:00 WIB')->assertSee('Kampus Simulasi')->assertSee('lokasi simulasi')
             ->assertSee('Tata tertib peserta')->assertSee('Peringatan pelanggaran')
@@ -138,15 +138,29 @@ class ExamFlyerTest extends TestCase
         $regular = ExamSession::create([...$settings, 'kind' => 'regular', 'starts_at' => $this->wib('2026-09-03 07:30'), 'ends_at' => $this->wib('2026-09-03 08:45')]);
         $makeup = ExamSession::create([...$settings, 'kind' => 'makeup', 'starts_at' => $this->wib('2026-09-05 10:00'), 'ends_at' => $this->wib('2026-09-05 11:15')]);
         $draft = ExamSession::create([...$settings, 'status' => 'draft', 'kind' => 'regular', 'starts_at' => $this->wib('2026-09-08 09:00'), 'ends_at' => $this->wib('2026-09-08 10:15')]);
+        foreach ([['XI-2', 11, 'Lab 2'], ['X-1', 10, 'Lab 1']] as [$name, $grade, $room]) {
+            $extraClass = SchoolClass::create(['academic_year_id' => $year->id, 'name' => $name, 'grade_level' => $grade]);
+            $extra = AssessmentSubject::create(['assessment_period_id' => $period->id, 'school_class_id' => $extraClass->id, 'subject_id' => $subject->id]);
+            ExamSession::create([...$settings, 'assessment_subject_id' => $extra->id, 'room_name' => $room, 'kind' => 'regular',
+                'starts_at' => $regular->starts_at, 'ends_at' => $regular->ends_at]);
+        }
         $this->actingAs(User::factory()->create(['role' => UserRole::Committee]));
 
         $this->get(route('exam-flyers.core', ['assessment_period_id' => $period->id]))->assertOk()
-            ->assertSee('Jadwal per mapel dan rombel')->assertSee('03/09/2026 07:30 – 08:45 WIB')
+            ->assertSee('data-print-content data-print-table-pages', false)
+            ->assertSeeInOrder(['Jadwal per mapel dan rombel', 'Kelas 10', 'X-1', 'Jadwal per mapel dan rombel', 'Kelas 11', 'XI-2, XI-3'])
+            ->assertViewHas('flyers', function ($flyers): bool {
+                $schedule = $flyers->sole()['schedule'];
+                $rooms = $schedule[11]->first()['rooms']->values();
+
+                return $schedule[10]->count() === 1 && $schedule[11]->count() === 2
+                    && $rooms->pluck('rombel', 'name')->all() === ['Gedung Utama · Lab 1' => 'XI-3', 'Gedung Utama · Lab 2' => 'XI-2'];
+            })->assertSee('03/09/2026 07:30 – 08:45 WIB')
             ->assertSee('05/09/2026 10:00 – 11:15 WIB')->assertDontSee('08/09/2026 09:00');
         $this->get(route('operations.index'))->assertOk()->assertSee(route('exam-flyers.core-session', $regular))
             ->assertSee('Cetak Flyer Asesmen')->assertSee('Pilih Flyer Simulasi Ujian')->assertDontSee('Cetak flyer peringatan');
         $this->get(route('exam-flyers.core-session', $makeup))->assertOk()
-            ->assertSee('Matematika · XI-3')->assertSee('Susulan')->assertSee('75 menit')->assertSee('Gedung Utama · Lab 1')
+            ->assertSeeInOrder(['Matematika', 'Kelas 11', 'Rombel', 'XI-3'])->assertSee('Susulan')->assertSee('75 menit')->assertSee('Gedung Utama · Lab 1')
             ->assertSee('05/09/2026 10:00 – 11:15 WIB')->assertDontSee('03/09/2026 07:30')
             ->assertSee('Tata tertib peserta')->assertSee('Peringatan pelanggaran');
         $this->get(route('exam-flyers.core-session', $draft))->assertOk()->assertSee('Draf jadwal');

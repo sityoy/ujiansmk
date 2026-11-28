@@ -40,6 +40,8 @@ export function paginateTableDocument(root, pageHeight) {
     const overflows = () => root.getBoundingClientRect().height > pageHeight;
 
     for (const block of blocks) {
+        if (root.children.length && block.hasAttribute('data-print-break')) finishPage();
+
         const table = block.querySelector('table');
         const body = table?.tBodies[0];
         if (!table?.tHead || table.tBodies.length !== 1 || !body?.rows.length) {

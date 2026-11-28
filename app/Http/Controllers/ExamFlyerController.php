@@ -35,11 +35,7 @@ class ExamFlyerController extends Controller
                 ['Pelaksanaan', $period->starts_on->translatedFormat('d F Y').' – '.$period->ends_on->translatedFormat('d F Y')],
                 ['Jadwal dan ruangan', $sessions->isEmpty() ? 'Jadwal mapel belum diterbitkan.' : 'Lihat lampiran jadwal. Ikuti rombel dan ruangan pada kartu peserta.'],
             ],
-            'schedule' => $sessions->map(fn (ExamSession $session) => [
-                $session->assessmentSubject->subject->name.' · '.$session->assessmentSubject->schoolClass->name,
-                $this->sessionKind($session), $this->window($session->starts_at, $session->ends_at),
-                $this->sessionLocation($session),
-            ]),
+            'schedule' => $this->scheduleByGrade($sessions),
         ]);
     }
 
@@ -51,10 +47,12 @@ class ExamFlyerController extends Controller
 
         return $this->render([
             'kind' => $this->assessmentTitle($period), 'period' => $period,
-            'headline' => $component->subject->name.' · '.$component->schoolClass->name,
+            'headline' => $component->subject->name,
             'subtitle' => 'UJIAN INTI · '.$this->sessionKind($examSession),
             'entryUrl' => route('login'), 'code' => null,
             'details' => [
+                ['Kelas', 'Kelas '.$component->schoolClass->grade_level],
+                ['Rombel', $component->schoolClass->name],
                 ['Jadwal sesi', $this->window($examSession->starts_at, $examSession->ends_at)],
                 ['Durasi', $examSession->duration_minutes.' menit'],
                 ['Lokasi dan ruangan', $this->sessionLocation($examSession)],
@@ -90,7 +88,9 @@ class ExamFlyerController extends Controller
         $period = $trialExam->assessmentSubject?->assessmentPeriod;
         abort_unless($period, 422, 'Ujian uji coba belum terhubung dengan periode dan tahun ajaran.');
         $details = [
-            ['Mata pelajaran', $trialExam->questionBank->subject->name.' · Kelas '.$trialExam->questionBank->grade_level],
+            ['Mata pelajaran', $trialExam->questionBank->subject->name],
+            ['Kelas', 'Kelas '.$trialExam->questionBank->grade_level],
+            ['Rombel', 'Semua rombel pada tingkat ini'],
             ['Jadwal akses', $this->window($trialExam->starts_at, $trialExam->ends_at)],
             ['Durasi', $trialExam->duration_minutes.' menit'],
         ];
@@ -105,6 +105,45 @@ class ExamFlyerController extends Controller
             'trial' => true, 'locationRequired' => true,
             'notice' => $trialExam->is_active ? null : 'Simulasi nonaktif. Tunggu panitia membuka akses.',
         ];
+    }
+
+    private function scheduleByGrade(Collection $sessions): Collection
+    {
+        return $sessions->groupBy('assessmentSubject.schoolClass.grade_level')
+            ->sortKeys(SORT_NUMERIC)
+            ->map(fn (Collection $gradeSessions) => $gradeSessions
+                ->groupBy(fn (ExamSession $session) => implode('|', [
+                    $session->assessmentSubject->subject_id,
+                    $session->starts_at->getTimestamp(),
+                    $session->ends_at->getTimestamp(),
+                    $session->kind->value,
+                    $session->duration_minutes,
+                ]))
+                ->map($this->scheduleRow(...)));
+    }
+
+    private function scheduleRow(Collection $sessions): array
+    {
+        $session = $sessions->first();
+        $rooms = $sessions->groupBy(fn (ExamSession $item) => $item->campus_id.'|'.$item->room_name)
+            ->map(fn (Collection $location) => [
+                'name' => $this->sessionLocation($location->first()),
+                'rombel' => $this->rombelNames($location),
+            ]);
+
+        return [
+            'subject' => $session->assessmentSubject->subject->name,
+            'rombel' => $this->rombelNames($sessions),
+            'time' => $this->window($session->starts_at, $session->ends_at),
+            'duration' => $session->duration_minutes,
+            'kind' => $this->sessionKind($session),
+            'rooms' => $rooms,
+        ];
+    }
+
+    private function rombelNames(Collection $sessions): string
+    {
+        return $sessions->pluck('assessmentSubject.schoolClass.name')->unique()->sort(SORT_NATURAL | SORT_FLAG_CASE)->join(', ');
     }
 
     private function assessmentTitle(AssessmentPeriod $period): string
@@ -169,6 +208,6 @@ class ExamFlyerController extends Controller
 
     private function sessionLocation(ExamSession $session): string
     {
-        return $session->campus->name.($session->room_name ? ' · '.$session->room_name : '');
+        return $session->campus->name.' · '.($session->room_name ?: 'Ruangan belum ditetapkan');
     }
 }

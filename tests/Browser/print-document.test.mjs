@@ -34,6 +34,7 @@ test('score rows stay with their history when the pair fits and exceptionally lo
 function printNode(tag, name, height = 0, children = []) {
     const node = {
         tag, name, children: [],
+        hasAttribute(attribute) { return attribute === 'data-print-break' && this.pageBreak === true; },
         get tHead() { return this.children.find(child => child.tag === 'thead'); },
         get tBodies() { return this.children.filter(child => child.tag === 'tbody'); },
         get rows() { return this.children; },
@@ -88,6 +89,19 @@ test('the schedule export carries full rows and their period header to each page
         [['Susulan', [1, 2]], 'note'],
     ]);
     assert.ok(pages.every(page => page.reduce((height, block) => height + block.getBoundingClientRect().height, 0) <= 90));
+});
+
+test('a flyer and each class appendix start on separate pages', () => {
+    const flyer = printNode('article', 'flyer', 65);
+    const firstClass = tableBlock('Kelas 10', [30, 35, 35]);
+    const nextClass = tableBlock('Kelas 11', [20, 18]);
+    firstClass.pageBreak = nextClass.pageBreak = true;
+    const root = printNode('main', 'flyer', 0, [flyer, firstClass, nextClass]);
+    const pages = paginateTableDocument(root, 100);
+    assert.deepEqual(pages.map(page => page.map(block => {
+        const table = block.querySelector('table');
+        return table ? [table.tHead.name, table.tBodies[0].rows.map(row => row.name)] : block.name;
+    })), [['flyer'], [['Kelas 10', [1, 2]]], [['Kelas 10', [3]]], [['Kelas 11', [1, 2]]]]);
 });
 
 test('an oversized schedule row is kept whole on a separate page for fitting', () => {
