@@ -27,6 +27,58 @@ export function paginateDocument(height, pageHeight, { boundaries = [], breaks =
     return pages;
 }
 
+// Keep each row and its table heading together as DOM nodes before capture.
+export function paginateTableDocument(root, pageHeight) {
+    const pages = [];
+    const blocks = [...root.children];
+    root.replaceChildren();
+
+    const finishPage = () => {
+        pages.push([...root.children]);
+        root.replaceChildren();
+    };
+    const overflows = () => root.getBoundingClientRect().height > pageHeight;
+
+    for (const block of blocks) {
+        const table = block.querySelector('table');
+        const body = table?.tBodies[0];
+        if (!table?.tHead || table.tBodies.length !== 1 || !body?.rows.length) {
+            root.append(block);
+            if (root.children.length > 1 && overflows()) {
+                block.remove();
+                finishPage();
+                root.append(block);
+            }
+            continue;
+        }
+
+        const rows = [...body.rows];
+        body.replaceChildren();
+        const addTable = () => {
+            const frame = block.cloneNode(true);
+            root.append(frame);
+            return frame;
+        };
+
+        let frame = addTable();
+        let pageBody = frame.querySelector('tbody');
+        for (const row of rows) {
+            pageBody.append(row);
+            if (!overflows() || (root.children.length === 1 && pageBody.rows.length === 1)) continue;
+
+            row.remove();
+            if (pageBody.rows.length === 0) frame.remove();
+            finishPage();
+            frame = addTable();
+            pageBody = frame.querySelector('tbody');
+            pageBody.append(row);
+        }
+    }
+
+    if (root.children.length) finishPage();
+    return pages;
+}
+
 function measureDocument(root, pageHeight) {
     const origin = root.getBoundingClientRect().top;
     const topOf = element => Math.floor(element.getBoundingClientRect().top - origin);
@@ -134,13 +186,16 @@ async function renderDocument(source, settings, format, progress) {
         }));
 
         if (root.scrollWidth > width + 2) throw new Error('Konten lebih lebar daripada ukuran kertas.');
-        const pages = paginateDocument(Math.ceil(root.getBoundingClientRect().height), pageHeight, measureDocument(root, pageHeight));
+        const byTableRows = source.hasAttribute('data-print-table-pages');
+        const pages = byTableRows ? paginateTableDocument(root, pageHeight)
+            : paginateDocument(Math.ceil(root.getBoundingClientRect().height), pageHeight, measureDocument(root, pageHeight));
         const cache = new Map();
-        const captureSlice = (y, height) => capture(root, {
-            x: 0, y, width, height, scale: pixelScale, backgroundColor: '#fff',
+        const captureOptions = {
+            scale: pixelScale, backgroundColor: '#fff',
             windowWidth: window.innerWidth, logging: false, useCORS: true,
             ignoreElements: element => element === source,
-        });
+        };
+        const captureSlice = (y, height) => capture(root, { ...captureOptions, x: 0, y, width, height });
         const output = [];
         for (const [index, page] of pages.entries()) {
             const canvas = document.createElement('canvas');
@@ -161,8 +216,17 @@ async function renderDocument(source, settings, format, progress) {
                 context.drawImage(header, x, y, header.width * zoom, header.height * zoom);
                 y += header.height * zoom;
             }
-            const body = await captureSlice(page.top, page.height);
-            context.drawImage(body, x, y, body.width * zoom, body.height * zoom);
+            let body;
+            let drawScale = zoom;
+            if (byTableRows) {
+                root.replaceChildren(...page);
+                body = await capture(root, captureOptions);
+                // Fit the full capture even when the browser clone lays out text differently.
+                drawScale = Math.min(zoom, width * pixelScale * zoom / body.width, pageHeight * pixelScale * zoom / body.height);
+            } else {
+                body = await captureSlice(page.top, page.height);
+            }
+            context.drawImage(body, x, y, body.width * drawScale, body.height * drawScale);
             body.width = 1;
             body.height = 1;
             const blob = await imageBlob(canvas, format === 'pdf' ? 'image/jpeg' : 'image/png');

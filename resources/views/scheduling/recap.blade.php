@@ -122,7 +122,7 @@
         @endif
     </header>
 
-    <main class="sheet report-sheet" data-print-content aria-label="Rekap Jadwal Ujian">
+    <main class="sheet report-sheet" data-print-content data-print-table-pages aria-label="Rekap Jadwal Ujian">
         <header class="brand" data-print-block>
             <x-school-print-heading :school="$school" title="REKAP JADWAL UJIAN" />
         </header>

@@ -135,6 +135,7 @@ class SchedulingManagementTest extends TestCase
             ->assertViewHas('shareText', fn (string $text) => str_contains($text, '23:30 – 13/09/2026 01:00 WIB'))
             ->assertSeeInOrder(['Jadwal (WIB)', 'Sabtu, 12 September 2026', '23:30 – 13/09/2026 01:00', '90 menit', 'Kampus Utama'])
             ->assertSee('A4 lanskap (297 × 210 mm)')
+            ->assertSee('data-print-content data-print-table-pages', false)
             ->assertSee('data-paper-width="297"', false)
             ->assertSee('data-paper-height="210"', false)
             ->assertSee('Lab 2')

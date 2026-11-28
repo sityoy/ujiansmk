@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { paginateDocument, setPngDensity } from '../../resources/js/print-document.js';
+import { paginateDocument, paginateTableDocument, setPngDensity } from '../../resources/js/print-document.js';
 import { buildPdf, crc32 } from '../../resources/js/question-bank-report.js';
 
 test('named sections and repeated table headers retain every point of the print document', () => {
@@ -29,6 +29,76 @@ test('score rows stay with their history when the pair fits and exceptionally lo
     for (let i = 1; i < pages.length; i++) {
         assert.equal(pages[i].top, pages[i - 1].top + pages[i - 1].height);
     }
+});
+
+function printNode(tag, name, height = 0, children = []) {
+    const node = {
+        tag, name, children: [],
+        get tHead() { return this.children.find(child => child.tag === 'thead'); },
+        get tBodies() { return this.children.filter(child => child.tag === 'tbody'); },
+        get rows() { return this.children; },
+        append(child) {
+            child.remove();
+            child.parent = this;
+            this.children.push(child);
+        },
+        remove() {
+            if (!this.parent) return;
+            this.parent.children.splice(this.parent.children.indexOf(this), 1);
+            this.parent = null;
+        },
+        replaceChildren() { [...this.children].forEach(child => child.remove()); },
+        querySelector(selector) {
+            for (const child of this.children) {
+                const match = child.tag === selector ? child : child.querySelector(selector);
+                if (match) return match;
+            }
+            return null;
+        },
+        cloneNode() { return printNode(tag, name, height, this.children.map(child => child.cloneNode())); },
+        getBoundingClientRect() {
+            return { height: height + this.children.reduce((total, child) => total + child.getBoundingClientRect().height, 0) };
+        },
+    };
+    children.forEach(child => node.append(child));
+    return node;
+}
+
+const tableBlock = (name, rowHeights) => printNode('div', name, 0, [
+    printNode('table', name, 0, [
+        printNode('thead', name, 10),
+        printNode('tbody', name, 0, rowHeights.map((height, i) => printNode('tr', i + 1, height))),
+    ]),
+]);
+
+test('the schedule export carries full rows and their period header to each page', () => {
+    const root = printNode('main', 'recap', 0, [
+        printNode('header', 'school', 23),
+        tableBlock('ASAS', [24, 32, 34, 31]),
+        tableBlock('Susulan', [26, 23]),
+        printNode('p', 'note', 10),
+    ]);
+    const pages = paginateTableDocument(root, 90);
+    assert.deepEqual(pages.map(page => page.map(block => {
+        const table = block.querySelector('table');
+        return table ? [table.tHead.name, table.tBodies[0].rows.map(row => row.name)] : block.name;
+    })), [
+        ['school', ['ASAS', [1, 2]]],
+        [['ASAS', [3, 4]]],
+        [['Susulan', [1, 2]], 'note'],
+    ]);
+    assert.ok(pages.every(page => page.reduce((height, block) => height + block.getBoundingClientRect().height, 0) <= 90));
+});
+
+test('an oversized schedule row is kept whole on a separate page for fitting', () => {
+    const root = printNode('main', 'recap', 0, [
+        printNode('header', 'school', 23),
+        tableBlock('ASAS', [145, 20]),
+    ]);
+    const pages = paginateTableDocument(root, 90);
+    assert.equal(pages.length, 3);
+    assert.equal(pages[0][0].name, 'school');
+    assert.deepEqual(pages.slice(1).map(page => page[0].querySelector('tbody').rows.map(row => row.name)), [[1], [2]]);
 });
 
 test('the PDF can keep the original print paper size in portrait, landscape and F4', () => {
