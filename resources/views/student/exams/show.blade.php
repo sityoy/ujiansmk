@@ -7,6 +7,7 @@
 @inject('optionOrder', 'App\Services\Exams\StudentOptionOrder')
 
 @section('content')
+    @php($shuffleOptions = $optionOrder->shouldShuffle($attempt->assignment->assessmentSubject->subject))
     @if ($attempt->security_enabled)
         <div id="exam-security" data-state-url="{{ route('student.exams.security', $attempt) }}"
             data-event-url="{{ route('student.exams.incident', $attempt) }}"
@@ -88,8 +89,9 @@
                     @endif
                     <x-exam-question-card :question="$question" :number="$number" :total="$questions->count()"
                         :show-context="false"
+                        :relabel-options="$shuffleOptions"
                         :context-reference="$contextRange && $contextRange['first'] !== $number ? ['id' => $contextAnchor, 'label' => $contextRange['label']] : null"
-                        :options="$type->requiresManualGrading() ? [] : $optionOrder->forQuestion($attempt, $question)"
+                        :options="$type->requiresManualGrading() ? [] : $optionOrder->forQuestion($attempt, $question, $shuffleOptions)"
                         :name="'question_'.$question->id" :answer="$answers->get($question->id)?->answer"
                         :save-url="route('student.exams.answer', [$attempt, $question])" />
                 @endforeach

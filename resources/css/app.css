@@ -611,6 +611,77 @@ html.sidebar-collapsed .app-sidebar {
     }
 }
 
+/* Keep navigation and secondary labels readable on dark mobile screens. */
+@media (max-width: 1023px) {
+    html[data-theme='dark'] :is(.app-shell, .tryout-page) .text-slate-500 {
+        color: #a6b6cc;
+    }
+
+    html[data-theme='dark'] :is(.app-shell, .tryout-page) :is(input, textarea)::placeholder {
+        color: #a6b6cc;
+        opacity: 1;
+    }
+
+    html[data-theme='dark'] .app-sidebar {
+        height: 100dvh;
+        padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+        background: #0f172a;
+        border-color: #64748b;
+    }
+
+    html[data-theme='dark'] :is(.app-main, .tryout-page) > header {
+        background: #0f172a;
+        border-color: #64748b;
+    }
+
+    html[data-theme='dark'] .app-sidebar .nav-group {
+        background: #1e293b;
+        border-color: #64748b;
+    }
+
+    html[data-theme='dark'] .app-sidebar .nav-group > div {
+        border-color: #64748b;
+    }
+
+    html[data-theme='dark'] [data-sidebar-nav] .text-slate-400 {
+        color: #e2e8f0;
+    }
+
+    html[data-theme='dark'] [data-sidebar-nav] a.bg-cyan-400 {
+        background-color: #67e8f9;
+    }
+
+    html[data-theme='dark'] [data-sidebar-nav] :is(a, summary) {
+        min-height: 2.75rem;
+        align-content: center;
+    }
+
+    html[data-theme='dark'] :is([data-sidebar-close], [data-sidebar-toggle], [data-theme-toggle], .app-main > header form button) {
+        min-height: 2.75rem;
+        border-color: #64748b;
+        background-color: #1e293b;
+        color: #f1f5f9;
+    }
+
+    html[data-theme='dark'] :is([data-sidebar-nav] :is(a, summary), [data-sidebar-close], [data-sidebar-toggle], [data-theme-toggle], .theme-options button):focus-visible {
+        outline: 2px solid #67e8f9;
+        outline-offset: 2px;
+    }
+
+    html[data-theme='dark'] .theme-options button {
+        min-height: 2.75rem;
+    }
+}
+
+@media (max-width: 639px) {
+    html[data-theme='dark'] .app-main > header h1 {
+        white-space: normal;
+        overflow-wrap: anywhere;
+        line-height: 1.25;
+        font-size: 1rem;
+    }
+}
+
 /* Mobile student table becomes readable cards instead of a wide floating table. */
 @media (max-width: 767px) {
     .responsive-data-table {

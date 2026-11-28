@@ -677,16 +677,23 @@ class TrialExamFlowTest extends TestCase
         ])->assertDontSee('Gambar khusus soal pertama');
     }
 
-    public function test_trial_options_keep_order_attachments_checked_answer_and_correct_score(): void
+    #[\PHPUnit\Framework\Attributes\TestWith([false])]
+    #[\PHPUnit\Framework\Attributes\TestWith([true])]
+    public function test_trial_options_keep_expected_order_attachments_checked_answer_and_correct_score(bool $english): void
     {
         [$trial] = $this->makeTrial();
+        if ($english) {
+            $trial->questionBank->subject->update(['code' => 'BIG', 'name' => 'English']);
+        }
         $question = $trial->questionBank->questions()->firstOrFail();
         $question->update(['option_file_paths' => ['A' => 'trial-options/benar.png', 'B' => 'trial-options/lain.pdf']]);
         $student = Student::query()->where('nisn', '1234567890')->firstOrFail();
         $this->actingAs($student->user)->startTrial($trial, ['access_code' => 'SJR-SMKBHG'])->assertRedirect();
         $attempt = TrialAttempt::query()->firstOrFail();
         $route = route('tryout.show', [$trial, $attempt]);
-        $expected = app(StudentOptionOrder::class)->forQuestion($attempt, $question)->keys()->all();
+        $expected = $english
+            ? ['A', 'B', 'C', 'D', 'E']
+            : app(StudentOptionOrder::class)->forQuestion($attempt, $question)->keys()->all();
         $getOptions = function (string $html) use ($question, $expected): array {
             $dom = new \DOMDocument;
             @$dom->loadHTML('<?xml encoding="UTF-8">'.$html);

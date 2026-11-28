@@ -1,4 +1,4 @@
-@props(['question', 'number', 'total', 'options', 'name', 'answer' => null, 'saveUrl' => null, 'trial' => false, 'showContext' => true, 'contextReference' => null])
+@props(['question', 'number', 'total', 'options', 'name', 'answer' => null, 'saveUrl' => null, 'trial' => false, 'showContext' => true, 'contextReference' => null, 'relabelOptions' => true])
 
 @php
     $type = $question->question_type->value;
@@ -32,7 +32,7 @@
                 <input type="hidden" name="{{ $name }}" value="{{ $answer }}" data-choice-value>
             @endif
             @foreach ($options as $key => $option)
-                @php($displayKey = chr(65 + $loop->index))
+                @php($displayKey = $relabelOptions ? chr(65 + $loop->index) : $key)
                 @php($optionPath = $question->option_file_paths[$key] ?? null)
                 <div @class(['rounded-xl border border-white/10 hover:border-cyan-400/30', 'tryout-option bg-slate-950/50' => $trial,
                     'text-sm text-slate-300 transition hover:bg-cyan-400/5' => ! $trial])>

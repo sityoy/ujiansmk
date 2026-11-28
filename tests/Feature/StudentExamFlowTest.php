@@ -241,23 +241,30 @@ class StudentExamFlowTest extends TestCase
             ->assertSee('Literal &lt;strong&gt; and comparison 2 &lt; 3.', false);
     }
 
-    public function test_core_options_are_stable_relabelled_and_keep_attachments_and_scoring(): void
+    #[\PHPUnit\Framework\Attributes\TestWith([false])]
+    #[\PHPUnit\Framework\Attributes\TestWith([true])]
+    public function test_core_options_keep_expected_order_attachments_and_scoring(bool $english): void
     {
         [$user, $assignment, $questions] = $this->makeExam();
+        if ($english) {
+            $assignment->assessmentSubject->subject->update(['name' => 'Bahasa Inggris (Kelas X)']);
+        }
         $question = $questions[0];
         $question->update(['options' => ['A' => 'Jawaban tepat', 'B' => 'Salah B', 'C' => 'Salah C', 'D' => 'Salah D', 'E' => 'Salah E'],
             'option_file_paths' => ['A' => 'exam-options/benar.png', 'B' => 'exam-options/lain.pdf']]);
         $attempt = $this->startAttempt($assignment);
         $route = route('student.exams.show', $attempt);
         $this->actingAs($user)->withSession(['exam_device_token' => str_repeat('a', 64)]);
-        $order = app(StudentOptionOrder::class)->forQuestion($attempt, $question);
+        $expected = $english
+            ? ['A', 'B', 'C', 'D', 'E']
+            : app(StudentOptionOrder::class)->forQuestion($attempt, $question)->keys()->all();
         $response = $this->get($route)->assertOk()
             ->assertSee('data-exam-image-zoom-in', false)
             ->assertSeeInOrder(array_map(fn ($item) => $item->question_text, $questions));
-        $this->assertCoreOptions($response->getContent(), $question, $order->keys()->all());
+        $this->assertCoreOptions($response->getContent(), $question, $expected);
         $this->putJson(route('student.exams.answer', [$attempt, $question]), ['answer' => 'A'])->assertOk();
         $resumed = $this->get($route)->assertOk();
-        $this->assertCoreOptions($resumed->getContent(), $question, $order->keys()->all());
+        $this->assertCoreOptions($resumed->getContent(), $question, $expected);
         $this->putJson(route('student.exams.answer', [$attempt, $questions[1]]), ['answer' => 'A'])->assertOk();
         $this->post(route('student.exams.submit', $attempt))->assertRedirect(route('student.exams.result', $attempt));
         $this->assertSame('2.00', $attempt->fresh()->score);

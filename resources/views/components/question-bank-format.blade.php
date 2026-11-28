@@ -15,7 +15,7 @@
         @if ($allowsChoices)
             <div>
                 <dt class="font-semibold text-slate-200">Pilihan ganda</dt>
-                <dd>Isi pilihan A sampai E dan centang semua kunci yang benar. Jawaban benar bernilai 2 poin, dengan nilai PG maksimal 100. Urutan pilihan di ujian daring dapat berbeda dari naskah PDF.</dd>
+                <dd>Isi pilihan A sampai E dan centang semua kunci yang benar. Jawaban benar bernilai 2 poin, dengan nilai PG maksimal 100. Pilihan Bahasa Inggris mengikuti urutan A–E pada naskah. Opsi pada mapel lain dapat diacak.</dd>
             </div>
         @endif
         <div>
