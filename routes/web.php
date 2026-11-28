@@ -1,0 +1,368 @@
+<?php
+
+use App\Http\Controllers\AcademicDataController;
+use App\Http\Controllers\AttendanceSecurityController;
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\PasswordChangeController;
+use App\Http\Controllers\CampusController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ExamOperationsController;
+use App\Http\Controllers\ExamFlyerController;
+use App\Http\Controllers\ExamGradingController;
+use App\Http\Controllers\QuestionBankController;
+use App\Http\Controllers\ParticipantCardController;
+use App\Http\Controllers\Reports\MidtermReportController;
+use App\Http\Controllers\Reports\ExamResultController;
+use App\Http\Controllers\Reports\MidtermReportEntryController;
+use App\Http\Controllers\ScheduleRecapController;
+use App\Http\Controllers\SchedulingController;
+use App\Http\Controllers\Settings\SchoolProfileController;
+use App\Http\Controllers\StudentAttendanceController;
+use App\Http\Controllers\StudentExamController;
+use App\Http\Controllers\StudentSpreadsheetController;
+use App\Http\Controllers\TrialExamController;
+use App\Http\Controllers\TrialExamPublicController;
+use App\Http\Controllers\TrialLocationController;
+use App\Http\Controllers\TrialQuestionBankController;
+use App\Http\Controllers\SubjectSpreadsheetController;
+use App\Http\Controllers\UserManagementController;
+use App\Http\Controllers\UserCredentialPrintController;
+use App\Http\Controllers\UserSpreadsheetController;
+use Illuminate\Support\Facades\Route;
+
+Route::get('/health', fn () => response()->json([
+    'status' => 'ok',
+    'service' => config('app.name'),
+    'time' => now()->toIso8601String(),
+]));
+
+Route::redirect('/', '/login');
+Route::get('/school/logo', [SchoolProfileController::class, 'logo'])->name('school.logo');
+
+Route::prefix('tryout')->name('tryout.')->group(function (): void {
+    Route::get('/{trialExam:slug}', [TrialExamPublicController::class, 'entry'])->name('entry');
+    Route::post('/{trialExam:slug}/attendance', [TrialExamPublicController::class, 'checkIn'])
+        ->middleware('throttle:trial-attendance')->name('attendance');
+    Route::post('/{trialExam:slug}/start', [TrialExamPublicController::class, 'start'])
+        ->middleware('throttle:trial-start')->name('start');
+    Route::get('/{trialExam:slug}/attempts/{trialAttempt}', [TrialExamPublicController::class, 'show'])->name('show');
+    Route::get('/{trialExam:slug}/attempts/{trialAttempt}/security', [TrialExamPublicController::class, 'securityState'])
+        ->middleware('throttle:trial-security')->name('security');
+    Route::put('/{trialExam:slug}/attempts/{trialAttempt}/questions/{question}', [TrialExamPublicController::class, 'answer'])
+        ->middleware('throttle:trial-answer')->name('answer');
+    Route::post('/{trialExam:slug}/attempts/{trialAttempt}/incidents', [TrialExamPublicController::class, 'incident'])
+        ->middleware('throttle:trial-incident')->name('incident');
+    Route::post('/{trialExam:slug}/attempts/{trialAttempt}/submit', [TrialExamPublicController::class, 'submit'])
+        ->middleware('throttle:trial-submit')->name('submit');
+    Route::get('/{trialExam:slug}/attempts/{trialAttempt}/result', [TrialExamPublicController::class, 'result'])->name('result');
+});
+
+Route::middleware('guest')->group(function (): void {
+    Route::get('/login', [LoginController::class, 'create'])->name('login');
+    Route::post('/login', [LoginController::class, 'store'])
+        ->middleware('throttle:school-login')
+        ->name('login.store');
+});
+
+Route::middleware(['auth', 'active'])->group(function (): void {
+    Route::get('/account/password', [PasswordChangeController::class, 'edit'])->name('password.change');
+    Route::put('/account/password', [PasswordChangeController::class, 'update'])->name('password.update');
+    Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
+
+    Route::middleware('password.changed')->group(function (): void {
+        Route::get('/dashboard', DashboardController::class)->name('dashboard');
+
+        Route::prefix('student')
+            ->middleware('role:student')
+            ->name('student.')
+            ->group(function (): void {
+                Route::get('/exams', [StudentExamController::class, 'index'])->name('exams.index');
+                Route::post('/attendance/{assignment}', [StudentAttendanceController::class, 'store'])
+                    ->middleware('throttle:10,1,attendance')
+                    ->name('attendance.store');
+                Route::post('/exams/{assignment}/start', [StudentExamController::class, 'start'])->name('exams.start');
+                Route::get('/attempts/{attempt}', [StudentExamController::class, 'show'])->name('exams.show');
+                Route::get('/attempts/{attempt}/result', [StudentExamController::class, 'result'])->name('exams.result');
+                Route::get('/attempts/{attempt}/security', [StudentExamController::class, 'securityState'])
+                    ->middleware('throttle:30,1,core-security')->name('exams.security');
+                Route::put('/attempts/{attempt}/questions/{question}', [StudentExamController::class, 'answer'])
+                    ->middleware('throttle:120,1,core-answer')
+                    ->name('exams.answer');
+                Route::post('/attempts/{attempt}/submit', [StudentExamController::class, 'submit'])->name('exams.submit');
+                Route::post('/attempts/{attempt}/incidents', [StudentExamController::class, 'incident'])
+                    ->middleware('throttle:30,1')
+                    ->name('exams.incident');
+            });
+
+        Route::middleware('role:super_admin')->group(function (): void {
+        Route::get('/settings/school', [SchoolProfileController::class, 'edit'])
+            ->name('settings.school.edit');
+        Route::put('/settings/school', [SchoolProfileController::class, 'update'])
+            ->name('settings.school.update');
+        Route::get('/settings/school/letterhead', [SchoolProfileController::class, 'letterhead'])
+            ->name('settings.school.letterhead');
+
+        Route::prefix('academic')->name('academic.')->group(function (): void {
+            Route::get('/', [AcademicDataController::class, 'index'])->name('index');
+
+            Route::post('/years', [AcademicDataController::class, 'storeAcademicYear'])->name('years.store');
+            Route::patch('/years/{academicYear}/activate', [AcademicDataController::class, 'activateAcademicYear'])->name('years.activate');
+            Route::delete('/years/{academicYear}', [AcademicDataController::class, 'destroyAcademicYear'])->name('years.destroy');
+
+            Route::post('/subjects', [AcademicDataController::class, 'storeSubject'])->name('subjects.store');
+            Route::get('/subjects/template', [SubjectSpreadsheetController::class, 'template'])->name('subjects.template');
+            Route::get('/subjects/export', [SubjectSpreadsheetController::class, 'export'])->name('subjects.export');
+            Route::post('/subjects/import', [SubjectSpreadsheetController::class, 'import'])->name('subjects.import');
+            Route::patch('/subjects/{subject}/toggle', [AcademicDataController::class, 'toggleSubject'])->name('subjects.toggle');
+            Route::delete('/subjects/{subject}', [AcademicDataController::class, 'destroySubject'])->name('subjects.destroy');
+
+            Route::post('/classes', [AcademicDataController::class, 'storeClass'])->name('classes.store');
+            Route::patch('/classes/{schoolClass}/homeroom', [AcademicDataController::class, 'updateHomeroomTeacher'])->name('classes.homeroom');
+            Route::delete('/classes/{schoolClass}', [AcademicDataController::class, 'destroyClass'])->name('classes.destroy');
+
+            Route::post('/students', [AcademicDataController::class, 'storeStudent'])->name('students.store');
+            Route::get('/students/template', [StudentSpreadsheetController::class, 'template'])->name('students.template');
+            Route::get('/students/export', [StudentSpreadsheetController::class, 'export'])->name('students.export');
+            Route::post('/students/import', [StudentSpreadsheetController::class, 'import'])->name('students.import');
+            Route::post('/students/participant-cards', [ParticipantCardController::class, 'generate'])->name('students.participant-cards');
+            Route::patch('/students/rooms', [AcademicDataController::class, 'updateStudentRooms'])->name('students.rooms');
+            Route::patch('/students/{student}/room', [AcademicDataController::class, 'updateStudentRoom'])->name('students.room');
+            Route::patch('/students/status', [AcademicDataController::class, 'updateStudentStatuses'])->name('students.bulk-status');
+            Route::patch('/students/{student}/toggle', [AcademicDataController::class, 'toggleStudent'])->name('students.toggle');
+            Route::delete('/students/all', [AcademicDataController::class, 'destroyAllStudents'])->name('students.destroy-all');
+            Route::delete('/students/bulk', [AcademicDataController::class, 'destroyStudents'])->name('students.bulk-destroy');
+            Route::delete('/students/{student}', [AcademicDataController::class, 'destroyStudent'])->name('students.destroy');
+        });
+
+        Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
+        Route::post('/users', [UserManagementController::class, 'store'])->name('users.store');
+        Route::put('/users/{user}', [UserManagementController::class, 'update'])->name('users.update');
+        Route::patch('/users/{user}/toggle', [UserManagementController::class, 'toggle'])->name('users.toggle');
+        Route::post('/users/credentials/print', [UserCredentialPrintController::class, 'generate'])->name('users.credentials.print');
+        Route::get('/users-spreadsheet/template', [UserSpreadsheetController::class, 'template'])->name('users.template');
+        Route::get('/users-spreadsheet/export', [UserSpreadsheetController::class, 'export'])->name('users.export');
+        Route::post('/users-spreadsheet/import', [UserSpreadsheetController::class, 'import'])->name('users.import');
+    });
+
+    Route::prefix('scheduling')
+        ->middleware('role:super_admin,committee')
+        ->name('scheduling.')
+        ->group(function (): void {
+            Route::get('/', [SchedulingController::class, 'index'])->name('index');
+            Route::get('/recap', ScheduleRecapController::class)->name('recap');
+            Route::post('/periods', [SchedulingController::class, 'storePeriod'])->name('periods.store');
+            Route::patch('/periods/{assessmentPeriod}', [SchedulingController::class, 'updatePeriod'])->name('periods.update');
+            Route::patch('/periods/{assessmentPeriod}/status', [SchedulingController::class, 'updatePeriodStatus'])->name('periods.status');
+            Route::delete('/periods/{assessmentPeriod}', [SchedulingController::class, 'destroyPeriod'])->name('periods.destroy');
+
+            Route::post('/components', [SchedulingController::class, 'storeComponent'])->name('components.store');
+            Route::patch('/components/{assessmentSubject}', [SchedulingController::class, 'updateComponent'])->name('components.update');
+            Route::patch('/components/{assessmentSubject}/teacher', [SchedulingController::class, 'updateComponentTeacher'])->name('components.teacher');
+            Route::delete('/components/{assessmentSubject}', [SchedulingController::class, 'destroyComponent'])->name('components.destroy');
+
+            Route::post('/sessions', [SchedulingController::class, 'storeSession'])->name('sessions.store');
+            Route::patch('/sessions/{examSession}', [SchedulingController::class, 'updateSession'])->name('sessions.update');
+            Route::delete('/sessions/{examSession}', [SchedulingController::class, 'destroySession'])->name('sessions.destroy');
+            Route::post('/components/{assessmentSubject}/sessions/{examSession}/assign-class', [SchedulingController::class, 'assignClass'])
+                ->name('assign-class');
+            Route::post('/makeup/move', [SchedulingController::class, 'moveToMakeup'])->name('makeup.move');
+
+        });
+
+    Route::prefix('scheduling/campuses')
+        ->middleware('role:super_admin,committee,principal')
+        ->name('scheduling.campuses.')
+        ->group(function (): void {
+            Route::get('/', [CampusController::class, 'index'])->name('index');
+            Route::post('/', [CampusController::class, 'store'])->name('store');
+            Route::put('/{campus}', [CampusController::class, 'update'])->name('update');
+            Route::patch('/{campus}/toggle', [CampusController::class, 'toggle'])->name('toggle');
+            Route::delete('/{campus}', [CampusController::class, 'destroy'])->name('destroy');
+        });
+
+    Route::prefix('trial-locations')->middleware('role:super_admin,committee')->name('trial-locations.')
+        ->group(function (): void {
+            Route::get('/', [TrialLocationController::class, 'index'])->name('index');
+            Route::post('/', [TrialLocationController::class, 'store'])->name('store');
+            Route::put('/{trialLocation}', [TrialLocationController::class, 'update'])->name('update');
+        });
+
+    Route::prefix('tryouts')
+        ->middleware('role:super_admin,committee')
+        ->name('tryouts.')
+        ->group(function (): void {
+            Route::get('/', [TrialExamController::class, 'index'])->name('index');
+            Route::post('/', [TrialExamController::class, 'store'])->name('store');
+            Route::get('/cards/all', [TrialExamController::class, 'allCards'])->name('cards.all');
+            Route::get('/{trialExam}/cards', [TrialExamController::class, 'cards'])->name('cards');
+            Route::get('/{trialExam}/edit', [TrialExamController::class, 'edit'])->name('edit');
+            Route::put('/{trialExam}', [TrialExamController::class, 'update'])->name('update');
+            Route::patch('/{trialExam}/toggle', [TrialExamController::class, 'toggle'])->name('toggle');
+            Route::delete('/{trialExam}', [TrialExamController::class, 'destroy'])->name('destroy');
+        });
+
+    Route::middleware('role:super_admin,committee,principal,proctor')->group(function (): void {
+        Route::get('/tryouts/{trialExam}/attendance/print', [TrialExamController::class, 'attendanceReport'])->name('tryouts.attendance.print');
+        Route::get('/tryouts/scores/print', [TrialExamController::class, 'printAllScores'])->name('tryouts.scores.all');
+        Route::get('/tryouts/{trialExam}/scores/print', [TrialExamController::class, 'printScores'])->name('tryouts.scores.print');
+    });
+    Route::get('/tryouts/links/share', [TrialExamController::class, 'links'])
+        ->middleware('role:super_admin,committee,principal')->name('tryouts.links');
+    Route::post('/tryouts/{trialExam}/attempts/{trialAttempt}/restart', [TrialExamController::class, 'restartParticipant'])
+        ->middleware('role:super_admin,committee,principal')->name('tryouts.attempts.restart');
+
+    Route::post('/tryouts/{trialExam}/attempts/{trialAttempt}/reset-violations', [TrialExamController::class, 'resetViolations'])
+        ->middleware('role:super_admin,committee,principal')->name('tryouts.attempts.reset-violations');
+
+    Route::middleware('role:super_admin,committee,principal,teacher')->group(function (): void {
+        Route::get('/tryouts/{trialExam}/attempts/{trialAttempt}/grade', [TrialExamController::class, 'editGrade'])->name('tryouts.attempts.grade.edit');
+        Route::put('/tryouts/{trialExam}/attempts/{trialAttempt}/grade', [TrialExamController::class, 'updateGrade'])->name('tryouts.attempts.grade.update');
+    });
+
+    Route::get('/tryouts/{trialExam}/progress', [TrialExamController::class, 'progress'])
+        ->middleware('role:super_admin,committee,teacher,proctor,principal')
+        ->name('tryouts.progress');
+    Route::get('/tryouts/participants/switch', [TrialExamController::class, 'switchParticipants'])
+        ->middleware('role:super_admin,committee,teacher,proctor,principal')
+        ->name('tryouts.participants.switch');
+    Route::get('/tryouts/{trialExam}', [TrialExamController::class, 'show'])
+        ->middleware('role:super_admin,committee,teacher,proctor,principal')
+        ->name('tryouts.participants');
+
+    Route::prefix('trial-question-banks')
+        ->middleware('can:author-trial-questions')
+        ->name('trial-question-banks.')
+        ->group(function (): void {
+            Route::get('/', [TrialQuestionBankController::class, 'index'])->name('index');
+            Route::get('/recap', [TrialQuestionBankController::class, 'recap'])->name('recap');
+            Route::patch('/{trialQuestionBank}/settings', [TrialQuestionBankController::class, 'updateSettings'])
+                ->middleware('role:super_admin,committee')->name('settings.update');
+            Route::post('/', [TrialQuestionBankController::class, 'store'])->middleware('role:super_admin,committee')->name('store');
+            Route::post('/import-pack', [TrialQuestionBankController::class, 'importPack'])->middleware('role:super_admin,committee')->name('import-pack');
+            Route::patch('/{trialQuestionBank}/restore', [TrialQuestionBankController::class, 'restore'])->middleware('role:super_admin,committee')->name('restore');
+            Route::get('/{trialQuestionBank}/questions/export', [TrialQuestionBankController::class, 'export'])->name('questions.export');
+            Route::get('/{trialQuestionBank}/questions/pdf', [TrialQuestionBankController::class, 'print'])->name('questions.pdf');
+            Route::get('/{trialQuestionBank}/questions/import-pdf', [TrialQuestionBankController::class, 'importPdfForm'])->name('questions.pdf-import.form');
+            Route::post('/{trialQuestionBank}/questions/import-pdf', [TrialQuestionBankController::class, 'importPdf'])
+                ->block(30, 10)->name('questions.pdf-import.store');
+            Route::get('/{trialQuestionBank}/questions/preview', [TrialQuestionBankController::class, 'preview'])->name('questions.preview');
+            Route::get('/{trialQuestionBank}/questions/{question}/edit', [TrialQuestionBankController::class, 'editQuestion'])->name('questions.edit');
+            Route::get('/{trialQuestionBank}/questions', [TrialQuestionBankController::class, 'questions'])->name('questions.index');
+            Route::post('/{trialQuestionBank}/questions', [TrialQuestionBankController::class, 'storeQuestion'])->name('questions.store');
+            Route::put('/{trialQuestionBank}/questions/{question}', [TrialQuestionBankController::class, 'updateQuestion'])->name('questions.update');
+            Route::delete('/{trialQuestionBank}/questions/{question}', [TrialQuestionBankController::class, 'destroyQuestion'])->name('questions.destroy');
+            Route::delete('/{trialQuestionBank}', [TrialQuestionBankController::class, 'destroy'])->middleware('role:super_admin,committee')->name('destroy');
+        });
+
+    Route::get('/question-bank/recap', [QuestionBankController::class, 'recap'])
+        ->middleware('role:super_admin,committee,teacher')
+        ->name('question-bank.recap');
+
+    Route::get('/question-bank', [QuestionBankController::class, 'catalog'])
+        ->middleware('role:super_admin,committee,teacher')
+        ->name('question-bank.index');
+
+    Route::patch('/question-bank/periods/{assessmentPeriod}/deadline', [QuestionBankController::class, 'updateDeadline'])
+        ->middleware('role:super_admin,committee')
+        ->name('question-bank.deadline.update');
+
+    Route::prefix('scheduling')
+        ->middleware('role:super_admin,committee,teacher')
+        ->name('scheduling.')
+        ->group(function (): void {
+            Route::get('/components/{assessmentSubject}/questions/export', [QuestionBankController::class, 'export'])
+                ->name('questions.export');
+            Route::get('/components/{assessmentSubject}/questions/pdf', [QuestionBankController::class, 'print'])
+                ->name('questions.pdf');
+            Route::get('/components/{assessmentSubject}/questions/import-pdf', [QuestionBankController::class, 'importPdfForm'])->name('questions.pdf-import.form');
+            Route::post('/components/{assessmentSubject}/questions/import-pdf', [QuestionBankController::class, 'importPdf'])
+                ->block(30, 10)->name('questions.pdf-import.store');
+            Route::get('/components/{assessmentSubject}/questions/preview', [QuestionBankController::class, 'preview'])
+                ->name('questions.preview');
+            Route::get('/components/{assessmentSubject}/questions/{question}/edit', [QuestionBankController::class, 'edit'])
+                ->name('questions.edit');
+            Route::get('/components/{assessmentSubject}/questions', [QuestionBankController::class, 'index'])
+                ->name('questions.index');
+            Route::post('/components/{assessmentSubject}/questions', [QuestionBankController::class, 'store'])
+                ->name('questions.store');
+            Route::put('/components/{assessmentSubject}/questions/{question}', [QuestionBankController::class, 'update'])
+                ->name('questions.update');
+            Route::delete('/components/{assessmentSubject}/questions/{question}', [QuestionBankController::class, 'destroy'])
+                ->name('questions.destroy');
+        });
+
+    Route::prefix('reports/exam-results')
+        ->middleware('role:super_admin,committee,teacher')
+        ->name('reports.exam-results.')
+        ->group(function (): void {
+            Route::get('/', [ExamResultController::class, 'index'])->name('index');
+            Route::get('/{assessmentPeriod}/{schoolClass}/print', [ExamResultController::class, 'print'])->name('print');
+        });
+
+    Route::prefix('reports/midterm')
+        ->middleware('role:super_admin,committee,principal,teacher')
+        ->name('reports.midterm.')
+        ->group(function (): void {
+            Route::get('/', [MidtermReportController::class, 'index'])->name('index');
+            Route::get('/{assessmentPeriod}/{schoolClass}', [MidtermReportController::class, 'show'])->name('show');
+            Route::get('/{assessmentPeriod}/{schoolClass}/edit', [MidtermReportEntryController::class, 'edit'])->name('edit');
+            Route::get('/{assessmentPeriod}/{schoolClass}/{student}/print', [MidtermReportController::class, 'print'])->name('print');
+            Route::put('/subjects/{assessmentSubject}', [MidtermReportEntryController::class, 'updateSubjectResults'])->name('subject-results.update');
+            Route::put('/subjects/{assessmentSubject}/learning-objective', [MidtermReportEntryController::class, 'updateLearningObjective'])->name('learning-objective.update');
+            Route::put('/{assessmentPeriod}/{schoolClass}/settings', [MidtermReportEntryController::class, 'updateReportSettings'])->name('settings.update');
+            Route::put('/{assessmentPeriod}/{schoolClass}/attendance', [MidtermReportEntryController::class, 'updateAttendance'])->name('attendance.update');
+            Route::post('/{assessmentPeriod}/{schoolClass}/extracurriculars', [MidtermReportEntryController::class, 'storeExtracurricular'])->name('extracurriculars.store');
+            Route::patch('/{assessmentPeriod}/{schoolClass}/extracurriculars/{extracurricular}', [MidtermReportEntryController::class, 'updateExtracurricular'])->name('extracurriculars.update');
+            Route::put('/{assessmentPeriod}/{schoolClass}/extracurriculars/{extracurricular}/participants', [MidtermReportEntryController::class, 'syncExtracurricularParticipants'])->name('extracurriculars.participants');
+            Route::put('/{assessmentPeriod}/{schoolClass}/extracurriculars/{extracurricular}/grades', [MidtermReportEntryController::class, 'updateExtracurricularGrades'])->name('extracurriculars.grades');
+        });
+
+    Route::prefix('grading')
+        ->middleware('role:super_admin,committee,teacher')
+        ->name('grading.')
+        ->group(function (): void {
+            Route::get('/', [ExamGradingController::class, 'index'])->name('index');
+            Route::get('/attempts/{attempt}', [ExamGradingController::class, 'show'])->name('show');
+            Route::put('/attempts/{attempt}', [ExamGradingController::class, 'update'])->name('update');
+        });
+
+    Route::middleware('role:super_admin,committee,principal')->group(function (): void {
+        Route::get('/exam-flyers/core', [ExamFlyerController::class, 'core'])->name('exam-flyers.core');
+        Route::get('/exam-flyers/core/sessions/{examSession}', [ExamFlyerController::class, 'coreSession'])->name('exam-flyers.core-session');
+        Route::get('/exam-flyers/warnings', [ExamFlyerController::class, 'core'])->name('exam-flyers.warnings');
+        Route::get('/exam-flyers/trials', [ExamFlyerController::class, 'trials'])->name('exam-flyers.trials');
+        Route::get('/exam-flyers/trials/{trialExam}', [ExamFlyerController::class, 'trial'])->name('exam-flyers.trial');
+    });
+
+    Route::prefix('operations')
+        ->middleware('role:super_admin,committee,proctor,teacher,principal')
+        ->name('operations.')
+        ->group(function (): void {
+            Route::get('/', [ExamOperationsController::class, 'index'])->name('index');
+            Route::get('/sessions/{examSession}', [ExamOperationsController::class, 'show'])->name('sessions.show');
+            Route::get('/sessions/{examSession}/progress', [ExamOperationsController::class, 'progress'])
+                ->middleware('throttle:6,1')->name('sessions.progress');
+            Route::post('/attempts/{attempt}/security-review', [ExamOperationsController::class, 'reviewSecurity'])
+                ->name('attempts.security-review');
+            Route::post('/attempts/{attempt}/reset-violations', [ExamOperationsController::class, 'resetViolations'])
+                ->middleware('role:super_admin,committee,principal')
+                ->name('attempts.reset-violations');
+            Route::post('/assignments/{assignment}/reset-attempt', [ExamOperationsController::class, 'resetAttempt'])
+                ->middleware('role:super_admin,committee,principal')
+                ->name('assignments.reset-attempt');
+            Route::patch('/sessions/{examSession}/status', [ExamOperationsController::class, 'updateSessionStatus'])
+                ->name('sessions.status');
+        });
+
+    Route::prefix('attendance')
+        ->middleware('role:super_admin,committee,proctor')
+        ->name('attendance.')
+        ->group(function (): void {
+            Route::get('/', [AttendanceSecurityController::class, 'index'])->name('index');
+            Route::get('/{dailyCheckin}/selfie', [AttendanceSecurityController::class, 'selfie'])->name('selfie');
+            Route::patch('/{dailyCheckin}/status', [AttendanceSecurityController::class, 'updateStatus'])->name('status');
+        });
+
+    });
+});
+

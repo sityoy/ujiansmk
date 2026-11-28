@@ -1,0 +1,273 @@
+{
+  "code": "BIN",
+  "subject": "Bahasa Indonesia",
+  "grade": 11,
+  "name": "Try Out Bahasa Indonesia 11 - Bergambar",
+  "questions": [
+    {
+      "question": "Teks prosedur terutama bertujuan untuk ...",
+      "options": {
+        "A": "mengisahkan konflik tokoh",
+        "B": "menggambarkan suasana pantai",
+        "C": "memandu pembaca melakukan suatu kegiatan secara berurutan",
+        "D": "menilai keindahan puisi",
+        "E": "mencatat silsilah keluarga"
+      },
+      "answer": "C",
+      "explanation": "Prosedur menjelaskan langkah untuk mencapai tujuan tertentu.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Kalimat yang menggunakan bentuk perintah adalah ...",
+      "options": {
+        "A": "Simpan berkas sebelum menutup aplikasi.",
+        "B": "Berkas itu tersimpan kemarin.",
+        "C": "Mereka sedang menyimpan berkas.",
+        "D": "Penyimpanan berkas memerlukan ruang.",
+        "E": "Apakah berkas sudah tersimpan?"
+      },
+      "answer": "A",
+      "explanation": "Simpan merupakan kata kerja perintah.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Kalimat yang tepat digunakan sebagai langkah ketiga menurut petunjuk adalah …",
+      "image": "bin-11-prosedur.png",
+      "options": {
+        "A": "Unduh berkas yang pernah dikirim.",
+        "B": "Ganti nama kelas setelah menyimpan tugas.",
+        "C": "Isi nilai sebelum memilih tugas.",
+        "D": "Ubah PDF menjadi gambar.",
+        "E": "Unggah berkas dan periksa status terkirim."
+      },
+      "answer": "E",
+      "explanation": "Langkah ketiga meminta siswa mengunggah berkas dan memastikan statusnya terkirim.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Kalimat yang menunjukkan hubungan akibat adalah ...",
+      "options": {
+        "A": "Meskipun hujan, ia berangkat.",
+        "B": "Dina memilih buku atau majalah.",
+        "C": "Saluran tersumbat sehingga air meluap.",
+        "D": "Rapat dimulai setelah bel berbunyi.",
+        "E": "Ia belajar sambil mendengarkan musik."
+      },
+      "answer": "C",
+      "explanation": "Sehingga memperkenalkan akibat dari saluran yang tersumbat.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Bagian proposal yang menjelaskan alasan perlunya kegiatan dilaksanakan adalah ...",
+      "options": {
+        "A": "daftar hadir",
+        "B": "indeks istilah",
+        "C": "lampiran foto",
+        "D": "lembar penilaian",
+        "E": "latar belakang"
+      },
+      "answer": "E",
+      "explanation": "Latar belakang memuat masalah atau alasan pengajuan kegiatan.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Kalimat persuasif yang sesuai untuk penutup ceramah tentang kebersihan adalah ...",
+      "options": {
+        "A": "Mari biasakan memilah sampah mulai dari kelas kita.",
+        "B": "Kelas kami berada di lantai dua.",
+        "C": "Kemarin hujan turun deras.",
+        "D": "Tempat sampah itu berwarna hijau.",
+        "E": "Petugas datang pukul tujuh."
+      },
+      "answer": "A",
+      "explanation": "Kata mari mengajak pendengar melakukan tindakan.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Urutan yang tepat untuk menyimpan dokumen baru di aplikasi pengolah kata adalah ...",
+      "options": {
+        "A": "beri nama – tutup aplikasi – pilih Simpan – tentukan folder",
+        "B": "tutup aplikasi – pilih Simpan – beri nama – tentukan folder",
+        "C": "tentukan folder – tutup aplikasi – beri nama – pilih Simpan",
+        "D": "pilih Simpan Sebagai – tentukan folder – beri nama – klik Simpan",
+        "E": "klik Simpan – tutup aplikasi – hapus berkas – beri nama"
+      },
+      "answer": "D",
+      "explanation": "Urutan itu menyelesaikan pemilihan lokasi, nama, dan penyimpanan dokumen.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Bacalah kutipan: \"Sampah yang menyumbat selokan menghambat aliran air. Saat hujan deras, air tidak tertampung dan menggenangi jalan.\" Penyebab langsung terhambatnya aliran air adalah ...",
+      "options": {
+        "A": "jalan yang lebar",
+        "B": "sampah yang menyumbat selokan",
+        "C": "kendaraan di jalan",
+        "D": "pepohonan di halaman",
+        "E": "panas matahari"
+      },
+      "answer": "B",
+      "explanation": "Penyebab disebutkan secara eksplisit pada kalimat pertama.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Dalam cerita, tokoh berkata, \"Aku akan mengembalikan dompet ini kepada pemiliknya,\" lalu menyerahkannya ke petugas. Watak yang paling jelas ditunjukkan adalah ...",
+      "options": {
+        "A": "pemarah",
+        "B": "pemalas",
+        "C": "sombong",
+        "D": "jujur",
+        "E": "ceroboh"
+      },
+      "answer": "D",
+      "explanation": "Tindakan mengembalikan barang orang lain menunjukkan kejujuran.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Kalimat eksplanasi yang paling runtut untuk menerangkan gambar adalah …",
+      "image": "bin-11-alur-genangan.png",
+      "options": {
+        "A": "Sumbatan menghambat aliran selokan, sehingga air meluap dan menggenangi jalan.",
+        "B": "Jalan tergenang karena aliran selokan semakin lancar.",
+        "C": "Aliran selokan terhambat setelah seluruh sampah diangkat.",
+        "D": "Genangan menyebabkan selokan bersih dan aliran terhambat.",
+        "E": "Sumbatan dan genangan selalu terjadi tanpa hubungan sebab akibat."
+      },
+      "answer": "A",
+      "explanation": "Penjelasan mengikuti urutan sebab dan akibat yang ditunjukkan diagram.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Kata penghubung yang menandai urutan langkah adalah ...",
+      "options": {
+        "A": "meskipun",
+        "B": "kemudian",
+        "C": "karena",
+        "D": "tetapi",
+        "E": "seandainya"
+      },
+      "answer": "B",
+      "explanation": "Kemudian menandai tahap berikutnya dalam urutan.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Dalam proposal kegiatan, rincian pemasukan dan pengeluaran dicantumkan pada bagian ...",
+      "options": {
+        "A": "anggaran biaya",
+        "B": "orientasi",
+        "C": "resolusi",
+        "D": "koda",
+        "E": "daftar tokoh"
+      },
+      "answer": "A",
+      "explanation": "Anggaran memuat kebutuhan biaya dan sumber pembiayaan.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Bacalah: \"Mira menahan kantuk demi menyelesaikan pesanan jahitan ibunya.\" Watak Mira yang paling didukung kutipan adalah ...",
+      "options": {
+        "A": "pemarah",
+        "B": "sombong",
+        "C": "tekun",
+        "D": "pendendam",
+        "E": "boros"
+      },
+      "answer": "C",
+      "explanation": "Usaha menyelesaikan pekerjaan meskipun mengantuk menunjukkan ketekunan.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Dalam resensi, kalimat yang menyatakan kelemahan buku disertai alasan adalah ...",
+      "options": {
+        "A": "Buku ini tidak berguna sama sekali.",
+        "B": "Penulisnya pasti tidak pernah belajar.",
+        "C": "Sampulnya ada dan halamannya banyak.",
+        "D": "Semua orang harus membenci buku ini.",
+        "E": "Beberapa istilah teknis tidak dijelaskan sehingga pembaca pemula sulit memahaminya."
+      },
+      "answer": "E",
+      "explanation": "Kalimat itu menyebut kekurangan konkret dan dampaknya pada pembaca.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Petunjuk berbunyi: \"Nyalakan komputer. Sambungkan kabel daya. Tekan tombol masuk.\" Perbaikan urutan paling mendasar adalah ...",
+      "options": {
+        "A": "memindahkan tombol masuk ke langkah pertama",
+        "B": "menghapus semua langkah",
+        "C": "menambahkan penutup ceramah",
+        "D": "menukar kata komputer dengan meja",
+        "E": "menyambungkan kabel daya sebelum menyalakan komputer"
+      },
+      "answer": "E",
+      "explanation": "Kabel daya perlu terpasang sebelum komputer dinyalakan.",
+      "difficulty": "sulit"
+    },
+    {
+      "question": "Bacalah: \"Hutan menyerap air hujan. Ketika tutupan hutan berkurang, lebih banyak air mengalir di permukaan tanah sehingga risiko banjir meningkat.\" Hubungan gagasan yang dominan adalah ...",
+      "options": {
+        "A": "perbandingan harga",
+        "B": "sebab-akibat",
+        "C": "urutan daftar tokoh",
+        "D": "pertentangan tanpa hubungan",
+        "E": "dialog penawaran"
+      },
+      "answer": "B",
+      "explanation": "Perubahan tutupan hutan dijelaskan melalui dampaknya terhadap aliran air dan banjir.",
+      "difficulty": "sulit"
+    },
+    {
+      "question": "Proposal menyebut tujuan \"meningkatkan minat baca\", tetapi seluruh kegiatan hanya berupa lomba lari. Perbaikan yang paling sesuai adalah ...",
+      "options": {
+        "A": "menghapus tujuan tanpa pertimbangan",
+        "B": "menambah lebih banyak lomba lari saja",
+        "C": "menambahkan kegiatan membaca, diskusi buku, atau kunjungan perpustakaan yang mendukung tujuan",
+        "D": "menghapus seluruh jadwal",
+        "E": "mengganti anggaran menjadi puisi"
+      },
+      "answer": "C",
+      "explanation": "Kegiatan harus berkaitan dengan tujuan proposal.",
+      "difficulty": "sulit"
+    },
+    {
+      "question": "Perubahan agenda dan evaluasi yang paling selaras dengan tujuan proposal adalah …",
+      "image": "bin-11-proposal.png",
+      "options": {
+        "A": "Memperbanyak tim futsal dan mencatat jumlah gol.",
+        "B": "Membagikan hadiah kepada kelas peserta terbanyak tanpa kegiatan membaca.",
+        "C": "Mempertahankan lomba lari lalu mengukur kecepatan rata-rata siswa.",
+        "D": "Menjadwalkan sesi membaca rutin dan membandingkan catatan membaca sebelum serta sesudah program.",
+        "E": "Mengadakan satu pentas musik lalu membandingkan jumlah penonton."
+      },
+      "answer": "D",
+      "explanation": "Sesi membaca melatih kebiasaan yang ditargetkan, dan catatan sebelum-sesudah memberikan dasar pembanding.",
+      "difficulty": "sulit"
+    },
+    {
+      "question": "Sebuah ceramah menyatakan bahwa penggunaan gawai perlu diatur, lalu memberi contoh gangguan tidur akibat pemakaian larut malam. Penutup yang paling selaras adalah ...",
+      "options": {
+        "A": "Karena itu, semua teknologi harus dihancurkan.",
+        "B": "Mari atur waktu penggunaan gawai agar belajar dan istirahat tetap seimbang.",
+        "C": "Jadi, tidur tidak diperlukan lagi.",
+        "D": "Demikian daftar harga gawai terbaru.",
+        "E": "Mari memakai gawai sepanjang malam."
+      },
+      "answer": "B",
+      "explanation": "Ajakan mengatur penggunaan gawai sesuai dengan masalah yang dibahas.",
+      "difficulty": "sulit"
+    },
+    {
+      "question": "Resensi menyebut alur novel menarik, tetapi perpindahan waktu kadang membingungkan. Simpulan yang paling seimbang adalah ...",
+      "options": {
+        "A": "novel memiliki daya tarik cerita, meskipun penanda waktu perlu dibuat lebih jelas",
+        "B": "semua pembaca pasti memahami alurnya",
+        "C": "penulis tidak memiliki kemampuan apa pun",
+        "D": "novel itu sama sekali tidak layak dibaca",
+        "E": "novel itu hanya berisi kesalahan"
+      },
+      "answer": "A",
+      "explanation": "Simpulan mempertimbangkan kelebihan dan kekurangan yang telah disebutkan.",
+      "difficulty": "sulit"
+    }
+  ],
+  "id": "bin-11-bergambar",
+  "manual_only": true
+}

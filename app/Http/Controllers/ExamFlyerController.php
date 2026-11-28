@@ -1,0 +1,205 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Enums\AssessmentType;
+use App\Enums\Semester;
+use App\Enums\SessionKind;
+use App\Enums\SessionStatus;
+use App\Models\AssessmentPeriod;
+use App\Models\ExamSession;
+use App\Models\SchoolProfile;
+use App\Models\TrialExam;
+use App\Services\Exams\ExamResetAllowance;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
+
+class ExamFlyerController extends Controller
+{
+    public function core(Request $request): Response
+    {
+        $validated = $request->validate(['assessment_period_id' => ['required', 'integer', 'exists:assessment_periods,id']]);
+        $period = AssessmentPeriod::with('academicYear')->findOrFail($validated['assessment_period_id']);
+        $sessions = ExamSession::query()
+            ->whereHas('assessmentSubject', fn ($query) => $query->where('assessment_period_id', $period->id))
+            ->where('status', '!=', SessionStatus::Draft)
+            ->with(['assessmentSubject.subject', 'assessmentSubject.schoolClass', 'campus'])
+            ->orderBy('starts_at')->orderBy('id')->get();
+
+        return $this->render([
+            'kind' => $this->assessmentTitle($period), 'period' => $period, 'headline' => $period->name,
+            'subtitle' => 'UJIAN BERBASIS KOMPUTER', 'entryUrl' => route('login'), 'code' => null,
+            'details' => [
+                ['Pelaksanaan', $period->starts_on->translatedFormat('d F Y').' – '.$period->ends_on->translatedFormat('d F Y')],
+                ['Jadwal', $sessions->isEmpty() ? 'Jadwal mapel belum diterbitkan.' : 'Lihat jadwal sesuai kelas dan rombel pada lampiran.'],
+            ],
+            'schedule' => $this->scheduleByGrade($sessions),
+        ]);
+    }
+
+    public function coreSession(ExamSession $examSession): Response
+    {
+        $examSession->load(['assessmentSubject.assessmentPeriod.academicYear', 'assessmentSubject.subject', 'assessmentSubject.schoolClass', 'campus']);
+        $component = $examSession->assessmentSubject;
+        $period = $component->assessmentPeriod;
+
+        return $this->render([
+            'kind' => $this->assessmentTitle($period), 'period' => $period,
+            'headline' => $component->subject->name,
+            'subtitle' => 'UJIAN INTI · '.$this->sessionKind($examSession),
+            'entryUrl' => route('login'), 'code' => null,
+            'details' => [
+                ['Kelas', 'Kelas '.$component->schoolClass->grade_level],
+                ['Rombel', $component->schoolClass->name],
+                ['Jadwal sesi', $this->window($examSession->starts_at, $examSession->ends_at)],
+                ['Durasi', $examSession->duration_minutes.' menit'],
+                ['Lokasi', $examSession->campus->name],
+            ],
+            'notice' => $examSession->status === SessionStatus::Draft ? 'Draf jadwal. Tunggu jadwal resmi dari panitia.' : null,
+        ]);
+    }
+
+    public function trial(TrialExam $trialExam): Response
+    {
+        $trialExam->load(['assessmentSubject.assessmentPeriod.academicYear', 'questionBank.subject', 'location']);
+
+        return $this->render($this->trialFlyer($trialExam));
+    }
+
+    public function trials(): Response
+    {
+        $exams = TrialExam::query()
+            ->whereHas('questionBank', fn ($banks) => $banks->whereNull('archived_at'))
+            ->with(['assessmentSubject.assessmentPeriod.academicYear', 'questionBank.subject', 'location'])
+            ->get()
+            ->sortBy([['questionBank.grade_level', 'asc'], ['questionBank.subject.name', 'asc'], ['title', 'asc'], ['id', 'asc']]);
+
+        return $this->renderPages(
+            $exams->map(fn (TrialExam $exam): array => $this->trialFlyer($exam)),
+            'Flyer Semua Simulasi Ujian',
+            'Flyer Semua Simulasi Ujian · '.$exams->count().' ujian',
+        );
+    }
+
+    private function trialFlyer(TrialExam $trialExam): array
+    {
+        $period = $trialExam->assessmentSubject?->assessmentPeriod;
+        abort_unless($period, 422, 'Ujian uji coba belum terhubung dengan periode dan tahun ajaran.');
+        $details = [
+            ['Mata pelajaran', $trialExam->questionBank->subject->name],
+            ['Kelas', 'Kelas '.$trialExam->questionBank->grade_level],
+            ['Rombel', 'Semua rombel pada tingkat ini'],
+            ['Jadwal akses', $this->window($trialExam->starts_at, $trialExam->ends_at)],
+            ['Durasi', $trialExam->duration_minutes.' menit'],
+        ];
+        if ($trialExam->location) {
+            $details[] = ['Lokasi absensi GPS', $trialExam->location->name];
+        }
+
+        return [
+            'kind' => 'Simulasi '.$this->assessmentTitle($period), 'period' => $period, 'headline' => $trialExam->title,
+            'subtitle' => 'UJIAN UJI COBA', 'entryUrl' => route('tryout.entry', $trialExam),
+            'code' => $trialExam->access_code, 'details' => $details,
+            'trial' => true, 'locationRequired' => true,
+            'notice' => $trialExam->is_active ? null : 'Simulasi nonaktif. Tunggu panitia membuka akses.',
+        ];
+    }
+
+    private function scheduleByGrade(Collection $sessions): Collection
+    {
+        return $sessions->groupBy('assessmentSubject.schoolClass.grade_level')
+            ->sortKeys(SORT_NUMERIC)
+            ->map(fn (Collection $gradeSessions) => $gradeSessions
+                ->groupBy(fn (ExamSession $session) => implode('|', [
+                    $session->assessmentSubject->subject_id,
+                    $session->starts_at->getTimestamp(),
+                    $session->ends_at->getTimestamp(),
+                    $session->kind->value,
+                    $session->duration_minutes,
+                    $session->campus_id,
+                ]))
+                ->map($this->scheduleRow(...)));
+    }
+
+    private function scheduleRow(Collection $sessions): array
+    {
+        $session = $sessions->first();
+
+        return [
+            'subject' => $session->assessmentSubject->subject->name,
+            'rombel' => $this->rombelNames($sessions),
+            'time' => $this->window($session->starts_at, $session->ends_at),
+            'duration' => $session->duration_minutes,
+            'kind' => $this->sessionKind($session),
+            'location' => $session->campus->name,
+        ];
+    }
+
+    private function rombelNames(Collection $sessions): string
+    {
+        return $sessions->pluck('assessmentSubject.schoolClass.name')->unique()->sort(SORT_NATURAL | SORT_FLAG_CASE)->join(', ');
+    }
+
+    private function assessmentTitle(AssessmentPeriod $period): string
+    {
+        $semester = $period->semester === Semester::Odd ? 'Ganjil' : 'Genap';
+
+        return match ($period->type) {
+            AssessmentType::ASAS => 'Asesmen Sumatif Akhir Semester '.$semester,
+            AssessmentType::ATS => 'Asesmen Tengah Semester '.$semester,
+            AssessmentType::AAT => 'Asesmen Akhir Tahun',
+            default => $period->name,
+        };
+    }
+
+    private function render(array $data): Response
+    {
+        $year = $data['period']->academicYear->name;
+        $label = ($data['trial'] ?? false) ? 'Flyer Simulasi Ujian' : 'Flyer Asesmen';
+
+        return $this->renderPages(collect([$data]), 'Flyer '.$data['kind'].' · '.$year, $label.' · '.$year);
+    }
+
+    private function renderPages(Collection $flyers, string $printTitle, string $toolbarLabel): Response
+    {
+        $school = SchoolProfile::query()->first();
+        $schoolName = SchoolProfile::usesLegacyBrand($school) && ! $school?->logo_path
+            ? 'SMK ISLAM BAHAGIA' : mb_strtoupper($school?->name ?? config('app.name'));
+
+        return response()->view('flyers.exam', [
+            'trial' => false, 'locationRequired' => true,
+            'notice' => null, 'schedule' => collect(),
+            'flyers' => $flyers, 'printTitle' => $printTitle, 'toolbarLabel' => $toolbarLabel,
+            'resetLimit' => ExamResetAllowance::LIMIT, 'schoolName' => $schoolName, 'school' => $school,
+        ])
+            ->header('Cache-Control', 'no-store, private')->header('X-Robots-Tag', 'noindex, nofollow');
+    }
+
+    private function window(?Carbon $start, ?Carbon $end): string
+    {
+        $start = $start?->copy()->timezone('Asia/Jakarta')->locale('id');
+        $end = $end?->copy()->timezone('Asia/Jakarta')->locale('id');
+        $dateTimeFormat = 'dddd, DD/MM/YYYY HH:mm';
+
+        if ($start && $end) {
+            $endFormat = $end->isSameDay($start) ? 'HH:mm' : $dateTimeFormat;
+
+            return $start->isoFormat($dateTimeFormat).' – '.$end->isoFormat($endFormat).' WIB';
+        }
+        if ($start) {
+            return 'Mulai '.$start->isoFormat($dateTimeFormat).' WIB';
+        }
+        if ($end) {
+            return 'Sampai '.$end->isoFormat($dateTimeFormat).' WIB';
+        }
+
+        return 'Tanggal dan jam belum ditetapkan.';
+    }
+
+    private function sessionKind(ExamSession $session): string
+    {
+        return $session->kind === SessionKind::Makeup ? 'Susulan' : 'Reguler';
+    }
+}

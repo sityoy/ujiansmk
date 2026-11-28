@@ -1,0 +1,273 @@
+{
+  "code": "MTK",
+  "subject": "Matematika",
+  "grade": 11,
+  "name": "Try Out Matematika 11 - Bergambar",
+  "questions": [
+    {
+      "question": "Jika f(x) = 3x − 2, nilai f(4) adalah ...",
+      "options": {
+        "A": "8",
+        "B": "14",
+        "C": "12",
+        "D": "10",
+        "E": "16"
+      },
+      "answer": "D",
+      "explanation": "f(4)=12−2=10.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Jika f(x) = x + 2 dan g(x) = 2x, nilai (f ∘ g)(3) adalah ...",
+      "options": {
+        "A": "6",
+        "B": "7",
+        "C": "12",
+        "D": "10",
+        "E": "8"
+      },
+      "answer": "E",
+      "explanation": "f(g(3))=f(6)=8.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Jika pola aritmetika berlanjut, berapa kursi pada baris kelima?",
+      "image": "mtk-11-barisan.png",
+      "options": {
+        "A": "18",
+        "B": "19",
+        "C": "20",
+        "D": "21",
+        "E": "23"
+      },
+      "answer": "C",
+      "explanation": "Setiap baris bertambah 3 kursi, sehingga baris kelima berisi 20 kursi.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Barisan aritmetika 4, 7, 10, 13, ... mempunyai beda ...",
+      "options": {
+        "A": "6",
+        "B": "4",
+        "C": "3",
+        "D": "7",
+        "E": "9"
+      },
+      "answer": "C",
+      "explanation": "Selisih dua suku berurutan adalah 3.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Suku kelima barisan aritmetika dengan suku pertama 2 dan beda 3 adalah ...",
+      "options": {
+        "A": "8",
+        "B": "10",
+        "C": "14",
+        "D": "12",
+        "E": "11"
+      },
+      "answer": "C",
+      "explanation": "U5=2+(5−1)×3=14.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Barisan geometri 3, 6, 12, 24, ... mempunyai rasio ...",
+      "options": {
+        "A": "2",
+        "B": "1/2",
+        "C": "3",
+        "D": "6",
+        "E": "12"
+      },
+      "answer": "A",
+      "explanation": "Rasio dua suku berurutan adalah 6/3=2.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Jika f(x) = 2x + 1 dan g(x) = x², bentuk (g ∘ f)(x) adalah ...",
+      "options": {
+        "A": "2x²+1",
+        "B": "4x²+4x+1",
+        "C": "4x²+1",
+        "D": "x²+2x+1",
+        "E": "2x²+2x+1"
+      },
+      "answer": "B",
+      "explanation": "g(f(x))=(2x+1)²=4x²+4x+1.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Invers dari f(x) = 2x − 6 adalah ...",
+      "options": {
+        "A": "2x+6",
+        "B": "(x−6)/2",
+        "C": "(x+6)/2",
+        "D": "x/2−6",
+        "E": "6−2x"
+      },
+      "answer": "C",
+      "explanation": "y=2x−6 memberi x=(y+6)/2.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Jumlah 10 suku pertama barisan aritmetika 3, 7, 11, ... adalah ...",
+      "options": {
+        "A": "230",
+        "B": "200",
+        "C": "220",
+        "D": "210",
+        "E": "240"
+      },
+      "answer": "D",
+      "explanation": "S10=10/2×(2×3+9×4)=5×42=210.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Hitung panjang busur kecil AB. Gunakan π = 22/7.",
+      "image": "mtk-11-juring.png",
+      "options": {
+        "A": "44/3 cm",
+        "B": "22 cm",
+        "C": "88/3 cm",
+        "D": "44 cm",
+        "E": "176/3 cm"
+      },
+      "answer": "C",
+      "explanation": "Panjang busur = (120/360) × 2 × (22/7) × 14 = 88/3 cm.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Jumlah lima suku pertama deret geometri 2 + 4 + 8 + ... adalah ...",
+      "options": {
+        "A": "30",
+        "B": "62",
+        "C": "64",
+        "D": "126",
+        "E": "128"
+      },
+      "answer": "B",
+      "explanation": "2+4+8+16+32=62.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Modal Rp2.000.000 mendapat bunga tunggal 6% per tahun selama 2 tahun. Jumlah modal dan bunga akhirnya adalah ...",
+      "options": {
+        "A": "Rp2.240.000",
+        "B": "Rp2.200.000",
+        "C": "Rp2.120.000",
+        "D": "Rp2.247.200",
+        "E": "Rp2.400.000"
+      },
+      "answer": "A",
+      "explanation": "Bunga=2.000.000×0,06×2=240.000, sehingga total 2.240.000.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Sudut pusat sebuah lingkaran yang menghadap suatu busur adalah 100°. Sudut keliling yang menghadap busur yang sama adalah ...",
+      "options": {
+        "A": "25°",
+        "B": "40°",
+        "C": "100°",
+        "D": "200°",
+        "E": "50°"
+      },
+      "answer": "E",
+      "explanation": "Sudut keliling yang menghadap busur sama adalah setengah sudut pusat.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Jari-jari lingkaran 7 cm. Panjang busur dengan sudut pusat 90° adalah ... (gunakan π = 22/7)",
+      "options": {
+        "A": "11 cm",
+        "B": "7 cm",
+        "C": "14 cm",
+        "D": "22 cm",
+        "E": "44 cm"
+      },
+      "answer": "A",
+      "explanation": "Panjang busur=(90/360)×2×(22/7)×7=11.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Diketahui f(x) = 2x − 1 dan (f ∘ g)(x) = 6x + 7. Bentuk g(x) adalah ...",
+      "options": {
+        "A": "3x+3",
+        "B": "6x+8",
+        "C": "3x−4",
+        "D": "3x+4",
+        "E": "6x+6"
+      },
+      "answer": "D",
+      "explanation": "2g(x)−1=6x+7, sehingga g(x)=3x+4.",
+      "difficulty": "sulit"
+    },
+    {
+      "question": "Jika f(x) = (2x + 1)/(x − 3), x ≠ 3, invers f adalah ...",
+      "options": {
+        "A": "(3x−1)/(x+2), x ≠ −2",
+        "B": "(3x−1)/(x−2), x ≠ 2",
+        "C": "(x+3)/(2x−1), x ≠ 1/2",
+        "D": "(3x+1)/(x−2), x ≠ 2",
+        "E": "(x−3)/(2x+1), x ≠ −1/2"
+      },
+      "answer": "D",
+      "explanation": "y(x−3)=2x+1 memberi x(y−2)=3y+1, sehingga invers (3x+1)/(x−2).",
+      "difficulty": "sulit"
+    },
+    {
+      "question": "Modal Rp1.000.000 berbunga majemuk 10% per tahun selama 2 tahun tanpa setoran tambahan. Jumlah akhirnya adalah ...",
+      "options": {
+        "A": "Rp1.100.000",
+        "B": "Rp1.200.000",
+        "C": "Rp1.250.000",
+        "D": "Rp1.220.000",
+        "E": "Rp1.210.000"
+      },
+      "answer": "E",
+      "explanation": "Jumlah akhir=1.000.000×1,1²=1.210.000.",
+      "difficulty": "sulit"
+    },
+    {
+      "question": "Tanpa biaya, setoran, atau penarikan, tabungan mana yang lebih besar setelah empat tahun dan berapa selisihnya?",
+      "image": "mtk-11-tabungan.png",
+      "options": {
+        "A": "A, Rp23.163,22",
+        "B": "A, Rp16.836,78",
+        "C": "B, Rp16.836,78",
+        "D": "B, Rp23.163,22",
+        "E": "Kedua saldo sama"
+      },
+      "answer": "D",
+      "explanation": "Saldo A Rp2.800.000. Saldo B = Rp2.000.000 × 1,09⁴ = Rp2.823.163,22, sehingga B lebih besar Rp23.163,22.",
+      "difficulty": "sulit"
+    },
+    {
+      "question": "Dari titik P di luar lingkaran, panjang garis singgung PT adalah 12 cm. Jarak P ke pusat O adalah 13 cm. Jari-jari lingkaran adalah ...",
+      "options": {
+        "A": "6 cm",
+        "B": "5 cm",
+        "C": "7 cm",
+        "D": "10 cm",
+        "E": "25 cm"
+      },
+      "answer": "B",
+      "explanation": "OT tegak lurus PT, sehingga r²=13²−12²=25 dan r=5.",
+      "difficulty": "sulit"
+    },
+    {
+      "question": "Suatu deret geometri tak hingga memiliki suku pertama 6 dan rasio 1/3. Jumlah deret tersebut adalah ...",
+      "options": {
+        "A": "2",
+        "B": "9",
+        "C": "8",
+        "D": "12",
+        "E": "6"
+      },
+      "answer": "B",
+      "explanation": "Karena |r|<1, jumlah=a/(1−r)=6/(2/3)=9.",
+      "difficulty": "sulit"
+    }
+  ],
+  "id": "mtk-11-bergambar",
+  "manual_only": true
+}

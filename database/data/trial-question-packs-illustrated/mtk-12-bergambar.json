@@ -1,0 +1,273 @@
+{
+  "code": "MTK",
+  "subject": "Matematika",
+  "grade": 12,
+  "name": "Try Out Matematika 12 - Bergambar",
+  "questions": [
+    {
+      "question": "Rata-rata dari data 6, 7, 8, 9, dan 10 adalah ...",
+      "options": {
+        "A": "6",
+        "B": "7",
+        "C": "10",
+        "D": "9",
+        "E": "8"
+      },
+      "answer": "E",
+      "explanation": "Jumlah data 40, sehingga rata-rata = 40/5 = 8.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Median dari data yang sudah diurutkan: 3, 5, 7, 8, 12 adalah ...",
+      "options": {
+        "A": "3",
+        "B": "5",
+        "C": "6",
+        "D": "8",
+        "E": "7"
+      },
+      "answer": "E",
+      "explanation": "Median adalah nilai di posisi ketiga, yaitu 7.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Berapakah modus nilai kuis?",
+      "image": "mtk-12-modus.png",
+      "options": {
+        "A": "60",
+        "B": "70",
+        "C": "80",
+        "D": "90",
+        "E": "100"
+      },
+      "answer": "C",
+      "explanation": "Nilai 80 memiliki frekuensi terbanyak, yaitu 7 siswa.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Jangkauan data 12, 15, 18, 20, dan 25 adalah ...",
+      "options": {
+        "A": "13",
+        "B": "12",
+        "C": "15",
+        "D": "10",
+        "E": "25"
+      },
+      "answer": "A",
+      "explanation": "Jangkauan = nilai maksimum − minimum = 25 − 12 = 13.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Nilai 60 diperoleh 2 siswa, nilai 70 diperoleh 3 siswa, dan nilai 80 diperoleh 5 siswa. Rata-rata nilai mereka adalah ...",
+      "options": {
+        "A": "70",
+        "B": "73",
+        "C": "75",
+        "D": "76",
+        "E": "78"
+      },
+      "answer": "B",
+      "explanation": "Rata-rata = (60×2 + 70×3 + 80×5)/10 = 730/10 = 73.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Sebuah dadu adil bersisi enam dilempar satu kali. Peluang muncul bilangan genap adalah ...",
+      "options": {
+        "A": "1/6",
+        "B": "1/3",
+        "C": "2/3",
+        "D": "5/6",
+        "E": "1/2"
+      },
+      "answer": "E",
+      "explanation": "Ada tiga hasil genap (2, 4, 6) dari enam hasil yang sama mungkin.",
+      "difficulty": "mudah"
+    },
+    {
+      "question": "Peluang seorang siswa hadir tepat waktu adalah 0,85. Peluang siswa tersebut tidak hadir tepat waktu adalah ...",
+      "options": {
+        "A": "0,05",
+        "B": "0,15",
+        "C": "0,10",
+        "D": "0,20",
+        "E": "0,85"
+      },
+      "answer": "B",
+      "explanation": "Peluang komplemen = 1 − 0,85 = 0,15.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Rani mempunyai 4 kemeja dan 3 celana. Banyak pasangan satu kemeja dan satu celana yang dapat dipilih adalah ...",
+      "options": {
+        "A": "12",
+        "B": "9",
+        "C": "10",
+        "D": "16",
+        "E": "7"
+      },
+      "answer": "A",
+      "explanation": "Aturan perkalian: 4×3 = 12 pasangan.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Lima buku berbeda disusun berjajar pada satu rak. Banyak susunan yang mungkin adalah ...",
+      "options": {
+        "A": "60",
+        "B": "25",
+        "C": "120",
+        "D": "100",
+        "E": "240"
+      },
+      "answer": "C",
+      "explanation": "Permutasi lima benda berbeda adalah 5! = 120.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Dua bola diambil secara acak tanpa pengembalian. Berapa peluang bola yang terambil berbeda warna?",
+      "image": "mtk-12-peluang.png",
+      "options": {
+        "A": "15/64",
+        "B": "15/56",
+        "C": "3/8",
+        "D": "15/28",
+        "E": "5/8"
+      },
+      "answer": "D",
+      "explanation": "Peluang merah lalu biru adalah (5/8)(3/7). Biru lalu merah juga (3/8)(5/7), sehingga jumlahnya 15/28.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Dua dadu adil dilempar bersamaan. Peluang jumlah kedua mata dadu sama dengan 8 adalah ...",
+      "options": {
+        "A": "1/6",
+        "B": "7/36",
+        "C": "1/9",
+        "D": "5/36",
+        "E": "1/36"
+      },
+      "answer": "D",
+      "explanation": "Pasangan yang sesuai: (2,6), (3,5), (4,4), (5,3), (6,2), yaitu 5 dari 36.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Dalam kelas berisi 40 siswa, 22 suka matematika, 18 suka bahasa Inggris, dan 10 suka keduanya. Jika dipilih satu siswa secara acak, peluang ia menyukai paling sedikit satu dari kedua mapel adalah ...",
+      "options": {
+        "A": "1/4",
+        "B": "1/2",
+        "C": "3/4",
+        "D": "4/5",
+        "E": "3/5"
+      },
+      "answer": "C",
+      "explanation": "Banyak anggota gabungan = 22 + 18 − 10 = 30, sehingga peluang = 30/40.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Kotak berisi 5 bola merah dan 3 bola biru. Dua bola diambil berurutan tanpa pengembalian. Peluang kedua bola berwarna merah adalah ...",
+      "options": {
+        "A": "5/8",
+        "B": "25/64",
+        "C": "5/14",
+        "D": "1/4",
+        "E": "3/14"
+      },
+      "answer": "C",
+      "explanation": "Peluang = (5/8)×(4/7) = 5/14.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Dari 20 siswa, 12 perempuan. Di antara siswa perempuan, 9 memakai kacamata. Jika diketahui siswa yang terpilih adalah perempuan, peluang ia memakai kacamata adalah ...",
+      "options": {
+        "A": "9/20",
+        "B": "3/5",
+        "C": "3/4",
+        "D": "2/3",
+        "E": "1/4"
+      },
+      "answer": "C",
+      "explanation": "Ruang sampel dibatasi pada 12 siswi, sehingga peluang bersyarat = 9/12.",
+      "difficulty": "sedang"
+    },
+    {
+      "question": "Tiga uang logam adil dilempar bersamaan. Peluang muncul tepat dua sisi gambar adalah ...",
+      "options": {
+        "A": "1/8",
+        "B": "3/8",
+        "C": "1/2",
+        "D": "1/4",
+        "E": "3/4"
+      },
+      "answer": "B",
+      "explanation": "Terdapat C(3,2) = 3 hasil yang sesuai dari 2³ = 8 hasil.",
+      "difficulty": "sulit"
+    },
+    {
+      "question": "Panitia beranggotakan 3 orang dipilih dari 5 siswa laki-laki dan 4 siswa perempuan. Banyak panitia yang terdiri atas tepat 2 laki-laki dan 1 perempuan adalah ...",
+      "options": {
+        "A": "20",
+        "B": "30",
+        "C": "60",
+        "D": "40",
+        "E": "90"
+      },
+      "answer": "D",
+      "explanation": "C(5,2)×C(4,1) = 10×4 = 40.",
+      "difficulty": "sulit"
+    },
+    {
+      "question": "Simpangan baku populasi dari data 2, 4, 4, dan 6 adalah ...",
+      "options": {
+        "A": "1",
+        "B": "2",
+        "C": "4",
+        "D": "√2",
+        "E": "√3"
+      },
+      "answer": "D",
+      "explanation": "Rata-rata 4, varians populasi = (4+0+0+4)/4 = 2, sehingga simpangan baku √2.",
+      "difficulty": "sulit"
+    },
+    {
+      "question": "Jika satu produk acak diketahui cacat, berapa peluang produk itu dibuat oleh Mesin B?",
+      "image": "mtk-12-produksi.png",
+      "options": {
+        "A": "1/4",
+        "B": "3/8",
+        "C": "2/5",
+        "D": "3/5",
+        "E": "5/8"
+      },
+      "answer": "E",
+      "explanation": "Bagian produk cacat dari B adalah 0,40 × 0,05 = 0,020. Total cacat 0,012 + 0,020 = 0,032. Peluang bersyaratnya 0,020/0,032 = 5/8.",
+      "difficulty": "sulit"
+    },
+    {
+      "question": "Sebuah permainan memberi hadiah Rp12.000 jika satu lemparan dadu adil menghasilkan angka 6, dan Rp0 untuk hasil lainnya. Biaya bermain Rp3.000. Nilai harapan keuntungan bersih pemain setiap permainan adalah ...",
+      "options": {
+        "A": "Rp1.000",
+        "B": "−Rp2.000",
+        "C": "Rp2.000",
+        "D": "−Rp1.000",
+        "E": "Rp9.000"
+      },
+      "answer": "D",
+      "explanation": "Harapan hadiah = 12.000/6 = 2.000; keuntungan bersih harapan = 2.000 − 3.000.",
+      "difficulty": "sulit"
+    },
+    {
+      "question": "Kotak I berisi 3 bola merah dan 2 biru; kotak II berisi 1 merah dan 4 biru. Sebuah kotak dipilih secara acak dengan peluang sama, lalu satu bola diambil. Jika bola yang terambil merah, peluang bola tersebut berasal dari kotak I adalah ...",
+      "options": {
+        "A": "3/4",
+        "B": "1/2",
+        "C": "3/5",
+        "D": "1/4",
+        "E": "4/5"
+      },
+      "answer": "A",
+      "explanation": "P(I|merah) = [(1/2)(3/5)] / [(1/2)(3/5)+(1/2)(1/5)] = 3/4.",
+      "difficulty": "sulit"
+    }
+  ],
+  "id": "mtk-12-bergambar",
+  "manual_only": true
+}

@@ -1,0 +1,287 @@
+[
+  {
+    "id": "sjr-10-campuran",
+    "code": "SJR",
+    "subject": "Sejarah",
+    "grade": 10,
+    "name": "Try Out Sejarah 10 - Campuran Bergambar",
+    "manual_only": true,
+    "questions": [
+      {
+        "difficulty": "mudah",
+        "question": "Apa tujuan utama menyusun peristiwa sejarah secara kronologis?",
+        "options": {
+          "A": "Mengelompokkan semua peristiwa berdasarkan tokohnya",
+          "B": "Membandingkan kondisi berbagai wilayah pada masa yang sama",
+          "C": "Mengetahui urutan terjadinya peristiwa",
+          "D": "Menentukan keaslian bahan setiap sumber sejarah",
+          "E": "Memilih peristiwa yang paling banyak dibahas"
+        },
+        "answer": "C",
+        "explanation": "Kronologi menempatkan peristiwa menurut urutan waktunya sehingga runtutan kejadian dapat dipahami."
+      },
+      {
+        "difficulty": "mudah",
+        "statement": "Seorang siswa menemukan buku transaksi asli dari sebuah pasar yang ditulis pada 1935. Ia juga menemukan artikel daring tahun 2026 yang merangkum isi buku tersebut.",
+        "question": "Jika topik penelitiannya adalah kegiatan jual beli di pasar pada 1935, manakah sumber primer yang disebutkan?",
+        "options": {
+          "A": "Buku transaksi pasar yang ditulis pada 1935",
+          "B": "Artikel daring tahun 2026 yang merangkum isi buku transaksi",
+          "C": "Buku sejarah kota yang terbit pada 2019",
+          "D": "Ulasan siswa tentang artikel sejarah pasar",
+          "E": "Film fiksi berlatar pasar pada 1935"
+        },
+        "answer": "A",
+        "explanation": "Buku transaksi dibuat pada masa yang diteliti dan mencatat kegiatan itu secara langsung."
+      },
+      {
+        "difficulty": "mudah",
+        "question": "Apa penanda umum berakhirnya masa praaksara bagi suatu masyarakat?",
+        "options": {
+          "A": "Masyarakat mulai bercocok tanam",
+          "B": "Masyarakat mulai membangun permukiman tetap",
+          "C": "Masyarakat mulai mengolah logam",
+          "D": "Masyarakat mulai berdagang dengan wilayah lain",
+          "E": "Masyarakat mulai mengenal dan menggunakan tulisan"
+        },
+        "answer": "E",
+        "explanation": "Masa praaksara mengacu pada masa sebelum masyarakat menggunakan tulisan. Peralihannya dapat terjadi pada waktu berbeda antardaerah."
+      },
+      {
+        "difficulty": "mudah",
+        "image": "sjr-x-lini-masa.png",
+        "question": "Berdasarkan gambar, kegiatan apa yang terjadi setelah terbentuknya tempat tambat dan sebelum dibukanya gudang?",
+        "options": {
+          "A": "Gudang rempah mulai dibuka",
+          "B": "Pasar tepi sungai mulai berdiri",
+          "C": "Tempat tambat perahu mulai dibangun",
+          "D": "Tempat tambat dan gudang mulai digunakan pada tahun yang sama",
+          "E": "Kegiatan pasar dimulai setelah gudang dibuka"
+        },
+        "answer": "B",
+        "explanation": "Gambar menempatkan pasar tepi sungai pada 1455, di antara tempat tambat pada 1440 dan gudang pada 1460."
+      },
+      {
+        "difficulty": "mudah",
+        "question": "Peninggalan tertulis apa yang memuat keterangan tentang Raja Mulawarman dari Kutai?",
+        "options": {
+          "A": "Prasasti Ciaruteun",
+          "B": "Prasasti Kedukan Bukit",
+          "C": "Kitab Negarakertagama",
+          "D": "Prasasti Yupa",
+          "E": "Prasasti Tugu"
+        },
+        "answer": "D",
+        "explanation": "Prasasti Yupa dari Muara Kaman menyebut Mulawarman. Prasasti ini memakai aksara Pallawa dan bahasa Sanskerta."
+      },
+      {
+        "difficulty": "mudah",
+        "statement": "Pedagang dari pedalaman membawa rempah ke pelabuhan. Di sana barang ditukar atau dijual, lalu dibawa kapal ke wilayah lain.",
+        "question": "Apa fungsi utama pelabuhan dalam pernyataan tersebut?",
+        "options": {
+          "A": "Tempat produksi rempah di kebun",
+          "B": "Pusat pengumpulan pajak hasil pertanian",
+          "C": "Tempat pertukaran dan penyaluran barang dagangan",
+          "D": "Pusat penggalian bahan untuk membuat perahu",
+          "E": "Tempat penyimpanan arsip pemerintahan"
+        },
+        "answer": "C",
+        "explanation": "Pelabuhan mempertemukan penjual dan pembeli serta menyalurkan rempah ke tujuan lain."
+      },
+      {
+        "difficulty": "sedang",
+        "statement": "Peneliti menelaah aktivitas pasar, pembagian pekerjaan, dan aturan pelayaran di satu kota pelabuhan khusus pada tahun 1500. Ia tidak membahas perubahan kota itu sebelum atau sesudah tahun tersebut.",
+        "question": "Pendekatan berpikir sejarah mana yang paling sesuai dengan fokus penelitian itu?",
+        "options": {
+          "A": "Diakronik, karena membandingkan perubahan dari beberapa abad",
+          "B": "Sinkronik, karena mengkaji berbagai aspek pada satu kurun waktu",
+          "C": "Kronologis, karena menyusun rangkaian peristiwa dari awal hingga akhir",
+          "D": "Periodisasi, karena membagi rentang panjang menjadi beberapa babak",
+          "E": "Verifikasi eksternal, karena menilai keaslian dokumen"
+        },
+        "answer": "B",
+        "explanation": "Fokusnya adalah hubungan berbagai aspek kehidupan dalam satu kurun terbatas, ciri pendekatan sinkronik."
+      },
+      {
+        "difficulty": "sedang",
+        "question": "Manakah tindakan yang termasuk kritik eksternal ketika meneliti surat lama?",
+        "options": {
+          "A": "Menganalisis maksud penulis dari pilihan katanya",
+          "B": "Membandingkan klaim penulis dengan kesaksian lain",
+          "C": "Menilai sudut pandang penulis terhadap tokoh yang dibahas",
+          "D": "Memeriksa bahan, tinta, dan tanda tangan untuk menguji keaslian surat",
+          "E": "Menghubungkan isi surat dengan kondisi ekonomi zamannya"
+        },
+        "answer": "D",
+        "explanation": "Kritik eksternal memeriksa keaslian dan asal-usul sumber. Analisis isi dan kredibilitas kesaksian termasuk kritik internal."
+      },
+      {
+        "difficulty": "sedang",
+        "image": "sjr-x-lapisan.png",
+        "question": "Pada penampang yang utuh ini, bagaimana urutan pembentukan lapisan dari yang paling awal?",
+        "options": {
+          "A": "C, lalu B, lalu A",
+          "B": "A, lalu B, lalu C",
+          "C": "B, lalu A, lalu C",
+          "D": "B, lalu C, lalu A",
+          "E": "C, lalu A, lalu B"
+        },
+        "answer": "A",
+        "explanation": "Dalam lapisan yang tidak terganggu, lapisan di bawah umumnya lebih awal terbentuk daripada lapisan di atas."
+      },
+      {
+        "difficulty": "sedang",
+        "statement": "Dua situs pesisir memiliki pecahan gerabah bermotif serupa. Kedua temuan belum memiliki penanggalan yang bisa dibandingkan.",
+        "question": "Kesimpulan mana yang paling sesuai dengan bukti itu?",
+        "options": {
+          "A": "Seluruh penduduk tiba secara bersamaan dari satu wilayah",
+          "B": "Satu kelompok pasti menaklukkan kelompok lainnya",
+          "C": "Rute perpindahan penduduk dapat dipastikan dari motif gerabah",
+          "D": "Dua situs itu pasti ditempati pada tahun yang sama",
+          "E": "Ada kemungkinan pertukaran benda atau pengetahuan, tetapi arah dan bentuk hubungannya perlu diuji dengan bukti lain"
+        },
+        "answer": "E",
+        "explanation": "Kemiripan benda mendukung dugaan adanya hubungan, tetapi tidak cukup untuk menentukan jalur, arah, atau jenis hubungan secara pasti."
+      },
+      {
+        "difficulty": "sedang",
+        "question": "Sebuah relief candi memuat adegan perahu dan orang membawa wadah. Informasi apa yang paling layak digunakan dari relief itu?",
+        "options": {
+          "A": "Jumlah perahu yang benar-benar berlayar setiap hari",
+          "B": "Tanggal pasti adegan yang dipahat",
+          "C": "Cara perahu dan kegiatan membawa barang digambarkan",
+          "D": "Daftar lengkap barang yang diperdagangkan",
+          "E": "Nama semua orang yang terlibat dalam pelayaran"
+        },
+        "answer": "C",
+        "explanation": "Relief merupakan bukti visual tentang cara kegiatan digambarkan. Penetapan angka, waktu, atau identitas memerlukan sumber lain."
+      },
+      {
+        "difficulty": "sedang",
+        "statement": "Dalam satu kawasan pelabuhan lama, arkeolog menemukan keramik dari beberapa daerah produksi. Tidak ditemukan catatan mengenai rute kapal yang membawanya.",
+        "question": "Mana kesimpulan yang paling kuat berdasarkan temuan tersebut?",
+        "options": {
+          "A": "Semua pedagang yang datang berasal dari negeri penghasil keramik",
+          "B": "Pelabuhan itu dapat memproduksi semua keramik temuannya",
+          "C": "Keramik dibawa dalam satu pelayaran langsung dari tempat asalnya",
+          "D": "Pelabuhan terhubung dengan jaringan peredaran barang antardaerah",
+          "E": "Penguasa pelabuhan menguasai wilayah tempat keramik dibuat"
+        },
+        "answer": "D",
+        "explanation": "Keramik dari beragam daerah produksi mendukung adanya jaringan peredaran barang. Temuan itu belum membuktikan perjalanan langsung atau kendali politik."
+      },
+      {
+        "difficulty": "sedang",
+        "image": "sjr-x-jalur-dagang.png",
+        "question": "Peran Pelabuhan B yang paling jelas ditunjukkan oleh gambar adalah …",
+        "options": {
+          "A": "Menyalurkan rempah dari daerah produksi ke kota tujuan",
+          "B": "Menghasilkan semua rempah yang diperdagangkan",
+          "C": "Menjadi tujuan akhir penjualan rempah",
+          "D": "Mengangkut rempah dari kota tujuan kembali ke kebun",
+          "E": "Membatasi perdagangan hanya untuk daerah produksinya sendiri"
+        },
+        "answer": "A",
+        "explanation": "Posisi Pelabuhan B di antara daerah produksi dan kota tujuan menunjukkan peran perantara distribusi."
+      },
+      {
+        "difficulty": "sedang",
+        "statement": "Sebuah masjid tua dibangun dengan atap bertingkat yang mengikuti bentuk bangunan setempat. Tata ruangnya disesuaikan untuk ibadah Islam.",
+        "question": "Konsep manakah yang paling tepat untuk menjelaskan bentuk bangunan tersebut?",
+        "options": {
+          "A": "Migrasi, karena penduduk berpindah tempat tinggal",
+          "B": "Akulturasi, karena unsur bangunan lokal berpadu dengan fungsi dan budaya baru",
+          "C": "Isolasi, karena tradisi lokal terpisah dari pengaruh luar",
+          "D": "Periodisasi, karena perkembangan bangunan dibagi menjadi zaman",
+          "E": "Standarisasi, karena semua bangunan mengikuti bentuk yang sama"
+        },
+        "answer": "B",
+        "explanation": "Akulturasi terlihat saat unsur budaya baru berpadu dengan ciri setempat. Atap lokal tetap digunakan pada bangunan ibadah Islam."
+      },
+      {
+        "difficulty": "sulit",
+        "statement": "Arsip A tahun 1480 memuat usulan membangun pasar. Arsip B tahun 1490 mencatat pemungutan biaya di pasar tersebut. Tidak ada laporan pembangunan yang ditemukan.",
+        "question": "Bagaimana sebaiknya peneliti menyatakan temuannya?",
+        "options": {
+          "A": "Memakai angka 1480 sebagai tahun pembangunan karena merupakan tanggal tertua",
+          "B": "Memakai angka 1490 karena kegiatan pertama pasti terjadi saat bangunan selesai",
+          "C": "Menyimpulkan pasar dibangun antara 1480 dan 1490 sebagai kepastian",
+          "D": "Mengabaikan kedua arsip karena tidak mencantumkan tahun pembangunan",
+          "E": "Menyebutkan usulan pada 1480 dan aktivitas yang terbukti pada 1490, lalu menjelaskan bahwa tahun pembangunan belum pasti"
+        },
+        "answer": "E",
+        "explanation": "Tanggal usulan dan tanggal penggunaan membuktikan dua hal berbeda. Tahun selesainya pembangunan memerlukan bukti tersendiri."
+      },
+      {
+        "difficulty": "sulit",
+        "statement": "Prasasti kerajaan menyebut penguasa membagikan hasil panen secara merata. Catatan seorang warga dari masa yang sama menyebut pembagian diprioritaskan untuk kelompok tertentu.",
+        "question": "Langkah kritik sumber mana yang paling tepat sebelum menyusun simpulan?",
+        "options": {
+          "A": "Mengutamakan klaim pelaku karena ia menyaksikan zamannya",
+          "B": "Mengutamakan laporan warga karena berasal dari luar pemerintahan",
+          "C": "Memeriksa siapa yang membuat setiap sumber, tujuannya, dan bukti independen yang dapat menguji kedua klaim",
+          "D": "Mengambil rata-rata dari dua klaim sebagai jalan tengah",
+          "E": "Membuang kedua sumber karena keterangannya saling bertentangan"
+        },
+        "answer": "C",
+        "explanation": "Kedua sumber perlu diuji dari konteks, kepentingan pembuat, dan dukungan bukti lain. Kedekatan dengan peristiwa tidak menjamin setiap klaim akurat."
+      },
+      {
+        "difficulty": "sulit",
+        "image": "sjr-x-sumber-pelabuhan.png",
+        "question": "Apa langkah pertama yang paling tepat sebelum menyatakan kedua sumber bertentangan?",
+        "options": {
+          "A": "Memilih laporan petugas karena pembuatnya bekerja di pelabuhan",
+          "B": "Memilih catatan pedagang karena jumlahnya lebih besar",
+          "C": "Menghitung selisihnya sebagai jumlah kapal yang tidak dicatat",
+          "D": "Menyamakan cakupan lokasi dan objek yang dihitung, lalu mencari catatan pembanding",
+          "E": "Menganggap keduanya mengukur hal yang sama karena tahunnya sama"
+        },
+        "answer": "D",
+        "explanation": "Satu sumber mencatat kapal di dermaga utama. Sumber lain mencakup perahu yang terlihat di teluk. Hasilnya belum layak diperbandingkan sebagai ukuran yang sama."
+      },
+      {
+        "difficulty": "sulit",
+        "statement": "Arkeolog menemukan lubang galian lama yang memotong dua lapisan tanah. Benda dari bagian atas tampak masuk ke bagian bawah melalui lubang tersebut.",
+        "question": "Tindakan mana yang paling tepat untuk menafsirkan urutan umur temuan?",
+        "options": {
+          "A": "Menempatkan temuan terdalam sebagai temuan paling awal tanpa pengecualian",
+          "B": "Mengurutkan umur temuan menurut berat masing-masing benda",
+          "C": "Menganggap semua benda di dalam lubang berasal dari satu masa",
+          "D": "Menghapus informasi dari bagian situs lain karena ada gangguan setempat",
+          "E": "Memisahkan data bagian yang terganggu, membandingkannya dengan lapisan utuh, dan menguji umur dengan metode lain bila memungkinkan"
+        },
+        "answer": "E",
+        "explanation": "Galian dapat memasukkan benda baru ke lapisan lebih tua. Konteks utuh dan metode penanggalan lain membantu menguji urutan yang diperkirakan."
+      },
+      {
+        "difficulty": "sulit",
+        "statement": "Sebagian besar prasasti yang ditemukan dari satu kerajaan membahas upacara dan hadiah penguasa. Peneliti juga ingin mengetahui makanan dan kegiatan sehari-hari penduduk biasa.",
+        "question": "Simpulan mana yang paling tepat mengenai sumber-sumber tersebut?",
+        "options": {
+          "A": "Prasasti lebih cocok daripada bukti permukiman untuk menyimpulkan menu harian seluruh warga",
+          "B": "Prasasti memberi informasi tentang kegiatan elite, sementara keseharian warga perlu diuji dengan bukti lain",
+          "C": "Informasi tentang kebutuhan warga dapat dipastikan dari besarnya hadiah penguasa",
+          "D": "Ketiadaan informasi pasar dalam prasasti membuktikan bahwa pasar belum ada",
+          "E": "Upacara kerajaan dan kehidupan warga dapat dianggap identik karena terjadi di wilayah yang sama"
+        },
+        "answer": "B",
+        "explanation": "Sumber resmi memberi informasi sesuai tujuan pembuatannya. Sisa makanan, artefak permukiman, dan sumber lain lebih relevan untuk menilai kegiatan sehari-hari."
+      },
+      {
+        "difficulty": "sulit",
+        "statement": "Catatan P menyebut alur sungai di sebuah pelabuhan mulai dangkal. Beberapa tahun kemudian catatan Q menunjukkan kunjungan kapal di pelabuhan tetangga meningkat. Belum ada data kunjungan yang lengkap untuk kedua pelabuhan.",
+        "question": "Penjelasan sementara mana yang paling dapat dipertanggungjawabkan?",
+        "options": {
+          "A": "Pendangkalan mungkin berperan dalam pergeseran perdagangan, dan catatan dari beberapa tahun dibutuhkan untuk menguji dampaknya",
+          "B": "Pendangkalan terbukti sebagai satu-satunya penyebab pergeseran perdagangan",
+          "C": "Jumlah kapal di pelabuhan tetangga membuktikan semua pedagang telah pindah",
+          "D": "Pembukaan jalur baru pasti menjadi penyebab pendangkalan alur sungai",
+          "E": "Pergeseran perdagangan mustahil terjadi selama kedua pelabuhan masih beroperasi"
+        },
+        "answer": "A",
+        "explanation": "Urutan kejadian dan perubahan jumlah kapal mendukung hipotesis. Data lintas waktu serta kemungkinan penyebab lain diperlukan untuk menilai hubungan sebab akibat."
+      }
+    ]
+  }
+]

@@ -1,0 +1,106 @@
+<?php
+
+namespace App\Http\Controllers\Reports;
+
+use App\Enums\AssessmentType;
+use App\Http\Controllers\Controller;
+use App\Models\AssessmentPeriod;
+use App\Models\SchoolClass;
+use App\Models\SchoolProfile;
+use App\Models\Student;
+use App\Services\Reports\MidtermReportAccess;
+use App\Services\Reports\MidtermReportService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
+use InvalidArgumentException;
+
+class MidtermReportController extends Controller
+{
+    public function index(Request $request, MidtermReportAccess $access): View
+    {
+        $periods = AssessmentPeriod::query()
+            ->where('type', AssessmentType::ATS)
+            ->with(['academicYear', 'assessmentSubjects.schoolClass'])
+            ->latest('starts_on')
+            ->paginateForDisplay()
+            ->withQueryString();
+
+        $periods->getCollection()->each(function (AssessmentPeriod $period) use ($request, $access): void {
+            $classes = $period->assessmentSubjects->pluck('schoolClass')->filter()->unique('id')->sortBy('name')
+                ->filter(fn (SchoolClass $schoolClass) => $access->canView($request->user(), $period, $schoolClass));
+            $period->setRelation('accessibleClasses', $classes->values());
+        });
+
+        return view('reports.midterm.index', compact('periods'));
+    }
+
+    public function show(
+        Request $request,
+        AssessmentPeriod $assessmentPeriod,
+        SchoolClass $schoolClass,
+        MidtermReportService $service,
+        MidtermReportAccess $access,
+    ): View|RedirectResponse {
+        abort_unless($access->canView($request->user(), $assessmentPeriod, $schoolClass), 403);
+        if (! $access->canPrint($request->user(), $schoolClass)) {
+            return redirect()->route('reports.midterm.edit', [$assessmentPeriod, $schoolClass]);
+        }
+
+        $report = $this->reportOrFail($service, $assessmentPeriod, $schoolClass);
+        $canEdit = $report['subjects']->contains(fn ($subject) => $access->canManageSubject($request->user(), $subject))
+            || $access->canRecordAttendance($request->user(), $schoolClass)
+            || $report['extracurriculars']->contains(fn ($activity) => $access->canManageExtracurricular($request->user(), $activity))
+            || $access->canConfigure($request->user());
+        $printClasses = SchoolClass::query()
+            ->where('academic_year_id', $assessmentPeriod->academic_year_id)
+            ->whereHas('assessmentSubjects', fn ($query) => $query->where('assessment_period_id', $assessmentPeriod->id))
+            ->orderBy('name')
+            ->get()
+            ->filter(fn (SchoolClass $class) => $access->canPrint($request->user(), $class))
+            ->values();
+
+        return view('reports.midterm.show', [
+            ...$report,
+            'canEdit' => $canEdit,
+            'canConfigure' => $access->canConfigure($request->user()),
+            'printClasses' => $printClasses,
+        ]);
+    }
+
+    public function print(
+        Request $request,
+        AssessmentPeriod $assessmentPeriod,
+        SchoolClass $schoolClass,
+        Student $student,
+        MidtermReportService $service,
+        MidtermReportAccess $access,
+    ): View {
+        abort_unless($student->school_class_id === $schoolClass->id, 404);
+        abort_unless($access->canPrint($request->user(), $schoolClass), 403);
+
+        $report = $this->reportOrFail($service, $assessmentPeriod, $schoolClass);
+        $row = $report['rows']->first(fn (array $item) => $item['student']->is($student));
+
+        abort_unless($row, 404);
+
+        return view('reports.midterm.print', [
+            ...$report,
+            'row' => $row,
+            'letterheadData' => SchoolProfile::letterheadData(SchoolProfile::query()->first()),
+            'printLayout' => $service->printLayout($assessmentPeriod),
+        ]);
+    }
+
+    private function reportOrFail(
+        MidtermReportService $service,
+        AssessmentPeriod $period,
+        SchoolClass $schoolClass,
+    ): array {
+        try {
+            return $service->build($period, $schoolClass);
+        } catch (InvalidArgumentException $exception) {
+            abort(404, $exception->getMessage());
+        }
+    }
+}

@@ -1,0 +1,269 @@
+{
+  "source": "Daftar mapel dan penjadwalan pada server sekolah, dibaca 14 November 2026",
+  "origin": "https://ujiansmkbhg.sityoyitsolutions.com",
+  "subjects": [
+    {
+      "code": "ADMP",
+      "name": "Administrasi Pajak",
+      "grades": [
+        11,
+        12
+      ],
+      "scheduled": true,
+      "school_code": "ADMP"
+    },
+    {
+      "code": "AK",
+      "name": "Akuntansi",
+      "grades": [
+        10
+      ],
+      "scheduled": false,
+      "school_code": "AK"
+    },
+    {
+      "code": "AKD1",
+      "name": "Akuntansi Dasar 1",
+      "grades": [
+        10
+      ],
+      "scheduled": true,
+      "school_code": "AKD1"
+    },
+    {
+      "code": "AKD2",
+      "name": "Akuntansi Dasar 2",
+      "grades": [
+        10
+      ],
+      "scheduled": true,
+      "school_code": "AKD2"
+    },
+    {
+      "code": "AK.KEU",
+      "name": "Akuntansi Keuangan",
+      "grades": [
+        11
+      ],
+      "scheduled": true,
+      "school_code": "AK.KEU"
+    },
+    {
+      "code": "ARB",
+      "name": "Bahasa Arab",
+      "grades": [
+        10,
+        11,
+        12
+      ],
+      "scheduled": true,
+      "school_code": "ARB"
+    },
+    {
+      "code": "BIN",
+      "name": "Bahasa Indonesia",
+      "grades": [
+        10,
+        11,
+        12
+      ],
+      "scheduled": true,
+      "school_code": "IND"
+    },
+    {
+      "code": "BIG",
+      "name": "Bahasa Inggris",
+      "grades": [
+        10,
+        11,
+        12
+      ],
+      "scheduled": true,
+      "school_code": "ING"
+    },
+    {
+      "code": "EKB",
+      "name": "Ekonomi Bisnis",
+      "grades": [
+        10
+      ],
+      "scheduled": true,
+      "school_code": "EKB"
+    },
+    {
+      "code": "EP",
+      "name": "Etika Profesi",
+      "grades": [
+        10
+      ],
+      "scheduled": true,
+      "school_code": "EP"
+    },
+    {
+      "code": "IPA",
+      "name": "Ilmu Pengetahuan Alam",
+      "grades": [
+        10
+      ],
+      "scheduled": false,
+      "school_code": "IPA"
+    },
+    {
+      "code": "IPS",
+      "name": "Ilmu Pengetahuan Sosial",
+      "grades": [
+        10
+      ],
+      "scheduled": false,
+      "school_code": "IPS"
+    },
+    {
+      "code": "INF",
+      "name": "Informatika",
+      "grades": [
+        10
+      ],
+      "scheduled": true,
+      "school_code": "INF"
+    },
+    {
+      "code": "KKA",
+      "name": "Koding dan Kecerdasan Artifisial",
+      "grades": [
+        10
+      ],
+      "scheduled": true,
+      "school_code": "KKA"
+    },
+    {
+      "code": "KOMP.AK",
+      "name": "Komputer Akuntansi",
+      "grades": [
+        11,
+        12
+      ],
+      "scheduled": true,
+      "school_code": "KOMP.AK"
+    },
+    {
+      "code": "KIK",
+      "name": "Kreativitas, Inovasi dan Kewirausahaan",
+      "grades": [
+        11,
+        12
+      ],
+      "scheduled": true,
+      "school_code": "KIK"
+    },
+    {
+      "code": "MTK",
+      "name": "Matematika",
+      "grades": [
+        10,
+        11,
+        12
+      ],
+      "scheduled": true,
+      "school_code": "MTK"
+    },
+    {
+      "code": "PAI",
+      "name": "Pendidikan Agama Islam dan Budi Pekerti",
+      "grades": [
+        10,
+        11,
+        12
+      ],
+      "scheduled": true,
+      "school_code": "PAI"
+    },
+    {
+      "code": "PJOK",
+      "name": "Pendidikan Jasmani, Olahraga dan Kesehatan",
+      "grades": [
+        10,
+        11
+      ],
+      "scheduled": true,
+      "school_code": "PJOK"
+    },
+    {
+      "code": "PP",
+      "name": "Pendidikan Pancasila",
+      "grades": [
+        10,
+        11,
+        12
+      ],
+      "scheduled": true,
+      "school_code": "PP"
+    },
+    {
+      "code": "SPS",
+      "name": "Pengolah Angka/Spreadsheet",
+      "grades": [
+        10
+      ],
+      "scheduled": true,
+      "school_code": "SPS"
+    },
+    {
+      "code": "BANK.D",
+      "name": "Perbankan Dasar",
+      "grades": [
+        10
+      ],
+      "scheduled": true,
+      "school_code": "BANK.D"
+    },
+    {
+      "code": "PRAK.AKLP",
+      "name": "Praktikum Akuntansi Perusahaan Akuntansi Lembaga/ Instansi Pemerintah",
+      "grades": [
+        11,
+        12
+      ],
+      "scheduled": true,
+      "school_code": "PRAK.AKLP"
+    },
+    {
+      "code": "PRAK.AKL.PJDM",
+      "name": "Praktikum Akuntansi Perusahaan Jasa, Dagang, Manufaktur",
+      "grades": [
+        11,
+        12
+      ],
+      "scheduled": true,
+      "school_code": "PRAK.AKL.PJDM"
+    },
+    {
+      "code": "IPAS",
+      "name": "Proyek IPAS",
+      "grades": [
+        10
+      ],
+      "scheduled": true,
+      "school_code": "IPAS"
+    },
+    {
+      "code": "SJR",
+      "name": "Sejarah",
+      "grades": [
+        10,
+        11
+      ],
+      "scheduled": true,
+      "school_code": "SJR"
+    },
+    {
+      "code": "SNR",
+      "name": "Seni Rupa",
+      "grades": [
+        10,
+        11
+      ],
+      "scheduled": true,
+      "school_code": "SNR"
+    }
+  ]
+}

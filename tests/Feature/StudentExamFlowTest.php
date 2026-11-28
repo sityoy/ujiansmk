@@ -1,0 +1,1500 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Enums\AssessmentType;
+use App\Enums\AssignmentStatus;
+use App\Enums\AttemptStatus;
+use App\Enums\CheckinMethod;
+use App\Enums\CheckinStatus;
+use App\Enums\ExamQuestionType;
+use App\Enums\GradingStatus;
+use App\Enums\PeriodStatus;
+use App\Enums\Semester;
+use App\Enums\SessionKind;
+use App\Enums\SessionStatus;
+use App\Enums\UserRole;
+use App\Models\AcademicYear;
+use App\Models\AssessmentPeriod;
+use App\Models\AssessmentSubject;
+use App\Models\Campus;
+use App\Models\ExamAssignment;
+use App\Models\ExamAttempt;
+use App\Models\ExamQuestion;
+use App\Models\ExamSession;
+use App\Models\SchoolClass;
+use App\Models\Student;
+use App\Models\Subject;
+use App\Models\User;
+use App\Services\Attendance\AttendanceAvailability;
+use App\Services\Attendance\DailyCheckinService;
+use App\Services\Exams\ExamAssignmentService;
+use App\Services\Exams\ExamAttemptService;
+use App\Services\Exams\ExamSessionService;
+use App\Services\Exams\StudentOptionOrder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Testing\TestResponse;
+use Illuminate\Validation\ValidationException;
+use Tests\TestCase;
+
+class StudentExamFlowTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->withoutVite();
+        Storage::fake('local');
+        $this->travelTo(Carbon::parse('2026-09-04 10:00:00'));
+    }
+
+    public function test_core_multiple_choices_limit_selections_and_award_partial_points(): void
+    {
+        [$user, $assignment, [$multi, $single]] = $this->makeExam();
+        $multi->update(['correct_answer' => 'AC']);
+        $threeKeys = $multi->replicate()->fill(['correct_answer' => 'ABC', 'position' => 3]);
+        $threeKeys->save();
+        $attempt = $this->startAttempt($assignment);
+        $this->actingAs($user)->withSession(['exam_device_token' => str_repeat('a', 64)]);
+        $answer = route('student.exams.answer', [$attempt, $multi]);
+        $singleAnswer = route('student.exams.answer', [$attempt, $single]);
+        $threeChoices = route('student.exams.answer', [$attempt, $threeKeys]);
+        $show = route('student.exams.show', $attempt);
+
+        $this->get($show)->assertOk()->assertSee('Pilih 1 sampai 2 jawaban yang menurut Anda benar.')
+            ->assertSee('Pilih satu jawaban.')->assertSee('Pilih 1 sampai 3 jawaban yang menurut Anda benar.')->assertSee('data-multiple-answer', false)
+            ->assertSee('type="checkbox" name="selection_'.$multi->id.'"', false);
+        $this->putJson($singleAnswer, ['answer' => 'BC'])->assertUnprocessable()->assertJsonValidationErrors('answer');
+        $this->putJson($singleAnswer, ['answer' => 'B'])->assertOk();
+        $this->putJson($answer, ['answer' => 'AA'])->assertUnprocessable()->assertJsonValidationErrors('answer');
+        $this->putJson($answer, ['answer' => 'A'])->assertOk();
+        $this->assertSame('1.00', $attempt->answers()->where('exam_question_id', $multi->id)->sole()->points_awarded);
+        $this->putJson($answer, ['answer' => 'AB'])->assertOk();
+        $this->assertSame('1.00', $attempt->answers()->where('exam_question_id', $multi->id)->sole()->points_awarded);
+        $this->putJson($answer, ['answer' => 'ABC'])->assertUnprocessable()
+            ->assertJsonPath('errors.answer.0', 'Pilih maksimal 2 jawaban untuk soal ini.');
+        $this->putJson($threeChoices, ['answer' => 'AD'])->assertOk();
+        $this->assertSame('0.67', $attempt->answers()->where('exam_question_id', $threeKeys->id)->sole()->points_awarded);
+        $this->putJson($threeChoices, ['answer' => 'ADB'])->assertOk();
+        $this->assertSame('1.33', $attempt->answers()->where('exam_question_id', $threeKeys->id)->sole()->points_awarded);
+        $attempt->answers()->where('exam_question_id', $threeKeys->id)->update(['points_awarded' => 0]);
+        $this->putJson($answer, ['answer' => ''])->assertOk();
+        $this->assertFalse($attempt->answers()->where('exam_question_id', $multi->id)->exists());
+        $this->from($show)->post(route('student.exams.submit', $attempt))->assertSessionHasErrors('submission');
+
+        $this->putJson($answer, ['answer' => 'CA'])->assertOk();
+        $card = $this->get($show)->assertOk();
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="UTF-8">'.$card->getContent());
+        $xpath = new \DOMXPath($dom);
+        $this->assertSame(2, $xpath->query('//fieldset[@data-choice-limit="2"]//input[@checked]')->length);
+        $this->assertSame('AC', $attempt->answers()->where('exam_question_id', $multi->id)->sole()->answer);
+        $this->post(route('student.exams.submit', $attempt))->assertRedirect(route('student.exams.result', $attempt));
+        $this->assertSame('5.33', $attempt->fresh()->score);
+        $this->assertSame(2, $attempt->fresh()->correct_answers);
+    }
+
+    public function test_student_can_check_in_start_autosave_and_submit_an_exam(): void
+    {
+        [$user, $assignment, $questions] = $this->makeExam();
+        $deviceToken = str_repeat('a', 64);
+        $this->actingAs($user)->get(route('student.exams.index'))->assertOk()
+            ->assertSee('data-exam-state="checkin"', false)->assertSee('Belum mulai · Absen dulu')
+            ->assertDontSee(route('student.exams.start', $assignment));
+
+        $this->withSession(['exam_device_token' => $deviceToken])
+            ->post(route('student.attendance.store', $assignment), [
+                'latitude' => -6.2000000,
+                'longitude' => 106.8166660,
+                'accuracy_meters' => 10,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->get(route('student.exams.index'))->assertOk()
+            ->assertSee('data-exam-state="ready"', false)->assertSee('Siap dimulai')
+            ->assertSee(route('student.exams.start', $assignment))
+            ->assertSee('data-state="success"', false)->assertSee('Lokasi terverifikasi.')
+            ->assertSeeInOrder(['Peringatan sebelum memulai ujian', 'Absensi lokasi sebelum ujian', 'Waktu ujian belum berjalan saat Anda absen', 'Jika absensi gagal', 'Cara mengaktifkan Jangan Ganggu di HP', 'Baca kembali peringatan ujian', 'Saya sudah membaca dan memahami aturan'])
+            ->assertSee('required aria-describedby="core-exam-rules-title"', false);
+
+        $this->withSession(['exam_device_token' => $deviceToken])
+            ->post(route('student.exams.start', $assignment))
+            ->assertRedirect();
+
+        $attempt = ExamAttempt::query()->firstOrFail();
+        $this->get(route('student.exams.index'))->assertOk()
+            ->assertSee('data-exam-state="working"', false)->assertSee('Lanjutkan ujian')
+            ->assertSee(route('student.exams.show', $attempt));
+
+        $this->withSession(['exam_device_token' => $deviceToken])
+            ->putJson(route('student.exams.answer', [$attempt, $questions[0]]), ['answer' => 'A'])
+            ->assertOk()
+            ->assertJson(['saved' => true]);
+        $this->from(route('student.exams.show', $attempt))->post(route('student.exams.submit', $attempt))
+            ->assertRedirect(route('student.exams.show', $attempt))->assertSessionHasErrors('submission');
+        $this->assertSame(AttemptStatus::InProgress, $attempt->fresh()->status);
+
+        $this->withSession(['exam_device_token' => $deviceToken])
+            ->putJson(route('student.exams.answer', [$attempt, $questions[1]]), ['answer' => 'A'])
+            ->assertOk();
+
+        $this->withSession(['exam_device_token' => $deviceToken])
+            ->post(route('student.exams.submit', $attempt))
+            ->assertRedirect(route('student.exams.result', $attempt));
+        $this->get(route('student.exams.result', $attempt))->assertOk()
+            ->assertSee('Kembali ke Dashboard Siswa')->assertSee(route('student.exams.index'));
+
+        $this->get(route('student.exams.index'))->assertOk()
+            ->assertSee('data-exam-state="done"', false)->assertSee('Jawaban sudah dikumpulkan.')
+            ->assertDontSee(route('student.exams.start', $assignment))->assertDontSee('Lanjutkan ujian');
+        $this->assertSame('submitted', $attempt->refresh()->status->value);
+        $this->assertSame('2.00', $attempt->score);
+        $this->assertSame(1, $attempt->correct_answers);
+        $this->assertSame(1, $attempt->incorrect_answers);
+        $this->assertSame(AssignmentStatus::Completed, $assignment->refresh()->status);
+        $this->assertDatabaseCount('exam_answers', 2);
+        $this->assertDatabaseCount('daily_checkins', 1);
+    }
+
+    public function test_makeup_requires_written_answers_for_manual_submission_even_when_locked_but_still_expires(): void
+    {
+        [$user, $assignment, $questions] = $this->makeExam();
+        $assignment->examSession->update(['kind' => SessionKind::Makeup]);
+        $questions[1]->update([
+            'question_type' => ExamQuestionType::Essay, 'options' => null, 'correct_answer' => null,
+            'question_image_path' => 'exam-questions/gambar-susulan.png',
+        ]);
+        $attempt = $this->startAttempt($assignment);
+        $show = route('student.exams.show', $attempt);
+        $submit = route('student.exams.submit', $attempt);
+        $this->actingAs($user)->withSession(['exam_device_token' => str_repeat('a', 64)]);
+
+        $this->get($show)->assertOk()->assertSeeInOrder([
+            'data-exam-section="multiple_choice"', 'Lanjut ke Esai', 'data-exam-section="essay"',
+        ], false)->assertDontSee('data-exam-section="short_answer"', false)
+            ->assertSeeInOrder(['gambar-susulan.png', 'class="exam-image-action"', 'Perbesar / Perkecil gambar'], false)
+            ->assertSee('data-exam-image-zoom-in', false)->assertSee('data-exam-image-zoom-out', false)
+            ->assertSee('data-exam-text-controls', false)->assertSee('exam-written-answer', false);
+
+        $this->putJson(route('student.exams.answer', [$attempt, $questions[0]]), ['answer' => 'A'])->assertOk();
+        $this->putJson(route('student.exams.answer', [$attempt, $questions[1]]), ['answer' => '   '])->assertUnprocessable();
+        $this->from($show)->post($submit)->assertSessionHasErrors('submission');
+        $attempt->update(['security_locked_at' => now(), 'violation_count' => 2]);
+        $this->get($show)->assertOk()->assertSee('Soal nomor 2 belum dijawab.')->assertDontSee('data-submit-cancel', false);
+        $this->from($show)->post($submit)->assertSessionHasErrors('submission');
+
+        $this->assertSame(AttemptStatus::InProgress, $attempt->fresh()->status);
+        $this->travel(90)->minutes();
+        $this->post($submit)->assertRedirect(route('student.exams.result', $attempt));
+        $this->assertSame(AttemptStatus::Submitted, $attempt->fresh()->status);
+        $this->assertSame(1, $attempt->answers()->count());
+    }
+
+    public function test_core_exam_groups_all_question_types_and_keeps_bank_order_within_each_section(): void
+    {
+        [$user, $assignment, $questions] = $this->makeExam();
+        $questions[1]->update(['question_text' => 'PG posisi kedua', 'position' => 4]);
+        $questions[0]->update(['question_text' => 'PG posisi pertama', 'position' => 2]);
+        $assignment->assessmentSubject->questions()->create([
+            'question_type' => ExamQuestionType::Essay,
+            'question_text' => 'Uraikan jawaban untuk esai.',
+            'points' => 5, 'position' => 1,
+        ]);
+        $assignment->assessmentSubject->questions()->create([
+            'question_type' => ExamQuestionType::ShortAnswer,
+            'question_text' => 'Tulis jawaban singkat.',
+            'points' => 3, 'position' => 3,
+        ]);
+        $attempt = $this->startAttempt($assignment);
+
+        $this->actingAs($user)->withSession(['exam_device_token' => str_repeat('a', 64)])
+            ->get(route('student.exams.show', $attempt))->assertOk()
+            ->assertSeeInOrder([
+                'data-exam-section="multiple_choice"', 'Soal 1 dari 4', 'PG posisi pertama',
+                'Soal 2 dari 4', 'PG posisi kedua', 'Lanjut ke Isian Singkat',
+                'data-exam-section="short_answer"', 'Soal 3 dari 4', 'Tulis jawaban singkat.', 'Lanjut ke Esai',
+                'data-exam-section="essay"', 'Soal 4 dari 4', 'Uraikan jawaban untuk esai.',
+                'Selesai dan kumpulkan jawaban',
+            ], false);
+    }
+
+    public function test_core_exam_displays_formatted_text_and_keeps_legacy_angle_brackets_literal(): void
+    {
+        [$user, $assignment, $questions] = $this->makeExam();
+        $questions[0]->update([
+            'text_format' => 'html', 'question_text' => '<p>Choose the <em>correct answer</em>.</p>',
+            'statement' => '<p>Read <strong>carefully</strong>.</p>',
+            'options' => ['A' => '<p><u>Answer A</u></p>', 'B' => 'Answer B'],
+        ]);
+        $questions[1]->update(['question_text' => 'Literal <strong> and comparison 2 < 3.']);
+        $attempt = $this->startAttempt($assignment);
+        $this->actingAs($user)->withSession(['exam_device_token' => str_repeat('a', 64)])
+            ->get(route('student.exams.show', $attempt))->assertOk()
+            ->assertSee('<em>correct answer</em>', false)->assertSee('<strong>carefully</strong>', false)
+            ->assertSee('<u>Answer A</u>', false)
+            ->assertSee('Literal &lt;strong&gt; and comparison 2 &lt; 3.', false);
+    }
+
+    #[\PHPUnit\Framework\Attributes\TestWith([false])]
+    #[\PHPUnit\Framework\Attributes\TestWith([true])]
+    public function test_core_options_keep_expected_order_attachments_and_scoring(bool $english): void
+    {
+        [$user, $assignment, $questions] = $this->makeExam();
+        if ($english) {
+            $assignment->assessmentSubject->subject->update(['name' => 'Bahasa Inggris (Kelas X)']);
+        }
+        $question = $questions[0];
+        $question->update(['options' => ['A' => 'Jawaban tepat', 'B' => 'Salah B', 'C' => 'Salah C', 'D' => 'Salah D', 'E' => 'Salah E'],
+            'option_file_paths' => ['A' => 'exam-options/benar.png', 'B' => 'exam-options/lain.pdf']]);
+        $attempt = $this->startAttempt($assignment);
+        $route = route('student.exams.show', $attempt);
+        $this->actingAs($user)->withSession(['exam_device_token' => str_repeat('a', 64)]);
+        $expected = $english
+            ? ['A', 'B', 'C', 'D', 'E']
+            : app(StudentOptionOrder::class)->forQuestion($attempt, $question)->keys()->all();
+        $response = $this->get($route)->assertOk()
+            ->assertSee('data-exam-image-zoom-in', false)
+            ->assertSeeInOrder(array_map(fn ($item) => $item->question_text, $questions));
+        $this->assertCoreOptions($response->getContent(), $question, $expected);
+        $this->putJson(route('student.exams.answer', [$attempt, $question]), ['answer' => 'A'])->assertOk();
+        $resumed = $this->get($route)->assertOk();
+        $this->assertCoreOptions($resumed->getContent(), $question, $expected);
+        $this->putJson(route('student.exams.answer', [$attempt, $questions[1]]), ['answer' => 'A'])->assertOk();
+        $this->post(route('student.exams.submit', $attempt))->assertRedirect(route('student.exams.result', $attempt));
+        $this->assertSame('2.00', $attempt->fresh()->score);
+        $this->assertTrue($attempt->answers()->where('exam_question_id', $question->id)->firstOrFail()->is_correct);
+        $this->assertSame(['A', 'B', 'C', 'D', 'E'], array_keys($question->fresh()->options));
+    }
+
+    private function assertCoreOptions(string $html, ExamQuestion $question, array $keys): void
+    {
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="UTF-8">'.$html);
+        $xpath = new \DOMXPath($dom);
+        $inputs = $xpath->query('//input[@name="question_'.$question->id.'"]');
+        $this->assertSame($keys, array_map(fn ($node) => $node->getAttribute('value'), iterator_to_array($inputs)));
+        foreach ($inputs as $index => $input) {
+            $label = $input->parentNode;
+            $this->assertSame(chr(65 + $index).'.', trim($xpath->query('.//strong', $label)->item(0)->textContent));
+            $key = $input->getAttribute('value');
+            $this->assertStringContainsString($question->options[$key], $label->textContent);
+            if ($question->option_file_paths[$key] ?? null) {
+                $this->assertStringContainsString($question->option_file_paths[$key], $dom->saveHTML($label->parentNode));
+            }
+            if ($input->hasAttribute('checked')) {
+                $this->assertSame('A', $key);
+            }
+        }
+        if (str_contains($html, 'checked')) {
+            $this->assertSame(1, $xpath->query('//input[@name="question_'.$question->id.'"][@checked]')->length);
+        }
+    }
+
+    public function test_student_cannot_start_without_verified_attendance(): void
+    {
+        [$user, $assignment] = $this->makeExam();
+
+        $this->actingAs($user)
+            ->post(route('student.exams.start', $assignment))
+            ->assertSessionHasErrors('attendance');
+
+        $this->assertDatabaseCount('exam_attempts', 0);
+    }
+
+    public function test_committee_can_add_questions_to_a_component(): void
+    {
+        [, $assignment] = $this->makeExam();
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+
+        $this->actingAs($committee)
+            ->post(route('scheduling.questions.store', $assignment->assessment_subject_id), [
+                'question_text' => 'Protokol untuk membuka halaman web adalah?',
+                'question_type' => ExamQuestionType::ShortAnswer->value,
+                'points' => 1,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('exam_questions', [
+            'assessment_subject_id' => $assignment->assessment_subject_id,
+            'question_text' => 'Protokol untuk membuka halaman web adalah?',
+            'question_type' => ExamQuestionType::ShortAnswer->value,
+        ]);
+    }
+
+    public function test_scheduled_end_controls_student_display_and_submission_after_a_late_start(): void
+    {
+        [$student, $assignment, $questions] = $this->makeExam();
+        $session = $assignment->examSession;
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $startsAt = now()->subMinutes(10);
+        $endsAt = now()->addMinutes(35);
+        $this->actingAs($committee)->patch(route('scheduling.sessions.update', $session), [
+            ...$this->sessionData($session),
+            'starts_at' => $startsAt->format('Y-m-d\TH:i'),
+            'ends_at' => $endsAt->format('Y-m-d\TH:i'),
+        ])->assertSessionHasNoErrors();
+        $assignment = $assignment->fresh();
+        $this->assertSame(45, (int) $assignment->examSession->duration_minutes);
+
+        $attempt = $this->startAttempt($assignment);
+        $this->actingAs($student)->withSession(['exam_device_token' => str_repeat('a', 64)]);
+        $this->get(route('student.exams.index'))->assertOk()->assertSee('04/09/2026 09:50–10:35 · 45 menit');
+        $show = route('student.exams.show', $attempt);
+        $this->get($show)->assertOk()
+            ->assertSee('04/09/2026 09:50–10:35 · 45 menit')
+            ->assertSee('datetime="'.$endsAt->toIso8601String().'">10:35', false)
+            ->assertSee('remainingAtLoad = 2100000', false);
+        $this->putJson(route('student.exams.answer', [$attempt, $questions[0]]), ['answer' => 'A'])->assertOk();
+
+        $this->travelTo($endsAt);
+        $this->getJson(route('student.exams.security', $attempt))->assertOk()->assertJsonPath('status', 'submitted');
+        $this->assertSame('2.00', $attempt->fresh()->score);
+    }
+
+    public function test_started_session_schedule_cannot_be_changed(): void
+    {
+        [, $assignment] = $this->makeExam();
+        $this->startAttempt($assignment);
+        $session = $assignment->examSession;
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+
+        $this->actingAs($committee)->patch(route('scheduling.sessions.update', $session), [
+            ...$this->sessionData($session), 'ends_at' => $session->starts_at->copy()->addMinutes(120)->toDateTimeString(),
+        ])->assertSessionHasErrors('session');
+
+        $this->assertSame(90, (int) $session->refresh()->duration_minutes);
+    }
+
+    public function test_closing_from_scheduling_submits_answers_and_cannot_be_reopened(): void
+    {
+        [, $assignment, $questions] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        app(ExamAttemptService::class)->saveAnswer($attempt, $questions[0], 'A');
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $session = $assignment->examSession;
+
+        $this->actingAs($committee)->patch(route('scheduling.sessions.update', $session), [
+            ...$this->sessionData($session), 'status' => 'closed',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame(AttemptStatus::Submitted, $attempt->refresh()->status);
+        $this->assertSame('2.00', $attempt->score);
+        $this->patch(route('operations.sessions.status', $session), ['status' => 'active'])
+            ->assertSessionHasErrors('status');
+        $this->assertSame(SessionStatus::Closed, $session->refresh()->status);
+    }
+
+    public function test_operations_cannot_return_started_session_to_draft_and_closes_consistently(): void
+    {
+        [, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $route = route('operations.sessions.status', $assignment->examSession);
+
+        $this->actingAs($committee)->patch($route, ['status' => 'draft'])->assertSessionHasErrors('status');
+        $this->patch($route, ['status' => 'closed'])->assertRedirect();
+        $this->assertSame(AttemptStatus::Submitted, $attempt->refresh()->status);
+        $this->assertSame(AssignmentStatus::Completed, $assignment->refresh()->status);
+    }
+
+    public function test_question_bank_is_frozen_after_first_attempt_even_for_unanswered_questions(): void
+    {
+        [, $assignment, $questions] = $this->makeExam();
+        $this->startAttempt($assignment);
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $this->actingAs($committee)->post(route('scheduling.questions.store', $assignment->assessment_subject_id), [
+            'question_text' => 'Soal baru', 'question_type' => ExamQuestionType::Essay->value, 'points' => 1,
+        ])->assertSessionHasErrors('question');
+        $this->delete(route('scheduling.questions.destroy', [$assignment->assessment_subject_id, $questions[1]]))
+            ->assertSessionHasErrors('question');
+        $this->get(route('scheduling.questions.index', $assignment->assessment_subject_id))
+            ->assertOk()->assertSee('Bank soal terkunci');
+        $this->assertDatabaseCount('exam_questions', 2);
+    }
+
+    public function test_stale_attempt_cannot_save_an_answer_after_submission(): void
+    {
+        [, $assignment, $questions] = $this->makeExam();
+        $staleAttempt = $this->startAttempt($assignment);
+        $service = app(ExamAttemptService::class);
+        $service->submit($staleAttempt);
+        try {
+            $service->saveAnswer($staleAttempt, $questions[0], 'A');
+            $this->fail('A submitted attempt accepted a late answer.');
+        } catch (ValidationException) {
+            $this->assertDatabaseCount('exam_answers', 0);
+            $this->assertSame('0.00', $staleAttempt->fresh()->score);
+        }
+    }
+
+    public function test_expired_autosave_commits_submission_before_returning_validation_error(): void
+    {
+        [, $assignment, $questions] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $this->travel(91)->minutes();
+        try {
+            app(ExamAttemptService::class)->saveAnswer($attempt, $questions[0], 'A');
+            $this->fail('Expired answer was accepted.');
+        } catch (ValidationException) {
+            $this->assertSame(AttemptStatus::Submitted, $attempt->fresh()->status);
+            $this->assertDatabaseCount('exam_answers', 0);
+        }
+    }
+
+    public function test_expired_command_is_idempotent_and_leaves_unexpired_attempts_alone(): void
+    {
+        [, $assignment, $questions] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        app(ExamAttemptService::class)->saveAnswer($attempt, $questions[0], 'A');
+        $this->artisan('exams:finalize-expired')->assertSuccessful();
+        $this->assertSame(AttemptStatus::InProgress, $attempt->fresh()->status);
+        $this->travel(91)->minutes();
+        $this->artisan('exams:finalize-expired')->assertSuccessful();
+        $submittedAt = $attempt->fresh()->submitted_at->toDateTimeString();
+        $this->travel(1)->minutes();
+        $this->artisan('exams:finalize-expired')->assertSuccessful();
+        $this->assertSame(AttemptStatus::Submitted, $attempt->fresh()->status);
+        $this->assertSame('2.00', $attempt->fresh()->score);
+        $this->assertSame($submittedAt, $attempt->fresh()->submitted_at->toDateTimeString());
+    }
+
+    public function test_terminated_attempt_is_not_converted_to_submitted(): void
+    {
+        [, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $attempt->update(['status' => AttemptStatus::Terminated]);
+        app(ExamAttemptService::class)->submit($attempt);
+        $this->assertSame(AttemptStatus::Terminated, $attempt->fresh()->status);
+        $this->assertNull($attempt->fresh()->score);
+    }
+
+    public function test_portal_explains_attendance_window_and_rejects_inactive_assignments(): void
+    {
+        [$user, $assignment] = $this->makeExam();
+        $assignment->examSession->update(['starts_at' => now()->addHours(2), 'ends_at' => now()->addHours(3)]);
+        $reason = app(AttendanceAvailability::class)
+            ->reason($assignment->fresh(), null);
+        $this->assertStringContainsString('Absensi dibuka pukul', $reason ?? '');
+        $this->actingAs($user)->get(route('student.exams.index'))->assertOk();
+        $assignment->update(['status' => AssignmentStatus::Cancelled]);
+        $this->post(route('student.attendance.store', $assignment))->assertSessionHasErrors('attendance', null, 'attendance');
+        $this->assertDatabaseCount('daily_checkins', 0);
+    }
+
+    public function test_core_location_failure_and_verified_attendance_before_start_have_distinct_statuses(): void
+    {
+        [$user, $assignment] = $this->makeExam();
+        $assignment->examSession->update([
+            'starts_at' => now()->addMinutes(20), 'ends_at' => now()->addHour(),
+            'kind' => SessionKind::Makeup,
+        ]);
+        $index = route('student.exams.index');
+        $store = route('student.attendance.store', $assignment);
+        $start = route('student.exams.start', $assignment);
+        $this->actingAs($user)->get($index)->assertOk()->assertSee('data-state="pending"', false);
+        $coords = ['latitude' => -6.2000000, 'longitude' => 106.8166660, 'accuracy_meters' => 10];
+        $anchor = $index.'#attendance-'.$assignment->id;
+        $failed = $this->from($index)->post($store, [...$coords, 'latitude' => -6.21])->assertRedirect($anchor)
+            ->assertSessionHasErrors('location', null, 'attendance')->assertSessionHas('attendance_assignment_id', $assignment->id);
+        $this->withCookie(config('session.cookie'), $failed->getCookie(config('session.cookie'))->getValue());
+        $this->get($index)->assertOk()->assertSee('data-state="error"', false)->assertSee('melewati radius')->assertDontSee($start);
+        $this->from($index)->post($store, $coords)->assertRedirect($anchor)->assertSessionHasNoErrors();
+        $this->get($index)->assertOk()->assertSee('data-exam-state="waiting"', false)->assertSee('data-state="pending"', false)->assertSee('Menunggu jadwal')
+            ->assertSee('Absensi sudah terverifikasi. Ujian dapat dimulai pukul 10:20.')->assertDontSee($start);
+        $this->travel(20)->minutes();
+        $this->get($index)->assertOk()->assertSee('data-state="success"', false)->assertSee($start);
+    }
+
+    public function test_rejected_attendance_cannot_be_self_verified_again(): void
+    {
+        [$user, $assignment] = $this->makeExam();
+        $this->startAttempt($assignment);
+        $checkin = $assignment->student->dailyCheckins()->firstOrFail();
+        $checkin->update(['status' => CheckinStatus::Rejected]);
+        $this->actingAs($user)->post(route('student.attendance.store', $assignment))
+            ->assertSessionHasErrors('attendance', null, 'attendance');
+        $this->assertSame(CheckinStatus::Rejected, $checkin->fresh()->status);
+    }
+
+    public function test_active_exam_page_renders_with_retry_and_server_based_timer(): void
+    {
+        [$user, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $response = $this->actingAs($user)->withSession(['exam_device_token' => str_repeat('a', 64)])
+            ->get(route('student.exams.show', $attempt))->assertOk()
+            ->assertSee('Coba simpan lagi')->assertSee('remainingAtLoad', false)
+            ->assertSee('data-theme="light"', false)->assertSee('Mengikuti sistem')
+            ->assertSee('Waktu sedang berjalan, termasuk saat peringatan muncul atau ujian terkunci.')
+            ->assertSee('Perbesar / Perkecil gambar di bawah gambar tersebut.')
+            ->assertSee('Konfirmasi kesiapan perangkat')
+            ->assertSee('Peserta Uji')->assertSee('S-001')->assertSee('IX-2')
+            ->assertSee('Informatika')->assertSee('data-theme-toggle', false);
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="UTF-8">'.$response->getContent());
+        $xpath = new \DOMXPath($dom);
+        $this->assertCount(3, $xpath->query('//*[@id="security-panel"]//button[@data-theme-choice]'));
+        $this->assertCount(2, $xpath->query('//*[@id="exam-content"]//dialog[@id="exam-image-dialog"]//button[@data-exam-image-zoom-in or @data-exam-image-zoom-out]'));
+        $this->assertCount(3, $xpath->query('//*[@data-exam-text-controls]//button[@type="button"]'));
+    }
+
+    public function test_second_security_event_locks_answers_and_hides_questions_after_reload(): void
+    {
+        [$user, $assignment, $questions] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $this->securityEvent($user, $attempt)->assertOk()->assertJson(['violations' => 1, 'locked' => false]);
+        $this->travel(4)->seconds();
+        $this->securityEvent($user, $attempt)->assertOk()->assertJson(['violations' => 2, 'locked' => true]);
+        $this->withSession(['exam_device_token' => str_repeat('a', 64)])
+            ->putJson(route('student.exams.answer', [$attempt, $questions[0]]), ['answer' => 'A'])
+            ->assertUnprocessable()->assertJsonValidationErrors('security');
+        $this->withSession(['exam_device_token' => str_repeat('a', 64)])
+            ->get(route('student.exams.show', $attempt))->assertOk()->assertSee('Hubungi pengawas ujian')
+            ->assertDontSee($questions[0]->question_text);
+        $this->assertDatabaseCount('exam_answers', 0);
+        $this->assertSame(2, (int) $attempt->fresh()->violation_count);
+    }
+
+    public function test_security_events_are_idempotent_and_simultaneous_signals_count_once(): void
+    {
+        [$user, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $firstId = (string) Str::uuid();
+        $suppressedId = (string) Str::uuid();
+        $this->securityEvent($user, $attempt, $firstId)->assertJson(['violations' => 1]);
+        $this->securityEvent($user, $attempt, $suppressedId, 'fullscreen_exit')->assertJson(['violations' => 1]);
+        $this->travel(10)->seconds();
+        $this->securityEvent($user, $attempt, $firstId)->assertJson(['violations' => 1]);
+        $this->securityEvent($user, $attempt, $suppressedId)->assertJson(['violations' => 1]);
+        $this->assertSame(2, $attempt->securityIncidents()->count());
+        $this->securityEvent($user, $attempt)->assertJson(['violations' => 2, 'locked' => true]);
+        $this->travel(4)->seconds();
+        $this->securityEvent($user, $attempt)->assertJson(['violations' => 2, 'locked' => true]);
+    }
+
+    public function test_proctor_can_release_lock_without_reset_and_stale_review_cannot_unlock_again(): void
+    {
+        [$user, $assignment, $questions] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $service = app(ExamAttemptService::class);
+        $deadline = $service->deadline($attempt)->toIso8601String();
+        $service->saveAnswer($attempt, $questions[0], 'A');
+        $this->lockAttempt($user, $attempt);
+        $proctor = User::factory()->create(['role' => UserRole::Proctor]);
+        $payload = ['action' => 'resume', 'reason' => 'Gangguan perangkat sudah diperiksa.', 'lock_version' => 1];
+        $reviewUrl = route('operations.attempts.security-review', $attempt);
+        $this->actingAs($proctor)->post($reviewUrl, $payload)->assertSessionHasNoErrors();
+        $this->assertNull($attempt->fresh()->security_locked_at);
+        $this->assertSame(2, (int) $attempt->fresh()->violation_count);
+        $this->assertSame($deadline, $service->deadline($attempt->fresh())->toIso8601String());
+        $this->assertDatabaseCount('exam_answers', 1);
+        $audit = $attempt->securityIncidents()->where('category', 'supervisor_resume')->firstOrFail();
+        $this->assertSame($proctor->id, $audit->details['reviewer_id']);
+        $this->travel(4)->seconds();
+        $this->securityEvent($user, $attempt)->assertJson(['violations' => 2, 'locked' => true]);
+        $this->assertSame(2, $attempt->fresh()->security_lock_version);
+        $this->actingAs($proctor)->post($reviewUrl, $payload)->assertSessionHasErrors('security');
+        $this->assertNotNull($attempt->fresh()->security_locked_at);
+    }
+
+    public function test_proctor_can_collect_locked_exam_and_roster_shows_audit(): void
+    {
+        [$user, $assignment, $questions] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        app(ExamAttemptService::class)->saveAnswer($attempt, $questions[0], 'A');
+        $this->lockAttempt($user, $attempt);
+        $proctor = User::factory()->create(['role' => UserRole::Proctor]);
+        $this->actingAs($proctor)->get(route('operations.sessions.show', [$assignment->examSession, 'status' => 'locked']))
+            ->assertOk()->assertSee('Simpan keputusan')->assertSee('Berpindah tab/aplikasi');
+        $this->post(route('operations.attempts.security-review', $attempt), [
+            'action' => 'submit', 'reason' => 'Pemeriksaan selesai, ujian diakhiri.', 'lock_version' => 1,
+        ])->assertSessionHasNoErrors();
+        $this->assertSame(AttemptStatus::Submitted, $attempt->fresh()->status);
+        $this->assertSame('2.00', $attempt->fresh()->score);
+        $this->get(route('operations.sessions.show', $assignment->examSession))->assertOk()
+            ->assertSee('Pemeriksaan selesai, ujian diakhiri.')->assertDontSee('Simpan keputusan');
+    }
+
+    public function test_security_review_requires_authorized_role_and_reason(): void
+    {
+        [$user, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $this->lockAttempt($user, $attempt);
+        $url = route('operations.attempts.security-review', $attempt);
+        $payload = ['action' => 'resume', 'reason' => 'Alasan pemeriksaan.', 'lock_version' => 1];
+        $this->actingAs($user)->post($url, $payload)->assertForbidden();
+        $teacher = User::factory()->create(['role' => UserRole::Teacher]);
+        $this->actingAs($teacher)->post($url, $payload)->assertForbidden();
+        $proctor = User::factory()->create(['role' => UserRole::Proctor]);
+        $this->actingAs($proctor)->post($url, [...$payload, 'reason' => ''])->assertSessionHasErrors('reason');
+        $this->assertNotNull($attempt->fresh()->security_locked_at);
+    }
+
+    public function test_super_admin_can_reset_violations_without_changing_answers_or_deadline(): void
+    {
+        [$student, $assignment, $questions] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $attempts = app(ExamAttemptService::class);
+        $deadline = $attempts->deadline($attempt)->toIso8601String();
+        $attempts->saveAnswer($attempt, $questions[0], 'A');
+        $this->lockAttempt($student, $attempt);
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+
+        $this->actingAs($admin)->post(route('operations.attempts.reset-violations', $attempt), [
+            'reason' => 'Gangguan perangkat siswa sudah diverifikasi.',
+        ])->assertSessionHasNoErrors()->assertSessionHas('status');
+
+        $attempt->refresh();
+        $this->assertSame(0, (int) $attempt->violation_count);
+        $this->assertNull($attempt->security_locked_at);
+        $this->assertSame(2, (int) $attempt->security_lock_version);
+        $this->assertSame(AttemptStatus::InProgress, $attempt->status);
+        $this->assertSame($deadline, $attempts->deadline($attempt)->toIso8601String());
+        $this->assertDatabaseCount('exam_answers', 1);
+        $this->assertSame(3, $attempt->securityIncidents()->count());
+        $audit = $attempt->securityIncidents()->where('category', 'supervisor_reset')->firstOrFail();
+        $this->assertSame($admin->id, $audit->details['reviewer_id']);
+        $this->assertSame(2, $audit->details['previous_count']);
+
+        $this->travel(4)->seconds();
+        $this->securityEvent($student, $attempt)->assertJson(['violations' => 1, 'locked' => false]);
+    }
+
+    public function test_committee_can_reset_a_warning_but_proctor_cannot_reset_violations(): void
+    {
+        [$student, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $this->securityEvent($student, $attempt)->assertJson(['violations' => 1]);
+        $url = route('operations.attempts.reset-violations', $attempt);
+        $proctor = User::factory()->create(['role' => UserRole::Proctor]);
+        $this->actingAs($proctor)->post($url, ['reason' => 'Perangkat sudah diperiksa.'])->assertForbidden();
+        $this->assertSame(1, (int) $attempt->fresh()->violation_count);
+
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $this->actingAs($committee)->post($url, ['reason' => 'Perangkat sudah diperiksa.'])
+            ->assertSessionHasNoErrors();
+        $this->assertSame(0, (int) $attempt->fresh()->violation_count);
+        $this->assertSame(1, (int) $attempt->fresh()->security_lock_version);
+    }
+
+    public function test_reset_violations_requires_a_reason_and_an_active_attempt(): void
+    {
+        [$student, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $this->securityEvent($student, $attempt)->assertJson(['violations' => 1]);
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $url = route('operations.attempts.reset-violations', $attempt);
+
+        $this->actingAs($admin)->post($url, ['reason' => ''])->assertSessionHasErrors('reason');
+        $this->assertSame(1, (int) $attempt->fresh()->violation_count);
+        $attempt->update(['status' => AttemptStatus::Submitted, 'submitted_at' => now()]);
+        $this->post($url, ['reason' => 'Reset sesudah ujian selesai.'])->assertSessionHasErrors('security');
+        $this->assertSame(1, (int) $attempt->fresh()->violation_count);
+    }
+
+    public function test_only_admin_and_committee_see_the_reset_control(): void
+    {
+        [$student, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $this->securityEvent($student, $attempt)->assertJson(['violations' => 1]);
+        $route = route('operations.sessions.show', $assignment->examSession);
+
+        $proctor = User::factory()->create(['role' => UserRole::Proctor]);
+        $this->actingAs($proctor)->get($route)->assertOk()->assertDontSee('Reset pelanggaran ke 0');
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $this->actingAs($committee)->get($route)->assertOk()->assertSee('Reset pelanggaran ke 0');
+    }
+
+    public function test_ats_accepts_only_short_answer_and_essay_questions(): void
+    {
+        [, $assignment] = $this->makeExam();
+        $assignment->assessmentSubject->assessmentPeriod->update(['type' => AssessmentType::ATS]);
+        ExamQuestion::query()->where('assessment_subject_id', $assignment->assessment_subject_id)->delete();
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $url = route('scheduling.questions.store', $assignment->assessment_subject_id);
+
+        $this->actingAs($committee)->post($url, [
+            'question_type' => ExamQuestionType::MultipleChoice->value,
+            'question_text' => 'Soal pilihan ganda tidak diperbolehkan untuk ATS.',
+            'option_a' => 'A', 'option_b' => 'B', 'option_c' => 'C', 'option_d' => 'D',
+            'correct_answer' => 'A', 'points' => 1,
+        ])->assertSessionHasErrors('question_type');
+        $this->post($url, [
+            'question_type' => ExamQuestionType::Essay->value,
+            'question_text' => 'Jelaskan fungsi protokol HTTP.', 'points' => 5,
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseCount('exam_questions', 1);
+        $this->get(route('scheduling.questions.index', $assignment->assessment_subject_id))
+            ->assertOk()->assertSee('Isian Singkat')->assertSee('Esai')->assertDontSee('Pilihan Ganda');
+    }
+
+    public function test_student_cannot_start_ats_while_legacy_multiple_choice_questions_remain(): void
+    {
+        [, $assignment] = $this->makeExam();
+        $assignment->assessmentSubject->assessmentPeriod->update(['type' => AssessmentType::ATS]);
+        $this->startAttemptExpectingError($assignment, 'exam');
+        $this->assertDatabaseCount('exam_attempts', 0);
+    }
+
+    public function test_teacher_manually_grades_assigned_ats_answers(): void
+    {
+        [$student, $assignment] = $this->makeExam();
+        $assignment->assessmentSubject->assessmentPeriod->update(['type' => AssessmentType::ATS]);
+        ExamQuestion::query()->where('assessment_subject_id', $assignment->assessment_subject_id)->delete();
+        $short = ExamQuestion::create([
+            'assessment_subject_id' => $assignment->assessment_subject_id,
+            'question_type' => ExamQuestionType::ShortAnswer,
+            'question_text' => 'Apa kepanjangan HTTP?', 'points' => 4, 'position' => 1,
+        ]);
+        $essay = ExamQuestion::create([
+            'assessment_subject_id' => $assignment->assessment_subject_id,
+            'question_type' => ExamQuestionType::Essay,
+            'question_text' => 'Jelaskan cara kerja HTTP.', 'points' => 6, 'position' => 2,
+        ]);
+        $teacher = User::factory()->create(['role' => UserRole::Teacher]);
+        $assignment->assessmentSubject->update(['teacher_user_id' => $teacher->id]);
+        $assignment = $assignment->fresh();
+        $attempt = $this->startAttempt($assignment);
+        $this->actingAs($student)->withSession(['exam_device_token' => str_repeat('a', 64)])
+            ->get(route('student.exams.show', $attempt))->assertOk()
+            ->assertSeeInOrder(['data-exam-section="short_answer"', 'Lanjut ke Esai', 'data-exam-section="essay"'], false)
+            ->assertDontSee('data-exam-section="multiple_choice"', false);
+        $attempts = app(ExamAttemptService::class);
+        $attempts->saveAnswer($attempt, $short, 'Hypertext Transfer Protocol');
+        $attempts->saveAnswer($attempt, $essay, 'Klien mengirim permintaan dan server memberikan respons.');
+        $attempts->submit($attempt);
+
+        $attempt->refresh();
+        $this->assertNull($attempt->score);
+        $this->assertSame(GradingStatus::Pending, $attempt->grading_status);
+        $this->actingAs($teacher)->get(route('grading.index'))->assertOk()->assertSee('Peserta Uji');
+        $this->put(route('grading.update', $attempt), [
+            'scores' => [$short->id => 4, $essay->id => 4],
+        ])->assertRedirect(route('grading.index'))->assertSessionHasNoErrors();
+
+        $attempt->refresh();
+        $this->assertSame('80.00', $attempt->score);
+        $this->assertSame(GradingStatus::Graded, $attempt->grading_status);
+        $this->assertNotNull($attempt->graded_at);
+        $this->assertSame($teacher->id, $attempt->answers()->where('exam_question_id', $essay->id)->value('graded_by_user_id'));
+
+        $otherTeacher = User::factory()->create(['role' => UserRole::Teacher]);
+        $this->actingAs($otherTeacher)->get(route('grading.show', $attempt))->assertForbidden();
+    }
+
+    public function test_teacher_can_revise_external_manual_score_and_final_score_never_exceeds_one_hundred(): void
+    {
+        [, $assignment, $questions] = $this->makeExam();
+        $teacher = User::factory()->create(['role' => UserRole::Teacher]);
+        $assignment->assessmentSubject->update(['teacher_user_id' => $teacher->id]);
+        $attempt = $this->startAttempt($assignment->fresh());
+        $attempts = app(ExamAttemptService::class);
+        $attempts->saveAnswer($attempt, $questions[0], 'A');
+        $attempts->saveAnswer($attempt, $questions[1], 'B');
+        $attempts->submit($attempt);
+
+        $this->assertSame('4.00', $attempt->fresh()->score);
+
+        $this->actingAs($teacher)->put(route('grading.update', $attempt), [
+            'manual_score' => 80,
+        ])->assertRedirect(route('grading.index'))->assertSessionHasNoErrors();
+        $this->assertSame('42.00', $attempt->fresh()->score);
+
+        $this->put(route('grading.update', $attempt), [
+            'manual_score' => 100,
+        ])->assertRedirect(route('grading.index'))->assertSessionHasNoErrors();
+
+        $attempt->refresh();
+        $this->assertSame('100.00', $attempt->manual_score);
+        $this->assertSame('52.00', $attempt->score);
+        $this->assertLessThanOrEqual(100, (float) $attempt->score);
+        $component = $assignment->assessmentSubject;
+        $this->actingAs(User::factory()->create(['role' => UserRole::Committee]))
+            ->get(route('reports.exam-results.print', [$component->assessmentPeriod, $component->schoolClass]))
+            ->assertOk()->assertSee('Esai')->assertSee('100,00')->assertSee('52,00');
+    }
+
+    public function test_admin_can_reset_entire_attempt_with_audit_and_student_can_start_again(): void
+    {
+        [$student, $assignment, $questions] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        app(ExamAttemptService::class)->saveAnswer($attempt, $questions[0], 'A');
+        $this->securityEvent($student, $attempt)->assertOk();
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $url = route('operations.assignments.reset-attempt', $assignment);
+
+        $this->actingAs($admin)->post($url, ['reason' => 'Perangkat bermasalah dan ujian harus diulang.'])
+            ->assertSessionHasNoErrors();
+        $this->assertDatabaseMissing('exam_attempts', ['id' => $attempt->id]);
+        $this->assertDatabaseCount('exam_answers', 0);
+        $this->assertSame(AssignmentStatus::Scheduled, $assignment->fresh()->status);
+        $this->assertDatabaseHas('exam_attempt_resets', [
+            'exam_assignment_id' => $assignment->id,
+            'original_attempt_id' => $attempt->id,
+            'performed_by_user_id' => $admin->id,
+        ]);
+
+        $newAttempt = $this->startAttempt($assignment->fresh());
+        $this->assertNotSame($attempt->id, $newAttempt->id);
+        $this->assertSame(0, $newAttempt->answers()->count());
+    }
+
+    public function test_proctor_cannot_reset_entire_attempt(): void
+    {
+        [, $assignment] = $this->makeExam();
+        $this->startAttempt($assignment);
+        $proctor = User::factory()->create(['role' => UserRole::Proctor]);
+
+        $this->actingAs($proctor)->post(route('operations.assignments.reset-attempt', $assignment), [
+            'reason' => 'Mencoba reset ujian peserta.',
+        ])->assertForbidden();
+        $this->assertDatabaseCount('exam_attempts', 1);
+        $this->assertDatabaseCount('exam_attempt_resets', 0);
+    }
+
+    public function test_another_student_or_device_cannot_report_or_inspect_security(): void
+    {
+        [$user, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $other = User::factory()->create(['role' => UserRole::Student]);
+        Student::create(['user_id' => $other->id, 'school_class_id' => $assignment->student->school_class_id,
+            'student_number' => 'OTHER-SEC', 'full_name' => 'Siswa lain', 'is_active' => true]);
+        $this->securityEvent($other, $attempt)->assertForbidden();
+        $this->getJson(route('student.exams.security', $attempt))->assertForbidden();
+        $this->actingAs($user)->withSession(['exam_device_token' => str_repeat('b', 64)])
+            ->getJson(route('student.exams.security', $attempt))->assertUnprocessable()->assertJsonValidationErrors('device');
+        $this->assertSame(0, (int) $attempt->fresh()->violation_count);
+    }
+
+    public function test_invalid_security_signal_is_rejected_without_changing_count(): void
+    {
+        [$user, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $this->securityEvent($user, $attempt, 'invalid-id', 'blur')->assertUnprocessable()
+            ->assertJsonValidationErrors(['event_id', 'category']);
+        $this->assertSame(0, (int) $attempt->fresh()->violation_count);
+    }
+
+    public function test_strict_browser_signals_are_recorded_with_safe_context(): void
+    {
+        [$user, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $context = [
+            'viewport_width' => 412,
+            'viewport_height' => 915,
+            'screen_width' => 412,
+            'screen_height' => 915,
+            'pixel_ratio' => 2.625,
+        ];
+
+        $this->securityEvent($user, $attempt, null, 'window_blur', $context)
+            ->assertOk()->assertJson(['violations' => 1, 'locked' => false]);
+        $incident = $attempt->securityIncidents()->firstOrFail();
+        $this->assertSame('window_blur', $incident->category);
+        $this->assertSame(412, $incident->details['context']['viewport_width']);
+
+        $this->travel(4)->seconds();
+        $this->securityEvent($user, $attempt, null, 'viewport_change', [
+            ...$context,
+            'viewport_width' => 206,
+        ])->assertOk()->assertJson(['violations' => 2, 'locked' => true]);
+    }
+
+    public function test_locked_exam_still_expires_and_cannot_be_released_after_deadline(): void
+    {
+        [$user, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $this->lockAttempt($user, $attempt);
+        $this->travel(91)->minutes();
+        $proctor = User::factory()->create(['role' => UserRole::Proctor]);
+        $this->actingAs($proctor)->post(route('operations.attempts.security-review', $attempt), [
+            'action' => 'resume', 'reason' => 'Pemeriksaan selesai.', 'lock_version' => 1,
+        ])->assertSessionHasErrors('security');
+        $this->artisan('exams:finalize-expired')->assertSuccessful();
+        $this->assertSame(AttemptStatus::Submitted, $attempt->fresh()->status);
+        $this->assertSame('0.00', $attempt->fresh()->score);
+    }
+
+    public function test_legacy_attempts_keep_monitoring_without_new_automatic_lock(): void
+    {
+        [$user, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $this->assertTrue($attempt->security_enabled);
+        $attempt->update(['security_enabled' => false]);
+        $this->securityEvent($user, $attempt)->assertJson(['enabled' => false, 'locked' => false]);
+        $this->travel(4)->seconds();
+        $this->securityEvent($user, $attempt)->assertJson(['violations' => 2, 'locked' => false]);
+    }
+
+    public function test_security_state_reports_lock_and_finalizes_at_deadline(): void
+    {
+        [$user, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $this->lockAttempt($user, $attempt);
+        $url = route('student.exams.security', $attempt);
+        $this->withSession(['exam_device_token' => str_repeat('a', 64)])->getJson($url)
+            ->assertOk()->assertJson(['locked' => true, 'violations' => 2, 'status' => 'in_progress']);
+        $this->travel(91)->minutes();
+        $this->withSession(['exam_device_token' => str_repeat('a', 64)])->getJson($url)
+            ->assertOk()->assertJson(['locked' => false, 'status' => 'submitted']);
+    }
+
+    public function test_reset_limit_is_shared_by_admin_principal_and_committee_and_retains_incidents(): void
+    {
+        [$student, $assignment, $questions] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        app(ExamAttemptService::class)->saveAnswer($attempt, $questions[0], 'A');
+        $deadline = app(ExamAttemptService::class)->deadline($attempt)->toIso8601String();
+        foreach ([UserRole::SuperAdmin, UserRole::Principal] as $index => $role) {
+            $this->travel(4)->seconds();
+            $this->securityEvent($student, $attempt)->assertJson(['violations' => 1]);
+            $actor = User::factory()->create(['role' => $role]);
+            $this->actingAs($actor)->post(route('operations.attempts.reset-violations', $attempt), ['reason' => 'Gangguan perangkat telah diperiksa.'])
+                ->assertSessionHasNoErrors();
+            $this->assertSame($index + 1, $assignment->fresh()->security_reset_count);
+        }
+        $this->travel(4)->seconds();
+        $this->lockAttempt($student, $attempt);
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $this->actingAs($committee)->post(route('operations.attempts.reset-violations', $attempt), ['reason' => 'Mencoba reset ketiga oleh petugas lain.'])
+            ->assertSessionHasErrors('security');
+        $this->assertSame(2, $assignment->fresh()->security_reset_count);
+        $this->assertNotNull($attempt->fresh()->security_locked_at);
+        $this->assertSame(2, $attempt->securityIncidents()->where('category', 'supervisor_reset')->count());
+        $this->assertDatabaseCount('exam_answers', 1);
+        $this->assertSame($deadline, app(ExamAttemptService::class)->deadline($attempt->fresh())->toIso8601String());
+        $this->get(route('operations.sessions.show', $assignment->examSession))->assertOk()->assertSee('Batas reset atau izin lanjut tercapai.')->assertDontSee('Reset pelanggaran ke 0');
+    }
+
+    public function test_whole_attempt_reset_does_not_renew_the_shared_reset_allowance(): void
+    {
+        [$student, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $this->securityEvent($student, $attempt)->assertOk();
+        $principal = User::factory()->create(['role' => UserRole::Principal]);
+        $this->actingAs($principal)->post(route('operations.assignments.reset-attempt', $assignment), ['reason' => 'Perangkat diperiksa dan ujian perlu dimulai ulang.'])->assertSessionHasNoErrors();
+        $newAttempt = $this->startAttempt($assignment->fresh());
+        $this->assertSame(1, $assignment->fresh()->security_reset_count);
+        $this->securityEvent($student, $newAttempt)->assertOk();
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $this->actingAs($admin)->post(route('operations.attempts.reset-violations', $newAttempt), ['reason' => 'Pemeriksaan gangguan kedua selesai.'])->assertSessionHasNoErrors();
+        $this->post(route('operations.assignments.reset-attempt', $assignment), ['reason' => 'Mencoba mengulang setelah jatah habis.'])->assertSessionHasErrors('security');
+        $this->assertDatabaseHas('exam_attempts', ['id' => $newAttempt->id]);
+        $this->assertSame(2, $assignment->fresh()->security_reset_count);
+        $this->assertDatabaseCount('exam_attempt_resets', 1);
+    }
+
+    public function test_supervisor_resume_uses_the_same_limit_but_collection_remains_available(): void
+    {
+        [$student, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $proctor = User::factory()->create(['role' => UserRole::Proctor]);
+        $url = route('operations.attempts.security-review', $attempt);
+        foreach ([1, 2] as $number) {
+            $this->travel(4)->seconds();
+            $this->lockAttempt($student, $attempt);
+            $this->actingAs($proctor)->post($url, ['action' => 'resume', 'reason' => 'Gangguan perangkat telah diperiksa.', 'lock_version' => $attempt->fresh()->security_lock_version])->assertSessionHasNoErrors();
+        }
+        $this->travel(4)->seconds();
+        $this->securityEvent($student, $attempt)->assertJson(['locked' => true]);
+        $payload = ['action' => 'resume', 'reason' => 'Jatah pemulihan sudah habis.', 'lock_version' => $attempt->fresh()->security_lock_version];
+        $this->actingAs($proctor)->post($url, $payload)->assertSessionHasErrors('security');
+        $this->assertSame(2, $assignment->fresh()->security_reset_count);
+        $this->post($url, [...$payload, 'action' => 'submit'])->assertSessionHasNoErrors();
+        $this->assertSame(AttemptStatus::Submitted, $attempt->fresh()->status);
+    }
+
+    public function test_subject_teacher_can_read_current_and_archived_violations_but_cannot_reset_or_unlock(): void
+    {
+        [$student, $assignment] = $this->makeExam();
+        $teacher = User::factory()->create(['role' => UserRole::Teacher]);
+        $assignment->assessmentSubject->update(['teacher_user_id' => $teacher->id]);
+        $attempt = $this->startAttempt($assignment);
+        $this->securityEvent($student, $attempt)->assertOk();
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $this->actingAs($admin)->post(route('operations.assignments.reset-attempt', $assignment), ['reason' => 'Audit percobaan sebelumnya tetap disimpan.'])->assertSessionHasNoErrors();
+        $newAttempt = $this->startAttempt($assignment->fresh());
+        $this->actingAs($teacher)->get(route('operations.sessions.show', $assignment->examSession))
+            ->assertOk()->assertSee('Berpindah tab/aplikasi')->assertSee('Audit percobaan sebelumnya tetap disimpan.')
+            ->assertDontSee('Reset pelanggaran ke 0')->assertDontSee('Reset ujian dari awal')->assertDontSee('Simpan keputusan');
+        $this->post(route('operations.attempts.reset-violations', $newAttempt), ['reason' => 'Guru mencoba mengubah pelanggaran.'])->assertForbidden();
+        $this->post(route('operations.assignments.reset-attempt', $assignment), ['reason' => 'Guru mencoba mengulang ujian.'])->assertForbidden();
+        $this->post(route('operations.attempts.security-review', $newAttempt), ['action' => 'resume', 'reason' => 'Guru mencoba membuka ujian.', 'lock_version' => 1])->assertForbidden();
+        $otherTeacher = User::factory()->create(['role' => UserRole::Teacher]);
+        $this->actingAs($otherTeacher)->get(route('operations.sessions.show', $assignment->examSession))->assertForbidden();
+    }
+
+    public function test_reset_limit_migration_counts_active_and_archived_legacy_actions(): void
+    {
+        [$student, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $attempt->securityIncidents()->create(['category' => 'supervisor_reset', 'severity' => 0, 'occurred_at' => now(), 'details' => []]);
+        $assignment->attemptResets()->create(['original_attempt_id' => 999, 'reason' => 'Legacy reset', 'snapshot' => ['security_incidents' => [['category' => 'supervisor_resume']]]]);
+        $migration = require database_path('migrations/2026_11_13_000100_limit_exam_security_resets.php');
+        $migration->down();
+        $migration->up();
+        $this->assertSame(3, $assignment->fresh()->security_reset_count);
+    }
+
+    public function test_a_new_departure_immediately_after_reset_is_not_suppressed_as_an_old_signal(): void
+    {
+        [$student, $assignment] = $this->makeExam();
+        $attempt = $this->startAttempt($assignment);
+        $this->securityEvent($student, $attempt)->assertJson(['violations' => 1]);
+        $admin = User::factory()->create(['role' => UserRole::SuperAdmin]);
+        $this->actingAs($admin)->post(route('operations.attempts.reset-violations', $attempt), ['reason' => 'Perangkat telah diperiksa oleh panitia.'])->assertSessionHasNoErrors();
+        $this->securityEvent($student, $attempt)->assertJson(['violations' => 1]);
+    }
+
+    private function securityEvent(
+        User $user,
+        ExamAttempt $attempt,
+        ?string $eventId = null,
+        string $category = 'tab_hidden',
+        array $context = [],
+    ): TestResponse {
+        return $this->actingAs($user)->withSession(['exam_device_token' => str_repeat('a', 64)])
+            ->postJson(route('student.exams.incident', $attempt), [
+                'event_id' => $eventId ?? (string) Str::uuid(),
+                'category' => $category,
+                'context' => $context,
+            ]);
+    }
+
+    private function lockAttempt(User $user, ExamAttempt $attempt): void
+    {
+        $this->securityEvent($user, $attempt)->assertOk();
+        $this->travel(4)->seconds();
+        $this->securityEvent($user, $attempt)->assertOk();
+    }
+
+    private function startAttempt(ExamAssignment $assignment): ExamAttempt
+    {
+        $checkin = app(DailyCheckinService::class)->checkIn(
+            $assignment->student, $assignment->examSession->campus,
+            -6.2000000, 106.8166660, 10, CheckinMethod::Face, null, 'test/selfie.jpg',
+        );
+
+        return app(ExamAttemptService::class)->start($assignment, $checkin, hash('sha256', str_repeat('a', 64)), '127.0.0.1', 'Test');
+    }
+
+    private function startAttemptExpectingError(ExamAssignment $assignment, string $errorKey): void
+    {
+        $checkin = app(DailyCheckinService::class)->checkIn(
+            $assignment->student, $assignment->examSession->campus,
+            -6.2000000, 106.8166660, 10, CheckinMethod::Face, null, 'test/selfie.jpg',
+        );
+
+        try {
+            app(ExamAttemptService::class)->start(
+                $assignment, $checkin, hash('sha256', str_repeat('a', 64)), '127.0.0.1', 'Test',
+            );
+            $this->fail('Ujian seharusnya ditolak.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey($errorKey, $exception->errors());
+        }
+    }
+
+    public function test_proctor_can_monitor_progress_and_search_by_nisn_without_showing_other_participants(): void
+    {
+        [, $assignment, $questions] = $this->makeExam();
+        $assignment->student->update(['nisn' => '0001234567']);
+        $attempt = $this->startAttempt($assignment);
+        app(ExamAttemptService::class)->saveAnswer($attempt, $questions[0], 'A');
+        $this->additionalParticipant($assignment->examSession, 'S-002', 'Peserta Kedua');
+        $proctor = User::factory()->create(['role' => UserRole::Proctor]);
+
+        $this->actingAs($proctor)->get(route('operations.sessions.show', [$assignment->examSession, 'q' => '0001234567']))
+            ->assertOk()->assertSee('Peserta Uji')->assertDontSee('Peserta Kedua')
+            ->assertSee('1 / 2 jawaban')->assertSee('Terverifikasi')
+            ->assertViewHas('statistics', fn ($stats) => $stats['total'] === 2 && $stats['in_progress'] === 1 && $stats['scheduled'] === 1);
+    }
+
+    public function test_session_roster_filters_status_and_does_not_include_other_sessions(): void
+    {
+        [, $assignment] = $this->makeExam();
+        $this->startAttempt($assignment);
+        $this->additionalParticipant($assignment->examSession, 'S-002', 'Peserta Belum Mulai');
+        $otherSession = $assignment->examSession->replicate();
+        $otherSession->save();
+        $this->additionalParticipant($otherSession, 'S-003', 'Peserta Sesi Lain');
+        $proctor = User::factory()->create(['role' => UserRole::Proctor]);
+
+        $this->actingAs($proctor)->get(route('operations.sessions.show', [$assignment->examSession, 'status' => 'scheduled']))
+            ->assertOk()->assertSee('Peserta Belum Mulai')->assertDontSee('Peserta Uji')->assertDontSee('Peserta Sesi Lain')
+            ->assertViewHas('participants', fn ($participants) => $participants->total() === 1);
+    }
+
+    public function test_session_roster_uses_attendance_on_exam_date_not_current_date(): void
+    {
+        [, $assignment] = $this->makeExam();
+        $this->startAttempt($assignment);
+        $this->travel(1)->days();
+        $proctor = User::factory()->create(['role' => UserRole::Proctor]);
+        $this->actingAs($proctor)->get(route('operations.sessions.show', $assignment->examSession))
+            ->assertOk()->assertSee('Terverifikasi')->assertDontSee('Belum tercatat');
+    }
+
+    public function test_student_and_teacher_cannot_view_session_roster(): void
+    {
+        [$student, $assignment] = $this->makeExam();
+        $teacher = User::factory()->create(['role' => UserRole::Teacher]);
+        $route = route('operations.sessions.show', $assignment->examSession);
+        $this->actingAs($student)->get($route)->assertForbidden();
+        $this->actingAs($teacher)->get($route)->assertForbidden();
+    }
+
+    public function test_session_roster_is_paginated_and_filter_parameters_are_validated(): void
+    {
+        [, $assignment] = $this->makeExam();
+        for ($i = 2; $i <= 27; $i++) {
+            $this->additionalParticipant($assignment->examSession, 'P-'.$i, 'Peserta Halaman '.$i);
+        }
+        $proctor = User::factory()->create(['role' => UserRole::Proctor]);
+        $this->actingAs($proctor)->get(route('operations.sessions.show', [$assignment->examSession, 'page' => 2, 'status' => 'scheduled']))
+            ->assertOk()->assertViewHas('participants', fn ($participants) => $participants->total() === 27 && $participants->count() === 10 && $participants->perPage() === 10);
+        $this->getJson(route('operations.sessions.show', [$assignment->examSession, 'status' => 'unknown']))
+            ->assertUnprocessable()->assertJsonValidationErrors('status');
+    }
+
+    public function test_operations_date_and_year_filters_scope_both_statistics_and_attempts(): void
+    {
+        [, $assignment] = $this->makeExam();
+        $this->startAttempt($assignment);
+        $proctor = User::factory()->create(['role' => UserRole::Proctor]);
+        $year = $assignment->assessmentSubject->assessmentPeriod->academic_year_id;
+
+        $this->actingAs($proctor)->get(route('operations.index', ['academic_year_id' => $year, 'date' => now()->toDateString()]))
+            ->assertOk()->assertViewHas('statistics', fn ($stats) => $stats['startedAttempts'] === 1)
+            ->assertViewHas('attempts', fn ($attempts) => $attempts->total() === 1);
+        $this->get(route('operations.index', ['date' => now()->addDay()->toDateString()]))
+            ->assertOk()->assertViewHas('statistics', fn ($stats) => $stats['startedAttempts'] === 0)
+            ->assertViewHas('attempts', fn ($attempts) => $attempts->total() === 0);
+        $this->getJson(route('operations.index', ['date' => 'invalid']))->assertUnprocessable();
+    }
+
+    public function test_closing_marks_only_unstarted_scheduled_participants_absent_and_makeup_reuses_assignment(): void
+    {
+        [, $assignment] = $this->makeExam();
+        $active = $this->additionalParticipant($assignment->examSession, 'S-002', 'Peserta Mengerjakan');
+        $this->startAttempt($active);
+        $cancelled = $this->additionalParticipant($assignment->examSession, 'S-003', 'Peserta Batal');
+        $cancelled->update(['status' => AssignmentStatus::Cancelled]);
+        $service = app(ExamSessionService::class);
+        $service->update($assignment->examSession, ['status' => SessionStatus::Closed]);
+        $service->update($assignment->examSession, ['status' => SessionStatus::Closed]);
+        $this->assertSame(AssignmentStatus::Absent, $assignment->fresh()->status);
+        $this->assertSame(AssignmentStatus::Completed, $active->fresh()->status);
+        $this->assertSame(AssignmentStatus::Cancelled, $cancelled->fresh()->status);
+        $this->assertDatabaseCount('exam_attempts', 1);
+
+        $makeup = $assignment->examSession->replicate();
+        $makeup->fill(['source_session_id' => $assignment->exam_session_id, 'kind' => SessionKind::Makeup,
+            'status' => SessionStatus::Published, 'starts_at' => now()->addDay(), 'ends_at' => now()->addDay()->addMinutes(90)]);
+        $makeup->save();
+        $moved = app(ExamAssignmentService::class)->moveToMakeup($assignment->fresh(), $makeup);
+        $this->assertSame($assignment->id, $moved->id);
+        $this->assertSame(AssignmentStatus::Scheduled, $moved->status);
+        $this->assertSame($makeup->id, $moved->exam_session_id);
+        $this->assertDatabaseCount('exam_assignments', 3);
+    }
+
+    public function test_closing_before_start_does_not_mark_students_absent(): void
+    {
+        [, $assignment] = $this->makeExam();
+        $assignment->examSession->update(['starts_at' => now()->addDay(), 'ends_at' => now()->addDay()->addMinutes(90)]);
+        app(ExamSessionService::class)->update($assignment->examSession, ['status' => SessionStatus::Closed]);
+        $this->assertSame(AssignmentStatus::Scheduled, $assignment->fresh()->status);
+    }
+
+    public function test_cancelled_assignment_and_closed_destination_cannot_be_used_for_makeup(): void
+    {
+        [, $assignment] = $this->makeExam();
+        $assignment->update(['status' => AssignmentStatus::Cancelled]);
+        $makeup = $assignment->examSession->replicate();
+        $makeup->fill(['kind' => SessionKind::Makeup, 'source_session_id' => $assignment->exam_session_id]);
+        $makeup->save();
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $data = ['assignment_id' => $assignment->id, 'makeup_session_id' => $makeup->id];
+        $this->actingAs($committee)->post(route('scheduling.makeup.move'), $data)->assertSessionHasErrors('assignment');
+        $assignment->update(['status' => AssignmentStatus::Scheduled]);
+        $makeup->update(['status' => SessionStatus::Closed]);
+        $this->post(route('scheduling.makeup.move'), $data)->assertSessionHasErrors('exam_session');
+        $this->assertSame($assignment->exam_session_id, $assignment->fresh()->exam_session_id);
+    }
+
+    private function additionalParticipant(ExamSession $session, string $number, string $name): ExamAssignment
+    {
+        $student = Student::create(['school_class_id' => $session->assessmentSubject->school_class_id,
+            'student_number' => $number, 'full_name' => $name, 'is_active' => true]);
+
+        return ExamAssignment::create(['assessment_subject_id' => $session->assessment_subject_id,
+            'student_id' => $student->id, 'exam_session_id' => $session->id,
+            'status' => AssignmentStatus::Scheduled, 'assigned_at' => now()]);
+    }
+
+    private function sessionData(ExamSession $session): array
+    {
+        return [
+            'campus_id' => $session->campus_id, 'kind' => $session->kind->value,
+            'status' => $session->status->value, 'room_name' => $session->room_name,
+            'starts_at' => $session->starts_at->toDateTimeString(),
+            'duration_minutes' => $session->duration_minutes,
+        ];
+    }
+
+    public function test_core_report_shows_each_score_and_recalculates_class_rank_after_essay_correction(): void
+    {
+        [, $assignment, [$multi, $single]] = $this->makeExam();
+        $component = $assignment->assessmentSubject;
+        $teacher = User::factory()->create(['role' => UserRole::Teacher]);
+        $component->update(['teacher_user_id' => $teacher->id]);
+        $component->schoolClass->update(['homeroom_teacher_user_id' => $teacher->id]);
+        $multi->update(['correct_answer' => 'AC']);
+        $short = $component->questions()->create([
+            'position' => 3, 'question_type' => ExamQuestionType::ShortAnswer, 'question_text' => 'Jawab dengan singkat.', 'points' => 4,
+        ]);
+        $essay = $component->questions()->create([
+            'position' => 4, 'question_type' => ExamQuestionType::Essay, 'question_text' => 'Jelaskan jawaban Anda.', 'points' => 6,
+        ]);
+        $attempt = $this->startAttempt($assignment);
+        $exams = app(ExamAttemptService::class);
+        $exams->saveAnswer($attempt, $multi, 'A');
+        $exams->saveAnswer($attempt, $single, 'B');
+        $exams->saveAnswer($attempt, $short, 'Jawaban singkat siswa');
+        $exams->saveAnswer($attempt, $essay, 'Penjelasan siswa');
+        $exams->submit($attempt);
+
+        $otherSubject = Subject::create(['code' => 'MTK2', 'name' => 'Matematika', 'is_active' => true]);
+        $otherComponent = $component->replicate()->fill(['subject_id' => $otherSubject->id]);
+        $otherComponent->save();
+        $otherSession = $assignment->examSession->replicate()->fill(['assessment_subject_id' => $otherComponent->id]);
+        $otherSession->save();
+        $sameStudent = $assignment->replicate()->fill([
+            'assessment_subject_id' => $otherComponent->id, 'exam_session_id' => $otherSession->id,
+        ]);
+        $sameStudent->save();
+        $secondStudent = $this->additionalParticipant($assignment->examSession, 'S-002', 'Peserta Lain');
+        $secondOther = $secondStudent->replicate()->fill([
+            'assessment_subject_id' => $otherComponent->id, 'exam_session_id' => $otherSession->id,
+        ]);
+        $secondOther->save();
+        foreach ([[$sameStudent, 83.5], [$secondStudent, 50], [$secondOther, 60]] as [$entry, $score]) {
+            $entry->attempt()->create([
+                'status' => AttemptStatus::Submitted, 'score' => $score,
+                'started_at' => now(), 'submitted_at' => now(), 'device_session_hash' => str_repeat('b', 64),
+            ]);
+        }
+
+        $report = route('reports.exam-results.print', [$component->assessmentPeriod, $component->schoolClass]);
+        $this->actingAs($teacher)->get(route('grading.show', $attempt))->assertOk()
+            ->assertSee('Nilai PG')->assertSee('3,00')->assertSee('Nilai Isian Singkat')->assertSee('Nilai Esai');
+        $this->put(route('grading.update', $attempt), ['scores' => [$short->id => 4, $essay->id => null]])
+            ->assertSessionHasNoErrors();
+        $this->assertNull($attempt->fresh()->score);
+        $before = $this->get($report)->assertOk()->assertSee('Menunggu koreksi')->assertSee('Sementara');
+        $row = $before->viewData('rows')->firstWhere('student.id', $assignment->student_id);
+        $this->assertSame(['multiple_choice' => 3.0, 'short_answer' => 100.0, 'essay' => null], $row['results'][$component->id]['components']);
+        $this->assertSame(83.5, $row['average']);
+        $this->assertNull($row['rank']);
+
+        $this->put(route('grading.update', $attempt), ['scores' => [$essay->id => 3]])->assertSessionHasNoErrors();
+        $after = $this->get($report)->assertOk()->assertDontSee('Menunggu koreksi');
+        $row = $after->viewData('rows')->firstWhere('student.id', $assignment->student_id);
+        $this->assertSame(['multiple_choice' => 3.0, 'short_answer' => 100.0, 'essay' => 50.0], $row['results'][$component->id]['components']);
+        $this->assertSame(36.5, $row['results'][$component->id]['final']);
+        $this->assertSame(60.0, $row['average']);
+        $this->assertSame(1, $row['rank']);
+        $this->assertSame(2, $after->viewData('rows')->firstWhere('student.id', $secondStudent->student_id)['rank']);
+    }
+
+    public function test_core_score_report_shows_subjects_in_one_screen_table_and_groups_them_in_print(): void
+    {
+        [, $assignment] = $this->makeExam();
+        $component = $assignment->assessmentSubject;
+        foreach (range(1, 14) as $index) {
+            $subject = Subject::create(['code' => 'PRINT'.$index, 'name' => 'Mapel Cetak '.$index, 'is_active' => true]);
+            $component->replicate()->fill(['subject_id' => $subject->id])->save();
+        }
+
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        $response = $this->actingAs($committee)
+            ->get(route('reports.exam-results.print', [$component->assessmentPeriod, $component->schoolClass]))
+            ->assertOk()->assertSee('data-document-download="pdf"', false)->assertSee('data-document-download="png"', false)
+            ->assertSee('data-paper-width="297"', false);
+
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="UTF-8">'.$response->getContent());
+        $xpath = new \DOMXPath($dom);
+        $screenTables = $xpath->query('//div[@role="region"]//table');
+        $this->assertCount(1, $screenTables);
+        $this->assertCount(20, $xpath->query('.//tbody/tr[1]/td', $screenTables[0]));
+        $this->assertCount(1, $xpath->query('.//tbody/tr', $screenTables[0]));
+        $this->assertStringContainsString('S-001', $screenTables[0]->textContent);
+        $this->assertStringContainsString('Informatika', $screenTables[0]->textContent);
+        $this->assertStringContainsString('Rata-rata', $screenTables[0]->textContent);
+        $this->assertStringContainsString('Rank', $screenTables[0]->textContent);
+
+        $tables = $xpath->query('//*[@data-print-content]//table');
+        $this->assertCount(2, $tables);
+        foreach ($tables as $table) {
+            $columns = $xpath->query('.//tbody/tr[1]/td', $table);
+            $this->assertLessThanOrEqual(15, $columns->length);
+            $this->assertStringContainsString('Nama Peserta Didik', $table->textContent);
+            $this->assertStringContainsString('Peserta Uji', $table->textContent);
+        }
+        foreach (range(1, 14) as $index) {
+            $this->assertCount(1, $xpath->query('.//th[text()="Mapel Cetak '.$index.'"]', $screenTables[0]));
+            $this->assertCount(1, $xpath->query('//*[@data-print-content]//th[text()="Mapel Cetak '.$index.'"]'));
+        }
+    }
+
+    public function test_shared_core_passages_are_grouped_and_numbered_in_the_actual_exam(): void
+    {
+        [$student, $assignment, [$first, $independent]] = $this->makeExam();
+        $bank = $assignment->assessmentSubject;
+        $teacher = User::factory()->create(['role' => UserRole::Teacher]);
+        $bank->update(['teacher_user_id' => $teacher->id]);
+        Storage::fake('public');
+        $this->actingAs($teacher);
+
+        $pg = [
+            'question_type' => 'multiple_choice', 'option_a' => 'Satu', 'option_b' => 'Dua',
+            'option_c' => 'Tiga', 'option_d' => 'Empat', 'option_e' => 'Lima', 'correct_answer' => 'A',
+        ];
+        $store = route('scheduling.questions.store', $bank);
+        $update = route('scheduling.questions.update', [$bank, $first]);
+        $this->put($update, [...$pg, 'question_text' => 'Tentukan operasi pertama.', 'question_context' => 'new',
+            'context_statement' => 'Pernyataan bersama PG', 'context_image' => UploadedFile::fake()->image('ilustrasi.png')])
+            ->assertSessionHasNoErrors();
+        $context = $first->fresh()->context;
+        Storage::disk('public')->assertExists($context->image_path);
+        $this->post($store, [...$pg, 'question_text' => 'Periksa hasil operasi.', 'question_context' => (string) $context->id])
+            ->assertSessionHasNoErrors()->assertSessionHas('saved_context_id', $context->id);
+        $this->post($store, [...$pg, 'question_text' => 'Bandingkan kedua hasil.', 'question_context' => (string) $context->id])
+            ->assertSessionHasNoErrors();
+        $essay = ['question_type' => 'essay', 'points' => 5];
+        $this->post($store, [...$essay, 'question_text' => 'Jelaskan bagian satu.', 'question_context' => 'new',
+            'text_format' => 'html', 'context_statement' => '<p>Konteks penjelasan tertulis</p><script>alert(1)</script>'])
+            ->assertSessionHasNoErrors();
+        $essayQuestion = $bank->questions()->where('question_type', 'essay')->sole();
+        $this->post($store, [...$essay, 'question_text' => 'Jelaskan bagian dua.',
+            'question_context' => (string) $essayQuestion->question_context_id])->assertSessionHasNoErrors();
+
+        $this->get(route('scheduling.questions.pdf', $bank))->assertOk()
+            ->assertSee('Pernyataan atau gambar untuk nomor 1, 3, 4')->assertSee('Pernyataan atau gambar untuk nomor 5–6')
+            ->assertDontSee('<script>alert(1)</script>', false);
+        $this->put($update, [...$pg, 'question_text' => 'Tentukan operasi pertama.', 'question_context' => 'edit',
+            'context_statement' => 'Pernyataan PG yang diperbarui'])->assertSessionHasNoErrors();
+        $newContext = $first->fresh()->context;
+        $this->assertSame($context->image_path, $newContext->image_path);
+        $this->assertSame(3, $bank->questions()->where('question_context_id', $newContext->id)->count());
+
+        $attempt = $this->startAttempt($assignment);
+        $this->actingAs($student)->withSession(['exam_device_token' => str_repeat('a', 64)])
+            ->get(route('student.exams.show', $attempt))->assertOk()
+            ->assertSeeInOrder(['Pernyataan atau gambar untuk nomor 1–3', 'Pernyataan PG yang diperbarui',
+                'Tentukan operasi pertama.', 'Periksa hasil operasi.', 'Bandingkan kedua hasil.', $independent->question_text,
+                'Pernyataan atau gambar untuk nomor 5–6', 'Konteks penjelasan tertulis', 'Jelaskan bagian satu.', 'Jelaskan bagian dua.'])
+            ->assertSee('Gambar pernyataan bersama');
+        $show = route('student.exams.show', $attempt);
+        foreach ([$first, $independent, $essayQuestion] as $question) {
+            $answer = $question->question_type->requiresManualGrading() ? 'Penjelasan' : 'A';
+            $this->putJson(route('student.exams.answer', [$attempt, $question]), ['answer' => $answer])->assertOk();
+        }
+        $message = 'Masih ada 3 soal yang belum dijawab. Silakan kerjakan soal nomor 2, 3, 6 terlebih dahulu.';
+        $this->from($show)->post(route('student.exams.submit', $attempt))
+            ->assertRedirect($show)->assertSessionHasErrors(['submission' => $message]);
+
+        $this->actingAs($teacher)->put($update, [...$pg, 'question_text' => 'Tidak boleh diubah.',
+            'question_context' => 'edit', 'context_statement' => 'Percobaan perubahan'])->assertSessionHasErrors('question');
+    }
+
+    private function makeExam(): array
+    {
+        $user = User::factory()->create([
+            'role' => UserRole::Student,
+            'is_active' => true,
+            'must_change_password' => false,
+        ]);
+        $year = AcademicYear::create([
+            'name' => '2026/2027',
+            'starts_on' => now()->subMonth()->toDateString(),
+            'ends_on' => now()->addMonths(10)->toDateString(),
+            'is_active' => true,
+        ]);
+        $class = SchoolClass::create([
+            'academic_year_id' => $year->id,
+            'name' => 'IX-2',
+            'grade_level' => 9,
+        ]);
+        $student = Student::create([
+            'user_id' => $user->id,
+            'school_class_id' => $class->id,
+            'student_number' => 'S-001',
+            'full_name' => 'Peserta Uji',
+            'is_active' => true,
+        ]);
+        $campus = Campus::create([
+            'name' => 'Kampus Utama',
+            'latitude' => -6.2000000,
+            'longitude' => 106.8166660,
+            'radius_meters' => 100,
+            'max_accuracy_meters' => 50,
+            'is_active' => true,
+        ]);
+        $subject = Subject::create(['code' => 'INF', 'name' => 'Informatika', 'is_active' => true]);
+        $period = AssessmentPeriod::create([
+            'academic_year_id' => $year->id,
+            'code' => 'AAS-AKTIF',
+            'name' => 'AAS Aktif',
+            'type' => AssessmentType::ASAS,
+            'semester' => Semester::Odd,
+            'starts_on' => now()->subDay()->toDateString(),
+            'ends_on' => now()->addDay()->toDateString(),
+            'status' => PeriodStatus::Active,
+        ]);
+        $component = AssessmentSubject::create([
+            'assessment_period_id' => $period->id,
+            'subject_id' => $subject->id,
+            'school_class_id' => $class->id,
+        ]);
+        $session = ExamSession::create([
+            'assessment_subject_id' => $component->id,
+            'campus_id' => $campus->id,
+            'room_name' => 'Lab Komputer',
+            'kind' => SessionKind::Regular,
+            'status' => SessionStatus::Published,
+            'starts_at' => now()->subMinutes(5),
+            'ends_at' => now()->addMinutes(85),
+            'duration_minutes' => 90,
+        ]);
+        $assignment = ExamAssignment::create([
+            'assessment_subject_id' => $component->id,
+            'student_id' => $student->id,
+            'exam_session_id' => $session->id,
+            'status' => AssignmentStatus::Scheduled,
+            'assigned_at' => now(),
+        ]);
+        $questions = collect([
+            ['question_text' => 'Dua tambah dua?', 'correct_answer' => 'A', 'position' => 1],
+            ['question_text' => 'Ibu kota Indonesia?', 'correct_answer' => 'B', 'position' => 2],
+        ])->map(fn (array $data) => ExamQuestion::create([
+            'assessment_subject_id' => $component->id,
+            'question_text' => $data['question_text'],
+            'options' => ['A' => 'Pilihan A', 'B' => 'Pilihan B', 'C' => 'Pilihan C', 'D' => 'Pilihan D'],
+            'correct_answer' => $data['correct_answer'],
+            'points' => 1,
+            'position' => $data['position'],
+        ]))->all();
+
+        return [$user, $assignment, $questions];
+    }
+}
