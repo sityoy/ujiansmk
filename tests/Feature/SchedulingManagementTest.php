@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\AssessmentType;
+use App\Enums\AssignmentStatus;
 use App\Enums\PeriodStatus;
 use App\Enums\Semester;
 use App\Enums\SessionKind;
@@ -71,8 +72,77 @@ class SchedulingManagementTest extends TestCase
         $committee = User::factory()->create(['role' => UserRole::Committee]);
         $teacher = User::factory()->create(['role' => UserRole::Teacher]);
 
-        $this->actingAs($committee)->get(route('scheduling.index'))->assertOk();
+        $this->actingAs($committee)->get(route('scheduling.index'))->assertOk()->assertSee('Rekap Jadwal Ujian');
+        $this->get(route('scheduling.recap'))->assertOk()->assertSee('Belum ada sesi ujian sesuai filter.');
         $this->actingAs($teacher)->get(route('scheduling.index'))->assertForbidden();
+        $this->get(route('scheduling.recap'))->assertForbidden();
+    }
+
+    public function test_schedule_recap_filters_and_exports_the_same_session_details_without_student_names(): void
+    {
+        $this->withoutVite();
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        [$component, $regular, $makeup] = $this->makeSchedule();
+        $regular->update(['room_name' => 'Lab 1', 'status' => SessionStatus::Draft]);
+        $makeup->update([
+            'room_name' => 'Lab 2',
+            'starts_at' => '2026-09-12 23:30:00',
+            'ends_at' => '2026-09-13 01:00:00',
+        ]);
+        $otherClass = SchoolClass::create([
+            'academic_year_id' => $component->schoolClass->academic_year_id,
+            'name' => 'IX-3',
+            'grade_level' => 9,
+        ]);
+        $otherComponent = $component->replicate()->fill(['school_class_id' => $otherClass->id]);
+        $otherComponent->save();
+        $otherSession = $regular->replicate()->fill([
+            'assessment_subject_id' => $otherComponent->id,
+            'room_name' => 'Lab Rombel Lain',
+            'status' => SessionStatus::Active,
+        ]);
+        $otherSession->save();
+        foreach ([AssignmentStatus::Scheduled, AssignmentStatus::Cancelled] as $status) {
+            $student = Student::create([
+                'school_class_id' => $component->school_class_id,
+                'student_number' => 'S-'.$status->value,
+                'full_name' => 'Nama Peserta Privat',
+                'is_active' => true,
+            ]);
+            ExamAssignment::create([
+                'assessment_subject_id' => $component->id,
+                'student_id' => $student->id,
+                'exam_session_id' => $makeup->id,
+                'status' => $status,
+                'assigned_at' => now(),
+            ]);
+        }
+
+        $this->actingAs($committee)->get(route('scheduling.recap'))->assertOk()
+            ->assertSeeInOrder(['Lab 1', 'Lab Rombel Lain', 'Lab 2'])
+            ->assertSee('Rekap memuat jadwal draf.');
+
+        $this->get(route('scheduling.recap', [
+            'session_period_id' => $component->assessment_period_id,
+            'session_class_id' => $component->school_class_id,
+            'session_search' => 'INF',
+            'session_status' => 'ready',
+            'session_kind' => SessionKind::Makeup->value,
+            'session_page' => 20,
+        ]))->assertOk()
+            ->assertViewHas('groups', fn ($groups) => $groups->first()['rows']->sole()['participants'] === 1)
+            ->assertViewHas('shareText', fn (string $text) => str_contains($text, '23:30 – 13/09/2026 01:00 WIB'))
+            ->assertSee('Sabtu, 12 September 2026')
+            ->assertSee('Kampus Utama')
+            ->assertSee('Lab 2')
+            ->assertSee('Unduh gambar PNG')
+            ->assertDontSee('Rekap memuat jadwal draf.')
+            ->assertDontSee('Lab 1')
+            ->assertDontSee('Lab Rombel Lain')
+            ->assertDontSee('Nama Peserta Privat');
+
+        $this->get(route('scheduling.recap', ['session_search' => 'Matematika']))
+            ->assertOk()->assertSee('Belum ada sesi ujian sesuai filter.');
     }
 
     public function test_principal_can_manage_locations_without_full_scheduling_access(): void

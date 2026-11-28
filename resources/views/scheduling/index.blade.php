@@ -158,6 +158,10 @@
                 <h2 class="mt-2 text-xl font-semibold text-white">Jadwal reguler dan susulan</h2>
                 <p class="mt-1 text-xs text-slate-500">Jadwal dikelompokkan per mapel dan tingkat, jumlah kelompok per halaman dapat dipilih. Buka pengaturan untuk mengatur seluruh rombel sekaligus.</p>
             </div>
+            <a href="{{ route('scheduling.recap', ['session_period_id' => $sessionPeriodId, 'session_class_id' => $sessionClassId, 'session_search' => $sessionSearch !== '' ? $sessionSearch : null]) }}"
+                class="inline-flex rounded-xl border border-cyan-400/35 bg-cyan-400/10 px-4 py-2.5 text-sm font-semibold text-cyan-200">
+                Rekap Jadwal Ujian
+            </a>
         </div>
 
         <form method="GET" action="{{ route('scheduling.index') }}" class="mb-5 grid gap-3 rounded-2xl border border-white/10 bg-white/[0.025] p-4 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_auto_auto]">

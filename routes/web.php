@@ -14,6 +14,7 @@ use App\Http\Controllers\ParticipantCardController;
 use App\Http\Controllers\Reports\MidtermReportController;
 use App\Http\Controllers\Reports\ExamResultController;
 use App\Http\Controllers\Reports\MidtermReportEntryController;
+use App\Http\Controllers\ScheduleRecapController;
 use App\Http\Controllers\SchedulingController;
 use App\Http\Controllers\Settings\SchoolProfileController;
 use App\Http\Controllers\StudentAttendanceController;
@@ -148,6 +149,7 @@ Route::middleware(['auth', 'active'])->group(function (): void {
         ->name('scheduling.')
         ->group(function (): void {
             Route::get('/', [SchedulingController::class, 'index'])->name('index');
+            Route::get('/recap', ScheduleRecapController::class)->name('recap');
             Route::post('/periods', [SchedulingController::class, 'storePeriod'])->name('periods.store');
             Route::patch('/periods/{assessmentPeriod}', [SchedulingController::class, 'updatePeriod'])->name('periods.update');
             Route::patch('/periods/{assessmentPeriod}/status', [SchedulingController::class, 'updatePeriodStatus'])->name('periods.status');
