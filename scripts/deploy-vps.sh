@@ -12,15 +12,46 @@ if [[ ! -f artisan || ! -f .env ]]; then
     exit 1
 fi
 
-if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
-    echo "Deployment dihentikan: terdapat perubahan lokal pada file Git." >&2
-    echo "Periksa dengan: git status" >&2
+require_clean_checkout() {
+    local operation
+    for operation in rebase-merge rebase-apply MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD sequencer; do
+        if [[ -e "$(git rev-parse --git-path "$operation")" ]]; then
+            echo "Deployment dihentikan. Selesaikan operasi Git yang masih terbuka sesuai petunjuk git status." >&2
+            return 1
+        fi
+    done
+
+    if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
+        echo "Deployment dihentikan. Periksa perubahan lokal dengan git status." >&2
+        return 1
+    fi
+}
+
+exec {deploy_lock}>"$(git rev-parse --git-path ujiansmk-deploy.lock)"
+flock -n "$deploy_lock" || { echo "Deployment lain sedang berjalan." >&2; exit 1; }
+
+require_clean_checkout
+current_branch="$(git symbolic-ref --quiet HEAD)" || {
+    echo "Pindah ke branch rilis sebelum menjalankan deployment." >&2
     exit 1
-fi
+}
+current="$(git rev-parse HEAD)"
 
 git fetch origin "$BRANCH"
+target="$(git rev-parse --verify 'FETCH_HEAD^{commit}')"
 
-if ! git cat-file -e "origin/$BRANCH:public/build/manifest.json" 2>/dev/null; then
+if ! git merge-base --is-ancestor "$current" "$target" && ! git merge-base --is-ancestor "$target" "$current"; then
+    # Prepare the merge without changing the branch, index or working tree.
+    if ! merge_result="$(git merge-tree --write-tree "$current" "$target")"; then
+        echo "Deployment dihentikan. Periksa konflik atau kesalahan Git di bawah ini." >&2
+        printf '%s\n' "$merge_result" >&2
+        exit 1
+    fi
+    merged_tree="${merge_result%%$'\n'*}"
+    target="$(git commit-tree "$merged_tree" -p "$current" -p "$target" -m "Merge origin/$BRANCH for deployment")"
+fi
+
+if ! git cat-file -e "$target:public/build/manifest.json" 2>/dev/null; then
     echo "Aset production belum tersedia. Tunggu workflow Build production assets selesai." >&2
     exit 1
 fi
@@ -46,7 +77,12 @@ restore_app() {
 trap restore_app EXIT
 assert_no_active_exams
 
-git merge --ff-only "origin/$BRANCH"
+require_clean_checkout
+if [[ "$(git symbolic-ref --quiet HEAD)" != "$current_branch" || "$(git rev-parse HEAD)" != "$current" ]]; then
+    echo "Posisi checkout berubah selama persiapan. Jalankan deploy.sh kembali." >&2
+    exit 1
+fi
+git merge --ff-only "$target"
 
 COMPOSER_MEMORY_LIMIT=512M composer install \
     --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader
