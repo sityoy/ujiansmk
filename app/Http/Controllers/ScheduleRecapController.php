@@ -17,6 +17,18 @@ use Illuminate\Validation\Rule;
 
 class ScheduleRecapController extends Controller
 {
+    private const TIMEZONE = 'Asia/Jakarta';
+
+    private const WEEKDAYS = [
+        1 => 'Senin',
+        2 => 'Selasa',
+        3 => 'Rabu',
+        4 => 'Kamis',
+        5 => 'Jumat',
+        6 => 'Sabtu',
+        7 => 'Minggu',
+    ];
+
     private const KINDS = ['regular' => 'Reguler', 'makeup' => 'Susulan'];
 
     private const STATUSES = [
@@ -31,12 +43,15 @@ class ScheduleRecapController extends Controller
         $filters = $request->validate([
             'session_period_id' => ['nullable', 'integer', 'min:1'],
             'session_class_id' => ['nullable', 'integer', 'min:1'],
+            'session_weekday' => ['nullable', 'integer', 'between:1,7'],
             'session_search' => ['nullable', 'string', 'max:255'],
             'session_kind' => ['nullable', Rule::enum(SessionKind::class)],
             'session_status' => ['nullable', Rule::in(['ready', ...array_keys(self::STATUSES)])],
         ]);
         $periodId = $filters['session_period_id'] ?? null;
         $classId = $filters['session_class_id'] ?? null;
+        $weekday = isset($filters['session_weekday']) ? (int) $filters['session_weekday'] : null;
+        $weekdayLabel = $weekday === null ? null : self::WEEKDAYS[$weekday];
         $search = trim($filters['session_search'] ?? '');
         $kind = $filters['session_kind'] ?? null;
         $status = $filters['session_status'] ?? null;
@@ -61,7 +76,9 @@ class ScheduleRecapController extends Controller
                 ->where('status', '!=', AssignmentStatus::Cancelled)])
             ->orderBy('starts_at')
             ->orderBy('id')
-            ->get();
+            ->get()
+            ->when($weekday !== null, fn ($sessions) => $sessions
+                ->filter(fn (ExamSession $session) => $session->starts_at->copy()->timezone(self::TIMEZONE)->isoWeekday() === $weekday));
 
         $periods = AssessmentPeriod::with('academicYear')->orderByDesc('starts_on')->get();
         $classes = SchoolClass::with('academicYear')->orderBy('name')->get();
@@ -71,6 +88,7 @@ class ScheduleRecapController extends Controller
         $schoolName = $school?->name ?? config('app.name');
         $statuses = ['ready' => 'Terbit atau aktif', ...self::STATUSES];
         $filterLabel = collect([
+            $weekdayLabel ? 'Hari '.$weekdayLabel : null,
             $kind ? self::KINDS[$kind] : null,
             $status ? $statuses[$status] : null,
             $search !== '' ? 'Pencarian “'.$search.'”' : null,
@@ -100,6 +118,9 @@ class ScheduleRecapController extends Controller
             'school' => $school,
             'periods' => $periods,
             'classes' => $classes,
+            'weekdays' => self::WEEKDAYS,
+            'weekday' => $weekday,
+            'filename' => 'rekap-jadwal-ujian'.($weekdayLabel ? '-'.strtolower($weekdayLabel) : ''),
             'kinds' => self::KINDS,
             'statuses' => $statuses,
             'filters' => $filters,
@@ -111,7 +132,7 @@ class ScheduleRecapController extends Controller
             'sessionCount' => $sessions->count(),
             'makeupCount' => $sessions->where('kind', SessionKind::Makeup)->count(),
             'shareText' => implode("\n", $shareLines),
-            'generatedAt' => now()->timezone('Asia/Jakarta')->format('d/m/Y H:i').' WIB',
+            'generatedAt' => now()->timezone(self::TIMEZONE)->format('d/m/Y H:i').' WIB',
         ])->header('Cache-Control', 'private, no-store')->header('X-Robots-Tag', 'noindex, nofollow');
     }
 
@@ -122,8 +143,8 @@ class ScheduleRecapController extends Controller
 
     private function row(ExamSession $session): array
     {
-        $start = $session->starts_at->copy()->timezone('Asia/Jakarta');
-        $end = $session->ends_at->copy()->timezone('Asia/Jakarta');
+        $start = $session->starts_at->copy()->timezone(self::TIMEZONE);
+        $end = $session->ends_at->copy()->timezone(self::TIMEZONE);
         $endFormat = $start->isSameDay($end) ? 'H:i' : 'd/m/Y H:i';
 
         return [

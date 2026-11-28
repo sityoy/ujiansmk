@@ -55,7 +55,7 @@
         <div class="toolbar">
             <a class="button" href="{{ $backUrl }}">Kembali ke Penjadwalan</a>
             @if ($sessionCount)
-                <x-print-actions filename="rekap-jadwal-ujian" landscape :margin="10" />
+                <x-print-actions :filename="$filename" landscape :margin="10" />
             @endif
         </div>
         <form method="GET" action="{{ route('scheduling.recap') }}" class="filters">
@@ -72,6 +72,14 @@
                     <option value="">Semua rombel</option>
                     @foreach ($classes as $class)
                         <option value="{{ $class->id }}" @selected((int) ($filters['session_class_id'] ?? 0) === $class->id)>{{ $class->name }} · {{ $class->academicYear->name }}</option>
+                    @endforeach
+                </select>
+            </label>
+            <label>Hari
+                <select name="session_weekday">
+                    <option value="">Semua hari</option>
+                    @foreach ($weekdays as $value => $label)
+                        <option value="{{ $value }}" @selected($weekday === $value)>{{ $label }}</option>
                     @endforeach
                 </select>
             </label>

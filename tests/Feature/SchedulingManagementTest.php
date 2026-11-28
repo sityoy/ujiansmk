@@ -20,6 +20,7 @@ use App\Models\Student;
 use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class SchedulingManagementTest extends TestCase
@@ -143,6 +144,38 @@ class SchedulingManagementTest extends TestCase
 
         $this->get(route('scheduling.recap', ['session_search' => 'Matematika']))
             ->assertOk()->assertSee('Belum ada sesi ujian sesuai filter.');
+    }
+
+    public function test_schedule_recap_filters_the_table_and_share_text_by_start_day_in_wib(): void
+    {
+        $this->withoutVite();
+        $committee = User::factory()->create(['role' => UserRole::Committee]);
+        [, $regular, $makeup] = $this->makeSchedule();
+        $regular->update(['room_name' => 'Lab Selasa']);
+        $makeup->update([
+            'room_name' => 'Lab Senin Satu',
+            'starts_at' => Carbon::parse('2026-09-06 17:30:00', 'UTC')->timezone(config('app.timezone')),
+            'ends_at' => Carbon::parse('2026-09-06 19:00:00', 'UTC')->timezone(config('app.timezone')),
+        ]);
+        $makeup->replicate()->fill([
+            'room_name' => 'Lab Senin Dua',
+            'starts_at' => '2026-09-14 08:00:00',
+            'ends_at' => '2026-09-14 10:00:00',
+        ])->save();
+
+        $this->actingAs($committee)->get(route('scheduling.recap', ['session_weekday' => 1]))
+            ->assertOk()
+            ->assertViewHas('sessionCount', 2)
+            ->assertViewHas('filename', 'rekap-jadwal-ujian-senin')
+            ->assertViewHas('shareText', fn (string $text) => str_contains($text, '00:30 – 02:00 WIB')
+                && str_contains($text, 'Lab Senin Dua') && ! str_contains($text, 'Lab Selasa'))
+            ->assertSee('Hari Senin')
+            ->assertSeeInOrder(['Senin, 7 September 2026', 'Lab Senin Satu', 'Senin, 14 September 2026', 'Lab Senin Dua'])
+            ->assertDontSee('Lab Selasa');
+
+        $this->get(route('scheduling.recap', ['session_weekday' => 3]))
+            ->assertOk()
+            ->assertSee('Belum ada sesi ujian sesuai filter.');
     }
 
     public function test_principal_can_manage_locations_without_full_scheduling_access(): void
